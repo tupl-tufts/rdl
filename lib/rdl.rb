@@ -148,7 +148,7 @@ module RDL
       @class = cls
       @mname = mname
 
-      action { nil }
+      action { |*args| nil }
     end
 
     # For non-DSL keywords
