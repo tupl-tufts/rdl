@@ -33,10 +33,10 @@ module RDL
         alias_method old_mname, mname
 
         define_method mname do |*args, &blk|
-          results = send pre_name, *args, &blk
+          results = self.__send__ pre_name, *args, &blk
           new_args = results[:args]
           new_blk = results[:block]
-          send old_mname, *new_args, &new_blk
+          self.__send__ old_mname, *new_args, &new_blk
         end
       end
     end
@@ -53,8 +53,8 @@ module RDL
         alias_method old_mname, mname
 
         define_method mname do |*args, &blk|
-          res = send old_mname, *args, &blk
-          send post_name, res, *args, &blk
+          res = self.__send__ old_mname, *args, &blk
+          self.__send__ post_name, res, *args, &blk
         end
       end
     end
@@ -67,7 +67,7 @@ module RDL
       pre_task_name = define_method_gensym("pre_task", &b)
 
       pre do |*args, &blk|
-        send pre_task_name, *args, &blk
+        self.__send__ pre_task_name, *args, &blk
         { args: args, block: blk }
       end
     end
@@ -76,7 +76,7 @@ module RDL
       post_task_name = define_method_gensym("post_task", &b)
 
       post do |r, *args, &blk|
-        send post_task_name, r, *args, &blk
+        self.__send__ post_task_name, r, *args, &blk
         r
       end
     end
@@ -109,12 +109,12 @@ module RDL
     # our checks. We'll overwrite this functionality inside the entry version.
     def dsl(*a, &b)
       pre do |*args, &blk|
+        p = Proxy.new
+        p.instance_exec(*a, &b)
         # Allow for methods that only sometimes take DSL blocks.
         if blk
           new_blk = Proc.new do |*args|
-            ec = singleton_class
-            Lang.new(ec).instance_exec(*a, &b)
-            instance_exec(*args, &blk)
+            p.apply(self).instance_exec(*args, &blk)
           end
           { args: args, block: new_blk }
         else { args: args, block: blk }
@@ -175,7 +175,8 @@ module RDL
       raise "Need a class or block" unless cls or b
 
       unless b.nil?
-        cls = Class.new(Object) if cls.nil?
+        cls = Class.new(BasicObject) if cls.nil?
+        cls.class_eval do include Kernel end
         Lang.new(cls).instance_exec(*a, &b)
       end
 
@@ -184,6 +185,40 @@ module RDL
         c.instance_exec(*args, &blk)
         c
       end
+    end
+  end
+
+  class Proxy
+    def initialize()
+      @class = Class.new(BasicObject)
+      @class.class_eval do
+        include Kernel
+
+        def initialize(obj)
+          @obj = obj
+        end
+
+        def method_missing(mname, *args, &blk)
+          raise "Attempt to call method #{mname} not in DSL"
+        end
+      end
+    end
+
+    def apply(obj)
+      @class.new(obj)
+    end
+
+    def keyword(mname, *args, &blk)
+      Keyword.new(@class, mname).instance_exec(*args, &blk)
+    end
+
+    def spec(mname, *args, &blk)
+      @class.class_eval do
+        define_method mname do |*args, &blk|
+          @obj.__send__ mname, *args, &blk
+        end
+      end
+      Spec.new(@class, mname).instance_exec(*args, &blk)
     end
   end
 
