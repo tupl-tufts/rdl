@@ -19,6 +19,9 @@ module RDL
     end
 
     def include_spec(blk, *args)
+      unless blk.is_a?(Proc)
+        raise "Expected a Proc, got #{blk.inspect}"
+      end
       instance_exec(*args, &blk)
     end
 
