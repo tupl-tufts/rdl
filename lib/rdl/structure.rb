@@ -725,9 +725,10 @@ class Object
         RDL::Structure.all_calls = [] if not RDL::Structure.all_calls
         RDL::Structure.all_calls.push(m)
 
-
 #puts "POP S #{fun}"
         RDL::Structure.call_stack.pop
+      else
+        r = self.send(fun, *args, &blk)
       end
     # elsif ($top_id != self.object_id) and (target == 1 and not p)
     elsif (not p)
