@@ -208,6 +208,11 @@ module RDL
     end
 
     def apply(obj)
+      @specs.each do |m|
+        unless obj.respond_to? m
+          raise "Method #{m} not found in DSL object #{obj}"
+        end
+      end
       @class.new(obj)
     end
 
@@ -216,6 +221,8 @@ module RDL
     end
 
     def spec(mname, *args, &blk)
+      @specs ||= []
+      @specs.push(mname)
       @class.class_eval do
         define_method mname do |*args, &blk|
           @obj.__send__ mname, *args, &blk
