@@ -8,6 +8,41 @@ module RDL
     end
   end
 
+  class Dsl
+    def initialize(&blk)
+      instance_eval(&blk)
+    end
+
+    def keyword(mname, &blk)
+      @keywords ||= {}
+      if @keywords[mname]
+        raise "Keyword definition already exists for #{mname}"
+      end
+      @keywords[mname] = blk
+    end
+
+    def spec(mname, &blk)
+      @specs ||= {}
+      @specs[mname] ||= []
+      @specs[mname].push(blk)
+    end
+
+    def apply(cls)
+      if @keywords
+        @keywords.each_pair do |m, b|
+          Keyword.new(cls, m).instance_eval(&b)
+        end
+      end
+      if @specs
+        @specs.each_pair do |m, bl|
+          bl.each do |b|
+            Spec.new(cls, m).instance_eval(&b)
+          end
+        end
+      end
+    end
+  end
+
   class Spec
     def initialize(cls, mname)
       @class = cls
