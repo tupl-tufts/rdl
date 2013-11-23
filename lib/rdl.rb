@@ -10,14 +10,12 @@ module RDL
 
   class Dsl
     def initialize(&blk)
-      instance_eval(&blk)
+      instance_eval(&blk) if block_given?
     end
 
     def keyword(mname, &blk)
       @keywords ||= {}
-      if @keywords[mname]
-        raise "Keyword definition already exists for #{mname}"
-      end
+      raise "Keyword definition already exists for #{mname}" if @keywords[mname]
       @keywords[mname] = blk
     end
 
@@ -25,6 +23,19 @@ module RDL
       @specs ||= {}
       @specs[mname] ||= []
       @specs[mname].push(blk)
+    end
+
+    def self.extend(spec, &blk)
+      raise "Expected a DSL spec, got #{spec}" unless spec.is_a?(Dsl)
+      new_spec = Dsl.new
+      old_keywords = spec.instance_variable_get(:@keywords)
+      if old_keywords
+        new_spec.instance_variable_set(:@keywords, old_keywords.clone)
+      end
+      old_specs = spec.instance_variable_get(:@specs)
+      new_spec.instance_variable_set(:@specs, old_specs.clone) if old_specs
+      new_spec.instance_eval(&blk) if block_given?
+      new_spec
     end
 
     def apply(cls)
