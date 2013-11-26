@@ -187,6 +187,7 @@ module RDL::Structure
       observed_parent_call_map[p_name].add c
     }
 
+
     observed_parent_call_map.each {|k, v|
       observed_parent_call_cls_map[k] ||= Set.new
       observed_parent_call_map_simple[k] ||= Set.new
@@ -669,19 +670,34 @@ class Object
   end
 
   def dsl_log_entry(fun, sid, target, *args, &blk)
-    r = dsl_log(fun, sid, target, *args, &blk)
+    r = dsl_log_non_entry(fun, sid, target, *args, &blk)
 
     c  = get_class
     p = nil
     fun = fun.to_sym
     m = RDL::Method.new(c, fun, sid, p)
     RDL::Structure.all_calls = [] if not RDL::Structure.all_calls
-    RDL::Structure.all_calls.push(m)
+    RDL::Structure.all_calls.push(m) if blk
 
     r
   end
-  
+
   def dsl_log(fun, sid, target, *args, &blk)
+    RDL::Structure.call_stack = [] if not RDL::Structure.call_stack
+    p = RDL::Structure.call_stack[-1]
+
+    if fun == "_"
+      return self.send(fun, *args, &blk)
+    end
+
+    if not p
+      dsl_log_entry(fun, sid, target, *args, &blk)
+    else
+      dsl_log_non_entry(fun, sid, target, *args, &blk)
+    end
+  end
+  
+  def dsl_log_non_entry(fun, sid, target, *args, &blk)
     RDL::Structure.call_stack = [] if not RDL::Structure.call_stack
     RDL::Structure.orders = {} if not RDL::Structure.orders
     RDL::Structure.sid_method_map = {} if not RDL::Structure.sid_method_map
@@ -714,6 +730,7 @@ class Object
         end
 
         RDL::Structure.call_stack.push(sid)
+        $top_id = nil
         r = self.send(fun, *args, &blk)
 
         k = RDL::MethodID.new(m.cls, m.name)
@@ -728,6 +745,7 @@ class Object
 #puts "POP S #{fun}"
         RDL::Structure.call_stack.pop
       else
+        $top_id = nil
         r = self.send(fun, *args, &blk)
       end
     # elsif ($top_id != self.object_id) and (target == 1 and not p)
@@ -740,11 +758,13 @@ class Object
 #puts "PUSHING S #{fun}"
       RDL::Structure.call_stack.push(sid)
 
+      $top_id = nil
       r = self.send(fun, *args, &blk)
 
 #puts "POP S #{fun}"
       RDL::Structure.call_stack.pop
     else
+      $top_id = nil
       r = self.send(fun, *args, &blk)
     end
 
