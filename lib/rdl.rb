@@ -9,8 +9,10 @@ module RDL
   end
 
   class Dsl
-    def initialize(&blk)
-      instance_eval(&blk) if block_given?
+    attr_accessor :keywords, :specs
+
+    def initialize(*a, &blk)
+      instance_eval(*a, &blk) if block_given?
     end
 
     def keyword(mname, &blk)
@@ -28,11 +30,12 @@ module RDL
     def self.extend(spec, &blk)
       raise "Expected a DSL spec, got #{spec}" unless spec.is_a?(Dsl)
       new_spec = Dsl.new
-      old_keywords = spec.instance_variable_get(:@keywords)
+      old_keywords = spec.keywords
       if old_keywords
         new_spec.instance_variable_set(:@keywords, old_keywords.clone)
       end
-      old_specs = spec.instance_variable_get(:@specs)
+      old_specs = spec.specs
+      # FIXME: Probably need to do one more level down of cloning
       new_spec.instance_variable_set(:@specs, old_specs.clone) if old_specs
       new_spec.instance_eval(&blk) if block_given?
       new_spec
@@ -41,12 +44,18 @@ module RDL
     def apply(cls)
       if @keywords
         @keywords.each_pair do |m, b|
+          if cls.method_defined? m
+            raise "Method #{m} listed in spec already defined in #{cls}"
+          end
           Keyword.new(cls, m).instance_eval(&b)
         end
       end
       if @specs
         @specs.each_pair do |m, bl|
           bl.each do |b|
+            unless cls.method_defined? m
+              raise "Method #{m} listed in spec not defined in #{cls}"
+            end
             Spec.new(cls, m).instance_eval(&b)
           end
         end
@@ -157,13 +166,22 @@ module RDL
     # here we want the dsl keyword to just intercept the block and add
     # our checks. We'll overwrite this functionality inside the entry version.
     def dsl(*a, &b)
+      spec = Dsl.new *a, &b
+      p = Proxy.new
+      spec.specs.each_pair { |m, b| p.add_method m }
+      spec.apply(p.instance_variable_get(:@class))
       pre do |*args, &blk|
-        p = Proxy.new
-        p.instance_exec(*a, &b)
         # Allow for methods that only sometimes take DSL blocks.
         if blk
           new_blk = Proc.new do |*args|
-            p.apply(self).instance_exec(*args, &blk)
+            unless self.is_a? Proxy
+              obj = p.apply(self)
+            else
+              spec.specs.each_pair { |m, b| add_method m }
+              spec.apply(class << self; self; end)
+              obj = self
+            end
+            obj.instance_exec(*args, &blk)
           end
           { args: args, block: new_blk }
         else { args: args, block: blk }
@@ -254,7 +272,7 @@ module RDL
     end
 
     def apply(obj)
-      @specs.each do |m|
+      @methods.each do |m|
         unless obj.respond_to? m
           raise "Method #{m} not found in DSL object #{obj}"
         end
@@ -262,19 +280,14 @@ module RDL
       @class.new(obj)
     end
 
-    def keyword(mname, *args, &blk)
-      Keyword.new(@class, mname).instance_exec(*args, &blk)
-    end
-
-    def spec(mname, *args, &blk)
-      @specs ||= []
-      @specs.push(mname)
+    def add_method(mname)
+      @methods ||= []
+      @methods.push(mname)
       @class.class_eval do
         define_method mname do |*args, &blk|
           @obj.__send__ mname, *args, &blk
         end
       end
-      Spec.new(@class, mname).instance_exec(*args, &blk)
     end
   end
 
