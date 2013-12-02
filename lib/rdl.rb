@@ -161,12 +161,15 @@ module RDL
       end
     end
 
-
     # Since we're describing an existing method, not creating a new DSL,
     # here we want the dsl keyword to just intercept the block and add
     # our checks. We'll overwrite this functionality inside the entry version.
     def dsl(*a, &b)
       spec = Dsl.new *a, &b
+      dsl_from spec
+    end
+
+    def dsl_from(spec)
       p = Proxy.new
       spec.specs.each_pair { |m, b| p.add_method m }
       spec.apply(p.instance_variable_get(:@class))
