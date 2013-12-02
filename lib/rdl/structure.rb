@@ -368,9 +368,9 @@ module RDL::Structure
         f.write "methods: #{methods}\n"
         f.write "lang_methods: #{lang_methods}\n"
 
-        o = v2[:orders].each {|e0, e1|
-          f.write "edge: #{e0.to_s} #{e1.to_s}\n"
-        }
+        #o = v2[:orders].each {|e0, e1|
+        #  f.write "edge: #{e0.to_s} #{e1.to_s}\n"
+        #}
 
         f.close
       }
