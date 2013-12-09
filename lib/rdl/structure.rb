@@ -84,6 +84,7 @@ module RDL::Structure
     attr_accessor :descendant_map
     attr_accessor :call_map
     attr_accessor :all_calls
+    attr_accessor :sid_blk_map
   end
 
   def self.get_lang_info
@@ -187,7 +188,6 @@ module RDL::Structure
       observed_parent_call_map[p_name].add c
     }
 
-
     observed_parent_call_map.each {|k, v|
       observed_parent_call_cls_map[k] ||= Set.new
       observed_parent_call_map_simple[k] ||= Set.new
@@ -281,8 +281,10 @@ module RDL::Structure
           if full_parent_call_cls_map[k].include?(candidate_cls)
             parent.each {|p|
               #puts "Adding stmt #{j.sid} to parent #{p.sid}"
-              missing_stmt_map[p.sid] ||= Set.new
-              missing_stmt_map[p.sid].add(j.sid)
+              if RDL::Structure.sid_blk_map[p.sid]
+                missing_stmt_map[p.sid] ||= Set.new
+                missing_stmt_map[p.sid].add(j.sid)
+              end
             }
           end
         }
@@ -686,6 +688,13 @@ class Object
     RDL::Structure.call_stack = [] if not RDL::Structure.call_stack
     p = RDL::Structure.call_stack[-1]
 
+    RDL::Structure.sid_blk_map = {} if not RDL::Structure.sid_blk_map
+    if blk 
+      RDL::Structure.sid_blk_map[sid] = true
+    else
+      RDL::Structure.sid_blk_map[sid] = false
+    end
+
     if fun == "_"
       return self.send(fun, *args, &blk)
     end
@@ -750,7 +759,6 @@ class Object
       end
     # elsif ($top_id != self.object_id) and (target == 1 and not p)
     elsif (not p)
-#puts "**************** #{fun}"
       c = get_class
       m = RDL::Method.new(c, fun, sid, p)
 
