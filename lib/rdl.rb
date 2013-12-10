@@ -271,8 +271,8 @@ module RDL
       if warn
         @class.class_eval do
           def method_missing(mname, *args, &blk)
-            puts "Attempt to call method #{mname} not in DSL at"
-            caller.each { |s| puts "  #{s}"}
+            $stderr.puts "Attempt to call method #{mname} not in DSL at"
+            caller.each { |s| $stderr.puts "  #{s}"}
             @obj.__send__ mname, *args, &blk
           end
         end
