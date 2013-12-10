@@ -169,15 +169,15 @@ module RDL
       dsl_from spec
     end
 
-    def dsl_from(spec)
-      p = Proxy.new
+    def dsl_from(spec, flags = {})
+      p = Proxy.new flags[:warn]
       spec.specs.each_pair { |m, b| p.add_method m }
       spec.apply(p.instance_variable_get(:@class))
       pre do |*args, &blk|
         # Allow for methods that only sometimes take DSL blocks.
         if blk
           new_blk = Proc.new do |*args|
-            unless self.is_a? Proxy
+            unless self.is_a? RDL::Proxy
               obj = p.apply(self)
             else
               spec.specs.each_pair { |m, b| add_method m }
@@ -259,17 +259,28 @@ module RDL
   end
 
   class Proxy
-    def initialize()
-      @class = Class.new(BasicObject)
-      @class.class_eval do
+    def initialize(warn = false)
+      @class = Class.new(BasicObject) do
         include Kernel
 
         def initialize(obj)
           @obj = obj
         end
+      end
 
-        def method_missing(mname, *args, &blk)
-          raise "Attempt to call method #{mname} not in DSL"
+      if warn
+        @class.class_eval do
+          def method_missing(mname, *args, &blk)
+            puts "Attempt to call method #{mname} not in DSL at"
+            caller.each { |s| puts "  #{s}"}
+            @obj.__send__ mname, *args, &blk
+          end
+        end
+      else
+        @class.class_eval do
+          def method_missing(mname, *args, &blk)
+            raise "Attempt to call method #{mname} not in DSL"
+          end
         end
       end
     end
