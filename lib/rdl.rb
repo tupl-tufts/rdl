@@ -29,6 +29,8 @@ module RDL
 
   def self.convert(v)
     case v
+    when Contract
+      v
     when Proc
       raise "Cannot convert non-unary proc #{p}" unless v.arity.abs == 1
       flat &v
@@ -160,8 +162,9 @@ module RDL
       end
     end
 
-    def arg(n, ctc)
+    def arg(n, c)
       mname = @mname
+      ctc = RDL.convert c
       old_mname = "__dsl_old_#{mname}_#{gensym}"
       arg_name = define_method_gensym "arg" do |*args, &blk|
         raise "#{n+1} arguments expected, got #{args.length}" if args.length <= n
