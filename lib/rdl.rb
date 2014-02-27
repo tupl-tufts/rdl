@@ -1,4 +1,47 @@
 module RDL
+  class Contract
+    def apply(v); end
+    def check(v); end
+    def to_s; end
+    def to_proc
+      x = self
+      Proc.new { |v| x.check v }
+    end
+  end
+
+  class FlatCtc < Contract
+    def initialize(s = "predicate", &p)
+      raise "Expected predicate, got #{p}" unless p.arity.abs == 1
+      @str = s.to_s; @pred = p
+    end
+    def apply(v)
+      check v ? v : (raise "Value #{v} does not match contract #{self}")
+    end
+    def check(v)
+      @pred.call v
+    end
+    def to_s; "#<FlatCtc:#{@str}>" end
+  end
+
+  def self.flat(&b)
+    FlatCtc.new &b
+  end
+
+  def self.convert(v)
+    case v
+    when Proc
+      raise "Cannot convert non-unary proc #{p}" unless v.arity.abs == 1
+      flat &v
+    else
+      FlatCtc.new(v) { |x| v === x }
+    end
+  end
+
+  def self.not(c)
+    raise "Expected flat contract, got #{c}" unless c.is_a? FlatCtc
+    flat { |x| not (c.check x) }
+  end
+
   module Gensym
     def self.gensym
       @gensym = 0 unless @gensym
@@ -113,6 +156,27 @@ module RDL
         define_method mname do |*args, &blk|
           res = self.__send__ old_mname, *args, &blk
           self.__send__ post_name, res, *args, &blk
+        end
+      end
+    end
+
+    def arg(n, ctc)
+      mname = @mname
+      old_mname = "__dsl_old_#{mname}_#{gensym}"
+      arg_name = define_method_gensym "arg" do |*args, &blk|
+        raise "#{n+1} arguments expected, got #{args.length}" if args.length <= n
+        args[n] = ctc.apply(args[n])
+        { args = args, block = blk }
+      end
+
+      @class.class_eval do
+        alias_method old_mname, mname
+
+        define_method mname do |*args, &blk|
+          results = self.__send__ arg_name, *args, &blk
+          new_args = results[:args]
+          new_blk = results[:block]
+          self.__send__ old_mname, *new_args, &new_blk
         end
       end
     end
