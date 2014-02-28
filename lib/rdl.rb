@@ -169,7 +169,7 @@ module RDL
       arg_name = define_method_gensym "arg" do |*args, &blk|
         raise "#{n+1} arguments expected, got #{args.length}" if args.length <= n
         args[n] = ctc.apply(args[n])
-        { args = args, block = blk }
+        { args: args, block: blk }
       end
 
       @class.class_eval do
