@@ -15,7 +15,7 @@ module RDL
       @str = s.to_s; @pred = p
     end
     def apply(v)
-      check v ? v : (raise "Value #{v} does not match contract #{self}")
+      (check v) ? v : (raise "Value #{v} does not match contract #{self}")
     end
     def check(v)
       @pred.call v
