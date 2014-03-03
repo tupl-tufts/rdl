@@ -164,9 +164,10 @@ module RDL
 
     # Checks argument n (positional) against contract c.
     def arg(n, c)
+      ctc = RDL.convert c
       arg_name = define_method_gensym("arg") do |*args, &blk|
         raise "#{n+1} arguments expected, got #{args.length}" if args.length <= n
-        args[n] = c.apply(args[n])
+        args[n] = ctc.apply(args[n])
         { args: args, block: blk }
       end
 
@@ -177,8 +178,9 @@ module RDL
 
     # Checks return value against contract c.
     def ret(c)
+      ctc = RDL.convert c
       ret_name = define_method_gensym("ret") do |r, *args, &blk|
-        c.apply(r)
+        ctc.apply(r)
       end
 
       post do |r, *args, &blk|
