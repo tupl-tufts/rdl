@@ -162,25 +162,27 @@ module RDL
       end
     end
 
+    # Checks argument n (positional) against contract c.
     def arg(n, c)
-      mname = @mname
-      ctc = RDL.convert c
-      old_mname = "__dsl_old_#{mname}_#{gensym}"
-      arg_name = define_method_gensym "arg" do |*args, &blk|
+      arg_name = define_method_gensym("arg") do |*args, &blk|
         raise "#{n+1} arguments expected, got #{args.length}" if args.length <= n
         args[n] = ctc.apply(args[n])
         { args: args, block: blk }
       end
 
-      @class.class_eval do
-        alias_method old_mname, mname
+      pre do |*args, &blk|
+        self.__send__ arg_name, *args, &blk
+      end
+    end
 
-        define_method mname do |*args, &blk|
-          results = self.__send__ arg_name, *args, &blk
-          new_args = results[:args]
-          new_blk = results[:block]
-          self.__send__ old_mname, *new_args, &new_blk
-        end
+    # Checks return value against contract c.
+    def ret(c)
+      ret_name = define_method_gensym("ret") do |r, *args, &blk|
+        ctc.apply(r)
+      end
+
+      post do |r, *args, &blk|
+        self.__send__ ret_name, r, *args, &blk
       end
     end
 
