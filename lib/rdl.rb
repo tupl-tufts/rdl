@@ -334,6 +334,8 @@ module RDL
       @class = Class.new(BasicObject) do
         include Kernel
 
+        attr_reader :obj
+
         def initialize(obj)
           @obj = obj
         end
