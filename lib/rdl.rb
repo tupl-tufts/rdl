@@ -40,8 +40,15 @@ module RDL
   end
 
   def self.not(c)
+    c = RDL.convert c
     raise "Expected flat contract, got #{c}" unless c.is_a? FlatCtc
     flat { |x| not (c.check x) }
+  end
+
+  def self.or(*cs)
+    cs = cs.map { |c| RDL.convert c }
+    cs.each { |c| raise "Expected flat contract, got #{c}" unless c.is_a? FlatCtc}
+    flat { |x| cs.any? { |c| c.check x } }
   end
 
   module Gensym
