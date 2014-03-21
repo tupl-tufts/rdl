@@ -15,7 +15,7 @@ module RDL
       @str = s.to_s; @pred = p
     end
     def apply(v)
-      (check v) ? v : (raise "Value #{v} does not match contract #{self}")
+      (check v) ? v : (raise "Value #{v.inspect} does not match contract #{self}")
     end
     def check(v)
       @pred.call v
@@ -168,6 +168,20 @@ module RDL
       arg_name = define_method_gensym("arg") do |*args, &blk|
         raise "#{n+1} arguments expected, got #{args.length}" if args.length <= n
         args[n] = ctc.apply(args[n])
+        { args: args, block: blk }
+      end
+
+      pre do |*args, &blk|
+        self.__send__ arg_name, *args, &blk
+      end
+    end
+
+    # Checks rest args after first n args (positional) against contract c.
+    def rest(n, c)
+      ctc = RDL.convert c
+      arg_name = define_method_gensym("rest") do |*args, &blk|
+        raise "At least #{n} arguments expected, got #{args.length}" if args.length < n
+        args[n..-1] = args[n..-1].map { |i| ctc.apply i }
         { args: args, block: blk }
       end
 
