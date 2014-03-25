@@ -183,6 +183,19 @@ module RDL
       end
     end
 
+    # Checks optional argument n (positional) against contract c, if given.
+    def opt(n, c)
+      ctc = RDL.convert c
+      arg_name = define_method_gensym("arg") do |*args, &blk|
+        args[n] = ctc.apply(args[n]) if args.length > n
+        { args: args, block: blk }
+      end
+
+      pre do |*args, &blk|
+        self.__send__ arg_name, *args, &blk
+      end
+    end
+
     # Checks rest args after first n args (positional) against contract c.
     def rest(n, c)
       ctc = RDL.convert c
