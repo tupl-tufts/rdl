@@ -43,8 +43,4 @@ class RDLTest < Test::Unit::TestCase
     assert_equal 3, p.left
     assert_equal 4, p.right
   end
-
-  def test_null
-    assert 1
-  end
 end
