@@ -1,7 +1,7 @@
 require 'test/unit'
 require 'rdl'
 
-class A
+class A_spec
   extend RDL
 
   attr_accessor :trace
@@ -41,7 +41,7 @@ class A_keyword
   end
 end
 
-class B
+class B_spec
   extend RDL
 
   def foo(x)
@@ -67,14 +67,43 @@ class B_keyword
   end
 end
 
-class Box
+class Pair_spec
   extend RDL
 
-  attr_reader :x
+  attr_reader :trace
 
-  keyword :set_x do
-    action { |x| @x = x }
+  def initialize(&block)
+    @trace = []
+    instance_eval(&block)
   end
+
+  def left(x)
+    @trace.push :left, x
+    @left = x
+  end
+
+  def right(x)
+    @trace.push :right, x
+    @right = x
+  end
+
+  def get
+    [@left, @right]
+  end
+
+  spec :initialize do
+    dsl do
+      spec :left do
+        pre_task { |x| @trace.push :pre_task_left, x }
+        post_task { |r, x| @trace.push :post_task_left, r, x }
+      end
+      spec :right do
+        pre_task { |x| @trace.push :pre_task_right, x }
+        post_task { |r, x| @trace.push :post_task_right, r, x }
+      end
+    end
+  end
+
 end
 
 class Pair
@@ -85,10 +114,10 @@ class Pair
   keyword :initialize do
     dsl do
       keyword :left do
-        action { |left| @left = left }
+        post_task { |left| @left = left }
       end
       keyword :right do
-        action { |right| @right = right }
+        post_task { |right| @right = right }
       end
     end
   end
@@ -97,13 +126,13 @@ end
 class RDLTest < Test::Unit::TestCase
 
   def test_spec_pre_post_task
-    a = A.new
+    a = A_spec.new
     a.foo 3
     assert_equal a.trace, [:pre_task, 3, :foo, 3, :post_task, 4, 3]
   end
 
   def test_spec_pre_post_cond
-    b = B.new
+    b = B_spec.new
     b.foo 5
     assert_raise RDL::Spec::PreConditionFailure do b.foo 0 end
     assert_raise RDL::Spec::PostConditionFailure do b.foo 2 end
@@ -122,17 +151,9 @@ class RDLTest < Test::Unit::TestCase
     assert_raise RDL::Spec::PostConditionFailure do b.foo 2 end
   end
 
-
-#  def test_box
-#    b = Box.new
-#    b.set_x 3
-#    assert_equal 3, b.x
-#  end
-
-#  def test_pair
-#    p = Pair.new { left 3; right 4 }
-#    puts p.inspect
-#    assert_equal 3, p.left
-#    assert_equal 4, p.right
-#  end
+ def test_pair_spec
+   p = Pair_spec.new { left 3; right 4 }
+   puts p.inspect
+   assert_equal [3,4], p.get
+ end
 end
