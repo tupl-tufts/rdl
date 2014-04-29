@@ -20,17 +20,17 @@ class Matrix
              arg = $matrix_identity_arg
              c = true
              
-             for i in 0..num_rows-1
-               for j in 0..num_cols-1
+             for i in Range.new(0, num_rows-1)
+               for j in Range.new(0, num_cols-1)
                  if i == j
-                   c = c & (r[i,j] == 1)
+                   c = (c and (r[i,j] == 1))
                  else
-                   c = c & (r[i,j] == 0)
+                   c = (c and (r[i,j] == 0))
                  end
                end
              end
 
-             (num_cols == arg) & (num_rows == arg) & c
+             (num_cols == arg) and (num_rows == arg) and c
            })
     end
 
@@ -78,7 +78,7 @@ class Matrix
              ret_row_count = r.instance_variable_get(:@rows).size
              ret_col_count = r.instance_variable_get(:@column_size)
              
-             (row_size_arg == ret_row_count) & (column_size_arg == ret_col_count)
+             (row_size_arg == ret_row_count) and (column_size_arg == ret_col_count)
            })
     end
 
@@ -96,11 +96,11 @@ class Matrix
 
              c = true
 
-             for i in 0..ret_row_count-1
-               c = c & (ret_rows[i] == [arg[i]])
+             for i in Range.new(0, ret_row_count-1)
+               c = (c and (ret_rows[i] == [arg[i]]))
              end
 
-             (ret_row_count == arg.size) & (ret_col_count == 1) & c
+             (ret_row_count == arg.size) and (ret_col_count == 1) and c
            })
     end
 
@@ -129,17 +129,17 @@ class Matrix
 
              c = true
 
-             for i in 0..ret_row_count-1
-               for j in 0..ret_col_count-1
+             for i in Range.new(0, ret_row_count-1)
+               for j in Range.new(0, ret_col_count-1)
                  if i == j
-                   c = c & (r[i,j] == args[i])
+                   c = (c and (r[i,j] == args[i]))
                  else
-                   c = c & (r[i,j] == 0)
+                   c = (c and (r[i,j] == 0))
                  end
                end
              end
 
-             (ret_row_count == ret_col_count) & (ret_row_count == args.size) & c
+             (ret_row_count == ret_col_count) and (ret_row_count == args.size) and c
            })
     end
 
@@ -160,7 +160,7 @@ class Matrix
           col_size = args[1]
         end        
 
-        (row_size >= 0) & (col_size >= 0) & ((row_size == 0) | (col_size == 0))
+        (row_size >= 0) and (col_size >= 0) and ((row_size == 0) or (col_size == 0))
       end
 
       ret (RDL.flat {|r|
@@ -183,7 +183,7 @@ class Matrix
 
              c = ret_rows.all? {|x| x == []}
 
-             (ret_row_count == row_size) & (ret_col_count == col_size) & c
+             (ret_row_count == row_size) and (ret_col_count == col_size) and c
            })
     end
 
@@ -199,7 +199,7 @@ class Matrix
              ret_row_count = ret_rows.size
              ret_col_count = r.instance_variable_get(:@column_size)
 
-             (ret_rows == [arg]) & (ret_row_count == 1) & (ret_col_count == arg.size)
+             (ret_rows == [arg]) and (ret_row_count == 1) and (ret_col_count == arg.size)
            })
     end
 
@@ -210,7 +210,7 @@ class Matrix
 
       pre_cond do |*args|
         arg_sizes = args[0].map {|x| x.size}
-        (arg_sizes.uniq.size == 1) | (arg_sizes.uniq.size == 0)
+        (arg_sizes.uniq.size == 1) or (arg_sizes.uniq.size == 0)
       end
 
       ret (RDL.flat {|r|
@@ -242,17 +242,17 @@ class Matrix
 
              c = true
 
-             for i in 0..ret_row_size-1
-               for j in 0..ret_col_size-1
+             for i in Range.new(0, ret_row_size-1)
+               for j in Range.new(0, ret_col_size-1)
                  if i == j
-                   c = c & (r[i,j] == arg_value)
+                   c = (c and (r[i,j] == arg_value))
                  else
-                   c = c & (r[i,j] == 0)
+                   c = (c and (r[i,j] == 0))
                  end
                end
              end
 
-             (ret_row_size == ret_col_size) & (ret_col_size == arg_n) & c
+             (ret_row_size == ret_col_size) and (ret_col_size == arg_n) and c
            })
     end
 
@@ -271,13 +271,13 @@ class Matrix
 
              c = true
 
-             for i in 0..ret_row_size-1
-               for j in 0..ret_col_size-1
-                 c = c & (r[i,j] == 0)
+             for i in Range.new(0, ret_row_size-1)
+               for j in Range.new(0, ret_col_size-1)
+                 c = (c and (r[i,j] == 0))
                end
              end
 
-             (ret_row_size == ret_col_size) & (ret_col_size == arg) & c
+             (ret_row_size == ret_col_size) and (ret_col_size == arg) and c
            })
     end
   end
@@ -304,7 +304,7 @@ class Matrix
            slf_row_size = slf.instance_variable_get(:@rows).size
            arg_col_size = arg.instance_variable_get(:@column_size)
 
-           (ret_row_size == slf_row_size) & (ret_col_size == arg_col_size)
+           (ret_row_size == slf_row_size) and (ret_col_size == arg_col_size)
          })
   end
 
@@ -322,7 +322,7 @@ class Matrix
            
            slf_row_size = slf.instance_variable_get(:@rows).size
 
-           (ret_row_size == ret_col_size) & (slf_row_size == ret_col_size)
+           (ret_row_size == ret_col_size) and (slf_row_size == ret_col_size)
          })
   end
 
@@ -344,13 +344,13 @@ class Matrix
 
            c = true
 
-           for i in 0..ret_row_size-1
-             for j in 0..ret_col_size-1
-               c = c & (r[i,j] == slf[i,j] - arg[i,j])
+           for i in Range.new(0, ret_row_size-1)
+             for j in Range.new(0, ret_col_size-1)
+               c = (c and (r[i,j] == slf[i,j] - arg[i,j]))
              end
            end
            
-           (ret_row_size == arg_row_size) & (ret_col_size == arg_col_size) & c
+           (ret_row_size == arg_row_size) and (ret_col_size == arg_col_size) and c
          })
   end
 
@@ -372,13 +372,13 @@ class Matrix
 
            c = true
 
-           for i in 0..ret_row_size-1
-             for j in 0..ret_col_size-1
-               c = c & (r[i,j] == slf[i,j] + arg[i,j])
+           for i in Range.new(0, ret_row_size-1)
+             for j in Range.new(0, ret_col_size-1)
+               c = (c and (r[i,j] == slf[i,j] + arg[i,j]))
              end
            end
            
-           (ret_row_size == arg_row_size) & (ret_col_size == arg_col_size) & c
+           (ret_row_size == arg_row_size) and (ret_col_size == arg_col_size) and c
          })
   end
 
@@ -405,13 +405,13 @@ class Matrix
 
            c = true
 
-           for i in 0..diff_row_size-1
-             for j in 0...diff_col_size-1
-               c = c & (diff[i,j].abs < $error_threshold)
+           for i in Range.new(0, diff_row_size-1)
+             for j in Range.new(0, diff_col_size-1)
+               c = (c and (diff[i,j].abs < $error_threshold))
              end
            end
 
-           (ret_row_size == arg_row_size) & (ret_col_size == arg_col_size) & c
+           (ret_row_size == arg_row_size) and (ret_col_size == arg_col_size) and c
          })
   end
 
@@ -436,14 +436,14 @@ class Matrix
            if not (arg_row_size == slf_row_size and arg_col_size == slf_col_size)
              matrices_eq = false
            else
-             for i in 0..arg_row_size-1
-               for j in 0..arg_col_size-1
-                 matrices_eq = matrices_eq & (arg[i,j] == slf[i,j])
+             for i in Range.new(0, arg_row_size-1)
+               for j in Range.new(0, arg_col_size-1)
+                 matrices_eq = (matrices_eq and (arg[i,j] == slf[i,j]))
                end
              end
            end
 
-           ((r == true) & matrices_eq) | ((r == false) & (not matrices_eq))
+           (r and matrices_eq) or ((not r) and (not matrices_eq))
          })
   end
 
@@ -468,7 +468,7 @@ class Matrix
            
            slf_includes_arg = slf_rows.any? {|x| x.any? {|x2| x2 == r} }
 
-           ((r == nil) & args_out_of_range) | slf_includes_arg
+           ((r == nil) and args_out_of_range) or slf_includes_arg
          })
   end
 
@@ -494,7 +494,7 @@ class Matrix
            ret_row_size = r.instance_variable_get(:@rows).size
            ret_col_size = r.instance_variable_get(:@column_size)
 
-           (slf_row_size == ret_row_size) & (slf_col_size == ret_col_size)
+           (slf_row_size == ret_row_size) and (slf_col_size == ret_col_size)
          })
   end
 
@@ -515,13 +515,13 @@ class Matrix
 
            c = true
 
-           for i in 0..slf_row_size-1 
-             c = c & (r[i] == slf[i, arg]) if r != nil
+           for i in Range.new(0, slf_row_size-1)
+             c = (c and (r[i] == slf[i, arg])) if r != nil
            end
 
            arg_out_of_range = arg >= slf_col_size || arg < -slf_col_size
 
-           ((not blk) & ((r == nil) & arg_out_of_range) | c) | blk
+           ((not blk) and ((r == nil) and arg_out_of_range) or c) or blk
          })
   end
 
@@ -538,11 +538,11 @@ class Matrix
 
            c = true
 
-           for i in 0..r.size-1
-             c = c & (slf.column(i) == r[i])
+           for i in Range.new(0, r.size-1)
+             c = (c and (slf.column(i) == r[i]))
            end
 
-           (r.size == slf_col_size) & c
+           (r.size == slf_col_size) and c
          })
   end
 
@@ -560,7 +560,7 @@ class Matrix
            r_row_size = r.instance_variable_get(:@rows).size
            r_col_size = r.instance_variable_get(:@column_size)
 
-           (r_row_size == slf_row_size) & (r_col_size == slf_col_size)
+           (r_row_size == slf_row_size) and (r_col_size == slf_col_size)
          })
   end
 
@@ -606,14 +606,14 @@ class Matrix
 
            c = true
 
-           for i in 0..slf_row_size-1
-             for j in 0..slf_col_size-1
+           for i in Range.new(0, slf_row_size-1)
+             for j in Range.new(0, slf_col_size-1)
                diff = (slf[i,j] - r[i,j]).abs
-               c = c & (diff < $error_threshold)
+               c = (c and (diff < $error_threshold))
              end
            end
 
-           (slf_row_size == ret_row_size) & (slf_col_size == ret_col_size) & c
+           (slf_row_size == ret_row_size) and (slf_col_size == ret_col_size) and c
          })
   end
 
@@ -633,14 +633,14 @@ class Matrix
 
            c = true
 
-           for i in 0..slf_row_size-1
-             for j in 0..slf_col_size-1
+           for i in Range.new(0, slf_row_size-1)
+             for j in Range.new(0, slf_col_size-1)
                diff = (slf[i,j] - r[i,j]).abs
-               c = c & (diff < $error_threshold)
+               c = (c and (diff < $error_threshold))
              end
            end
 
-           (slf_row_size == ret_row_size) & (slf_col_size == ret_col_size) & c
+           (slf_row_size == ret_row_size) and (slf_col_size == ret_col_size) and c
          })
   end
 
@@ -660,14 +660,14 @@ class Matrix
 
            c = true
 
-           for i in 0..slf_row_size-1
-             for j in 0..slf_col_size-1
+           for i in Range.new(0, slf_row_size-1)
+             for j in Range.new(0, slf_col_size-1)
                diff = (slf[i,j] - r[i,j]).abs
-               c = c & (diff < $error_threshold)
+               c = (c and (diff < $error_threshold))
              end
            end
 
-           (slf_row_size == ret_row_size) & (slf_col_size == ret_col_size) & c
+           (slf_row_size == ret_row_size) and (slf_col_size == ret_col_size) and c
          })
   end
 
@@ -684,7 +684,7 @@ class Matrix
 
            # this post condition is pretty much the method definition
 
-           ((r == true) & ((slf_row_size == 0) & (slf_col_size == 0))) | ((r == false) & (not ((slf_row_size == 0) & (slf_col_size == 0))))
+           (r and ((slf_row_size == 0) and (slf_col_size == 0))) or ((not r) and (not ((slf_row_size == 0) and (slf_col_size == 0))))
          })
   end
 
@@ -711,7 +711,7 @@ class Matrix
            r_row_size = r.instance_variable_get(:@rows).size
            r_col_size = r.instance_variable_get(:@column_size)
 
-           (r_row_size == slf_row_size) & (r_col_size == slf_col_size)
+           (r_row_size == slf_row_size) and (r_col_size == slf_col_size)
          })
   end
 
@@ -766,7 +766,7 @@ class Matrix
 
            c = ret_elements.all? {|x| slf_elements.include?(x)}
 
-           (ret_row_size <= slf_row_size) & (ret_col_size <= slf_col_size) & c
+           (ret_row_size <= slf_row_size) and (ret_col_size <= slf_col_size) and c
          })
   end
   
@@ -778,7 +778,7 @@ class Matrix
     ret (RDL.flat {|r|
            slf = $matrix_rank_slf
            slf_row_size = slf.instance_variable_get(:@rows).size
-           (r >= 0) & (r <= slf_row_size)
+           (r >= 0) and (r <= slf_row_size)
          })
   end
 
@@ -796,7 +796,7 @@ class Matrix
            r_row_size = r.instance_variable_get(:@rows).size
            r_col_size = r.instance_variable_get(:@column_size)
 
-           (r_row_size == slf_row_size) & (r_col_size == slf_col_size)
+           (r_row_size == slf_row_size) and (r_col_size == slf_col_size)
          })    
   end
 
@@ -809,7 +809,7 @@ class Matrix
            slf = $matrix_real_q_slf
            all_are_real = slf.all? {|x| x.real?}
 
-           (r == true & all_are_real) | (r == false & (not all_are_real))
+           (r and all_are_real) or ((not r) and (not all_are_real))
          })
   end
 
@@ -830,13 +830,13 @@ class Matrix
 
            c = true
 
-           for i in 0..slf_col_size-1 
-             c = c & (r[i] == slf[arg, i]) if r != nil
+           for i in Range.new(0, slf_col_size-1)
+             c = (c and (r[i] == slf[arg, i])) if r != nil
            end
 
            arg_out_of_range = arg >= slf_row_size || arg < -slf_row_size
 
-           ((not blk) & ((r == nil) & arg_out_of_range) | c) | blk
+           ((not blk) and ((r == nil) and arg_out_of_range) or c) or blk
          })
   end
 
@@ -848,7 +848,7 @@ class Matrix
     ret (RDL.flat {|r|
            slf = $matrix_regular_q_slf
 
-           ((r == true) & (not (slf.singular?))) | ((r == false) & (slf.singular?))
+           (r and (not (slf.singular?))) or ((not r) and (slf.singular?))
          })
   end
 
@@ -871,11 +871,11 @@ class Matrix
 
            c = true
 
-           for i in 0..r.size-1
-             c = c & (slf.row(i) == r[i])
+           for i in Range.new(0, r.size-1)
+             c = (c and (slf.row(i) == r[i]))
            end
 
-           (r.size == slf_row_size) & c
+           (r.size == slf_row_size) and c
          })
   end
 
@@ -887,7 +887,7 @@ class Matrix
     ret (RDL.flat {|r|
            slf = $matrix_singular_q_slf
            
-           ((r == true) & (slf.determinant == 0)) | ((r == false) & (slf.determinant != 0)) 
+           (r and (slf.determinant == 0)) or ((not r) and (slf.determinant != 0)) 
          })
   end
 
@@ -902,7 +902,7 @@ class Matrix
            slf_row_size = slf.instance_variable_get(:@rows).size
            slf_col_size = slf.instance_variable_get(:@column_size)  
 
-           ((r == true) & (slf_row_size == slf_col_size)) | ((r == false) & (slf_row_size != slf_col_size)) 
+           (r and (slf_row_size == slf_col_size)) or ((not r) and (slf_row_size != slf_col_size)) 
          })
   end
 
@@ -939,8 +939,8 @@ class Matrix
 
            r2 = 0
 
-           for i in 0..slf_row_size-1
-             for j in 0..slf_col_size-1
+           for i in Range.new(0, slf_row_size-1)
+             for j in Range.new(0, slf_col_size-1)
                r2 += slf[i,j] if i == j
              end
            end
@@ -965,13 +965,13 @@ class Matrix
 
            c = true
 
-           for i in 0..slf_row_size-1
-             for j in 0..slf_col_size-1
-               c = c & (slf[i,j] == r[j, i])
+           for i in Range.new(0, slf_row_size-1)
+             for j in Range.new(0, slf_col_size-1)
+               c = (c and (slf[i,j] == r[j, i]))
              end
            end
 
-           (slf_row_size == ret_col_size) & (slf_col_size == ret_row_size) & c
+           (slf_row_size == ret_col_size) and (slf_col_size == ret_row_size) and c
          })
   end
 
