@@ -53,6 +53,19 @@ module RDL
     def to_s; "#<FlatCtc:#{@str}>" end
   end
 
+  class AndCtc < Contract
+    def initialize(*subs)
+      @subs = subs.map { |v| RDL.convert v }
+    end
+    def apply(v)
+      @subs.reduce(v) { |a, c| c.apply a }
+    end
+    def check(v)
+      @subs.all? { |c| c.check v }
+    end
+    def to_s; "#<AndCtc:#{@subs}" end
+  end
+
   def self.flat(&b)
     FlatCtc.new &b
   end
@@ -82,9 +95,7 @@ module RDL
   end
 
   def self.and(*cs)
-    cs = cs.map { |c| RDL.convert c }
-    cs.each { |c| raise "Expected flat contract, got #{c}" unless c.is_a? FlatCtc}
-    flat { |x| cs.all? { |c| c.check x } }
+    AndCtc.new *cs
   end
 
   def self.implies(*cs)
