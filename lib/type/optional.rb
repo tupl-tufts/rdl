@@ -2,7 +2,7 @@ require_relative './type'
 
 module RDL::Type
   class OptionalType < Type
-    attr_accessor :type
+    attr_reader :type
 
     @@cache = {}
 
