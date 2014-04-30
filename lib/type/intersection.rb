@@ -37,6 +37,7 @@ module RDL::Type
 
     def initialize(types)
       @types = types
+      super
     end
 
     def to_s  # :nodoc:
