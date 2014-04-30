@@ -41,9 +41,8 @@ module RDL::Type
     end
 
     def hash  # :nodoc:
-      h = 37 + @ret.hash
-      @args.each { |arg| h = h*31 + arg.hash }
-      h = h*31 + @block.hash if @block
+      h = (37 + @ret.hash) * 41 + @args.hash
+      h = h * 31 + @block.hash if @block
       return h
     end
   end

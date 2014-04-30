@@ -13,7 +13,7 @@ module RDL::Type
     end
 
     def to_s  # :nodoc:
-      "[ " + @methods.to_a.map { |k,v| "#{k}: #{v}" }.join(", ") + " ]"
+      "[ " + @methods.to_a.map { |k,v| "#{k}: #{v}" }.sort.join(", ") + " ]"
     end
 
     def ==(other)  # :nodoc:
