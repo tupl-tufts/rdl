@@ -63,7 +63,23 @@ module RDL
     def check(v)
       @subs.all? { |c| c.check v }
     end
-    def to_s; "#<AndCtc:#{@subs}" end
+    def to_s; "#<AndCtc:#{@subs}>" end
+  end
+
+  class ImpliesCtc < Contract
+    def initialize(lhs, rhs)
+      @lhs = RDL.convert lhs
+      raise "Expected flat contract, got #{@lhs}" unless @lhs.is_a? FlatCtc    
+      @rhs = RDL.convert rhs
+    end
+    def apply(v)
+      return v unless @lhs.check v
+      @rhs.apply v
+    end
+    def check(v)
+      not (@lhs.check v) or (@rhs.check v)
+    end
+    def to_s; "#<ImpliesCtc:#{@lhs}=>#{@rhs}>" end
   end
 
   def self.flat(&b)
@@ -98,15 +114,8 @@ module RDL
     AndCtc.new *cs
   end
 
-  def self.implies(*cs)
-    if cs.size < 2
-      raise ArgumentError, 'argument size must not < 2'
-    end
-
-    lhs = cs[0]
-    rhs = cs[1..-1]
-
-    RDL.or(RDL.not(lhs), rhs)
+  def self.implies(lhs, rhs)
+    ImpliesCtc.new lhs, rhs
   end
 
   module Gensym
