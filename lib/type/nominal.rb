@@ -31,7 +31,7 @@ module RDL::Type
     # Return +true+ if +other+ is a NominalType with the same +klass+ as
     # +self.
     def ==(other)
-      return other.instance_of? NominalType && other.klass == @klass
+      return (other.instance_of? NominalType) && (other.klass == @klass)
     end
 
     def hash # :nodoc:

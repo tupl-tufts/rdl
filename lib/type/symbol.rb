@@ -29,7 +29,7 @@ module RDL::Type
     end
 
     def ==(other) # :nodoc:
-      return other.instance_of? SymbolType && other.symbol == @symbol
+      return (other.instance_of? SymbolType) && (other.symbol == @symbol)
     end
 
     def hash # :nodoc:

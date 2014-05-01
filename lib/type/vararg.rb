@@ -29,7 +29,7 @@ module RDL::Type
     end
 
     def ==(other) # :nodoc:
-      return other.instance_of? VarargType && other.type == @type
+      return (other.instance_of? VarargType) && (other.type == @type)
     end
 
     def hash # :nodoc:

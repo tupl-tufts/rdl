@@ -1,9 +1,18 @@
-require 'singleton'
 require_relative './type'
 
 module RDL::Type
   class TopType < Type
-    include Singleton
+
+    @@cache = nil
+
+    class << self
+      alias :__new__ :new
+    end
+
+    def self.new
+      @@cache = TopType.__new__ unless @@cache
+      return @@cache
+    end
 
     def initialize
       super

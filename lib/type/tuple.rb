@@ -29,7 +29,7 @@ module RDL::Type
     end
 
     def ==(other)  # :nodoc:
-      return other.instance_of? TupleType && other.types == @types
+      return (other.instance_of? TupleType) && (other.types == @types)
     end
 
     def hash  # :nodoc:

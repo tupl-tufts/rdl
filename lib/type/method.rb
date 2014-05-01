@@ -34,10 +34,10 @@ module RDL::Type
 
     # Return +true+ if +other+ is the same type
     def ==(other)
-      return other.instance_of? MethodType &&
-        other.args == args &&
-        other.block == block &&
-        other.ret == ret
+      return (other.instance_of? MethodType) &&
+        (other.args == args) &&
+        (other.block == block) &&
+        (other.ret == ret)
     end
 
     def hash  # :nodoc:

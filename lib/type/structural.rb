@@ -17,7 +17,7 @@ module RDL::Type
     end
 
     def ==(other)  # :nodoc:
-      return other.instance_of? StructuralType && other.methods == @methods
+      return (other.instance_of? StructuralType) && (other.methods == @methods)
     end
 
     def hash  # :nodoc:

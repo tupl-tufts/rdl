@@ -42,7 +42,6 @@ token T_IVAR T_CVAR T_GVAR
 token T_CONST_ID
 token T_TYPE_ID
 token T_SYMBOL
-# token T_METHOD_NAME
 token T_LOCAL_ID T_TICKED_ID T_SUFFIXED_ID
 token T_DOUBLE_HASH
 token K_NIL
@@ -50,55 +49,17 @@ token K_NIL
 rule
 
   entry:
-      e_method { result = val[0] }
-    | e_field { result = val[0] }
-    | e_annotation { result = val[0] }
-    | e_type { result = val[0] }
-
-
-  field_sig:
-      T_IVAR T_COLON type_expr {
-        result = handle_var(:ivar, val[0], val[2]) }
-    | T_CVAR T_COLON type_expr {
-        result = handle_var(:cvar, val[0], val[2]) }
-    | T_GVAR T_COLON type_expr {
-        result = handle_var(:gvar, val[0], val[2]) }
-
-/* entry points, presumably for non-IF annotations */
-
-/* NOTE:  none of these actually register the types -- that has to be
-   done at a higher level (where the use for the signature will be known) */
-
-  e_method:
       method_annotation_list T_EOF { result = val[0] }
-
-  e_field:
-      field_annotation_list T_EOF { result = val[0] }
-
-  e_annotation:
-      T_DOUBLE_HASH type_expr T_EOF { result = val[1] }
-
-  e_type:
-      K_TYPE T_TYPE_NAME T_EQUAL type_expr T_EOF { result = wrap_etype(val[1], val[3])  }
 
   method_start:
       T_BEGIN_LINE { result = nil }
     | { result = nil }
 
   method_annotation_list:
-      method_start const_method_type { result = [val[1]] }
-    | method_start const_method_type method_annotation_list {
-        result = [val[1]] + val[2]
+      const_method_type { result = [val[0]] }
+    | const_method_type method_annotation_list {
+        result = [val[0]] + val[1]
       }
-
-  field_start:
-      T_BEGIN_LINE { result = nil }
-    | { result = nil }
-
-  field_annotation_list:
-      field_start field_sig { result = [val[1]] }
-    | field_start field_sig field_annotation_list { result = [val[1]] + val[2] }
-
 
   method_type:
       method_name T_LESS type_id_list T_GREATER T_COLON method_sig

@@ -49,10 +49,6 @@ rule
 # ####################
 
   {SPACE_RE}+                          # nothing
-  #{SPACE_RE}*\n{SPACE_RE}*\#\#\%      # nothing
-  ##\%                                 { [:T_BEGIN_LINE, text] }
-  #(?:[^\#\n][^\n]*)?                  # nothing
-  \n{SPACE_RE}*\=begin                 { @state = :COMMENT }
 
 # keywords
   {CLASS_RE}                                { [:K_CLASS, text] }
@@ -119,12 +115,6 @@ rule
   $                                   { @state = :END; [:T_EOF, ""] }
   :END $ { }
 
-
-# ####################
-# comments
-# ####################
-  :COMMENT  {SPACE_RE}*\=end[^\n]*\n         { state = nil }
-  :COMMENT  [^\n]*\n                         # nothing
 inner
 
   # def scan_str(str)
