@@ -58,23 +58,23 @@ class TypeTest < Test::Unit::TestCase
     ta = NominalType.new :A
     tb = NominalType.new :B
     tc = NominalType.new :C
-    tu1 = c.new ta, tb
-    assert_equal tu1.types.length, 2
-    tu2 = c.new tb, ta
-    assert_same tu1, tu2
-    tu3 = c.new ttop, ttop
-    assert_same tu3, ttop
-    tu4 = c.new ttop, tnil, ttop, tnil
-    assert_same tu4, ttop
-    tu5 = c.new tnil, tnil
-    assert_same tu5, tnil
-    tu6 = c.new ta, tb, tc
-    assert_equal tu6.types.length, 3
-    tu7 = c.new ta, (c.new tb, tc)
-    assert_same tu6, tu7
-    tu8 = c.new (c.new tc, tb), (c.new ta)
-    assert_same tu6, tu8
-    assert_not_equal tu1, tnil
+    t1 = c.new ta, tb
+    assert_equal t1.types.length, 2
+    t2 = c.new tb, ta
+    assert_same t1, t2
+    t3 = c.new ttop, ttop
+    assert_same t3, ttop
+    t4 = c.new ttop, tnil, ttop, tnil
+    assert_same t4, ttop
+    t5 = c.new tnil, tnil
+    assert_same t5, tnil
+    t6 = c.new ta, tb, tc
+    assert_equal t6.types.length, 3
+    t7 = c.new ta, (c.new tb, tc)
+    assert_same t6, t7
+    t8 = c.new (c.new tc, tb), (c.new ta)
+    assert_same t6, t8
+    assert_not_equal t1, tnil
   end
 
   def test_union_intersection
@@ -88,13 +88,49 @@ class TypeTest < Test::Unit::TestCase
     ta = NominalType.new :A
     tb = NominalType.new :B
     tc = NominalType.new :C
-    tt1 = TupleType.new ta, tb
-    assert_equal tt1.types, [ta, tb]
-    tt2 = TupleType.new ta, ta
-    assert_equal tt2.types, [ta, ta]
-    tt3 = TupleType.new tnil, ttop, tb, tb, ta
-    assert_equal tt3.types, [tnil, ttop, tb, tb, ta]
-    assert_not_equal tt1, tnil
+    t1 = TupleType.new ta, tb
+    assert_equal t1.types, [ta, tb]
+    t2 = TupleType.new ta, ta
+    assert_equal t2.types, [ta, ta]
+    t3 = TupleType.new tnil, ttop, tb, tb, ta
+    assert_equal t3.types, [tnil, ttop, tb, tb, ta]
+    assert_not_equal t1, tnil
+  end
+
+  def test_optional
+    tnil = NilType.new
+    ta = NominalType.new :A
+    t1 = OptionalType.new tnil
+    assert_equal t1.type, tnil
+    t2 = OptionalType.new tnil
+    assert_same t1, t2
+    t3 = OptionalType.new ta
+    assert_not_equal t1, t3
+  end
+
+  def test_vararg
+    tnil = NilType.new
+    ta = NominalType.new :A
+    t1 = VarargType.new tnil
+    assert_equal t1.type, tnil
+    t2 = VarargType.new tnil
+    assert_same t1, t2
+    t3 = VarargType.new ta
+    assert_not_equal t1, t3
+  end
+
+  def test_method
+    tnil = NilType.new
+    ta = NominalType.new :A
+    tb = NominalType.new :B
+    tc = NominalType.new :C
+    t1 = MethodType.new [ta, tb, tc], nil, tnil
+    assert_equal t1.args, [ta, tb, tc]
+    assert_nil t1.block
+    assert_equal t1.ret, tnil
+    t2 = MethodType.new tnil, t1, tnil
+    assert_equal t2.block, t1
+    assert_raise(RuntimeError) { MethodType.new tnil, tnil, tnil }
   end
 
 end

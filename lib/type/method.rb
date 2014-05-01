@@ -17,9 +17,10 @@ module RDL::Type
     # [+ret+] The type that the procedure returns.
     def initialize(args, block, ret)
       @args = args
+      raise "block must be MethodType" unless (not block) or (block.instance_of? MethodType)
       @block = block
       @ret = ret
-      super
+      super()
     end
 
     def to_s  # :nodoc:

@@ -21,7 +21,7 @@ module RDL::Type
 
     def initialize(type)
       @type = type
-      super
+      super()
     end
         
     def to_s

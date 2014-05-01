@@ -1,6 +1,6 @@
 require_relative './type'
 
-module NamedType
+module RDL::Type::NamedType
   def self.included(base)
     s = <<END
       attr_reader :name
