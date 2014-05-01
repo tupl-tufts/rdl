@@ -23,6 +23,18 @@ class TypeTest < Test::Unit::TestCase
     assert_same ta, ta2
     assert_same ta, ta3
     assert_not_equal ta, tb
+    assert_equal ta.klass, :A
+  end
+
+  def test_symbol
+    ta = SymbolType.new :A
+    ta2 = SymbolType.new :A
+    ta3 = SymbolType.new "A"
+    tb = SymbolType.new :B
+    assert_same ta, ta2
+    assert_same ta, ta3
+    assert_not_equal ta, tb
+    assert_equal ta.sym, :A
   end
 
   def u_or_i(c)

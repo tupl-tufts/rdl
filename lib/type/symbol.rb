@@ -2,7 +2,7 @@ require_relative './type'
 
 module RDL::Type
   class SymbolType < Type
-    attr_reader :symbol
+    attr_reader :sym
 
     @@cache = {}
 
@@ -10,30 +10,31 @@ module RDL::Type
       alias :__new__ :new
     end
 
-    def self.new(symbol)
-      t = @@cache[symbol]
+    def self.new(sym)
+      sym = sym.to_sym
+      t = @@cache[sym]
       if not t
-        t = SymbolType.__new__ symbol
-        @@cache[symbol] = t
+        t = SymbolType.__new__ sym
+        @@cache[sym] = t
       end
       return t
     end
 
-    def initialize(symbol)
-      @symbol = symbol
-      super
+    def initialize(sym)
+      @sym = sym
+      super()
     end
 
     def to_s # :nodoc:
-      return ":#{@symbol}"
+      return ":#{@sym}"
     end
 
     def ==(other) # :nodoc:
-      return (other.instance_of? SymbolType) && (other.symbol == @symbol)
+      return (other.instance_of? SymbolType) && (other.sym == @sym)
     end
 
     def hash # :nodoc:
-      return @symbol.hash
+      return @sym.hash
     end
   end
 end
