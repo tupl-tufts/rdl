@@ -23,7 +23,7 @@ class TypeTest < Test::Unit::TestCase
     assert_same ta, ta2
     assert_same ta, ta3
     assert_not_equal ta, tb
-    assert_equal ta.klass, :A
+    assert_equal ta.name, :A
   end
 
   def test_symbol
@@ -31,10 +31,25 @@ class TypeTest < Test::Unit::TestCase
     ta2 = SymbolType.new :A
     ta3 = SymbolType.new "A"
     tb = SymbolType.new :B
+    tan = NominalType.new :A
     assert_same ta, ta2
     assert_same ta, ta3
     assert_not_equal ta, tb
-    assert_equal ta.sym, :A
+    assert_equal ta.name, :A
+    assert_not_equal ta, tan
+  end
+
+  def test_var
+    ta = VarType.new :A
+    ta2 = VarType.new :A
+    ta3 = VarType.new "A"
+    tb = VarType.new :B
+    tan = NominalType.new :A
+    assert_same ta, ta2
+    assert_same ta, ta3
+    assert_not_equal ta, tb
+    assert_equal ta.name, :A
+    assert_not_equal ta, tan
   end
 
   def u_or_i(c)

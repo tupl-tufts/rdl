@@ -11,6 +11,7 @@ module RDL::Type
     end
 
     def self.new(name)
+      name = name.to_sym
       t = @@cache[name]
       if not t
         t = VarType.__new__ name
@@ -21,7 +22,7 @@ module RDL::Type
 
     def initialize(name)
       @name = name
-      super
+      super()
     end
 
     def to_s # :nodoc:
@@ -29,7 +30,7 @@ module RDL::Type
     end
 
     def ==(other) # :nodoc:
-      return (other.instance_of? VarType) && (other.symbol == @name)
+      return (other.instance_of? VarType) && (other.name == @name)
     end
 
     def hash # :nodoc:

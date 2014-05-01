@@ -2,7 +2,7 @@ require_relative './type'
 
 module RDL::Type
   class NominalType < Type
-    attr_reader :klass
+    attr_reader :name
 
     @@cache = {}
 
@@ -10,33 +10,30 @@ module RDL::Type
       alias :__new__ :new
     end
 
-    # Create a new nominal type for +klass+, or return existing 
-    def self.new(klass)
-      klass = klass.to_sym
-      t = @@cache[klass]
+    def self.new(name)
+      name = name.to_sym
+      t = @@cache[name]
       if not t
-        t = NominalType.__new__ klass
-        @@cache[klass] = t
+        t = NominalType.__new__ name
+        @@cache[name] = t
       end
       return t
     end
 
-    def initialize(klass)
-      @klass = klass
+    def initialize(name)
+      @name = name
     end
 
     def to_s # :nodoc:
-      return @klass.to_s
+      return @name.to_s
     end
 
-    # Return +true+ if +other+ is a NominalType with the same +klass+ as
-    # +self.
     def ==(other)
-      return (other.instance_of? NominalType) && (other.klass == @klass)
+      return (other.instance_of? NominalType) && (other.name == @name)
     end
 
     def hash # :nodoc:
-      return @klass.hash
+      return @name.hash
     end
   end
 end
