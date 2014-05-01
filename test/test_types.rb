@@ -133,4 +133,30 @@ class TypeTest < Test::Unit::TestCase
     assert_raise(RuntimeError) { MethodType.new tnil, tnil, tnil }
   end
 
+  def test_generic
+    thash = NominalType.new :Hash
+    ta = NominalType.new :A
+    tb = NominalType.new :B
+    t1 = GenericType.new thash, ta, tb
+    assert_equal t1.base, thash
+    assert_equal t1.params, [ta, tb]
+    t2 = GenericType.new thash, ta, tb
+    assert_same t1, t2
+    t3 = GenericType.new thash, tb, ta
+    assert_not_equal t1, t3
+  end
+
+  def test_structural
+    tnil = NilType.new
+    ta = NominalType.new :A
+    tb = NominalType.new :B
+    tc = NominalType.new :C
+    tm1 = MethodType.new [ta, tb, tc], nil, tnil
+    tm2 = MethodType.new [ta], tm1, tb
+    t1 = StructuralType.new :m1 => tm1, :m2 => tm2
+    assert_equal t1.methods[:m1], tm1
+    assert_equal t1.methods[:m2], tm2
+    t2 = StructuralType.new :m1 => tm1, :m2 => tm2
+    assert_equal t1, t2
+  end
 end

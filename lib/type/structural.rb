@@ -9,7 +9,7 @@ module RDL::Type
     # [+methods+] Map from method names as symbols to their types.
     def initialize(methods)
       @methods = methods
-      super
+      super()
     end
 
     def to_s  # :nodoc:

@@ -13,11 +13,11 @@ module RDL::Type
       alias :__new__ :new
     end
 
-    def self.new(base, params)
-      t = @@cache[base, params]
+    def self.new(base, *params)
+      t = @@cache[[base, params]]
       if not t
         t = GenericType.__new__(base, params)
-        @@cache[base, params] = t
+        @@cache[[base, params]] = t
       end
       return t
     end
@@ -26,7 +26,7 @@ module RDL::Type
       raise "base must be NominalType" unless base.instance_of? NominalType
       @base = base
       @params = params
-      super
+      super()
     end
 
     def to_s
@@ -34,7 +34,7 @@ module RDL::Type
     end
 
     def ==(other) # :nodoc:
-      return other.instance_of? GenericType && other.base == @base && other.params == @params
+      return (other.instance_of? GenericType) && (other.base == @base) && (other.params == @params)
     end
 
     def hash
