@@ -10,7 +10,7 @@ module RDL::Type
       alias :__new__ :new
     end
 
-    def self.new(types)
+    def self.new(*types)
       ts = []
       types.each { |t|
         if t.instance_of? NilType
@@ -29,7 +29,7 @@ module RDL::Type
 
       t = @@cache[ts]
       if not t
-        t = UnionType.__new__(ts)
+        t = IntersectionType.__new__(ts)
         @@cache[ts] = t
       end
       return t
@@ -37,7 +37,7 @@ module RDL::Type
 
     def initialize(types)
       @types = types
-      super
+      super()
     end
 
     def to_s  # :nodoc:

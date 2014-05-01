@@ -12,6 +12,7 @@ module RDL::Type
 
     # Create a new nominal type for +klass+, or return existing 
     def self.new(klass)
+      klass = klass.to_sym
       t = @@cache[klass]
       if not t
         t = NominalType.__new__ klass
@@ -35,7 +36,7 @@ module RDL::Type
     end
 
     def hash # :nodoc:
-      return @klass.name.hash
+      return @klass.hash
     end
   end
 end
