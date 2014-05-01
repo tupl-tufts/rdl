@@ -1,0 +1,368 @@
+# ######################################################################
+#
+# DRuby annotation language parser
+# Adapted directly from DRuby source file typeAnnotationParser.mly
+# Version of GitHub DRuby repo commit 0cda0264851bcdf6b301c3d7f564e9a3ee220e435
+#
+# ######################################################################
+
+class Parser
+  prechigh
+    left T_COMMA
+    right T_RARROW
+    left K_OR
+  preclow
+
+  start entry
+
+token T_EOF
+token K_CLASS K_METACLASS K_MODULE K_INTERFACE K_TYPE K_TYPEVAR
+token K_ALIAS K_REQUIRE K_END
+token K_OR K_SELF K_TUPLE
+token T_BOTTOM T_TOP
+token T_BEGIN_LINE T_SEMICOLON
+token T_COLON T_DOUBLE_COLON T_DOT
+token T_STAR T_QUESTION
+token T_CARROT T_BANG
+token T_EQUAL T_ASSOC
+
+token T_RARROW
+token T_LPAREN T_RPAREN
+token T_LESS T_GREATER T_COMMA
+token T_LBRACKET T_RBRACKET
+token T_LBRACE T_RBRACE
+
+token T_TRUE T_BOOL T_FALSE
+token T_TYPE_NAME
+
+token T_SUBTYPE
+
+token T_STRING
+token T_IVAR T_CVAR T_GVAR
+token T_CONST_ID
+token T_TYPE_ID
+token T_SYMBOL
+# token T_METHOD_NAME
+token T_LOCAL_ID T_TICKED_ID T_SUFFIXED_ID
+token T_DOUBLE_HASH
+token K_NIL
+
+rule
+
+  entry:
+      e_method { result = val[0] }
+    | e_field { result = val[0] }
+    | e_annotation { result = val[0] }
+    | e_type { result = val[0] }
+
+
+  field_sig:
+      T_IVAR T_COLON type_expr {
+        result = handle_var(:ivar, val[0], val[2]) }
+    | T_CVAR T_COLON type_expr {
+        result = handle_var(:cvar, val[0], val[2]) }
+    | T_GVAR T_COLON type_expr {
+        result = handle_var(:gvar, val[0], val[2]) }
+
+/* entry points, presumably for non-IF annotations */
+
+/* NOTE:  none of these actually register the types -- that has to be
+   done at a higher level (where the use for the signature will be known) */
+
+  e_method:
+      method_annotation_list T_EOF { result = val[0] }
+
+  e_field:
+      field_annotation_list T_EOF { result = val[0] }
+
+  e_annotation:
+      T_DOUBLE_HASH type_expr T_EOF { result = val[1] }
+
+  e_type:
+      K_TYPE T_TYPE_NAME T_EQUAL type_expr T_EOF { result = wrap_etype(val[1], val[3])  }
+
+  method_start:
+      T_BEGIN_LINE { result = nil }
+    | { result = nil }
+
+  method_annotation_list:
+      method_start const_method_type { result = [val[1]] }
+    | method_start const_method_type method_annotation_list {
+        result = [val[1]] + val[2]
+      }
+
+  field_start:
+      T_BEGIN_LINE { result = nil }
+    | { result = nil }
+
+  field_annotation_list:
+      field_start field_sig { result = [val[1]] }
+    | field_start field_sig field_annotation_list { result = [val[1]] + val[2] }
+
+
+  method_type:
+      method_name T_LESS type_id_list T_GREATER T_COLON method_sig
+      { result = handle_mtype(val[0], val[2], val[6]) }
+    | method_name T_COLON method_sig 
+      { result = handle_mtype(val[0], nil, val[2]) }
+
+
+  const_method_type:
+      method_name T_LESS type_id_list T_GREATER T_COLON method_sig
+      { result = handle_mtype(val[0], val[2], val[5]) }
+    | method_name T_COLON method_sig 
+      { result = handle_mtype(val[0], nil, val[2]) }
+    | T_CONST_ID T_LESS type_id_list T_GREATER T_COLON method_sig
+      { result = handle_mtype(val[0], val[2], val[6]) }
+    | T_CONST_ID T_COLON method_sig
+      { result = handle_mtype(val[0], nil, val[2]) }
+    | K_SELF T_DOT T_CONST_ID T_COLON method_sig {
+    	result = handle_mtype(ClassMethodIdentifier.new(val[2]), nil, val[4]) 
+      }
+    | K_SELF T_DOT T_CONST_ID T_LESS type_id_list T_GREATER T_COLON method_sig
+      { result = handle_mtype(ClassMethodIdentifier.new(val[2]), val[4], val[7]) }
+    | method_sig {
+       result = handle_mtype(MethodIdentifier.new("__rtc_next_method"), nil, val[0])
+      }
+
+  relative_method_name:
+      T_STRING         
+      { result = val[0] }
+    | T_LOCAL_ID
+      { result = val[0] }
+    | T_SUFFIXED_ID    
+      { result = val[0] }
+
+  method_name:
+      relative_method_name { result = MethodIdentifier.new(val[0]) }
+    | K_SELF T_DOT relative_method_name { result = ClassMethodIdentifier.new(val[2]) }
+
+  method_sig:
+      T_LPAREN T_RPAREN block T_RARROW type_expr {
+        result = construct_msig([], val[2], val[4])
+      }
+    | T_LPAREN method_arg_list T_RPAREN block T_RARROW /*named_*/ type_expr {
+        result = construct_msig(val[1], val[3], val[5])
+      }
+    | T_LPAREN method_arg_list T_RPAREN block {
+    	result = construct_msig(val[1], val[3], Rtc::Types::TopType.instance)
+      }
+    | T_LPAREN T_RPAREN block {
+        result = construct_msig([], val[2], Rtc::Types::TopType.instance)
+      }
+
+  # kinda ridiculous
+  method_arg_list:
+    method_arg T_COMMA method_arg_list {
+      result = val[2].unshift(val[0])
+    }
+    | method_arg {
+      result = [val[0]]
+    }
+  method_arg:
+    T_QUESTION type_expr {
+        result = add_opt_mthd_arg(val[1])
+      }
+    | T_STAR type_expr {
+        result = add_var_mthd_arg(val[1])
+      }
+    | type_expr {
+        result = val[0]
+      }
+
+
+  block:
+      { result = nil }
+    | T_LBRACE method_sig T_RBRACE { result = handle_btype(val[1]) }
+
+  type_id_list:
+      type_var { result = [val[0]] }
+    | type_var T_COMMA type_id_list { result = [val[0]] + val[2] }
+
+  simple_type_var:
+      T_LOCAL_ID { result = handle_type_param(:id, val[0]) }  
+    | K_SELF { result = handle_type_param(:self, val[0]) }
+
+  type_var:
+      simple_type_var { result = val[0] }
+    | T_CARROT simple_type_var {
+        result = handle_type_param(:varargs, val[1]) }
+
+   
+   type_ident_list:
+   	  T_CONST_ID { result = [val[0]] } 
+   	| T_CONST_ID T_DOUBLE_COLON type_ident_list { 
+      result = [val[0]] + val[2]
+      } 
+   
+   type_ident:
+   	  T_DOUBLE_COLON type_ident_list {
+   	  	result = {
+   	  		:type => :absolute,
+   	  		:name_list => val[1]
+   	  	}
+   	  }
+   	| type_ident_list {
+        result = {
+        	:type => :relative,
+        	:name_list => val[0]
+        }
+   	  }
+
+  type_expr:
+      or_type_list {
+        list = val[0][:or_list]
+        if(list.length > 1)
+          result = handle_type_union(list)
+        else
+          # flatten if there is no union
+          result = list[0]
+        end
+      }
+
+  or_type_list:
+      single_type_expr {
+      # before unions could only be built via this parser rule so we didn't
+      # need to account for nested unions (they were impossible to construct
+      # in the grammar). Now with type abbreviations, it's possible to construct
+      # a nested union as follows:
+      # type %foo = Fixnum or String
+      # type %bar = Float or Proc
+      # type %baz = %foo or %baz
+      # so we need to flatten it as we parse an or expression, so that the above
+      # yields the type Fixnum or String or Float or Proc
+      if is_union_type?(val[0])
+         result = {:or_list => val[0].types.to_a }
+      else
+         result = {:or_list => [val[0]]} 
+      end }
+    | single_type_expr K_OR or_type_list {
+        if is_union_type?(val[0])
+           result = {:or_list => val[0].types.to_a + val[2][:or_list] }
+        else 
+           result = {:or_list => [val[0]] + val[2][:or_list] }
+        end
+      }
+
+  single_type_expr:
+      type_var { result = val[0] }
+    | T_SYMBOL {
+    	result = Rtc::Types::SymbolType.new(eval(val[0]))
+      }
+    | type_ident {
+        result = handle_type_ident(val[0])
+      }
+    | tuple {
+        result = val[0] 
+      } /* tuples are just arrays */
+    | T_TOP { 
+        result = Rtc::Types::TopType.instance
+      }
+    | T_BOTTOM { 
+    	result = Rtc::Types::BottomType.instance
+      }
+    | T_TRUE {
+        result = Rtc::Types::NominalType.of(TrueClass)
+      }
+    | T_FALSE {
+        result = Rtc::Types::NominalType.of(FalseClass)
+      }
+    | T_BOOL {
+        result = Rtc::Types::UnionType.of([
+          Rtc::Types::NominalType.of(FalseClass),
+          Rtc::Types::NominalType.of(TrueClass)
+        ])
+      } 
+    | T_DOT T_QUESTION { 
+        result = Rtc::Types::TopType.instance
+      }
+    | T_LBRACKET field_or_method_list T_RBRACKET {
+        result = handle_structural_type(val[1])
+      }
+    | type_ident T_LESS type_expr_comma_list T_GREATER {
+        nominal = handle_type_ident(val[0])
+        result = Rtc::Types::ParameterizedType.new(nominal, val[2])
+      }
+    | T_LPAREN type_expr_comma_list T_RPAREN T_RARROW single_type_expr { 
+       result = Rtc::Types::ProceduralType.new(nil, val[4], val[1], nil)
+      }
+    | K_NIL {
+    	result = Rtc::Types::NominalType.of(NilClass)
+      }
+    | T_LBRACE hash_member_list T_RBRACE {
+        result = Rtc::Types::HashType.new(val[1])
+      }
+    | T_TYPE_NAME {
+        result = get_type(val[0])
+      }
+
+  hash_member_list:
+     hash_key T_ASSOC hash_type T_COMMA hash_member_list {
+       result = val[4]
+       result[val[0]] = val[2]
+     }
+    | hash_key T_ASSOC hash_type {
+      result = Rtc::NativeHash.new
+      result[val[0]] = val[2]
+     }
+
+  hash_key:
+     T_STRING { result = val[0] }
+   | T_SYMBOL { result = eval(val[0]) }
+
+  hash_type:
+    T_QUESTION type_expr {
+       result = Rtc::Types::OptionalArg.new(val[1])
+    }
+   | type_expr { result = val[0] }
+
+  tuple:
+      K_TUPLE T_LESS type_expr_comma_list T_GREATER {
+        result = Rtc::Types::TupleType.new(val[2])
+      }
+
+  type_expr_comma_list:
+      type_expr { result = [val[0]] } 
+    | type_expr T_COMMA type_expr_comma_list {
+        result = [val[0]] + val[2] }
+
+
+  field_type:
+      T_IVAR T_COLON type_expr {
+        result = handle_var(:ivar, val[0], val[2])
+      }
+
+  field_or_method_nonempty_list:
+      field_type  {
+        result = {:fields => [val[0]], :methods => []}       }
+    | method_type {
+        result = {:fields => [],       :methods => [val[0]]} }
+    | field_type T_COMMA field_or_method_nonempty_list {
+        field_method_hash = val[2]
+        field_method_hash[:fields] += [val[0]]
+        result = field_method_hash
+      }
+    | method_type T_COMMA field_or_method_nonempty_list {
+        field_method_hash = val[2]
+        field_method_hash[:methods] += [val[0]]
+        result = field_method_hash
+      }
+
+  field_or_method_list:
+      { result = {:fields => [], :methods => []} }
+    | field_or_method_nonempty_list { result = val[0] } 
+
+end
+
+---- header ----
+
+require 'annot_lexer.rex'
+require 'types'
+
+module RDL::Type
+
+---- inner ----
+
+---- footer ----
+
+end
