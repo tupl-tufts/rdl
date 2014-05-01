@@ -10,18 +10,18 @@ module RDL::Type
       alias :__new__ :new
     end
 
-    def self.new(types)
-      t = @@cache[ts]
+    def self.new(*types)
+      t = @@cache[types]
       if not t
-        t = TupleType.__new__(ts)
-        @@cache[ts] = t
+        t = TupleType.__new__(types)
+        @@cache[types] = t
       end
       return t
     end
 
     def initialize(types)
       @types = types
-      super
+      super()
     end
 
     def to_s  # :nodoc:

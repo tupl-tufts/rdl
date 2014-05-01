@@ -47,11 +47,27 @@ class TypeTest < Test::Unit::TestCase
     assert_same tu6, tu7
     tu8 = c.new (c.new tc, tb), (c.new ta)
     assert_same tu6, tu8
+    assert_not_equal tu1, tnil
   end
 
   def test_union_intersection
     u_or_i UnionType
     u_or_i IntersectionType
+  end
+
+  def test_tuple
+    tnil = NilType.new
+    ttop = TopType.new
+    ta = NominalType.new :A
+    tb = NominalType.new :B
+    tc = NominalType.new :C
+    tt1 = TupleType.new ta, tb
+    assert_equal tt1.types, [ta, tb]
+    tt2 = TupleType.new ta, ta
+    assert_equal tt2.types, [ta, ta]
+    tt3 = TupleType.new tnil, ttop, tb, tb, ta
+    assert_equal tt3.types, [tnil, ttop, tb, tb, ta]
+    assert_not_equal tt1, tnil
   end
 
 end
