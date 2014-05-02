@@ -18,7 +18,7 @@ require 'racc/parser'
 # Version of GitHub DRuby repo commit 0cda0264851bcdf6b301c3d7f564e9a3ee220e45
 # ######################################################################
 module RDL::Type
-class Parser < Racc::Parser < Racc::Parser
+class Parser < Racc::Parser
   require 'strscan'
 
   class ScanError < StandardError ; end
@@ -65,190 +65,35 @@ class Parser < Racc::Parser < Racc::Parser
       case state
       when nil
         case
-        when (text = ss.scan(/[\t\ ]+/))
-          ;
-
-        when (text = ss.scan(/\n[\t\ ]*\=begin/))
-           @rex_tokens.push action { @state = :COMMENT }
-
-        when (text = ss.scan(/class\ /))
-           @rex_tokens.push action { [:K_CLASS, text] }
-
-        when (text = ss.scan(/metaclass\ /))
-           @rex_tokens.push action { [:K_METACLASS, text]}
-
-        when (text = ss.scan(/require\ /))
-           @rex_tokens.push action { [:K_MODULE, text] }
-
-        when (text = ss.scan(/alias\ /))
-           @rex_tokens.push action { [:K_ALIAS, text] }
-
-        when (text = ss.scan(/require\ /))
-           @rex_tokens.push action { [:K_REQUIRE, text] }
-
-        when (text = ss.scan(/end\ /))
-           @rex_tokens.push action { [:K_END, text] }
-
-        when (text = ss.scan(/type\ /))
-           @rex_tokens.push action { [:K_TYPE, text] }
-
-        when (text = ss.scan(/%none/))
-           @rex_tokens.push action { [:T_BOTTOM, text] }
-
-        when (text = ss.scan(/%any/))
-           @rex_tokens.push action { [:T_TOP, text] }
-
-        when (text = ss.scan(/%false/))
-           @rex_tokens.push action { [:T_FALSE, text] }
-
-        when (text = ss.scan(/%true/))
-           @rex_tokens.push action { [:T_TRUE, text] }
-
-        when (text = ss.scan(/%bool/))
-           @rex_tokens.push action { [:T_BOOL, text] }
-
-        when (text = ss.scan(/%[A-Za-z][A-Za-z_0-9]*'?/))
-           @rex_tokens.push action { [:T_TYPE_NAME, text[1..-1]] }
+        when (text = ss.scan(/\s/))
+           @rex_tokens.push action { }
 
         when (text = ss.scan(/or/))
-           @rex_tokens.push action { [:K_OR, text] }
-
-        when (text = ss.scan(/self/))
-           @rex_tokens.push action { [:K_SELF, text] }
-
-        when (text = ss.scan(/Tuple/))
-           @rex_tokens.push action { [:K_TUPLE, text] }
-
-        when (text = ss.scan(/nil/))
-           @rex_tokens.push action { [:K_NIL, text] }
-
-        when (text = ss.scan(/[a-z_]+\w*\'?/))
-           @rex_tokens.push action { [:T_LOCAL_ID, text] }
-
-        when (text = ss.scan(/[A-Z]+\w*/))
-           @rex_tokens.push action { [:T_CONST_ID, text] }
-
-        when (text = ss.scan(/([A-Za-z_]+\w*|self)\.(\w|\[|\]|=)+[\?\!\=]?/))
-           @rex_tokens.push action { [:T_SCOPED_ID, text] }
-
-        when (text = ss.scan(/[A-Za-z_]+\w*[\?\!\=]/))
-           @rex_tokens.push action { [:T_SUFFIXED_ID, text] }
-
-        when (text = ss.scan(/:[A-Za-z_][A-Za-z_0-9]*/))
-           @rex_tokens.push action { [:T_SYMBOL, text] }
-
-        when (text = ss.scan(/\#\#/))
-           @rex_tokens.push action { [:T_DOUBLE_HASH, text] }
-
-        when (text = ss.scan(/\*/))
-           @rex_tokens.push action { [:T_STAR, text] }
-
-        when (text = ss.scan(/\?/))
-           @rex_tokens.push action { [:T_QUESTION, text] }
-
-        when (text = ss.scan(/\^/))
-           @rex_tokens.push action { [:T_CARROT, text] }
-
-        when (text = ss.scan(/\@FIXME/))
-           @rex_tokens.push action {fail "ERROR at line #{lineno}: " +
-                                        "deprecated @@FIXME in '#{text}', " +
-                                        "use !FIXME"}
-
-
-        when (text = ss.scan(/'[^']*'/))
-           @rex_tokens.push action { [:T_STRING, text.gsub("'", "")] }
+           @rex_tokens.push action { [:OR, text] }
 
         when (text = ss.scan(/=>/))
-           @rex_tokens.push action { [:T_ASSOC, text] }
-
-        when (text = ss.scan(/\<\=/))
-           @rex_tokens.push action { [:T_SUBTYPE, text] }
-
-        when (text = ss.scan(/@[A-Za-z_]+\w*/))
-           @rex_tokens.push action { [:T_IVAR, text] }
-
-        when (text = ss.scan(/@@[A-Za-z_]+\w*/))
-           @rex_tokens.push action { [:T_CVAR, text] }
-
-        when (text = ss.scan(/\$[A-Za-z_]+\w*/))
-           @rex_tokens.push action { [:T_GVAR, text] }
-
-        when (text = ss.scan(/\!/))
-           @rex_tokens.push action { [:T_BANG, text] }
+           @rex_tokens.push action { [:ASSOC, text] }
 
         when (text = ss.scan(/\::/))
-           @rex_tokens.push action { [:T_DOUBLE_COLON, text] }
-
-        when (text = ss.scan(/\:/))
-           @rex_tokens.push action { [:T_COLON, text] }
-
-        when (text = ss.scan(/\./))
-           @rex_tokens.push action { [:T_DOT, text] }
+           @rex_tokens.push action { [:DOUBLE_COLON, text] }
 
         when (text = ss.scan(/->/))
-           @rex_tokens.push action { [:T_RARROW, text] }
+           @rex_tokens.push action { [:RARROW, text] }
 
-        when (text = ss.scan(/\(/))
-           @rex_tokens.push action { [:T_LPAREN, text] }
+        when (text = ss.scan(/\w+/))
+           @rex_tokens.push action { [:ID, text] }
 
-        when (text = ss.scan(/\)/))
-           @rex_tokens.push action { [:T_RPAREN, text] }
+        when (text = ss.scan(/:\w+/))
+           @rex_tokens.push action { [:SYMBOL, text[1..-1] }
 
-        when (text = ss.scan(/\[/))
-           @rex_tokens.push action { [:T_LBRACKET, text] }
+        when (text = ss.scan(/[\?\*]?\w+/))
+           @rex_tokens.push action { [:ARG, text] }
 
-        when (text = ss.scan(/\]/))
-           @rex_tokens.push action { [:T_RBRACKET, text] }
+        when (text = ss.scan(/%\w+/))
+           @rex_tokens.push action { [:NAME, text] }
 
-        when (text = ss.scan(/,/))
-           @rex_tokens.push action { [:T_COMMA, text] }
-
-        when (text = ss.scan(/\{/))
-           @rex_tokens.push action { [:T_LBRACE, text] }
-
-        when (text = ss.scan(/\}/))
-           @rex_tokens.push action { [:T_RBRACE, text] }
-
-        when (text = ss.scan(/</))
-           @rex_tokens.push action { [:T_LESS, text] }
-
-        when (text = ss.scan(/>/))
-           @rex_tokens.push action { [:T_GREATER, text] }
-
-        when (text = ss.scan(/;/))
-           @rex_tokens.push action { [:T_SEMICOLON, text] }
-
-        when (text = ss.scan(/\n/))
-           @rex_tokens.push action { }
-
-        when (text = ss.scan(/\=/))
-           @rex_tokens.push action { [:T_EQUAL, text] }
-
-        when (text = ss.scan(/$/))
-           @rex_tokens.push action { @state = :END; [:T_EOF, ""] }
-
-        else
-          text = ss.string[ss.pos .. -1]
-          raise  ScanError, "can not match: '" + text + "'"
-        end  # if
-
-      when :END
-        case
-        when (text = ss.scan(/$/))
-           @rex_tokens.push action { }
-
-        else
-          text = ss.string[ss.pos .. -1]
-          raise  ScanError, "can not match: '" + text + "'"
-        end  # if
-
-      when :COMMENT
-        case
-        when (text = ss.scan(/[\t\ ]*\=end[^\n]*\n/))
-           @rex_tokens.push action { state = nil }
-
-        when (text = ss.scan(/[^\n]*\n/))
-          ;
+        when (text = ss.scan(/'[^']*'/))
+           @rex_tokens.push action { [:STRING, text.gsub("'", "")] }
 
         else
           text = ss.string[ss.pos .. -1]
@@ -262,5 +107,3 @@ class Parser < Racc::Parser < Racc::Parser
   end  # def scan_evaluate
 
 end # class
-
-end

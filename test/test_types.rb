@@ -1,7 +1,6 @@
 require 'test/unit'
 require_relative '../lib/type/types'
 
-
 class TypeTest < Test::Unit::TestCase
   include RDL::Type
 
