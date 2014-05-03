@@ -44,30 +44,13 @@ rule
     | LBRACE method_type RBRACE { result = val[1] }
 
   type_expr:
-    single_type_expr { result = val[0] }
+    union_type { result = val[0] }
 
-  # type_expr:
-  #     or_type_list {
-  #       list = val[0][:or_list]
-  #       if(list.length > 1)
-  #         result = handle_type_union(list)
-  #       else
-  #         # flatten if there is no union
-  #         result = list[0]
-  #       end
-  #     }
+  union_type:
+    single_type { result = val[0] }
+  | single_type OR union_type { result = RDL::Type::UnionType.new val[0], val[2] }
 
-  # or_type_list:
-  #   | single_type_expr { result = {:or_list => [val[0]]} }
-  #   | single_type_expr K_OR or_type_list {
-  #       if is_union_type?(val[0])
-  #          result = {:or_list => val[0].types.to_a + val[2][:or_list] }
-  #       else 
-  #          result = {:or_list => [val[0]] + val[2][:or_list] }
-  #       end
-  #     }
-
-  single_type_expr:
+  single_type:
       SYMBOL { result = RDL::Type::SymbolType.new(val[0]) }
     | ID {
       if val[0] == 'nil' then

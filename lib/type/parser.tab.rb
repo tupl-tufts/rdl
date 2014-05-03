@@ -14,7 +14,7 @@ module RDL::Type
 
 class Parser < Racc::Parser
 
-module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 97)
+module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 80)
 
 def initialize()
   @tbool = RDL::Type::UnionType.new (RDL::Type::NominalType.new TrueClass), (RDL::Type::NominalType.new FalseClass)
@@ -25,40 +25,42 @@ end
 ##### State transition tables begin ###
 
 racc_action_table = [
-    12,    11,    13,    12,    11,    13,    12,    11,    13,     3,
-     7,     8,    15,     7,     8,    12,    11,    13,    12,    11,
-    13,    16,    20,    14,    22,     3,     4,    25 ]
+    13,    12,    14,    13,    12,    14,    13,    12,    14,    20,
+     7,     8,    16,     7,     8,    13,    12,    14,    13,    12,
+    14,    13,    12,    14,    17,    22,    15,     3,    25,     3,
+     4,    28 ]
 
 racc_action_check = [
-     3,     3,     3,    16,    16,    16,     8,     8,     8,     0,
-     3,     3,     5,    16,    16,    22,    22,    22,     7,     7,
-     7,     6,    15,     4,    19,    20,     1,    23 ]
+     3,     3,     3,    17,    17,    17,    20,    20,    20,    11,
+     3,     3,     5,    17,    17,    25,    25,    25,     8,     8,
+     8,     7,     7,     7,     6,    16,     4,     0,    21,    22,
+     1,    26 ]
 
 racc_action_pointer = [
-    -2,    26,   nil,    -7,    23,     0,    19,    11,    -1,   nil,
-   nil,   nil,   nil,   nil,   nil,     9,    -4,   nil,   nil,    21,
-    14,   nil,     8,    13,   nil,   nil ]
+    16,    30,   nil,    -7,    26,     0,    22,    14,    11,   nil,
+   nil,     5,   nil,   nil,   nil,   nil,    12,    -4,   nil,   nil,
+    -1,    25,    18,   nil,   nil,     8,    17,   nil,   nil ]
 
 racc_action_default = [
-   -15,   -15,    -1,    -3,   -15,   -15,    -4,   -15,   -15,    -8,
-   -11,   -12,   -13,   -14,    26,    -9,    -3,    -6,    -7,   -15,
-   -15,    -5,   -15,   -15,    -2,   -10 ]
+   -17,   -17,    -1,    -3,   -17,   -17,    -4,   -17,   -17,    -8,
+   -11,   -12,   -14,   -15,   -16,    29,    -9,    -3,    -6,    -7,
+   -17,   -17,   -17,    -5,   -13,   -17,   -17,    -2,   -10 ]
 
 racc_goto_table = [
-     2,    17,    18,    19,     5,     1,   nil,   nil,   nil,   nil,
-   nil,   nil,   nil,   nil,   nil,   nil,    24,    21,   nil,   nil,
-    23 ]
+     2,    18,    19,     5,    21,     1,    24,   nil,   nil,   nil,
+   nil,   nil,   nil,   nil,   nil,   nil,   nil,    23,   nil,    27,
+   nil,   nil,    26 ]
 
 racc_goto_check = [
-     2,     5,     5,     4,     3,     1,   nil,   nil,   nil,   nil,
-   nil,   nil,   nil,   nil,   nil,   nil,     5,     3,   nil,   nil,
-     2 ]
+     2,     5,     5,     3,     4,     1,     7,   nil,   nil,   nil,
+   nil,   nil,   nil,   nil,   nil,   nil,   nil,     3,   nil,     5,
+   nil,   nil,     2 ]
 
 racc_goto_pointer = [
-   nil,     5,     0,     1,   -12,    -6,   nil,   nil ]
+   nil,     5,     0,     0,   -12,    -6,   nil,   -14,   nil ]
 
 racc_goto_default = [
-   nil,   nil,   nil,   nil,   nil,     9,     6,    10 ]
+   nil,   nil,   nil,   nil,   nil,     9,     6,    10,    11 ]
 
 racc_reduce_table = [
   0, 0, :racc_error,
@@ -74,12 +76,14 @@ racc_reduce_table = [
   3, 24, :_reduce_10,
   1, 25, :_reduce_11,
   1, 27, :_reduce_12,
-  1, 27, :_reduce_13,
-  1, 27, :_reduce_14 ]
+  3, 27, :_reduce_13,
+  1, 28, :_reduce_14,
+  1, 28, :_reduce_15,
+  1, 28, :_reduce_16 ]
 
-racc_reduce_n = 15
+racc_reduce_n = 17
 
-racc_shift_n = 26
+racc_shift_n = 29
 
 racc_token_table = {
   false => 0,
@@ -151,9 +155,10 @@ Racc_token_to_s_table = [
   "block",
   "type_expr",
   "arg",
-  "single_type_expr" ]
+  "union_type",
+  "single_type" ]
 
-Racc_debug_parser = true
+Racc_debug_parser = false
 
 ##### State transition tables end #####
 
@@ -237,15 +242,29 @@ module_eval(<<'.,.,', 'parser.racc', 46)
   end
 .,.,
 
-module_eval(<<'.,.,', 'parser.racc', 70)
+module_eval(<<'.,.,', 'parser.racc', 49)
   def _reduce_12(val, _values, result)
+     result = val[0] 
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'parser.racc', 50)
+  def _reduce_13(val, _values, result)
+     result = RDL::Type::UnionType.new val[0], val[2] 
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'parser.racc', 53)
+  def _reduce_14(val, _values, result)
      result = RDL::Type::SymbolType.new(val[0]) 
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'parser.racc', 72)
-  def _reduce_13(val, _values, result)
+module_eval(<<'.,.,', 'parser.racc', 55)
+  def _reduce_15(val, _values, result)
           if val[0] == 'nil' then
         result = RDL::Type::NilType.new
       else
@@ -256,8 +275,8 @@ module_eval(<<'.,.,', 'parser.racc', 72)
   end
 .,.,
 
-module_eval(<<'.,.,', 'parser.racc', 79)
-  def _reduce_14(val, _values, result)
+module_eval(<<'.,.,', 'parser.racc', 62)
+  def _reduce_16(val, _values, result)
           if val[0] == '%any' then
         result = RDL::Type::TopType.new
       elsif val[0] == '%bool' then
