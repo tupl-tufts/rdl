@@ -66,7 +66,7 @@ class Parser < Racc::Parser
       when nil
         case
         when (text = ss.scan(/\s/))
-           @rex_tokens.push action { }
+          ;
 
         when (text = ss.scan(/or/))
            @rex_tokens.push action { [:OR, text] }
@@ -80,17 +80,41 @@ class Parser < Racc::Parser
         when (text = ss.scan(/->/))
            @rex_tokens.push action { [:RARROW, text] }
 
+        when (text = ss.scan(/\(/))
+           @rex_tokens.push action { [:LPAREN, text] }
+
+        when (text = ss.scan(/\)/))
+           @rex_tokens.push action { [:RPAREN, text] }
+
+        when (text = ss.scan(/\{/))
+           @rex_tokens.push action { [:LBRACE, text] }
+
+        when (text = ss.scan(/\}/))
+           @rex_tokens.push action { [:RBRACE, text] }
+
+        when (text = ss.scan(/\[/))
+           @rex_tokens.push action { [:LBRACKET, text] }
+
+        when (text = ss.scan(/\]/))
+           @rex_tokens.push action { [:RBRACKET, text] }
+
+        when (text = ss.scan(/,/))
+           @rex_tokens.push action { [:COMMA, text] }
+
+        when (text = ss.scan(/\?/))
+           @rex_tokens.push action { [:QUERY, text] }
+
+        when (text = ss.scan(/\*/))
+           @rex_tokens.push action { [:STAR, text] }
+
         when (text = ss.scan(/\w+/))
            @rex_tokens.push action { [:ID, text] }
 
         when (text = ss.scan(/:\w+/))
-           @rex_tokens.push action { [:SYMBOL, text[1..-1] }
-
-        when (text = ss.scan(/[\?\*]?\w+/))
-           @rex_tokens.push action { [:ARG, text] }
+           @rex_tokens.push action { [:SYMBOL, text[1..-1]] }
 
         when (text = ss.scan(/%\w+/))
-           @rex_tokens.push action { [:NAME, text] }
+           @rex_tokens.push action { [:SPECIAL_ID, text] }
 
         when (text = ss.scan(/'[^']*'/))
            @rex_tokens.push action { [:STRING, text.gsub("'", "")] }
@@ -107,3 +131,4 @@ class Parser < Racc::Parser
   end  # def scan_evaluate
 
 end # class
+end

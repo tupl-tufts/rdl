@@ -6,7 +6,6 @@
  'optional.rb',
  'structural.rb',
  'top.rb',
- 'tuple.rb',
  'type.rb',
  'union.rb',
  'vararg.rb'].each { |f| require_relative f }

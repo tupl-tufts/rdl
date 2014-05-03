@@ -16,8 +16,7 @@ class Parser
 macro
   ID \w+
   SYMBOL :\w+
-  ARG [\?\*]?\w+
-  NAME %\w+
+  SPECIAL_ID %\w+
 
 rule
 # rules take the form:
@@ -27,15 +26,24 @@ rule
 # tokens
 # ####################
 
-  \s        { }
-  or        { [:OR, text] }
-  =>        { [:ASSOC, text] } 
-  \::       { [:DOUBLE_COLON, text] }
-  ->        { [:RARROW, text] }
-  {ID}      { [:ID, text] }
-  {SYMBOL}  { [:SYMBOL, text[1..-1] }
-  {ARG}     { [:ARG, text] }
-  {NAME}    { [:NAME, text] }
-  '[^']*'   { [:STRING, text.gsub("'", "")] }
+  \s            # skip
+  or            { [:OR, text] }
+  =>            { [:ASSOC, text] } 
+  \::           { [:DOUBLE_COLON, text] }
+  ->            { [:RARROW, text] }
+  \(            { [:LPAREN, text] }
+  \)            { [:RPAREN, text] }
+  \{            { [:LBRACE, text] }
+  \}            { [:RBRACE, text] }
+  \[            { [:LBRACKET, text] }
+  \]            { [:RBRACKET, text] }
+  ,             { [:COMMA, text] }
+  \?            { [:QUERY, text] }
+  \*            { [:STAR, text] }
+  {ID}          { [:ID, text] }
+  {SYMBOL}      { [:SYMBOL, text[1..-1]] }
+  {SPECIAL_ID}  { [:SPECIAL_ID, text] }
+  '[^']*'       { [:STRING, text.gsub("'", "")] }
 
+end
 end

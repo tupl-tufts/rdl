@@ -12,7 +12,7 @@ module RDL::Type::NamedType
       end
 
       def self.new(name)
-        name = name.to_sym
+        name = name.to_s.to_sym
         t = @@cache[name]
         if not t
           t = self.__new__ name
