@@ -81,21 +81,6 @@ class TypeTest < Test::Unit::TestCase
     u_or_i IntersectionType
   end
 
-  def test_tuple
-    tnil = NilType.new
-    ttop = TopType.new
-    ta = NominalType.new :A
-    tb = NominalType.new :B
-    tc = NominalType.new :C
-    t1 = TupleType.new ta, tb
-    assert_equal t1.types, [ta, tb]
-    t2 = TupleType.new ta, ta
-    assert_equal t2.types, [ta, ta]
-    t3 = TupleType.new tnil, ttop, tb, tb, ta
-    assert_equal t3.types, [tnil, ttop, tb, tb, ta]
-    assert_not_equal t1, tnil
-  end
-
   def test_optional
     tnil = NilType.new
     ta = NominalType.new :A
