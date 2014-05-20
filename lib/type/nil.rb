@@ -29,5 +29,9 @@ module RDL::Type
     def hash
       13
     end
+
+    def <=(other)
+      true
+    end
   end
 end
