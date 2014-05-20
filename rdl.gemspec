@@ -12,6 +12,7 @@ Gem::Specification.new do |s|
   s.email       = ['sstrickl@cs.umd.edu', 'bren@cs.umd.edu']
   s.files       = ["lib/rdl.rb", "lib/rdl/inspect.rb", "lib/rdl/infer.rb",
                    "lib/rdl/structure.rb"]
+  s.files      += Dir['lib/type/*']
   s.homepage    =
     'https://github.com/plum-umd/rdl'
 end
