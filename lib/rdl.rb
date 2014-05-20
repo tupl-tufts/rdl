@@ -24,11 +24,27 @@ class Range
     end
 
     rand_set.to_a
-end
-
+  end
 end
 
 module RDL
+  def self.get_type(m)
+    if m.include?('#')
+      s = m.split('#')
+      cls = eval(s[0])
+      nt = RDL::Type::NominalType.new(cls)
+    elsif m.include?('.')
+      s = m.split('.')
+      cls = eval(s[0])
+      nt = eval("#{s[0]}.rdl_type")
+    else
+      raise Exception, "argument to get_type must be or the form \"Talks#list\" or \"Talks.list\""
+    end
+
+    m = s[1]
+    nt.get_method(m.to_sym)
+  end
+
   class Contract
     def apply(v); end
     def check(v); end
@@ -235,10 +251,17 @@ module RDL
         end
       end
     end
+
+    def store_method_type(sig_type)
+      n = RDL::Type::NominalType.new @class
+      n.add_method_type(@mname, sig_type)
+    end
     
-    def typesig(sig)
+    def typesig_c(sig)
       parser = RDL::Type::Parser.new
       t = parser.scan_str(sig)
+
+      store_method_type(t)
 
       c_args = []
 
@@ -253,6 +276,11 @@ module RDL
       arg_check_name = define_method_gensym("check_arg") do |*args, &blk|
         for i in 0..t.args.size-1
           args[i] = ctcs[i].apply(args[i])
+        end
+
+        if blk
+          bp = BlockProxy_c.new(blk, t.block)
+          blk = BlockProxy_c.wrap_block(bp)
         end
 
         { args: args, block: blk }
@@ -278,9 +306,11 @@ module RDL
       end
     end
 
-    def typesig_c(sig)
+    def typesig(sig)
       parser = RDL::Type::Parser.new
       t = parser.scan_str(sig)
+
+      store_method_type(t)
 
       mname = @mname
       old_mname = "__dsl_old_#{mname}"
@@ -297,7 +327,14 @@ module RDL
             end
           }
 
-          ret = self.__send__ old_mname, *args, &blk
+          if blk
+            bp = BlockProxy_c.new(blk, t.block)
+
+            wrapped_block = BlockProxy_c.wrap_block(bp)
+            ret = self.__send__ old_mname, *args, &wrapped_block
+          else
+            ret = self.__send__ old_mname, *args, &blk
+          end
 
           if not ret.rdl_type <= t.ret
             raise Exception, "return value #{ret.inspect} is not <= annotated type #{t.ret.inspect}"
@@ -598,3 +635,51 @@ module RDL
     @state
   end
 end
+
+class BlockProxy_c
+  attr_reader :blk
+  attr_reader :blk_type
+
+  def initialize(blk, blk_type)
+    @blk = blk
+    @blk_type = blk_type
+  end
+
+  def call(*args)
+    arg_types = args.zip @blk_type.args
+
+    arg_types.each {|arg, arg_type|
+      if not arg.rdl_type <= arg_type
+        raise Exception, "argument #{arg.inspect} is not <= annotated type #{arg_type.inspect}"
+      end
+    }
+
+    ret = @blk.call(*args)
+
+    if not ret.rdl_type <= @blk_type.ret
+      raise Exception, "return value #{ret.inspect} is not <= annotated type #{@blk_type.ret.inspect}"
+    end
+
+    ret
+  end
+
+  def self.wrap_block(x)
+    Proc.new {|*v| x.call(*v)}
+  end
+end
+
+
+class Object
+  def add_typesig(cls, mname, sig)
+    typesig_call = "
+      extend RDL if not #{cls}.singleton_class.included_modules.include?(RDL)
+      spec :#{mname.to_s} do
+        typesig(\"#{sig}\")
+      end"
+      
+    cls.instance_eval(typesig_call)
+  end
+end
+
+require_relative 'type/types'
+require_relative 'type/parser.tab.rb'
