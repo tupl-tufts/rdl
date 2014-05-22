@@ -28,7 +28,7 @@ end
 "… Class" ### Standard Type Definition
 "… :sym" ### Symbol
 "… %any" ### Type Placeholder (Any Type)
-"… %true" ### True Value; Similarly for %false
+"… %bool" ### Boolean Value (TrueClass and FalseClass)
 "… Type0 OR Type1" ### Union Types
 
 
