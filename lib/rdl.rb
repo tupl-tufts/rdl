@@ -626,6 +626,10 @@ module RDL
     Lang.new(self).spec(mname, *args, &blk)
   end
 
+  def typesig(mname, sig)
+    Object.new.typesig(self, mname, sig)
+  end
+
   def self.create_spec(&b)
     Proc.new &b
   end
@@ -670,7 +674,13 @@ end
 
 
 class Object
-  def add_typesig(cls, mname, sig)
+  def typesig(cls, mname, sig)
+    if cls.class == Symbol
+      cls = eval(cls.to_s)
+    elsif cls.class == String
+      cls = eval(cls)
+    end
+    
     typesig_call = "
       extend RDL if not #{cls}.singleton_class.included_modules.include?(RDL)
       spec :#{mname.to_s} do
