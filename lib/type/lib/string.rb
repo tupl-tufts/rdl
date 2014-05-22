@@ -30,7 +30,7 @@ class String
 	
 	typesig :b , " ( ) -> String "
 	
-	typesig :bytes , " ( ) -> Array<Byte> "
+	typesig :bytes , " ( ) -> Array " # TODO: Add BYTE
 	
 	typesig :bytesize , " ( ) -> Fixnum "
 	
@@ -40,6 +40,22 @@ class String
 	
 	typesig :capitalize , " ( ) -> String "
 	
-	typesig :capitalize , " ( ) -> String OR nil "
+	typesig :capitalize! , " ( ) -> String OR nil "
+	
+	typesig :casecmp , " ( String ) -> nil OR Fixnum "
+	
+	typesig :center , " ( Fixnum , ? String ) -> String "
+	
+	typesig :chars , " ( ) -> Array " # TODO: Handle CHAR (String)
+	
+	typesig :chomp , " ( String ) -> String "
+	
+	typesig :chomp! , " ( String ) -> String OR nil "
+	
+	typesig :chop , " ( ) -> String "
+	
+	typesig :chp , " ( ) -> String OR nil "
+	
+	typesig :chr , " ( ) -> String "
 	
 end
