@@ -1,0 +1,35 @@
+
+# RDL Typesig Documentation
+# Updated 05-21-2014
+
+
+## Generating Typesigs
+
+spec :mthd_name do
+	typesig "ANNOTATION"
+end
+
+
+## Annotation Syntax
+
+"( arg0, arg1, … argN ) { Annotation } -> Type" ### Method Arguments, Block, and Return
+
+
+## Argument Syntax
+
+"Type …" ### Standard Argument
+"typevar …" ### Lowercase Type Variable for Generic Types
+"?Type …" ### Optional Argument
+"*Type …" ### Variable Number of Arguments (Splat)
+
+
+## Type Syntax
+
+"… Class" ### Standard Type Definition
+"… :sym" ### Symbol
+"… %any" ### Type Placeholder (Any Type)
+"… %true" ### True Value; Similarly for %false
+"… Type0 OR Type1" ### Union Types
+
+
+
