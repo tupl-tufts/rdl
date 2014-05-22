@@ -3,49 +3,43 @@ require 'rdl'
 class String
 	extend RDL
 
-	spec :new do
-		typesig " ( %any ) -> String "
-	end
+	typesig :new , " ( %any ) -> String "
 	
-	spec :try_convert do
-		typesig " ( Object ) -> String OR nil "
-	end
+	typesig :try_convert , " ( Object ) -> String OR nil "
 	
-	spec :% do
-		typesig " ( %any ) -> String "
-	end
+	typesig :% , " ( %any ) -> String "
 	
 	#Are these neccessary due to implementation with Object?
-	spec :+ do
-		typesig " ( String ) -> String "
-	end
+	typesig :+ " ( String ) -> String "
 	
-	spec :<< do
-		typesig " ( Object ) -> String "
-	end
+	typesig :<< " ( Object ) -> String "
 	
-	spec :<=> do
-		typesig " ( String ) -> Integer OR nil "
-	end
+	typesig :<=> " ( String ) -> Integer OR nil "
 	
-	spec :== do
-		typesig " ( Object ) -> %true OR %false "
-	end
+	typesig :== , " ( Object ) -> %bool "
 	
-	spec :=== do
-		typesig " ( Object ) -> %true OR %false "
-	end
+	typesig :=== , " ( Object ) -> %bool "
 	
-	spec :=~ do
-		typesig " ( Object ) -> Fixnum OR nil "
-	end
+	typesig :=~ , " ( Object ) -> Fixnum OR nil "
 	
-	spec :[] do
-		typesig " ( Fixnum OR Range OR Regexp OR String, ? Fixnum OR String ) ->  String OR nil "
-	end
+	typesig, :[] , " ( Fixnum OR Range OR Regexp OR String, ? Fixnum OR String ) ->  String OR nil "
 	
-	spec :[]= do
-		typesig " ( Fixnum OR Range OR Regexp OR String, ? Fixnum OR String, String ) ->  String "
-	end
+	typesig :[]= , " ( Fixnum OR Range OR Regexp OR String, ? Fixnum OR String, String ) ->  String "
+	
+	typesig :ascii_only? , " ( ) -> %bool"
+	
+	typesig :b , " ( ) -> String "
+	
+	typesig :bytes , " ( ) -> Array<Byte> "
+	
+	typesig :bytesize , " ( ) -> Fixnum "
+	
+	typesig :byteslice , " ( Fixnum, ? Fixnum ) -> String OR nil "
+	
+	typesig :byteslice , " ( Range ) -> String or nil "
+	
+	typesig :capitalize , " ( ) -> String "
+	
+	typesig :capitalize , " ( ) -> String OR nil "
 	
 end
