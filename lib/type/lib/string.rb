@@ -58,4 +58,6 @@ class String
 	
 	typesig :chr , " ( ) -> String "
 	
+	
+		
 end
