@@ -1,7 +1,6 @@
+# Introduction
 
-# RDL Typesig Documentation
-# Updated 05-21-2014
-
+# Typesigs
 
 ## Generating Typesigs
 
@@ -31,5 +30,18 @@ end
 "… %bool" ### Boolean Value (TrueClass and FalseClass)
 "… Type0 OR Type1" ### Union Types
 
+# RDL Quick Reference
 
-
+| API call | Meaning |
+| --- | --- |
+| `spec` | a |
+| `keyword` |
+| `dsl` |
+| `arg` |
+| `pre_cond { block }` |
+| `pre_task { block }` |
+| `post_cond { block }` |
+| `post_task { block }` |
+| `dsl_from { block }` |
+| `Spec.new` |
+| `ret_dep` |
