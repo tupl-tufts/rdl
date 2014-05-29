@@ -1,5 +1,5 @@
 require 'test/unit'
-require 'rdl'
+require_relative '../lib/rdl.rb'
 
 class A_spec
   extend RDL
