@@ -73,17 +73,17 @@ class Pair_spec
   attr_reader :trace
 
   def initialize(&block)
-    @trace = []
+    $trace = []
     instance_eval(&block)
   end
 
   def left(x)
-    @trace.push :left, x
+    $trace.push :left, x
     @left = x
   end
 
   def right(x)
-    @trace.push :right, x
+    $trace.push :right, x
     @right = x
   end
 
@@ -94,12 +94,12 @@ class Pair_spec
   spec :initialize do
     dsl do
       spec :left do
-        pre_task { |x| @trace.push :pre_task_left, x }
-        post_task { |r, x| @trace.push :post_task_left, r, x }
+        pre_task { |x| $trace.push :pre_task_left, x }
+        post_task { |r, x| $trace.push :post_task_left, r, x }
       end
       spec :right do
-        pre_task { |x| @trace.push :pre_task_right, x }
-        post_task { |r, x| @trace.push :post_task_right, r, x }
+        pre_task { |x| $trace.push :pre_task_right, x }
+        post_task { |r, x| $trace.push :post_task_right, r, x }
       end
     end
   end
