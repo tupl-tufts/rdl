@@ -108,8 +108,6 @@ class RDLTest < Test::Unit::TestCase
   class Pair_spec
     extend RDL
 
-    attr_reader :trace
-
     def initialize(&block)
       $trace = []
       instance_eval(&block)
@@ -154,28 +152,32 @@ class RDLTest < Test::Unit::TestCase
 
 #####################################################################
 
- #  class Pair
- #    extend RDL
+  class Pair
+    extend RDL
 
- #    attr_reader :left, :right
+    attr_accessor :pair
 
- #    keyword :initialize do
- #      dsl do
- #        keyword :left do
- #          post_task { |left| @left = left }
- #        end
- #        keyword :right do
- #          post_task { |right| @right = right }
- #        end
- #      end
- #    end
- #  end
+    def get
+      [@left, @right]
+    end
 
- # def test_pair
- #   p = Pair.new { left 3; right 4 }
- #   puts p.inspect
- #   assert_equal [3,4], p.get
- # end
+    keyword :initialize do
+      dsl do
+        keyword :left do
+          post_task { |r, left| @left = left }
+        end
+        keyword :right do
+          post_task { |r, right| @right = right }
+        end
+      end
+      post_task { |r| @pair = [(r.instance_eval "@left"), (r.instance_eval "@right")] }
+    end
+  end
+
+ def test_pair
+   p = Pair.new { left 3; right 4 }
+   assert_equal [3,4], p.pair
+ end
 
 
 end
