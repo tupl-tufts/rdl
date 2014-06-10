@@ -1,5 +1,3 @@
-require 'deep_clone'
-
 module RailsHelper
   class << self
     attr_accessor :namespace
