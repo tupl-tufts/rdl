@@ -37,9 +37,12 @@ rule
   \}            { [:RBRACE, text] }
   \[            { [:LBRACKET, text] }
   \]            { [:RBRACKET, text] }
+  <             { [:LESS, text] }
+  >             { [:GREATER, text] }
   ,             { [:COMMA, text] }
   \?            { [:QUERY, text] }
   \*            { [:STAR, text] }
+  \#\#      	{ [:DOUBLE_HASH, text] }
   {ID}          { [:ID, text] }
   {SYMBOL}      { [:SYMBOL, text[1..-1]] }
   {SPECIAL_ID}  { [:SPECIAL_ID, text] }

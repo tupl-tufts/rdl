@@ -40,8 +40,21 @@ module RDL::Type
       super()
     end
 
+    def map
+      ts = types.map {|t| yield t}
+      IntersectionType.new(*ts)
+    end
+    
+    def each
+      types.each {|t| yield t}
+    end
+
     def to_s  # :nodoc:
       "(#{@types.to_a.join(' and ')})"
+    end
+    
+    def eql?(other)
+      self == other
     end
 
     def ==(other)  # :nodoc:

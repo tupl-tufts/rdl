@@ -1,10 +1,11 @@
 require_relative './type'
+require_relative './native'
 
 module RDL::Type
   class OptionalType < Type
     attr_reader :type
 
-    @@cache = {}
+    @@cache = RDL::NativeHash.new
 
     class << self
       alias :__new__ :new
@@ -23,9 +24,17 @@ module RDL::Type
       @type = type
       super()
     end
-        
+
+    def map
+      OptionalType.new(yield type)
+    end
+
     def to_s
       "?(#{@type})"
+    end
+
+    def eql?(other)
+      self == other
     end
 
     def ==(other) # :nodoc:

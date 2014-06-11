@@ -1,8 +1,10 @@
 require_relative './type'
+require_relative './terminal'
 
 module RDL::Type
   class NilType < Type
-
+    include TerminalType
+    
     @@cache = nil
 
     class << self
@@ -22,6 +24,18 @@ module RDL::Type
       "nil"
     end
 
+    def map
+      self
+    end
+    
+    def each
+      yield self
+    end
+
+    def eql?(other)
+      self == other
+    end
+
     def ==(other)
       other.instance_of? NilType
     end
@@ -33,5 +47,11 @@ module RDL::Type
     def <=(other)
       true
     end
+
+    def self.instance
+      return @@instance || (@@instance = NilType.new)
+      end
+    
+    @@instance = nil
   end
 end

@@ -23,9 +23,17 @@ module RDL::Type
       @type = type
       super()
     end
+
+    def map
+       Vararg.new(yield type)
+    end
         
     def to_s
       "*(#{@type})"
+    end
+
+    def eql?(other)
+      self == other
     end
 
     def ==(other) # :nodoc:
