@@ -394,7 +394,7 @@ module RDL
             unsolved_tvars.each {|t| t.to_actual_type}
             
             unless RDL::MethodCheck.check_return(chosen_type, ret_value, unsolved_tvars)
-              raise TypesigException, "invalid return type in #{mname}, expected #{chosen_type.ret}, got #{ret_value.rdl_type}" 
+              raise RDL::TypesigException, "invalid return type in #{mname}, expected #{chosen_type.ret}, got #{ret_value.rdl_type}" 
             end   
 
             return ret_value
@@ -796,7 +796,6 @@ end
 
 require_relative 'type/types'
 require_relative 'type/parser.tab.rb'
-
 
 status = RDL::MasterSwitch.is_on?
 RDL::MasterSwitch.turn_off if status

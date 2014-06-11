@@ -100,7 +100,7 @@ module RDL::MethodCheck
         a.rdl_type
       }
       
-      raise TypesigException, "In method #{method_name}, annotated types are #{method_types.inspect}, but actual arguments are #{args.inspect}, with types #{arg_types.inspect}" +
+      raise RDL::TypesigException, "In method #{method_name}, annotated types are #{method_types.inspect}, but actual arguments are #{args.inspect}, with types #{arg_types.inspect}" +
         " for class #{class_obj}"
     else
       chosen_type, annotations = possible_types[0]

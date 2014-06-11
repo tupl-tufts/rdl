@@ -15,7 +15,9 @@
 
 require_relative 'type_inferencer.rb'
 
-class TypesigException < StandardError; end
+module RDL
+  class TypesigException < StandardError; end
+end
 
 class Object
   def rtc_meta

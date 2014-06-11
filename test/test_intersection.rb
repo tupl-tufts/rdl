@@ -58,11 +58,11 @@ class IntersectionTest < Test::Unit::TestCase
     x = arr[0,2]
     assert_equal([1,2], x)
 
-    assert_raise(TypesigException) {
+    assert_raise(RDL::TypesigException) {
       arr[true]
     }
 
-    assert_raise(TypesigException) {
+    assert_raise(RDL::TypesigException) {
       arr[1, true]
     }
 

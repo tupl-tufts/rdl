@@ -93,7 +93,7 @@ class GenericTest < Test::Unit::TestCase
     y = x.push(true)
     assert_equal [1,2,3,"123",true], y
 
-    assert_raise(TypesigException) {
+    assert_raise(RDL::TypesigException) {
       x.push(false)
     }
 
