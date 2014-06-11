@@ -15,15 +15,22 @@ class Parser
 
   start entry
 
+token DOUBLE_HASH
 token OR ASSOC DOUBLE_COLON RARROW ID SYMBOL SPECIAL_ID STRING
 token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
-token COMMA QUERY STAR
+token COMMA QUERY STAR LESS GREATER
 token EOF
 
 rule
 
   entry:
       method_type { result = val[0] }
+    | annotation { result = val[0] }
+
+  annotation:
+      DOUBLE_HASH type_expr {
+        result = val[1]
+      }
 
   method_type:
       LPAREN arg_list RPAREN block RARROW type_expr {
@@ -46,6 +53,11 @@ rule
   type_expr:
     union_type { result = val[0] }
 
+  type_expr_comma_list:
+      type_expr { result = [val[0]] }
+    | type_expr COMMA type_expr_comma_list {
+        result = [val[0]] + val[2] }
+
   union_type:
     single_type { result = val[0] }
   | single_type OR union_type { result = RDL::Type::UnionType.new val[0], val[2] }
@@ -55,6 +67,8 @@ rule
     | ID {
       if val[0] == 'nil' then
         result = RDL::Type::NilType.new
+      elsif val[0] =~ /^[a-z_]+\w*\'?/ then
+        result = RDL::Type::TypeParameter.new(val[0].to_sym)
       else
         result = RDL::Type::NominalType.new val[0]
       end
@@ -68,6 +82,11 @@ rule
         fail "Unexpected special type identifier #{val[0]}"
       end
     }
+    | ID LESS type_expr_comma_list GREATER { 
+        n = RDL::Type::NominalType.new(val[0])
+        result = RDL::Type::GenericType.new(n, *val[2])
+      }
+
 
 ---- header ----
 
