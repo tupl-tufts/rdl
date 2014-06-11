@@ -1,6 +1,7 @@
 require 'test/unit'
-require_relative '../lib/type/types'
-require_relative '../lib/type/parser.tab.rb'
+require 'rdl'
+
+RDL::MasterSwitch.turn_off
 
 class TypeTest < Test::Unit::TestCase
   include RDL::Type
