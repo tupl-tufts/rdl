@@ -1,0 +1,53 @@
+
+#Rubydoc annotation parser for RDL
+
+class Parser
+    prechigh
+        left COMMA
+        right ARROW
+        left OR
+    preclow
+
+    start entry
+    
+token BEGIN END OR RARROW COMMA BLK EQ STRING ID SP_ID
+token LPAREN RPAREN LBRACKET RBRACKET LCURLY RCURLY
+token EOF
+
+rule
+
+    entry:
+        method_doc                          { result = val[0] }
+        
+    method_doc:
+                                            { result = nil }
+        | BEGIN method_def END              { result = RDL::Type::Lib::DocParser.gen val[1]}
+        | BEGIN method_def END method_doc   {}
+        
+    method_def:
+        method_name params RARROW returns   { result = "typesig :"+val[0]+" \""+val[1]+"->"+val[3]+"\""}
+        
+    method_name:
+        ID                                  { result = val[0] }
+        
+    params:
+                                            { result = nil }
+        | ID                                { result = " ? "+val[0]} #Optional Args
+        | ID EQ ID                          {}
+        | ID COMMA params                   {}
+        | ID LBRACKET COMMA params RBRACKET {}
+        | LPAREN params RPAREN              {}
+        | LPAREN params RPAREN block        {}
+        | LBRACKET params RBRACKET          {}
+        
+    block:
+                                            { result = nil }
+        | LCURLY BLK params BLK ... RCURLY  {}
+
+    returns:
+                                            { result = nil }
+        | ID                                {}
+        | ID COMMA returns                  {}
+
+
+end

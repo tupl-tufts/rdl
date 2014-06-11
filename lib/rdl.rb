@@ -210,7 +210,7 @@ module RDL
       @class = cls
       @mname = mname
 
-      unless cls.method_defined? mname
+      unless cls.method_defined? mname or mname.to_sym == :initialize
         raise "Method #{mname} not defined for #{cls}"
       end
     end
