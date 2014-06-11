@@ -1,4 +1,11 @@
 require 'set'
+require_relative 'type/native'
+require_relative 'type/method_check'
+require 'master_switch'
+
+# TODO: remove the global vars
+$RDL_CURR_METHOD = nil
+$RDL_CURR_OBJ = nil
 
 class Range
   alias :old_initialize :initialize
@@ -256,7 +263,8 @@ module RDL
       n = RDL::Type::NominalType.new @class
       n.add_method_type(@mname, sig_type)
     end
-    
+
+    # Use typesig instead for now
     def typesig_c(sig)
       parser = RDL::Type::Parser.new
       t = parser.scan_str(sig)
@@ -306,41 +314,93 @@ module RDL
       end
     end
 
-    def typesig(sig)
+    def typesig(sig, meta={})
+      status = RDL::MasterSwitch.is_on?
+      RDL::MasterSwitch.turn_off if status
+
       parser = RDL::Type::Parser.new
       t = parser.scan_str(sig)
+      tvars = meta[:vars]
 
-      store_method_type(t)
+      if tvars
+        tvars = tvars.map {|x| RDL::Type::TypeParameter.new(x.to_sym)}
+        t.parameters = tvars 
+      end
+
+      n = RDL::Type::NominalType.new @class
+      t_old = n.get_method(@mname)
+      store_method_type(t)  # may make an intersection type
+      t = n.get_method(@mname)
 
       mname = @mname
       old_mname = "__dsl_old_#{mname}"
+
+      if t_old
+        @class.class_eval do
+          alias_method mname, old_mname
+        end
+      end
+
+      RDL::MasterSwitch.turn_on if status
 
       @class.class_eval do
         alias_method old_mname, mname
 
         define_method mname do |*args, &blk|
-          arg_types = args.zip t.args
+          # TODO: remove the global vars
+          $RDL_CURR_METHOD = mname
+          $RDL_CURR_OBJ = self
 
-          arg_types.each {|arg, arg_type|
-            if not arg.rdl_type <= arg_type
-              raise Exception, "argument #{arg.inspect} is not <= annotated type #{arg_type.inspect}"
+          if not RDL::MasterSwitch::is_on?
+            ret_value = self.__send__ old_mname, *args, &blk
+            return ret_value
+          end
+
+          RDL::MasterSwitch.turn_off
+
+          begin
+            tp = self.instance_variable_get(:@s_type_parameters)
+            
+            s_type = self.rdl_type
+            s_type.dynamic = false if s_type.is_a?(RDL::Type::GenericType)
+
+            if tp
+              method_type = s_type.get_method(mname, nil, tp)
+            else
+              method_type = s_type.get_method(mname)
             end
-          }
+            
+            if t.is_a?(RDL::Type::MethodType)
+              method_types = NativeArray[method_type]
+            else
+              method_types = NativeArray.new(method_type.types.to_a)
+            end
 
-          if blk
-            bp = BlockProxy_c.new(blk, t.block)
+            regular_args = args
 
-            wrapped_block = BlockProxy_c.wrap_block(bp)
-            ret = self.__send__ old_mname, *args, &wrapped_block
-          else
-            ret = self.__send__ old_mname, *args, &blk
+            chosen_type, annotated_args, unsolved_tvars = RDL::MethodCheck.select_and_check_args(method_types, mname, regular_args,  (not blk.nil?), self.class) 
+
+            if blk
+              bp = BlockProxy_c.new(blk, chosen_type.block, mname, self, unsolved_tvars)
+              blk = BlockProxy_c.wrap_block(bp)
+            end
+            
+            RDL::MasterSwitch.turn_on
+            
+            ret_value = self.__send__ old_mname, *args, &blk
+            
+            RDL::MasterSwitch.turn_off
+            
+            unsolved_tvars.each {|t| t.to_actual_type}
+            
+            unless RDL::MethodCheck.check_return(chosen_type, ret_value, unsolved_tvars)
+              raise TypesigException, "invalid return type in #{mname}, expected #{chosen_type.ret}, got #{ret_value.rdl_type}" 
+            end   
+
+            return ret_value
+          ensure
+            RDL::MasterSwitch.turn_on
           end
-
-          if not ret.rdl_type <= t.ret
-            raise Exception, "return value #{ret.inspect} is not <= annotated type #{t.ret.inspect}"
-          end
-
-          ret
         end
       end
     end
@@ -622,12 +682,42 @@ module RDL
 
   alias :entry :keyword
 
+  def type_params(*t_params)
+    return if t_params.empty?
+
+    t_parameters = []
+
+    iterators = {}
+    t_params.each {
+      |pair|
+      t_parameters << pair[0]
+      if pair.length == 1
+        iterators[pair[0]] = nil
+      else
+        iterators[pair[0]] = pair[1]
+      end
+    }
+
+    t_parameters.map! {|p| RDL::Type::TypeParameter.new(p)}
+    
+    RDL::Type::NominalType.new(self).type_parameters = t_parameters
+    define_iterators(iterators)
+  end
+
+  def define_iterator(param_name,iterator_name)
+    rtc_meta.fetch(:iterators)[param_name] = iterator_name
+  end
+
+  def define_iterators(iter_hash)
+    rtc_meta.fetch(:iterators).merge!(iter_hash)
+  end
+  
   def spec(mname, *args, &blk)
     Lang.new(self).spec(mname, *args, &blk)
   end
 
-  def typesig(mname, sig)
-    Object.new.typesig(self, mname, sig)
+  def typesig(mname, sig, meta={})
+    Object.new.typesig(self, mname, sig, meta)
   end
 
   def self.create_spec(&b)
@@ -643,28 +733,41 @@ end
 class BlockProxy_c
   attr_reader :blk
   attr_reader :blk_type
+  attr_reader :method_name
+  attr_reader :class_obj
 
-  def initialize(blk, blk_type)
+  def initialize(blk, blk_type, method_name, class_obj, unsolved_vars)
     @blk = blk
     @blk_type = blk_type
+    @method_type = method_name
+    @class_obj = class_obj
+    @unsolved_type_variables = unsolved_vars
   end
 
   def call(*args)
-    arg_types = args.zip @blk_type.args
+    args = RDL::NativeArray.new(args)
 
-    arg_types.each {|arg, arg_type|
-      if not arg.rdl_type <= arg_type
-        raise Exception, "argument #{arg.inspect} is not <= annotated type #{arg_type.inspect}"
+    RDL::MasterSwitch.turn_off
+
+    begin
+      check_result = RDL::MethodCheck.check_args(@blk_type, args, @unsolved_type_variables)
+      
+      if not check_result
+        raise RDL::TypesigException, "Block arg failed!"
       end
-    }
+      
+      annotated_args, @unsolved_type_variables = check_result
+      
+      RDL::MasterSwitch.turn_on
+      ret = @blk.call(*annotated_args)
+      RDL::MasterSwitch.turn_off
 
-    ret = @blk.call(*args)
-
-    if not ret.rdl_type <= @blk_type.ret
-      raise Exception, "return value #{ret.inspect} is not <= annotated type #{@blk_type.ret.inspect}"
+      return_valid = RDL::MethodCheck.check_return(@blk_type, ret, @unsolved_type_variables)
+      raise RDL::TypesigException, "Block return type mismatch, expected #{@blk_type.return_type}, got #{ret.rdl_type}" unless return_valid
+      ret
+    ensure
+      RDL::MasterSwitch.turn_on
     end
-
-    ret
   end
 
   def self.wrap_block(x)
@@ -674,22 +777,29 @@ end
 
 
 class Object
-  def typesig(cls, mname, sig)
+  def typesig(cls, mname, sig, meta={})
     if cls.class == Symbol
       cls = eval(cls.to_s)
     elsif cls.class == String
       cls = eval(cls)
     end
-    
+
     typesig_call = "
       extend RDL if not #{cls}.singleton_class.included_modules.include?(RDL)
       spec :#{mname.to_s} do
-        typesig(\"#{sig}\")
+        typesig(\"#{sig}\", #{meta})
       end"
-      
+
     cls.instance_eval(typesig_call)
   end
 end
 
 require_relative 'type/types'
 require_relative 'type/parser.tab.rb'
+
+
+status = RDL::MasterSwitch.is_on?
+RDL::MasterSwitch.turn_off if status
+require_relative 'type/base_types'
+RDL::MasterSwitch.turn_on if status
+
