@@ -16,7 +16,7 @@ module RDL::Type
       raise "this method should be implemented each subclass"
     end
 
-    def get_method_parameters(a = RDL::NativeArray.new)
+    def get_method_parameters(a = []) 
       self.each {|ti|
         if self != ti
           ti.get_method_parameters(a)
@@ -27,7 +27,7 @@ module RDL::Type
       
       a.uniq
     end
-
+    
     def has_variables
       self.each {|t|        
         return true if t.is_a?(RDL::Type::TypeVariable) and t.solving?

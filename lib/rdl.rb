@@ -3,10 +3,6 @@ require_relative 'type/native'
 require_relative 'type/method_check'
 require 'master_switch'
 
-# TODO: remove the global vars
-$RDL_CURR_METHOD = nil
-$RDL_CURR_OBJ = nil
-
 class Range
   alias :old_initialize :initialize
   
@@ -35,6 +31,10 @@ class Range
 end
 
 module RDL
+  class << self
+    attr_accessor :print_warning
+  end
+
   def self.get_type(m)
     if m.include?('#')
       s = m.split('#')
@@ -332,7 +332,7 @@ module RDL
       }
 
       if not invalid_tparams.empty?
-        raise Exception, "Invalid paramters #{invalid_tparams.inspect} in #{@class}##{@mname} typesig #{sig}"
+        raise Exception, "Invalid parameters #{invalid_tparams.inspect} in #{@class}##{@mname} typesig #{sig}"
       end
 
       if tvars
@@ -360,10 +360,6 @@ module RDL
         alias_method old_mname, mname
 
         define_method mname do |*args, &blk|
-          # TODO: remove the global vars
-          $RDL_CURR_METHOD = mname
-          $RDL_CURR_OBJ = self
-
           if not RDL::MasterSwitch::is_on?
             ret_value = self.__send__ old_mname, *args, &blk
             return ret_value
@@ -373,7 +369,21 @@ module RDL
 
           begin
             tp = self.instance_variable_get(:@s_type_parameters)
-            
+            tp = {} if not tp
+            uninstantiated_params = []
+
+            cls_param_symbols.each {|cp|
+              uninstantiated_params.push(cp) if not tp.keys.include?(cp)
+            }
+
+            if not uninstantiated_params.empty? and RDL.print_warning
+              puts "WARNING: #{self.class} self=#{self.inspect} has uninstantiated parameters #{uninstantiated_params.inspect}. These parameters will instantiated to TopType."
+            end
+
+            uninstantiated_params.each {|up|
+              tp[up] = RDL::Type::TopType.new
+            }
+
             s_type = self.rdl_type
             s_type.dynamic = false if s_type.is_a?(RDL::Type::GenericType)
 
@@ -382,7 +392,7 @@ module RDL
             else
               method_type = s_type.get_method(mname)
             end
-            
+
             if t.is_a?(RDL::Type::MethodType)
               method_types = NativeArray[method_type]
             else
@@ -807,11 +817,12 @@ class Object
   end
 end
 
-require_relative 'type/types'
-require_relative 'type/parser.tab.rb'
-
+RDL.print_warning = false
 status = RDL::MasterSwitch.is_on?
 RDL::MasterSwitch.turn_off if status
+require_relative 'type/types'
+require_relative 'type/parser.tab.rb'
 require_relative 'type/base_types'
 RDL::MasterSwitch.turn_on if status
+
 
