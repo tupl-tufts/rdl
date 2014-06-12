@@ -1,8 +1,6 @@
 require 'test/unit'
 require 'rdl'
 
-RDL::MasterSwitch.turn_off
-
 class IntersectionTest < Test::Unit::TestCase
   include RDL::Type
 
@@ -42,9 +40,6 @@ class IntersectionTest < Test::Unit::TestCase
 
   def test_array_types
     arr = [1,2,3,4,5]
-
-    RDL::MasterSwitch.turn_on
-    
     x = arr[1]
     assert_equal(2, x)
 
@@ -65,8 +60,6 @@ class IntersectionTest < Test::Unit::TestCase
     assert_raise(RDL::TypesigException) {
       arr[1, true]
     }
-
-    RDL::MasterSwitch.turn_off
   end
 end
 

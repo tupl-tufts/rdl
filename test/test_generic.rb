@@ -1,8 +1,6 @@
 require 'test/unit'
 require 'rdl'
 
-RDL::MasterSwitch.turn_off
-
 class GenericTest < Test::Unit::TestCase
   include RDL::Type
 
@@ -87,8 +85,6 @@ class GenericTest < Test::Unit::TestCase
   end
 
   def test_array_methods
-    RDL::MasterSwitch.turn_on
-
     x = [1,2,3,"123"].rdl_inst({:t => "Fixnum or String or TrueClass"})
     y = x.push(true)
     assert_equal [1,2,3,"123",true], y
@@ -103,8 +99,6 @@ class GenericTest < Test::Unit::TestCase
 
     y = x.+([true, false])
     assert_equal [1,"a",true, false], y
-
-    RDL::MasterSwitch.turn_off    
   end
 
   def test_type_params
