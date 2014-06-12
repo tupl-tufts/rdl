@@ -320,7 +320,20 @@ module RDL
 
       parser = RDL::Type::Parser.new
       t = parser.scan_str(sig)
-      tvars = meta[:vars]
+      tvars = meta[:vars].nil? ? [] : meta[:vars]
+
+      cls_params = RDL::Type::NominalType.new(@class).type_parameters
+      cls_param_symbols = cls_params.map {|p| p.symbol}
+      valid_param_symbols = tvars + cls_param_symbols
+
+      invalid_tparams = []
+      t.get_method_parameters.each {|p|
+        invalid_tparams.push(p) if not valid_param_symbols.include?(p)
+      }
+
+      if not invalid_tparams.empty?
+        raise Exception, "Invalid paramters #{invalid_tparams.inspect} in #{@class}##{@mname} typesig #{sig}"
+      end
 
       if tvars
         tvars = tvars.map {|x| RDL::Type::TypeParameter.new(x.to_sym)}

@@ -106,4 +106,31 @@ class GenericTest < Test::Unit::TestCase
 
     RDL::MasterSwitch.turn_off    
   end
+
+  def test_type_params
+    t = "(t) -> t"
+    t = @parser.scan_str(t)
+    tps = t.get_method_parameters
+    assert_equal([:t].to_set, tps.to_set)
+
+    t = "(String, Array<TrueClass>) -> Hash<u, Array<Array<abc>>>"
+    t = @parser.scan_str(t)
+    tps = t.get_method_parameters
+    assert_equal([:u, :abc].to_set, tps.to_set)
+
+    t = "(t) -> abcd"
+    t = @parser.scan_str(t)
+    tps = t.get_method_parameters
+    assert_equal([:t, :abcd].to_set, tps.to_set)
+
+    t = "(a, b, Array<c>, Array<Hash<d, Array<e>>>) -> f"
+    t = @parser.scan_str(t)
+    tps = t.get_method_parameters
+    assert_equal([:a, :b, :c, :d, :e, :f].to_set, tps.to_set)
+
+    t = "(String) -> %any"
+    t = @parser.scan_str(t)
+    tps = t.get_method_parameters
+    assert_equal([].to_set, tps.to_set)
+  end
 end
