@@ -13,7 +13,7 @@ module RDL::Type
     def self.new(type)
       t = @@cache[type]
       if not t
-        t = OptionalType.__new__ type
+        t = VarargType.__new__ type
         @@cache[type] = t
       end
       return t
@@ -24,8 +24,12 @@ module RDL::Type
       super()
     end
 
+    def each
+      yield @type
+    end
+
     def map
-       Vararg.new(yield type)
+       VarargType.new(yield type)
     end
         
     def to_s
