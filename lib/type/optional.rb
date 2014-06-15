@@ -29,6 +29,10 @@ module RDL::Type
       OptionalType.new(yield type)
     end
 
+    def each
+      yield type
+    end
+    
     def to_s
       "?(#{@type})"
     end
