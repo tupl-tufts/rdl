@@ -16,7 +16,7 @@ class Parser
   start entry
 
 token DOUBLE_HASH
-token OR ASSOC DOUBLE_COLON RARROW ID SYMBOL SPECIAL_ID STRING
+token OR TUPLE ASSOC DOUBLE_COLON RARROW ID SYMBOL SPECIAL_ID STRING
 token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
 token COMMA QUERY STAR LESS GREATER
 token EOF
@@ -82,10 +82,13 @@ rule
         fail "Unexpected special type identifier #{val[0]}"
       end
     }
+    | TUPLE LESS type_expr_comma_list GREATER { 
+        result = RDL::Type::TupleType.new(*val[2])
+    }
     | ID LESS type_expr_comma_list GREATER { 
         n = RDL::Type::NominalType.new(val[0])
         result = RDL::Type::GenericType.new(n, *val[2])
-      }
+    }
 
 
 ---- header ----

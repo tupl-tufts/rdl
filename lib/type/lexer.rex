@@ -28,6 +28,7 @@ rule
 
   \s            # skip
   or            { [:OR, text] }
+  Tuple         { [:TUPLE, text] }
   =>            { [:ASSOC, text] } 
   \::           { [:DOUBLE_COLON, text] }
   ->            { [:RARROW, text] }
