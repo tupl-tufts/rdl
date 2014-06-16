@@ -11,7 +11,7 @@ module RDL::Type
       alias :__new__ :new
     end
 
-    def self.new(arr)
+    def self.new(*arr)
       t = @@cache[arr]
       if not t
         t = TupleType.__new__(arr)
@@ -32,7 +32,6 @@ module RDL::Type
 
     def each
       @ordered_params.each {|p| yield p}
-      yield self
     end
 
     def is_tuple
@@ -69,7 +68,7 @@ module RDL::Type
         
         true
       else
-        raise Exception, "NOT IMPLEMENTED"
+        super
       end
     end
     
