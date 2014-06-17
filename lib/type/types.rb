@@ -17,9 +17,14 @@ require_relative 'type_inferencer.rb'
 
 module RDL
   class TypesigException < StandardError; end
+  class InvalidParameterException < StandardError; end
 end
 
 class Object
+  def method_added(method_name)
+    
+  end
+
   def rtc_meta
     if defined? @_rtc_meta
       @_rtc_meta
@@ -66,7 +71,7 @@ class Object
   end
 
   def rdl_inst(types)
-    parser = p = RDL::Type::Parser.new
+    parser = RDL::Type::Parser.new
 
     if types.class == Hash
       h = {}
