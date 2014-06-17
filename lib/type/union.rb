@@ -4,7 +4,7 @@ module RDL::Type
   class UnionType < Type
     attr_reader :types
 
-    @@cache = {}
+    @@cache = RDL::NativeHash.new
 
     class << self
       alias :__new__ :new

@@ -28,6 +28,10 @@ module RDL::Type
       self
     end
 
+    def _to_actual_type
+      self
+    end
+
     def each 
       yield self
     end
