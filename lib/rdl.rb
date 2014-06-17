@@ -689,10 +689,10 @@ module RDL
     @state
   end
 
-  #def self.extended(extendee)
-  #  extendee.instance_variable_set(:@typesig_info, {})
-  #  extendee.instance_variable_set(:@deferred_specs, {})
-  #end
+  def self.extended(extendee)
+    extendee.instance_variable_set(:@typesig_info, {})
+    #extendee.instance_variable_set(:@deferred_specs, {})
+  end
 end
 
 class Object
@@ -708,7 +708,7 @@ class Object
       spec :#{mname.to_s} do
         typesig(\"#{sig}\", #{meta})
       end"
-
+    
     #    if cls.instance_methods(false).include?(mname)
     cls.instance_eval(typesig_call)
     #   else
