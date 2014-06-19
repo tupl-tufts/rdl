@@ -1,4 +1,6 @@
-['generic.rb',
+['lexer.rex.rb',
+ 'parser.tab.rb',
+ 'generic.rb',
  'intersection.rb',
  'method.rb',
  'nil.rb',
@@ -8,12 +10,11 @@
  'top.rb',
  'tuple.rb',
  'type.rb',
+ 'type_inferencer.rb',
  'type_parameters.rb',
  'type_variables.rb',
  'union.rb',
- 'vararg.rb'].each { |f| require_relative f }
-
-require_relative 'type_inferencer.rb'
+ 'vararg.rb'].each { |f| require_relative "types/#{f}" }
 
 module RDL
   class TypesigException < StandardError; end

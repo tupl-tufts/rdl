@@ -1,6 +1,6 @@
 require 'set'
-require_relative 'type/native'
-require_relative 'type/method_check'
+#require_relative 'rdl/type/native'
+#require_relative 'rdl/type/method_check'
 #require_relative 'type/method_wrapper'
 
 class Range
@@ -723,8 +723,7 @@ end
 #RDL.print_warning = false
 #status = RDL::MasterSwitch.is_on?
 #RDL::MasterSwitch.turn_off if status
-require_relative 'type/types'
-require_relative 'type/parser.tab.rb'
+require_relative 'rdl/types'
 #require_relative 'type/base_types'
 #RDL::MasterSwitch.turn_on if status
 

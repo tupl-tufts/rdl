@@ -8,7 +8,7 @@ require 'racc/parser.rb'
 
 
 require_relative 'lexer.rex'
-require_relative 'types'
+require_relative '../types'
 
 module RDL::Type
 
