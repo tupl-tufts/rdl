@@ -49,8 +49,8 @@ class RDLTest < Minitest::Test
   def test_spec_pre_post_cond
     b = B_spec.new
     b.foo 5
-    assert_raise RDL::Spec::PreConditionFailure do b.foo 0 end
-    assert_raise RDL::Spec::PostConditionFailure do b.foo 2 end
+    assert_raises RDL::Spec::PreConditionFailure do b.foo 0 end
+    assert_raises RDL::Spec::PostConditionFailure do b.foo 2 end
   end
 
 #####################################################################
@@ -99,8 +99,8 @@ class RDLTest < Minitest::Test
   def test_keyword_pre_post_cond
     b = B_keyword.new
     b.foo 5
-    assert_raise RDL::Spec::PreConditionFailure do b.foo 0 end
-    assert_raise RDL::Spec::PostConditionFailure do b.foo 2 end
+    assert_raises RDL::Spec::PreConditionFailure do b.foo 0 end
+    assert_raises RDL::Spec::PostConditionFailure do b.foo 2 end
   end
 
 #####################################################################

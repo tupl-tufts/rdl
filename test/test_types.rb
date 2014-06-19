@@ -11,7 +11,7 @@ class TypeTest < Minitest::Test
     ttop = TopType.new
     ttop2 = TopType.new
     assert_same ttop, ttop2
-    assert_not_equal tnil, ttop
+    assert (tnil != ttop)
   end
 
   def test_nominal
@@ -21,7 +21,7 @@ class TypeTest < Minitest::Test
     tb = NominalType.new :B
     assert_same ta, ta2
     assert_same ta, ta3
-    assert_not_equal ta, tb
+    assert (ta != tb)
     assert_equal ta.name, :A
   end
 
@@ -33,9 +33,9 @@ class TypeTest < Minitest::Test
     tan = NominalType.new :A
     assert_same ta, ta2
     assert_same ta, ta3
-    assert_not_equal ta, tb
+    assert (ta != tb)
     assert_equal ta.name, :A
-    assert_not_equal ta, tan
+    assert (ta != tan)
   end
 
   def test_var
@@ -46,9 +46,9 @@ class TypeTest < Minitest::Test
     tan = NominalType.new :A
     assert_same ta, ta2
     assert_same ta, ta3
-    assert_not_equal ta, tb
+    assert (ta != tb)
     assert_equal ta.name, :A
-    assert_not_equal ta, tan
+    assert (ta != tan)
   end
 
   def u_or_i(c)
@@ -73,7 +73,7 @@ class TypeTest < Minitest::Test
     assert_same t6, t7
     t8 = c.new (c.new tc, tb), (c.new ta)
     assert_same t6, t8
-    assert_not_equal t1, tnil
+    assert (t1 != tnil)
   end
 
   def test_union_intersection
@@ -89,7 +89,7 @@ class TypeTest < Minitest::Test
     t2 = OptionalType.new tnil
     assert_same t1, t2
     t3 = OptionalType.new ta
-    assert_not_equal t1, t3
+    assert (t1 != t3)
   end
 
   def test_vararg
@@ -100,7 +100,7 @@ class TypeTest < Minitest::Test
     t2 = VarargType.new tnil
     assert_same t1, t2
     t3 = VarargType.new ta
-    assert_not_equal t1, t3
+    assert (t1 != t3)
   end
 
   def test_method
@@ -114,7 +114,7 @@ class TypeTest < Minitest::Test
     assert_equal t1.ret, tnil
     t2 = MethodType.new tnil, t1, tnil
     assert_equal t2.block, t1
-    assert_raise(RuntimeError) { MethodType.new tnil, tnil, tnil }
+    assert_raises(RuntimeError) { MethodType.new tnil, tnil, tnil }
   end
 
   def test_generic
@@ -127,7 +127,7 @@ class TypeTest < Minitest::Test
     t2 = GenericType.new thash, ta, tb
     assert_same t1, t2
     t3 = GenericType.new thash, tb, ta
-    assert_not_equal t1, t3
+    assert (t1 != t3)
   end
 
   def test_structural

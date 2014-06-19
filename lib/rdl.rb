@@ -1,7 +1,7 @@
 require 'set'
 require_relative 'type/native'
 require_relative 'type/method_check'
-require_relative 'type/method_wrapper'
+#require_relative 'type/method_wrapper'
 
 class Range
   alias :old_initialize :initialize

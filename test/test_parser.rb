@@ -31,7 +31,7 @@ class TypeTest < Minitest::Test
     assert_equal t4, (MethodType.new [@ttop], nil, @tnil)
     t5 = @p.scan_str "(%bool) -> Fixnum"
     assert_equal t5, (MethodType.new [@tbool], nil, @tfixnum)
-    assert_raise(RuntimeError) { @p.scan_str "(%foo) -> nil" }
+    assert_raises(RuntimeError) { @p.scan_str "(%foo) -> nil" }
   end
 
   def test_opt_vararg

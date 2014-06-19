@@ -53,7 +53,7 @@ class IntersectionTest < Minitest::Test
     x = arr[0,2]
     assert_equal([1,2], x)
 
-    assert_raise(RDL::TypesigException) {
+    assert_raises(RDL::TypesigException) {
       arr[true]
     }
 
