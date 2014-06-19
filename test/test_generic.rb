@@ -1,7 +1,7 @@
-require 'test/unit'
-require 'rdl'
+require 'minitest/autorun'
+require_relative '../lib/rdl.rb'
 
-class GenericTest < Test::Unit::TestCase
+class GenericTest < Minitest::Test
   include RDL::Type
 
   def setup

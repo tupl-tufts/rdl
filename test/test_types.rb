@@ -1,7 +1,7 @@
-require 'test/unit'
-require 'rdl'
+require 'minitest/autorun'
+require_relative '../lib/rdl.rb'
 
-class TypeTest < Test::Unit::TestCase
+class TypeTest < Minitest::Test
   include RDL::Type
 
   def test_nil_top

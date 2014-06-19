@@ -1,7 +1,7 @@
-require 'test/unit'
+require 'minitest/autorun'
 require_relative '../lib/rdl.rb'
 
-class RDLTest < Test::Unit::TestCase
+class RDLTest < Minitest::Test
 
 #####################################################################
 
@@ -179,6 +179,7 @@ class RDLTest < Test::Unit::TestCase
    assert_equal [3,4], p.pair
  end
 
+#####################################################################
 
 end
 

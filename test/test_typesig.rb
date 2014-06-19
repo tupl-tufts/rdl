@@ -1,4 +1,4 @@
-require 'test/unit'
+require 'minitest/autorun'
 require_relative '../lib/rdl.rb'
 
 class Test1
