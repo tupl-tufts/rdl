@@ -7,14 +7,13 @@
 require 'racc/parser.rb'
 
 
-require_relative 'lexer.rex'
-require_relative '../types'
+require_relative './lexer.rex'
 
 module RDL::Type
 
 class Parser < Racc::Parser
 
-module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 103)
+module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 102)
 
 def initialize()
   @tbool = RDL::Type::UnionType.new (RDL::Type::NominalType.new TrueClass), (RDL::Type::NominalType.new FalseClass)

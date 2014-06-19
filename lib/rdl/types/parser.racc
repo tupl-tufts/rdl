@@ -94,8 +94,7 @@ rule
 
 ---- header ----
 
-require_relative 'lexer.rex'
-require_relative '../types'
+require_relative './lexer.rex'
 
 module RDL::Type
 

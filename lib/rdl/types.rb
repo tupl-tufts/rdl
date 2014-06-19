@@ -1,3 +1,8 @@
+module RDL
+  class TypesigException < StandardError; end
+  class InvalidParameterException < StandardError; end
+end
+
 ['lexer.rex.rb',
  'parser.tab.rb',
  'generic.rb',
@@ -15,11 +20,6 @@
  'type_variables.rb',
  'union.rb',
  'vararg.rb'].each { |f| require_relative "types/#{f}" }
-
-module RDL
-  class TypesigException < StandardError; end
-  class InvalidParameterException < StandardError; end
-end
 
 class Object
   def method_added(method_name)
