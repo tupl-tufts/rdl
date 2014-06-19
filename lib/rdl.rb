@@ -2,7 +2,6 @@ require 'set'
 require_relative 'type/native'
 require_relative 'type/method_check'
 require_relative 'type/method_wrapper'
-require 'master_switch'
 
 class Range
   alias :old_initialize :initialize
@@ -32,6 +31,8 @@ class Range
 end
 
 module RDL
+  @@master_switch = true
+
   class << self
     attr_accessor :print_warning
   end
@@ -316,8 +317,8 @@ module RDL
     end
 
     def typesig(sig, meta={})
-      status = RDL::MasterSwitch.is_on?
-      RDL::MasterSwitch.turn_off if status
+      status = @@master_switch
+      @@master_switch = false if status
 
       begin
         parser = RDL::Type::Parser.new
@@ -360,7 +361,7 @@ module RDL
         end
         
       ensure
-        RDL::MasterSwitch.turn_on if status
+        @@master_switch = true if status
       end
       RDL::MethodWrapper.wrap_method(@class, mname, old_mname, cls_param_symbols, t)
     end
@@ -719,12 +720,12 @@ class Object
 end
 
 
-RDL.print_warning = false
-status = RDL::MasterSwitch.is_on?
-RDL::MasterSwitch.turn_off if status
+#RDL.print_warning = false
+#status = RDL::MasterSwitch.is_on?
+#RDL::MasterSwitch.turn_off if status
 require_relative 'type/types'
 require_relative 'type/parser.tab.rb'
-require_relative 'type/base_types'
-RDL::MasterSwitch.turn_on if status
+#require_relative 'type/base_types'
+#RDL::MasterSwitch.turn_on if status
 
 
