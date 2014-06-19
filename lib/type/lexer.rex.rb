@@ -76,9 +76,6 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/or/))
          action { [:OR, text] }
 
-      when (text = @ss.scan(/Tuple/))
-         action { [:TUPLE, text] }
-
       when (text = @ss.scan(/=>/))
          action { [:ASSOC, text] }
 
