@@ -56,6 +56,15 @@ class TypeTest < Minitest::Test
     assert_equal t3, (MethodType.new [], nil, UnionType.new(@ta, @tb, @tc))
   end
 
+  def test_bare
+    t1 = @p.scan_str "## nil"
+    assert_equal t1, @tnil
+    t2 = @p.scan_str "## %any"
+    assert_equal t2, @ttop
+    t3 = @p.scan_str "## A"
+    assert_equal t3, NominalType.new("A")
+  end
+
 #def test_generic
 #    t = @p.scan_str "'[]': (Fixnum) -> t or nil"
 #  t = @p.scan_str "(t) -> Array<t>"

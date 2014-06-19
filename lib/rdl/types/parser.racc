@@ -25,9 +25,9 @@ rule
 
   entry:
       method_type { result = val[0] }
-    | annotation { result = val[0] }
+    | bare_type { result = val[0] }
 
-  annotation:
+  bare_type:
       DOUBLE_HASH type_expr {
         result = val[1]
       }

@@ -169,7 +169,7 @@ Racc_token_to_s_table = [
   "$start",
   "entry",
   "method_type",
-  "annotation",
+  "bare_type",
   "type_expr",
   "arg_list",
   "block",
