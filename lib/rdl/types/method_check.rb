@@ -1,4 +1,4 @@
-require_relative './native'
+require_relative 'native'
 
 module RDL::MethodCheck
   def self.check_type(value, type, check_variables = true)

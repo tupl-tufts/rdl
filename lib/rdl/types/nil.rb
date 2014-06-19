@@ -1,5 +1,5 @@
-require_relative './type'
-require_relative './terminal'
+require_relative 'type'
+require_relative 'terminal'
 
 module RDL::Type
   class NilType < Type

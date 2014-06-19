@@ -1,4 +1,4 @@
-require_relative './type'
+require_relative 'type'
 require_relative 'native'
 
 module RDL::Type

@@ -1,5 +1,5 @@
-require_relative './type'
-require_relative './native'
+require_relative 'type'
+require_relative 'native'
 
 module RDL::Type
   class OptionalType < Type
