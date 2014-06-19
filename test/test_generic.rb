@@ -89,7 +89,7 @@ class GenericTest < Minitest::Test
     y = x.push(true)
     assert_equal [1,2,3,"123",true], y
 
-    assert_raise(RDL::TypesigException) {
+    assert_raises(RDL::TypesigException) {
       x.push(false)
     }
 
