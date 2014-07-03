@@ -1,18 +1,27 @@
-require 'minitest/autorun'
-require_relative '../lib/rdl.rb'
+require 'test/unit'
+require 'rdl'
 
-class Test1
-	extend RDL
-	
-	x = "String"
-	#x.byteslice(5,5)
-	#x.byteslice(6)
-	#x.byteslice(1..2)
-	#x.byteslice(String)
-	
+class Typesig_test < Test::Unit::TestCase
+    include RDL::Type
+    
+    def setup
+        @x = "String"
+        @y = ""
+    end
+    
+    def method_overload
+        assert_equal("S",@x[0])
+        assert_equal("Str",@x[0..2])
+        assert_equal("St",@x[0,2])
+    end
+    
+    def undefined_typesig
+        assert_raise(error) {RDLTests::undefined_typesig}
+    end
+    
 end
 
-class Test2
+class RDLTests
 	extend RDL
 	
 	typesig :foo, " () -> asdfghjkl"
@@ -20,6 +29,8 @@ class Test2
 		return "hello world"
 	end
 	
-	p "String"+( foo() )
+    def undefined_typesig
+        p "String"+( foo() )
+    end
 	
 end

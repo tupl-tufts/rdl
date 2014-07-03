@@ -316,7 +316,7 @@ module RDL
       end
     end
 
-    def typesig(sig, meta={})
+    def typesig(sig, meta={}, &embctc)
       status = @@master_switch
       @@master_switch = false if status
 
@@ -336,6 +336,10 @@ module RDL
 
         if not invalid_tparams.empty?
           raise RDL::InvalidParameterException, "Invalid parameters #{invalid_tparams.inspect} in #{@class}##{@mname} typesig #{sig}"
+        end
+        
+        unless instance_exec(args, ret_value, &embctc)
+            raise TypesigException, "Failed to uphold contract in #{mname}"
         end
         
         if tvars
@@ -677,8 +681,8 @@ module RDL
     Lang.new(self).spec(mname, *args, &blk)
   end
 
-  def typesig(mname, sig, meta={})
-    Object.new.typesig(self, mname, sig, meta)
+  def typesig(mname, sig, meta={}, &blk)
+    Object.new.typesig(self, mname, sig, meta, blk)
   end
 
   def self.create_spec(&b)
@@ -697,7 +701,7 @@ module RDL
 end
 
 class Object
-  def typesig(cls, mname, sig, meta={})
+  def typesig(cls, mname, sig, meta={}, &blk)
     if cls.class == Symbol
       cls = eval(cls.to_s)
     elsif cls.class == String
@@ -707,7 +711,7 @@ class Object
     typesig_call = "
       extend RDL if not #{cls}.singleton_class.included_modules.include?(RDL)
       spec :#{mname.to_s} do
-        typesig(\"#{sig}\", #{meta})
+        typesig(\"#{sig}\", #{meta}, #{blk})
       end"
     
     #    if cls.instance_methods(false).include?(mname)
