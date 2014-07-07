@@ -1,11 +1,20 @@
 module RailsHelper
   class << self
     attr_accessor :namespace
+    attr_accessor :resources_stack
+    attr_accessor :inside_member
+  end
+
+  def self.get_path_helper(name)
+    stack = RailsHelper.resources_stack.map {|e| e.to_s.singularize}
+    resources_str = stack.join("_")
+    method_prefix = resources_str == "" ? "#{name}" : "#{name}_#{resources_str}" 
+    :"#{method_prefix}_path"
   end
 
   def self.get_resource_info(controller, action)
     controller_s = controller.singularize
-    controller_c = controller.camelize
+    controller_c = controller_s.camelize
 
     case action
     when :new
@@ -50,7 +59,7 @@ module RailsHelper
 
   def self.get_resources_info(controller, action)
     controller_s = controller.singularize
-    controller_c = controller.camelize
+    controller_c = controller_s.camelize
     n = RailsHelper.namespace.to_s
     nnh = (n == "" ? "" : "#{n}_")
 
@@ -217,6 +226,19 @@ module ActionDispatch
     class Mapper
       extend RDL
 
+      spec :root do
+        post_cond do |ret, *args|
+          methods = [:root_path, :root_url]
+
+          methods.all? {|m|
+            puts "ApplicationController ##% #{m} : () -> String"
+
+            #add_typesig(ApplicationController, m, "() -> String")
+            ApplicationController.instance_methods.include?(m)
+          }
+        end
+      end
+
       spec :namespace do
         pre_task do |*args, &blk|
           RailsHelper.namespace = args[0]
@@ -228,9 +250,6 @@ module ActionDispatch
       end
 
       spec :get do
-        pre_task do |*args, &blk|
-        end
-
         pre_cond do |*args, &blk|
           options = args[1] || {}
           
@@ -252,12 +271,51 @@ module ActionDispatch
             true
           end
         end
+
+        post_cond do |ret, *args|
+          if RailsHelper.inside_member and not parent_resource.actions.include?(args[0])
+            path_helper = RailsHelper.get_path_helper(args[0])
+            ctrl = parent_resource.controller.singularize.camelize
+
+            puts "ApplicationController ##% #{path_helper} : (#{ctrl}) -> String"
+
+            add_typesig(ApplicationController, path_helper, "() -> String")
+
+            ApplicationController.instance_methods.include?(path_helper)
+          else
+            true
+          end
+        end
       end
 
-      spec :resource do
-        pre_task do |*args, &blk|
+      spec :post do
+        post_cond do |ret, *args|
+          if RailsHelper.inside_member and not parent_resource.actions.include?(args[0])
+            path_helper = RailsHelper.get_path_helper(args[0])
+            ctrl = parent_resource.controller.singularize.camelize
+
+            puts "ApplicationController ##% #{path_helper} : (#{ctrl}) -> String"
+
+            add_typesig(ApplicationController, path_helper, "() -> String")
+
+            ApplicationController.instance_methods.include?(path_helper)
+          else
+            true
+          end
+        end
+      end
+
+      spec :member do
+        pre_task do |*args|
+          RailsHelper.inside_member = true
         end
 
+        post_task do |*args|
+          RailsHelper.inside_member = false
+        end
+      end
+      
+      spec :resource do
         post_task do |ret, *args, &blk|
           return true if args[0] == :session or args[0] == :password or args[0] == :registration or args[0] == :confirmation
 
@@ -280,8 +338,8 @@ module ActionDispatch
             r_ph = info[:path_helper]
             r_uh = info[:url_helper]
 
-            typesig(controller_obj, r_ph[0], r_ph[1])
-            typesig(controller_obj, r_uh[0], r_uh[1])
+            #typesig(controller_obj, r_ph[0], r_ph[1])
+            #typesig(controller_obj, r_uh[0], r_uh[1])
           }
         end
 
@@ -300,9 +358,13 @@ module ActionDispatch
       # TODO: resources arg can also be a list
       spec :resources do
         pre_task do |*args, &blk|
+          RailsHelper.resources_stack = [] if not RailsHelper.resources_stack
+          RailsHelper.resources_stack.push(args[0])
         end
 
         post_task do |ret, *args, &blk|
+          RailsHelper.resources_stack.pop
+
           controller = args[0].to_s
           controller_obj = controller.camelize + "Controller"
           controller_obj = eval(controller_obj)
@@ -322,8 +384,11 @@ module ActionDispatch
             r_ph = info[:path_helper]
             r_uh = info[:url_helper]
 
-            typesig(controller_obj, r_ph[0], r_ph[1])
-            typesig(controller_obj, r_uh[0], r_uh[1])
+            puts "#{controller_obj} ##% #{r_ph[0]} : #{r_ph[1]}"
+            puts "#{controller_obj} ##% #{r_uh[0]} : #{r_uh[1]}"
+
+            #typesig(controller_obj, r_ph[0], r_ph[1])
+            #typesig(controller_obj, r_uh[0], r_uh[1])
           }
         end
 
