@@ -3,6 +3,20 @@ module ActiveRecord
     module ClassMethods
       extend RDL
 
+      def __rdl_get_arg_method_typesig(mname, arg_options)
+        if arg_options.keys.include?(:class_name)
+          c = arg_options[:class_name]
+        else
+          c = mname.to_s.singularize.camelize
+        end
+        
+        t = "() -> Array<#{c}>"
+        
+        puts "#{self} ##% #{mname} : #{t}"
+        
+        t
+      end
+
       def __rdl_option_keys_valid?(spec_valid_options, options_used)
         # Original class association options can be found with
         # ActiveRecord::Associations::Builder::Association.valid_options
@@ -31,6 +45,9 @@ module ActiveRecord
         end
 
         r
+
+        # TODO: Fix this, late binding?
+        true
       end
 
       def __rdl_collection_methods_added?(collection, arg_options)
@@ -63,22 +80,42 @@ module ActiveRecord
       end
 
       def __rdl_singular_methods_added?(type, assoc, arg_options)
-        new_methods = []
+        new_methods = {}
+
+        if arg_options.keys.include?(:class_name)
+          cls = arg_options[:class_name]
+        else
+          cls = assoc.to_s.camelize
+        end
 
         if type == :belongs_to
           if arg_options.keys.include?(:polymorphic) and arg_options[:polymorphic] == true 
-            new_methods = [assoc, "#{assoc}="]
+            new_methods[:"#{assoc}"] = "(?%bool) -> #{cls}"
+            new_methods[:"#{assoc}="] = "(#{cls}) -> #{cls}"
           else
-            new_methods = [assoc, "#{assoc}=", "build_#{assoc}", "create_#{assoc}", "create_#{assoc}!"]
+            new_methods[:"#{assoc}"] = "(?%bool) -> #{cls}"
+            new_methods[:"#{assoc}="] = "(#{cls}) -> #{cls}"
+            new_methods[:"build_#{assoc}"] = "(Hash) -> #{cls}"
+            new_methods[:"create_#{assoc}"] = "(Hash) -> #{cls}"
+            new_methods[:"create_#{assoc}!"] = "(Hash) -> #{cls}"
           end
         elsif type == :has_one
-          new_methods = [assoc, "#{assoc}=", "build_#{assoc}", "create_#{assoc}", "create_#{assoc}!"]
+          new_methods[:"#{assoc}"] = "(?%bool) -> #{cls}"
+          new_methods[:"#{assoc}="] = "(#{cls}) -> #{cls}"
+          new_methods[:"build_#{assoc}"] = "(Hash) -> #{cls}"
+          new_methods[:"create_#{assoc}"] = "(Hash) -> #{cls}"
+          new_methods[:"create_#{assoc}!"] = "(Hash) -> #{cls}"
         else
           raise Exception, "type must be a singular association"
         end
 
-        new_methods.map! {|m| m.to_sym}
-        new_methods.all? {|m| self.instance_methods.include?(m)}
+        new_methods.each {|k, v|
+          puts "#{self} ##% #{k} : #{v}"
+
+          #add_typesig(self, k, v)
+        }        
+
+        new_methods.keys.all? {|m| self.instance_methods.include?(m)}
       end
 
       spec :belongs_to do
@@ -155,7 +192,6 @@ module ActiveRecord
 
           correct_methods_added = __rdl_singular_methods_added?(:belongs_to, arg_name, arg_options)
 
-
           if arg_options.keys.include?(:foreign_key)
             fk = arg_options[:foreign_key]
           else
@@ -165,7 +201,13 @@ module ActiveRecord
           foreign_key_added = (slf.reflections.keys.include?(arg_name) and
                                (slf.reflections[arg_name].foreign_key == fk))
 
-          correct_methods_added and foreign_key_added
+          arg_method_added = self.instance_methods.include?(args[0])
+          arg_method_typesig = __rdl_get_arg_method_typesig(args[0], arg_options)
+
+          puts "#{self} ##% #{args[0]} : #{arg_method_typesig}"
+          #add_typesig(self, args[0], arg_method_typesig)
+
+          arg_method_added and correct_methods_added and foreign_key_added
         end
       end
 
@@ -210,10 +252,14 @@ module ActiveRecord
 
           correct_methods_added = __rdl_singular_methods_added?(:has_one, arg_name, arg_options)
 
-          correct_methods_added
+          arg_method_added = self.instance_methods.include?(args[0])
+          arg_method_typesig = __rdl_get_arg_method_typesig(args[0], arg_options)
+
+          puts "#{self} ##% #{args[0]} : #{arg_method_typesig}"
+          
+          arg_method_added and correct_methods_added
         end
       end
-
 
       spec :has_many do
         pre_task do |*args|
@@ -242,7 +288,7 @@ module ActiveRecord
           spec_valid_options = [:primary_key, :dependent, :as, :through, :source, :source_type, :inverse_of, :table_name, :order, :group, :having, :limit, :offset, :uniq, :finder_sql, :counter_sql, :before_add, :after_add, :before_remove, :after_remove]
           option_keys_valid = __rdl_option_keys_valid?(spec_valid_options, arg_options)
           arg_classes_defined = __rdl_arg_objects_defined?(arg_name, arg_options)
-          
+
           option_keys_valid and
           arg_classes_defined
         end
@@ -276,6 +322,14 @@ module ActiveRecord
           col_names = slf.columns.map {|x| x.name}
           bad_foreign_key_col_not_exist = (not col_names.include?(fk))
 
+          arg_method_added = self.instance_methods.include?(args[0])
+          arg_method_typesig = __rdl_get_arg_method_typesig(args[0], arg_options)
+
+          #add_typesig(self, args[0], arg_method_typesig)
+
+          puts "#{self} ##% #{args[0]} : #{arg_method_typesig}"
+
+          arg_method_added and
           correct_methods_added and foreign_key_added and
           bad_foreign_key_col_not_exist
         end
@@ -333,10 +387,18 @@ module ActiveRecord
             fk = "#{slf.to_s.camelize(:lower)}_id"
           end
 
+          arg_method_added = self.instance_methods.include?(args[0])
+          arg_method_typesig = __rdl_get_arg_method_typesig(args[0], arg_options)
+
+          # this adds methods like poster_lists, owned_lists, etc
+          #add_typesig(self, args[0], arg_method_typesig)
+
+          puts "#{self} ##% #{args[0]} : #{arg_method_typesig}"
+
           foreign_key_added = (slf.reflections.keys.include?(arg_name) and
                                (slf.reflections[arg_name].foreign_key == fk))
-
-          correct_methods_added and foreign_key_added
+          
+          arg_method_added and correct_methods_added and foreign_key_added
         end
       end
     end
