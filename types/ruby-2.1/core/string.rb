@@ -1,27 +1,30 @@
+# -*- coding: utf-8 -*-
 require 'rdl'
 
 # RDL Annotations for Ruby 2.1.1
 
 class String
-	extend RDL
-    
-	typesig( :new , " ( ? String ) -> String " ) {|prm,ret| unless prm.empty?; ret.include?(prm[0]) ;end}
+  extend RDL
 
-typesig( :try_convert , " ( Object ) -> String or nil " ) {|prm,ret| unless ret[0].nil?; ret[0]==prm[0].to_str ;end}
+  typesig(:new, "(str : ?String) -> new_str : String") { new_str.include?(str) unless str.empty? }
 
-typesig( :% , " ( Object ) -> String " )
+  typesig(:try_convert, "(obj : Object) -> ret : String or nil") { ret.nil? || ret==obj.to_str }
 
-typesig( :* , " ( Fixnum ) -> String " ) {|prm,ret| prm[0]>=0 && !(ret[0]=~/(#{self}){#{prm[0]}}/).nil?}
+  typesig(:%, "(Object) -> String")
 
-typesig( :+, " ( String ) -> String " ) {|prm,ret| ret[0].include?(prm[0]) && ret[0].include?(self)}
+  typesig(:*, "(Fixnum) -> String")
+  post_cond { |ret,prm| prm[0]>=0 && !(ret[0]=~/(#{self}){#{prm[0]}}/).nil? }
 
-typesig( :<<, " ( Object ) -> String " ) {|prm,ret| ret[0].include?(prm[0]) && ret[0].include?(self)}
+  typesig(:+, "(String) -> String")
+  post_cond { |ret,prm| ret[0].include?(prm[0]) && ret[0].include?(self) }
 
-typesig( :<=>, " ( String ) -> Fixnum or nil " ) {|prm,ret| unless ret[0].nil?; ret[0].abs<2 ;end}
+  typesig( :<<, " ( Object ) -> String " ) {|prm,ret| ret[0].include?(prm[0]) && ret[0].include?(self)}
 
-typesig( :== , " ( Object ) -> %bool " ) {|prm,ret| ret[0]==(!(prm[0].class<＝String) ? self.eql?(prm[0]) : self===prm[0])}
+  typesig(:<=>, "(other : String) -> ret : Fixnum or nil" ) { ret.nil? || ret.abs < 2 }
 
-typesig( :=== , " ( Object ) -> %bool " ) {|prm,ret| ret[0]==(!(prm[0].class<＝String) ? self.eql?(prm[0]) : self===prm[0])}
+  typesig( :== , " ( Object ) -> %bool " )
+
+  typesig( :=== , " ( Object ) -> %bool " )
 
 typesig( :=~ , " ( Object ) -> Fixnum or nil " )
 
