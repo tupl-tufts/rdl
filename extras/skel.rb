@@ -13,6 +13,7 @@ def skel(klass)
     first = true
     block = false
     ps.each { |kind, name|
+        name = "XXXX" unless name
         if kind == :req then
           ret << ", " unless first
           first = false
@@ -21,7 +22,7 @@ def skel(klass)
           ret << ", " unless first
           first = false
           ret << "#{name} : ?XXXX"
-        elsif kind == :args then
+        elsif kind == :args or kind == :rest then
           ret << ", " unless first
           first = false
           ret << "#{name} : *XXXX"
