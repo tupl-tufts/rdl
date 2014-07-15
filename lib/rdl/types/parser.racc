@@ -16,7 +16,7 @@ class Parser
   start entry
 
 token DOUBLE_HASH
-token OR ASSOC DOUBLE_COLON RARROW ID SYMBOL SPECIAL_ID STRING
+token OR ASSOC DOUBLE_COLON COLON RARROW ID SYMBOL SPECIAL_ID STRING
 token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
 token COMMA QUERY STAR LESS GREATER
 token EOF
@@ -36,12 +36,20 @@ rule
       LPAREN arg_list RPAREN block RARROW type_expr {
         result = RDL::Type::MethodType.new val[1], val[3], val[5]
       }
+   | LPAREN arg_list RPAREN block RARROW ID COLON type_expr {
+        result = RDL::Type::MethodType.new val[1], val[3], RDL::Type::NamedArgType.new(val[5], val[7])
+      }
+
 
   arg_list:
       { result = [] }
     | arg { result = [val[0]] }
     | arg COMMA arg_list { if val[2] then result = val[2].unshift val[0] else val[0] end }
   arg:
+      base_arg { result = val[0] }
+    | ID COLON base_arg { result = RDL::Type::NamedArgType.new(val[0], val[2]) }
+
+  base_arg:
       QUERY type_expr { result = RDL::Type::OptionalType.new val[1] }
     | STAR type_expr { result = RDL::Type::VarargType.new val[1] }
     | type_expr { result = val[0] }

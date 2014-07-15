@@ -45,6 +45,7 @@ rule
   \#\#      	{ [:DOUBLE_HASH, text] }
   {ID}          { [:ID, text] }
   {SYMBOL}      { [:SYMBOL, text[1..-1]] }
+  \:            { [:COLON, text] } # Must come after SYMBOL
   {SPECIAL_ID}  { [:SPECIAL_ID, text] }
   '[^']*'       { [:STRING, text.gsub("'", "")] }
 

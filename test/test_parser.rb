@@ -18,6 +18,13 @@ class TypeTest < Minitest::Test
     @ta = RDL::Type::NominalType.new :A
     @tb = RDL::Type::NominalType.new :B
     @tc = RDL::Type::NominalType.new :C
+    @tfixnumx = RDL::Type::NamedArgType.new("x", @tfixnum)
+    @tfixnumy = RDL::Type::NamedArgType.new("y", @tfixnum)
+    @tfixnumret = RDL::Type::NamedArgType.new("ret", @tfixnum)
+    @tfixnumoptx = RDL::Type::NamedArgType.new("x", @tfixnumopt)
+    @tfixnumvarargx = RDL::Type::NamedArgType.new("x", @tfixnumvararg)
+    @tsymbol = RDL::Type::SymbolType.new(:symbol)
+    @tsymbolx = RDL::Type::NamedArgType.new("x", @tsymbol)
   end
 
   def test_basic
@@ -63,6 +70,34 @@ class TypeTest < Minitest::Test
     assert_equal t2, @ttop
     t3 = @p.scan_str "## A"
     assert_equal t3, NominalType.new("A")
+  end
+
+  def test_symbol
+    t1 = @p.scan_str "## :symbol"
+    assert_equal t1, @tsymbol
+  end
+
+  def test_named_params
+    t1 = @p.scan_str "(x : Fixnum, Fixnum) -> Fixnum"
+    assert_equal t1, (MethodType.new [@tfixnumx, @tfixnum], nil, @tfixnum)
+    t2 = @p.scan_str "(x : ?Fixnum, Fixnum) -> Fixnum"
+    assert_equal t2, (MethodType.new [@tfixnumoptx, @tfixnum], nil, @tfixnum)
+    t3 = @p.scan_str "(x : *Fixnum, Fixnum) -> Fixnum"
+    assert_equal t3, (MethodType.new [@tfixnumvarargx, @tfixnum], nil, @tfixnum)
+    t4 = @p.scan_str "(Fixnum, y : Fixnum) -> Fixnum"
+    assert_equal t4, (MethodType.new [@tfixnum, @tfixnumy], nil, @tfixnum)
+    t5 = @p.scan_str "(x : Fixnum, y : Fixnum) -> Fixnum"
+    assert_equal t5, (MethodType.new [@tfixnumx, @tfixnumy], nil, @tfixnum)
+    t6 = @p.scan_str "(Fixnum, Fixnum) -> ret : Fixnum"
+    assert_equal t6, (MethodType.new [@tfixnum, @tfixnum], nil, @tfixnumret)
+    t7 = @p.scan_str "(x : Fixnum, Fixnum) -> ret : Fixnum"
+    assert_equal t7, (MethodType.new [@tfixnumx, @tfixnum], nil, @tfixnumret)
+    t8 = @p.scan_str "(Fixnum, y : Fixnum) -> ret : Fixnum"
+    assert_equal t8, (MethodType.new [@tfixnum, @tfixnumy], nil, @tfixnumret)
+    t9 = @p.scan_str "(x : Fixnum, y : Fixnum) -> ret : Fixnum"
+    assert_equal t9, (MethodType.new [@tfixnumx, @tfixnumy], nil, @tfixnumret)
+    t10 = @p.scan_str "(x : :symbol) -> Fixnum"
+    assert_equal t10, (MethodType.new [@tsymbolx], nil, @tfixnum)
   end
 
 #def test_generic

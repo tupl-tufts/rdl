@@ -127,6 +127,9 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/:\w+/))
          action { [:SYMBOL, text[1..-1]] }
 
+      when (text = @ss.scan(/\:/))
+         action { [:COLON, text] } # Must come after SYMBOL
+
       when (text = @ss.scan(/%\w+/))
          action { [:SPECIAL_ID, text] }
 

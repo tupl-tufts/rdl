@@ -10,6 +10,7 @@ end
  'method.rb',
  'nil.rb',
  'named.rb',
+ 'named_arg.rb',
  'optional.rb',
  'structural.rb',
  'top.rb',
