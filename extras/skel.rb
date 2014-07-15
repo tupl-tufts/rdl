@@ -1,7 +1,12 @@
 def skel(klass)
   ret = ""
-  ret << "class #{klass}"
-  ret << "< #{klass.superclass}" if klass.superclass != Object
+  
+  if klass.instance_of? Class then
+    ret << "class #{klass}"
+    ret << "< #{klass.superclass}" if klass.superclass != Object
+  elsif klass.instance_of? Module then
+    ret << "module #{klass}"
+  end
   ret << "\n"
   ret << "  extend RDL\n"
   klass.methods(false).each do |m|
