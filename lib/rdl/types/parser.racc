@@ -76,7 +76,7 @@ rule
       if val[0] == 'nil' then
         result = RDL::Type::NilType.new
       elsif val[0] =~ /^[a-z_]+\w*\'?/ then
-        result = RDL::Type::TypeParameter.new(val[0].to_sym)
+        result = RDL::Type::VarType.new(val[0].to_sym)
       else
         result = RDL::Type::NominalType.new val[0]
       end
