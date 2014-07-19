@@ -1,31 +1,7 @@
 require 'set'
-
-class Range
-  alias :old_initialize :initialize
-  
-  def initialize(*args)
-    old_initialize(*args)
-  end
-
-  def no_iter
-    []
-  end
-
-  def step_iter(step_num)
-    self.step(step_num)
-  end
-
-  def random_iter(iter = (self.max - self.min) / 2)
-    rand_set = Set.new
-    prng = Random.new
-    
-    while rand_set.size < iter
-      rand_set.add(prng.rand(self.min..self.max))
-    end
-
-    rand_set.to_a
-  end
-end
+require_relative 'rdl_ctc'
+require_relative 'rdl_sig'
+require_relative 'rdl_dsl'
 
 module RDL
   @@master_switch = true
@@ -95,45 +71,64 @@ module RDL
     Lang.new(self).spec(mname, *args, &blk)
   end
 
-  def typesig(mname, sig, meta={})
+# Typesig annotations for method types
+# TODO: meta vs *conds
+def typesig(mname, sig, meta={})
     Object.new.typesig(self, mname, sig, meta)
-  end
-
-  def self.create_spec(&b)
-    Proc.new &b
-  end
-
-  def self.state
-    @state = {} unless @state
-    @state
-  end
-
-  def self.extended(extendee)
-    extendee.instance_variable_set(:@typesig_info, {})
-    #extendee.instance_variable_set(:@deferred_specs, {})
-  end
 end
 
-class Object
-  def typesig(cls, mname, sig, meta={})
-    if cls.class == Symbol
-      cls = eval(cls.to_s)
-    elsif cls.class == String
-      cls = eval(cls)
-    end
+# Pre condition generator for use in :typesig annotations
+def pre(desc=nil,&blk)
+    PreCtc.new(desc,&blk)
+end
 
-    typesig_call = "
-      extend RDL if not #{cls}.singleton_class.included_modules.include?(RDL)
-      spec :#{mname.to_s} do
+# Post condition generator for use in :typesig annotations
+def post(desc=nil,&blk)
+    PostCtc.new(desc,&blk)
+end
+
+#
+def self.create_spec(&b)
+    Proc.new &b
+end
+
+#
+def self.state
+    @state = {} unless @state
+    @state
+end
+
+#
+def self.extended(extendee)
+    extendee.instance_variable_set(:@typesig_info, {})
+    #extendee.instance_variable_set(:@deferred_specs, {})
+end
+
+end #End of Module:RDL
+
+
+class Object
+    # Handles internal typesig routing
+    # See rdl_sig.rb
+    def typesig(cls, mname, sig, meta={})
+        if cls.class == Symbol
+            cls = eval(cls.to_s)
+        elsif cls.class == String
+            cls = eval(cls)
+        end
+        
+        typesig_call = "
+        extend RDL if not #{cls}.singleton_class.included_modules.include?(RDL)
+        spec :#{mname.to_s} do
         typesig(\"#{sig}\", #{meta})
-      end"
+        end"
     
     #    if cls.instance_methods(false).include?(mname)
-    cls.instance_eval(typesig_call)
-    #   else
-    #     dss = cls.instance_variable_get(:@deferred_specs)
-    #     dss[mname] = typesig_call
-    #   end
+        cls.instance_eval(typesig_call)
+    #    else
+    #    dss = cls.instance_variable_get(:@deferred_specs)
+    #    dss[mname] = typesig_call
+    #    end
   end
 end
 

@@ -8,6 +8,7 @@ class Spec
         @class = cls
         @mname = mname
         
+        # TODO: Fix typesig before method definition feature
         unless cls.method_defined? mname or mname.to_sym == :initialize
             raise "Method #{mname} not defined for #{cls}"
         end
@@ -62,7 +63,7 @@ class Spec
         n.add_method_type(@mname, sig_type)
     end
     
-    # Use typesig instead for now
+    # DEPRECATED: Use typesig instead
     def typesig_c(sig)
         parser = RDL::Type::Parser.new
         t = parser.scan_str(sig)
@@ -161,6 +162,77 @@ class Spec
         end
         RDL::MethodWrapper.wrap_method(@class, mname, old_mname, cls_param_symbols, t)
     end
+    
+    # Proposed changes to typesig
+    def typesig_neo(sig, *ctcmeta)
+        meta = ((ctcmeta[0].is_a? Hash) ? ctcmeta[0]:{})
+        status = @@master_switch
+        @@master_switch = false if status
+        
+        begin
+            # Extracting type information from typesig annotation as NominalType
+            parser = RDL::Type::Parser.new
+            t = parser.scan_str(sig)
+            tvars = meta[:vars].nil? ? [] : meta[:vars]
+            
+            # Handling type params
+            cls_params = RDL::Type::NominalType.new(@class).type_parameters
+            cls_param_symbols = cls_params.map {|p| p.symbol}
+            valid_param_symbols = tvars + cls_param_symbols
+            invalid_tparams = []
+            t.get_method_parameters.each {|p|
+                invalid_tparams.push(p) if not valid_param_symbols.include?(p)
+            }
+            if not invalid_tparams.empty?
+                raise RDL::InvalidParameterException, "Invalid parameters #{invalid_tparams.inspect} in #{@class}##{@mname} typesig #{sig}"
+            end
+            if tvars
+                tvars = tvars.map {|x| RDL::Type::TypeParameter.new(x.to_sym)}
+                t.parameters = tvars
+            end
+            
+            # TODO: Or Contracts and Optional Vars, Etc
+            # Handling pre conditions and input types
+            ctcmeta.each{|typ|
+                if typ.is_a? Contract
+                    prmctc = (prmctc ? AandCtc.new("User Precondition",typ, prmctc):typ)
+                else
+                    raise RDL::InvalidParameterException, "Invalid input to typesig. Expecting Contract received #{typ.class}!" unless typ.is_a? Hash
+                end
+            }
+            t.method_types.each{|typ|
+                if prmctc
+                    prmctc = AandCtc.new("Input Parameter Type",typ, prmctc)
+                else
+                    prmctc = RootCtc.new("Input Parameter Type"){typ}
+                end
+            }
+            
+            #TODO: Output Parameter Type and Post conditions
+            
+            pre(prmctc) if prmctc
+            post(retctc) if retctc
+            
+            #TODO: Store method
+            
+            #TODO: Store original value, instance eval or read labelled types
+            
+            # Wrapping Method to execute typesig check
+            mname = @mname
+            old_mname = "__dsl_old_#{mname}"
+            ti = @class.instance_variable_get(:@typesig_info)
+            ti[mname] = [@class, mname, old_mname, cls_param_symbols, t]
+            if t_old
+                @class.class_eval do
+                    alias_method mname, old_mname
+                end
+            end
+            
+            ensure
+            @@master_switch = true if status
+        end
+    end
+
     
     # Checks argument n (positional) against contract c.
     def arg(n, c)

@@ -181,6 +181,34 @@ class Lang
     end
 end
 
+class Range
+    alias :old_initialize :initialize
+    
+    def initialize(*args)
+        old_initialize(*args)
+    end
+    
+    def no_iter
+        []
+    end
+    
+    def step_iter(step_num)
+        self.step(step_num)
+    end
+    
+    def random_iter(iter = (self.max - self.min) / 2)
+        rand_set = Set.new
+        prng = Random.new
+        
+        while rand_set.size < iter
+            rand_set.add(prng.rand(self.min..self.max))
+        end
+        
+        rand_set.to_a
+    end
+end
+
+
 
 
 end

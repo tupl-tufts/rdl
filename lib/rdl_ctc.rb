@@ -5,18 +5,84 @@
 
 module RDL
 
+# Interface for Contract Objects
 class Contract
-    def apply(v); end
-    def check(v); end
+    def apply(*v)
+        (check *v) ? v : false #(raise "Value(s) #{v.inspect} does not match contract(s) #{self}")
+    end
+    def check(*v); end
     def to_s; end
     def to_proc
         x = self
         Proc.new { |v| x.check v }
     end
+    def implies(&ctc)
+        #TODO
+    end
 end
 
+# First Order Contract
+class RootCtc < Contract
+    def initialize(desc="No Description", &ctc)
+        @pred = ctc
+        @str = desc
+    end
+    def check(*v)
+        @pred.call unless ((@pred.arity < 0) ? @pred.arity.abs <= v.size : @pred.arity == v.size)
+    end
+    def to_s
+        "#<RootCtc:#{@str}>"
+    end
+end
+
+# Higher Order Contract Interface
+class OrdNCtc < Contract
+    @cond = Proc.new{}
+    def initialize(desc="Blank Contract Bundle: No Description", lctc, rctc)
+        init()
+        @str = desc
+        @lctc = lctc
+        @rctc = rctc
+    end
+    def init; end
+    def check(*v)
+        @cond.call(lctc.check(*v), rctc, v)
+    end
+end
+
+# Contract where both child contracts are checked
+# TODO: Rename AndCtc once deprecated moved
+class AandCtc < OrdNCtc
+    def init
+        @cond = Proc.new{|l,r,v| l && r.check(*v)}
+    end
+    def to_s
+        "#<ANDCtc:#{@str}>"
+    end
+end
+
+# Contract where one or both child contracts are checked
+class OrCtc < OrdNCtc
+    def init
+        @cond = Proc.new{|l,r,v| }
+    end
+    def to_s
+        "#<ORCtc:#{@str}>"
+    end
+end
+
+class PreCtc < RootCtc; end
+
+class PostCtc < RootCtc; end
+
+
+############ TODO: self.convert
+
+
+#################################### V DEPRECATED V #######################################
+
 class FlatCtc < Contract
-    def initialize(s = "predicate", &p)
+    def initialize(s = "FlatCtc:Predicate", &p)
         raise "Expected predicate, got #{p}" unless p.arity.abs == 1
         @str = s.to_s; @pred = p
     end
@@ -93,5 +159,7 @@ end
 def self.implies(lhs, rhs)
 ImpliesCtc.new lhs, rhs
 end
+
+#################################### ^ DEPRECATED ^ #######################################
 
 end
