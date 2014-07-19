@@ -163,6 +163,10 @@ class Spec
         RDL::MethodWrapper.wrap_method(@class, mname, old_mname, cls_param_symbols, t)
     end
     
+    def typeToCtc
+        #TODO: Implement this
+    end
+    
     # Proposed changes to typesig
     def typesig_neo(sig, *ctcmeta)
         meta = ((ctcmeta[0].is_a? Hash) ? ctcmeta[0]:{})
@@ -195,20 +199,21 @@ class Spec
             # Handling pre conditions and input types
             ctcmeta.each{|typ|
                 if typ.is_a? Contract
-                    prmctc = (prmctc ? AandCtc.new("User Precondition",typ, prmctc):typ)
+                    prmctc = ((prmctc && typ.is_a? PreCtc) ? AandCtc.new("User Precondition",typ, prmctc):typ)
+                    retctc = ((retctc && typ.is_a? PostCtc) ? AandCtc.new("User Postcondition",typ, prmctc):typ)
                 else
-                    raise RDL::InvalidParameterException, "Invalid input to typesig. Expecting Contract received #{typ.class}!" unless typ.is_a? Hash
+                    unless typ.is_a? Hash raise RDL::InvalidParameterException, "Invalid input to typesig. Expecting Contract received #{typ.class}!" end
                 end
             }
             t.method_types.each{|typ|
                 if prmctc
-                    prmctc = AandCtc.new("Input Parameter Type",typ, prmctc)
+                    prmctc = AandCtc.new("Input Parameters",typeToCtc(typ), prmctc)
                 else
-                    prmctc = RootCtc.new("Input Parameter Type"){typ}
+                    prmctc = typeToCtc(typ)
                 end
             }
             
-            #TODO: Output Parameter Type and Post conditions
+            #TODO: Return Type
             
             pre(prmctc) if prmctc
             post(retctc) if retctc
