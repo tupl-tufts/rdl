@@ -4,8 +4,9 @@ class Set
   extend RDL
   type_params [:t, :each]
 
-# CLASS METHOD: typesig(:[], "(Array<t>) -> Set<t>) # note this t is not the t above!
-# CLASS METHOD: typesig(:new, "(enum : ?Enumerable<t>) -> Set<t>") # same note
+  typesig('self.[]', "(Array<u>) -> Set<u>, :vars => [:u])
+  typesig('self.new', "(enum : ?Enumerable<u>) -> Set<u>", :vars => [:u])
+
   rdl_alias :&, :intersection
   typesig(:+, "(enum : Enumerable<t>) -> Set<t>")
   rdl_alias :-, :difference
