@@ -29,7 +29,6 @@ class Set
   typesig(:each, "() { (t) -> %any } -> self")
   typesig(:each, "() -> Enumerator<t>")
   typesig(:empty?, "() -> %bool")
-  typesig(:eql?, "(o : XXXX)")
 #  typesig(:flatten!, "()") # How do we write a contract for this?
 #  typesig(:flatten, "()") # How do we write a contract for this?
 #  typesig(:flatten_merge, "(set : XXXX, seen : ?XXXX)") #??
