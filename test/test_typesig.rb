@@ -1,36 +1,45 @@
-require 'test/unit'
-require 'rdl'
+require 'minitest/autorun'
+require_relative '../lib/rdl.rb'
 
-class Typesig_test < Test::Unit::TestCase
-    include RDL::Type
+class Typesig_test < Minitest::Test
     
-    def setup
-        @x = "String"
-        @y = ""
+    #####################################################
+    
+    class Overload_Tests
+        extend RDL
+        
+        def initialize
+            @x = "String"
+            @y = ""
+        end
+        
+        def method_overload
+            assert_equal("S",@x[0])
+            assert_equal("Str",@x[0..2])
+            assert_equal("St",@x[0,2])
+        end
+        
+        
+        
     end
     
-    def method_overload
-        assert_equal("S",@x[0])
-        assert_equal("Str",@x[0..2])
-        assert_equal("St",@x[0,2])
+    ###################################################
+    
+    class Err_Tests
+        extend RDL
+        
+        typesig( :foo, " () -> asdfghjkl ") {}
+        def foo
+            return "hello world"
+        end
+        
+        def undefined_typesig
+            #assert_raise(error) {p "String"+( foo() )}
+        end
+        
     end
     
-    def undefined_typesig
-        assert_raise(error) {RDLTests::undefined_typesig}
-    end
+    ###################################################
     
 end
 
-class RDLTests
-	extend RDL
-	
-	typesig :foo, " () -> asdfghjkl"
-	def foo
-		return "hello world"
-	end
-	
-    def undefined_typesig
-        p "String"+( foo() )
-    end
-	
-end
