@@ -47,31 +47,35 @@ module Kernel
   typesig('self.load', '(filename : String, ?%bool) -> %true')
   typesig('self.local_variables', '() -> Array<Symbol>')
 #  typesig('self.loop') #TODO
-  typesig('self.open')
-  typesig('self.p')
-  typesig('self.print')
-  typesig('self.printf')
-  typesig('self.proc')
-  typesig('self.putc')
-  typesig('self.puts')
-  typesig('self.raise')
-  typesig('self.rand')
-  typesig('self.readline')
-  typesig('self.readlines')
-  typesig('self.require')
-  typesig('self.require_relative')
-  typesig('self.select')
-  typesig('self.set_trace_func')
-  typesig('self.sleep')
-  typesig('self.spawn')
-  typesig('self.sprintf')
-  typesig('self.srand')
-  typesig('self.syscall')
-  typesig('self.system')
-  typesig('self.test')
-  typesig('self.throw')
-  typesig('self.trace_var')
-  typesig('self.trap')
-  typesig('self.untrace_var')
-  typesig('self.warn')
+  typesig('self.open', '(path : String, mode : ?(String or Fixnum), perm : ?String) -> IO or nil')
+  typesig('self.open', '(path : String, mode : ?(String or Fixnum), perm : ?String) { (IO) -> %any) } -> %any') # TODO: returns block value
+  typesig('self.p', '(*[inspect : () -> String]) -> nil')
+  typesig('self.print', '(*[to_s : () -> String] -> nil')
+  typesig('self.printf', '(?IO, String, *%any) -> nil')
+#  typesig('self.proc') # TODO
+  typesig('self.putc', '(Fixnum) -> Fixnum')
+  typesig('self.puts', '(*[to_s : () -> String] -> nil')
+  typesig('self.raise', '() -> %any')
+  typesig('self.raise', '(String or [exception : () -> String], ?String, ?Array<String>) -> %any')
+# TODO: above same as fail?
+  typesig('self.rand', '(max : Fixnum or Range) -> Numeric')
+  typesig('self.readline', '(?String, ?Fixnum) -> String')
+  typesig('self.readlines', '(?String, ?Fixnum) -> Array<String>')
+  typesig('self.require', '(name : String) -> %bool')
+  typesig('self.require_relative', '(name : String) -> %bool')
+  typesig('self.select',
+          '(read : Array<IO>, write : ?Array<IO>, error : ?Array<IO>, timeout : ?Fixnum) -> Array<String>') # TODO: return type?
+#  typesig('self.set_trace_func') #TODO
+  typesig('self.sleep', '(duration : Numeric) -> Fixnum')
+#  typesig('self.spawn') #TODO
+  rdl_alias :sprintf, :format # TODO: are they aliases?
+  typesig('self.srand', '(number : Numeric) -> Numeric')
+  typesig('self.syscall', '(num : Fixnum, args : *%any) -> %any') # TODO : ?
+#  typesig('self.system') # TODO
+  typesig('self.test', '(cmd : String, file1 : String, file2 : ?String) -> %bool or Time') # TODO: better, dependent type?
+#  typesig('self.throw') # TODO
+#  typesig('self.trace_var') # TODO
+#  typesig('self.trap') # TODO
+#  typesig('self.untrace_var') # TODO
+  typesig('self.warn', '(msg : *String) -> nil')
 end
