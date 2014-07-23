@@ -3,8 +3,8 @@ require_relative 'type'
 module RDL::Type
   class UnionType < Type
     attr_reader :types
-
-    @@cache = RDL::NativeHash.new
+    
+    @@cache = {}
 
     class << self
       alias :__new__ :new
@@ -57,9 +57,25 @@ module RDL::Type
       "(#{@types.to_a.join(' or ')})"
     end
 
-    def <=(other)
-      @types.all? do |t|
-        t <= other
+    def le(other, h={})
+      if not self.get_vartypes.empty?
+        raise RDL::TypeComparisonException, "UnionType#le's caller cannot contain VarTypes"
+      end
+
+      if other.instance_of? VarType
+        if h.keys.include? other.name
+          h[other.name] = UnionType.new(h[other.name], self)
+        else
+          h[other.name] ||= self
+        end
+
+        true
+      elsif other.instance_of? UnionType
+         super(le, h)
+      else
+        @types.all? do |t|
+          t.le(other, h)
+        end
       end
     end
 

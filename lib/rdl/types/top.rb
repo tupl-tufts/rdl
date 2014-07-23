@@ -2,8 +2,6 @@ require_relative 'type'
 
 module RDL::Type
   class TopType < Type
-    include TerminalType
-
     @@cache = nil
 
     class << self
@@ -39,14 +37,24 @@ module RDL::Type
       other.instance_of? TopType
     end
 
+    def le(other, h={})
+      if other.instance_of?(TopType)
+        true
+      elsif other.instance_of?(VarType)
+        if h.keys.include? other.name
+          h[other.name] = UnionType.new(h[other.name], self)
+        else
+          h[other.name] ||= self
+        end
+
+        true
+      else
+        false
+      end
+    end
+
     def hash
       17
     end
-
-    def self.instance
-      return @@instance || (@@instance = TopType.new)
-    end
-
-    @@instance = nil
   end
 end

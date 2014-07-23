@@ -48,6 +48,10 @@ module RDL::Type
     def each
       types.each {|t| yield t}
     end
+    
+    def le(other, h={})
+      raise Exception, "IntersectionType#le should not be called"
+    end
 
     def to_s  # :nodoc:
       "(#{@types.to_a.join(' and ')})"

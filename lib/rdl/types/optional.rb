@@ -1,11 +1,10 @@
 require_relative 'type'
-require_relative 'native'
 
 module RDL::Type
   class OptionalType < Type
     attr_reader :type
 
-    @@cache = RDL::NativeHash.new
+    @@cache = {}
 
     class << self
       alias :__new__ :new

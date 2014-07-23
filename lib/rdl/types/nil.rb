@@ -1,10 +1,7 @@
 require_relative 'type'
-require_relative 'terminal'
 
 module RDL::Type
   class NilType < Type
-    include TerminalType
-    
     @@cache = nil
 
     class << self
@@ -44,14 +41,14 @@ module RDL::Type
       13
     end
 
-    def <=(other)
+    def le(other, h={})
+      if h.keys.include? other.name
+        h[other.name] = UnionType.new(h[other.name], self)
+      else
+        h[other.name] ||= self
+      end
+
       true
     end
-
-    def self.instance
-      return @@instance || (@@instance = NilType.new)
-      end
-    
-    @@instance = nil
   end
 end

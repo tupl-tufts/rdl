@@ -1,5 +1,4 @@
 require_relative 'type'
-require_relative 'native'
 
 module RDL::Type
 
@@ -10,8 +9,6 @@ module RDL::Type
     attr_reader :args
     attr_reader :block
     attr_reader :ret
-    attr_accessor :parameters
-    attr_accessor :type_variables
 
     # Create a new MethodType
     #
@@ -23,13 +20,11 @@ module RDL::Type
       raise "block must be MethodType" unless (not block) or (block.instance_of? MethodType)
       @block = block
       @ret = ret
-      @parameters = []
-      @type_variables = []
       super()
     end
 
     def map
-      new_arg_types = RDL::NativeArray.new
+      new_arg_types = []
 
       args.each {|p|
         new_arg_types << (yield p)
@@ -41,97 +36,14 @@ module RDL::Type
                      )
     end
 
+    def le(other, h)
+      raise Exception, "should not be called"
+    end
+
     def each
       yield ret
       yield block if block
       args.each { |a| yield a }
-    end
-
-    def parameterized?
-      not parameters.empty?
-    end
-    
-    def contains_free_variables?
-      not type_variables.empty?
-    end
-    
-    def free_vars
-      type_variables.map { |v| v.name }
-    end
-        
-    def instantiate(type_replacement = nil)
-      if type_replacement.nil? and not parameterized?
-        return self
-      end
-
-      free_variables = []
-
-      if not type_replacement.nil?
-        duped = false
-
-        parameters.each {|t_param|
-          unless type_replacement.include?(t_param.symbol)
-            if not duped
-              type_replacement = type_replacement.dup
-              duped = true
-            end
-
-            new_tv = TypeVariable.new(t_param.symbol, self)
-            type_replacement[t_param.symbol] = new_tv
-            free_variables.push(new_tv)
-          end
-        }
-      else
-        type_replacement = RDL::NativeHash.new
-
-        parameters.map {|t_param|
-          new_tv = TypeVariable.new(t_param.symbol, self)
-          type_replacement[t_param.symbol] = new_tv
-          free_variables.push(new_tv)
-        }
-      end
-
-      to_return = self.map {|t|
-        t.replace_parameters(type_replacement)
-      };
-
-      to_return.type_variables = free_variables
-      
-      return to_return
-    end    
-
-    # Return true if +self+ is a subtype of +other+. This follows the usual
-    # semantics of TopType and BottomType. If +other+ is also an instance of
-    # ProceduralType, return true iff all of the following hold:
-    # 1. +self+'s return type is a subtype of +other+'s (covariant).
-    # 2. +other+'s block type is a subtype of +self+'s (contravariant.
-    # 3. Both types have blocks, or neither type does.
-    # 4. Both types have the same number of arguments, and +other+'s
-    #    arguments are subtypes of +self+'s (contravariant).
-    def <=(other)
-      case other
-      when MethodType
-        # Check number of arguments, presence of blocks, etc.
-        return false unless compatible_with?(other)
-        
-        # Return types are covariant.
-        return false unless @ret <= other.ret
-        # Block types must both exist and are contravariant.
-        if @block
-          return false unless other.block <= @block
-        end
-        
-        # Arguments are contravariant.
-        @args.zip(other.args).each do |a, b|
-          return false unless b <= a
-        end
-
-        return true
-      when TupleType
-        false
-      else
-        super(other)
-      end
     end
 
     #returns the minimum number of arguments required by this function
@@ -162,10 +74,11 @@ module RDL::Type
     def parameter_layout
       return @param_layout_cache if defined? @param_layout_cache
       a_list = args + [nil]
-      to_return = RDL::NativeHash.new()
-      to_return[:required] = RDL::NativeArray[0,0]
+      to_return = {}
+      to_return[:required] = [0,0]
       to_return[:rest] =  false
       to_return[:opt] = 0
+
       def param_type(arg_type)
         case arg_type
         when NilClass
@@ -245,23 +158,6 @@ module RDL::Type
       h = (37 + @ret.hash) * 41 + @args.hash
       h = h * 31 + @block.hash if @block
       return h
-    end
-
-    private
-    
-    # Return true iff all of the following are true:
-    # 1. +other+ is a ProceduralType.
-    # 2. +other+ has the same number of arguments as +self+.
-    # 3. +self+ and +other+ both have a block type, or neither do.
-    def compatible_with?(other)
-      return false unless other.instance_of?(MethodType)
-      return false unless @args.size() == other.args.size()
-      if @block
-        return false unless other.block
-      else
-        return false if other.block
-      end
-      return true
     end
   end
 end

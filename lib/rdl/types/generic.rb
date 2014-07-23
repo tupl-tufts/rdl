@@ -1,5 +1,4 @@
 require_relative 'type'
-require_relative 'native'
 
 module RDL::Type
   # A type that is parameterized on one or more other types. The base type
@@ -7,31 +6,19 @@ module RDL::Type
   class GenericType < Type
     attr_reader :base
     attr_reader :params
-    attr_accessor :dynamic
-    attr_accessor :method_cache
 
-    @@cache = RDL::NativeHash.new
+    @@cache = {}
 
     class << self
       alias :__new__ :new
     end
 
     def self.new(base, *params)
-      # RTC has dynamic as an optional arg
-      # For now we are assuming it's the last arg
-      if params[-1] == true or params[-1] == false
-        dynamic = params.pop
-      else
-        dynamic = false
-      end
-
-      t = @@cache[[base, params, dynamic]]
+      t = @@cache[[base, params]]
       if not t
-        t = GenericType.__new__(base, params, dynamic)
-        t.method_cache = RDL::NativeHash.new
-        @@cache[[base, params, dynamic]] = t
+        t = GenericType.__new__(base, params)
+        @@cache[[base, params]] = t
       end
-
       return t
     end
 
@@ -40,8 +27,6 @@ module RDL::Type
 
       @base = base
       @params = params
-      @method_cache = RDL::NativeHash.new
-      @dynamic = dynamic
       super()
     end
 
@@ -50,95 +35,41 @@ module RDL::Type
       @params.each {|p| yield p}
     end
 
-    def parameterized?
-      true
-    end
-
     def map
       new_nominal = yield @base
-      new_params = RDL::NativeArray.new
+      new_params = []
       params.each {|p| new_params << (yield p)}
-      GenericType.new(new_nominal, *new_params, dynamic)
+      GenericType.new(new_nominal, *new_params)
     end
 
-    def get_method(name, which = nil, tvars = nil)
-      replacement_map = tvars || RDL::NativeHash.new
-
-      if dynamic
-        # no caching here folks                          
-        @base.type_parameters.each_with_index {|t_param, type_index|          
-          replacement_map[t_param.symbol] ||= TypeVariable.new(t_param.symbol, self, params[type_index])
-        }
-
-        to_ret = @base.get_method(name, which).replace_parameters(replacement_map)
-
-        if to_ret.is_a?(IntersectionType)
-          to_ret.each {|type|            
-            type.type_variables += replacement_map.values
-          }
-        else
-          to_ret.type_variables += replacement_map.values
-        end
-        to_ret
-      else
-        if @method_cache[name]
-          return @method_cache[name]
-        end
-
-        @base.type_parameters.each_with_index {|t_param, type_index|
-          replacement_map[t_param.symbol] ||= params[type_index]
-        }
-
-        to_ret = @base.get_method(name, which, replacement_map)
-        
-        has_tvars =
-          if to_ret.is_a?(IntersectionType)
-            to_ret.types.any? {
-            |type|
-            not type.type_variables.empty?
-          }
-          else
-            not to_ret.type_variables.empty?
-          end
-        if not has_tvars
-          @method_cache[name] = to_ret
-        end
-
-        return to_ret
+    def le(other, h={})
+      if not self.get_vartypes.empty?
+        raise RDL::TypeComparisonException, "self should not contain VarTypes, self = #{self}"
       end
-    end
 
-    def <=(other)
       case other
-      when GenericType
-        return false unless (@base <= other.base)
-        
+      when GenericType        
+        return false unless @base.le(other.base)
         zipped = @params.zip(other.params)
-
-        if not @dynamic
-          return false unless zipped.all? do |t, u|
-            if u.instance_of?(TypeVariable)
-              t <= u
-            else
-              t <= u and u <= t
-            end
-          end
-        else
-          return false unless zipped.all? do |t, u|
-            t <= u
-          end
-        end
-        true
+        zipped.all? {|t, u| t.le(u, h)}
       when NominalType
         if other.name.to_s == "Object"
           true
         else
-          false 
+          false
         end
       when TupleType
         false
+      when VarType
+        if h.keys.include? other.name
+          h[other.name] = UnionType.new(h[other.name], self)
+        else
+          h[other.name] = self
+        end
+
+        true
       else
-        super(other)
+        super(other, h)
       end
     end
 
