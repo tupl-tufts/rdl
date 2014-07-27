@@ -5,7 +5,9 @@
 
 module RDL
 
-# Interface for Contract Objects
+##########################
+### Contract Structure ###
+
 class Contract
     def apply(*v)
         (check *v) ? v : false #(raise "Value(s) #{v.inspect} does not match contract(s) #{self}")
@@ -19,41 +21,100 @@ class Contract
     def implies(&ctc)
         #TODO
     end
+    def getCtcInfo
+        #TODO Returns inner data for rdoc use; in format where code can recognize contract logic
+    end
 end
 
-# First Order Contract
+##########################
+### Contract Labelling ###
+
+# Wrapper for Contracts
+class CtcLabel < Contract
+    @ctc = nil
+    def initialize(wctc)
+        @ctc = wctc
+    end
+    def apply(*v)
+        @ctc.apply(*v)
+    end
+    def check(*v)
+        @ctc.check(*v)
+    end
+    def to_proc
+        @ctc.to_proc
+    end
+    def implies(&ctc)
+        @ctc.implies(&ctc)
+    end
+end
+
+class PreCtc < CtcLabel
+    def to_s
+        "#Pre-Condition : {@ctc.to_s}"
+    end
+end
+
+class PostCtc < CtcLabel
+    def to_s
+        "#Post-Condition : #{@ctc.to_s}"
+    end
+end
+
+######################
+### Flat Contracts ###
+
+# Contract using user-defined block
 class RootCtc < Contract
     def initialize(desc="No Description", &ctc)
         @pred = ctc
         @str = desc
+        @bindings = [] # TODO: Add node bindings for CbD-CSP
     end
     def check(*v)
-        @pred.call unless ((@pred.arity < 0) ? @pred.arity.abs <= v.size : @pred.arity == v.size)
+        @pred.call(*v) unless ((@pred.arity < 0) ? @pred.arity.abs <= v.size : @pred.arity == v.size)
     end
     def to_s
         "#<RootCtc:#{@str}>"
     end
 end
 
-# Higher Order Contract Interface
-class OrdNCtc < Contract
-    @cond = Proc.new{}
-    def initialize(desc="Blank Contract Bundle: No Description", lctc, rctc)
-        init()
+# Shortcut for creating contracts from typesigs
+class TypeCtc < RootCtc
+    def initialize(desc="No Description", typ)
         @str = desc
-        @lctc = lctc
-        @rctc = rctc
-    end
-    def init; end
-    def check(*v)
-        @cond.call(lctc.check(*v), rctc, v)
+        @typeannot = typ
+        # TODO: Convert TypeAnnot typ into block and assign to @pred
     end
 end
 
-# Contract where both child contracts are checked
+##############################
+### Higher Order Contracts ###
+
+# Inner-node structure for contracts capable of holding multiple child contracts
+class OrdNCtc < Contract
+    @cond = Proc.new{}
+    def initialize(desc="Blank Contract Bundle: No Description", *ctcs)
+        @str = desc
+        @ctcls = ctcs
+        @emp = false
+        init()
+    end
+    def init; end
+    def check(*v)
+        check_aux(v,0)
+    end
+    def check_aux(v, nt)
+        tmp = (nt>=@ctcls.length ? @emp : check(*v,nt+1))
+        @cond.call(tmp,@ctcls[nt],v)
+    end
+end
+
+# Contract where all child contracts must be held
 # TODO: Rename AndCtc once deprecated moved
 class AandCtc < OrdNCtc
     def init
+        @emp=true
         @cond = Proc.new{|l,r,v| l && r.check(*v)}
     end
     def to_s
@@ -61,23 +122,38 @@ class AandCtc < OrdNCtc
     end
 end
 
-# Contract where one or both child contracts are checked
+# Contract where any one child contract must be held
 class OrCtc < OrdNCtc
     def init
-        @cond = Proc.new{|l,r,v| }
+        @cond = Proc.new{|l,r,v| l || r.check(*v)}
     end
     def to_s
         "#<ORCtc:#{@str}>"
     end
 end
 
-class PreCtc < RootCtc; end
-
-class PostCtc < RootCtc; end
-
-
-############ TODO: self.convert
-
+# Contract that applies pre(left) and post(right) condition
+class MethodCtc < OrdNCtc
+    def initialize(mname,env,lctc,rctc)
+        @mname = mname
+        @env = env.clone
+        @lctc = lctc
+        @rctc = rctc
+    end
+    def check(*v)
+        false unless @lctc.check(*v) && @rctc.check(*v,@env.send(@mname.to_sym,*v))
+    end
+    def to_s
+        "#<TypesigMethodCtc:#{@str}>"
+    end
+    def rdoc_gen
+        pg = RDoc::AnyMethod.new("",@mname)
+        ctx = RDoc::Context.new
+        # TODO: Implementation
+        ctx.add_method(pg)
+        
+    end #TODO: RI support
+end
 
 #################################### V DEPRECATED V #######################################
 

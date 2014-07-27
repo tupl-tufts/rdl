@@ -79,12 +79,12 @@ end
 
 # Pre condition generator for use in :typesig annotations
 def pre(desc=nil,&blk)
-    PreCtc.new(desc,&blk)
+    PreCtc.new(RootCtc.new(desc,&blk))
 end
 
 # Post condition generator for use in :typesig annotations
 def post(desc=nil,&blk)
-    PostCtc.new(desc,&blk)
+    PostCtc.new(RootCtc.new(desc,&blk))
 end
 
 #

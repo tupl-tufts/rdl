@@ -163,10 +163,6 @@ class Spec
         RDL::MethodWrapper.wrap_method(@class, mname, old_mname, cls_param_symbols, t)
     end
     
-    def typeToCtc
-        #TODO: Implement this
-    end
-    
     # Proposed changes to typesig
     def typesig_neo(sig, *ctcmeta)
         meta = ((ctcmeta[0].is_a? Hash) ? ctcmeta[0]:{})
@@ -199,24 +195,23 @@ class Spec
             # Handling pre conditions and input types
             ctcmeta.each{|typ|
                 if typ.is_a? Contract
-                    prmctc = ((prmctc && typ.is_a? PreCtc) ? AandCtc.new("User Precondition",typ, prmctc):typ)
-                    retctc = ((retctc && typ.is_a? PostCtc) ? AandCtc.new("User Postcondition",typ, prmctc):typ)
+                    prmctc = ((prmctc && (typ.is_a? PreCtc)) ? AandCtc.new("User Precondition",typ, prmctc):typ)
+                    retctc = ((retctc && (typ.is_a? PostCtc)) ? AandCtc.new("User Postcondition",typ, prmctc):typ)
                 else
-                    unless typ.is_a? Hash raise RDL::InvalidParameterException, "Invalid input to typesig. Expecting Contract received #{typ.class}!" end
+                    unless (typ.is_a? Hash)
+                        raise RDL::InvalidParameterException, "Invalid input to typesig. Expecting Contract received #{typ.class}!"
+                    end
                 end
             }
             t.method_types.each{|typ|
                 if prmctc
                     prmctc = AandCtc.new("Input Parameters",typeToCtc(typ), prmctc)
                 else
-                    prmctc = typeToCtc(typ)
+                    prmctc = TypeCtc.new("Type",typ)
                 end
             }
             
             #TODO: Return Type
-            
-            pre(prmctc) if prmctc
-            post(retctc) if retctc
             
             #TODO: Store method
             
@@ -226,16 +221,30 @@ class Spec
             mname = @mname
             old_mname = "__dsl_old_#{mname}"
             ti = @class.instance_variable_get(:@typesig_info)
-            ti[mname] = [@class, mname, old_mname, cls_param_symbols, t]
-            if t_old
-                @class.class_eval do
-                    alias_method mname, old_mname
-                end
+            ti[mname] = [@class, mname, old_mname, cls_param_symbols, t] #TODO: Put MethodCtc Here
+            
+            unless @class.instance_methods(false).include?(mname)
+                #TODO: Alias method_added to call gen_method_wrap
+            else
+                gen_method_wrap
             end
             
             ensure
             @@master_switch = true if status
+            
         end
+    end
+    
+    def gen_method_wrap(mname)
+        tempstr = "
+        def #{mname.to_s} (*args)
+            return @class.instance_variable_get(:@typesig_info)[-1].check(*v)
+        end
+        "
+        @class.class_eval do
+            alias_method mname, old_mname
+        end
+        @class.class_eval(tempstr)
     end
 
     
