@@ -3,6 +3,18 @@ require_relative 'rdl_ctc'
 require_relative 'rdl_sig'
 require_relative 'rdl_dsl'
 
+class Object
+  def self.method_added(mname)
+    specs = self.instance_variable_get :@__rdl_specs
+
+    if specs and specs.keys.include? mname
+      sm = specs[mname]
+      specs.delete mname
+      sm.each {|args, blk| self.spec(mname, *args, &blk)}
+    end
+  end
+end
+
 module RDL
   @@master_switch = true
 
@@ -68,7 +80,24 @@ module RDL
   end
   
   def spec(mname, *args, &blk)
-    Lang.new(self).spec(mname, *args, &blk)
+    mname = mname.to_sym
+
+    if self.instance_methods(false).include? mname
+      Lang.new(self).spec(mname, *args, &blk)
+    else
+      specs = self.instance_variable_get(:@__rdl_specs)
+
+      if not specs
+        self.instance_variable_set(:@__rdl_specs, {})
+        specs = self.instance_variable_get :@__rdl_specs
+      end
+
+      if not specs.keys.include? mname
+        specs[mname] = []
+      end
+
+      specs[mname].push([args, blk])
+    end
   end
 
 # Typesig annotations for method types
