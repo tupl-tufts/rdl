@@ -5,7 +5,7 @@ require_relative 'rdl_dsl'
 
 class Object
   def self.method_added(mname)
-    specs = self.instance_variable_get :@__rdl_specs
+    specs = self.instance_variable_get :@__deferred_specs
 
     if specs and specs.keys.include? mname
       sm = specs[mname]
@@ -85,18 +85,9 @@ module RDL
     if self.instance_methods(false).include? mname
       Lang.new(self).spec(mname, *args, &blk)
     else
-      specs = self.instance_variable_get(:@__rdl_specs)
-
-      if not specs
-        self.instance_variable_set(:@__rdl_specs, {})
-        specs = self.instance_variable_get :@__rdl_specs
-      end
-
-      if not specs.keys.include? mname
-        specs[mname] = []
-      end
-
-      specs[mname].push([args, blk])
+      deferred_specs = self.instance_variable_get(:@__deferred_specs)
+      deferred_specs[mname] = [] if not deferred_specs.keys.include? mname
+      deferred_specs[mname].push([args, blk])
     end
   end
 
@@ -129,8 +120,7 @@ end
 
 #
 def self.extended(extendee)
-    extendee.instance_variable_set(:@typesig_info, {})
-    #extendee.instance_variable_set(:@deferred_specs, {})
+  extendee.instance_variable_set(:@__deferred_specs, {})
 end
 
 end #End of Module:RDL
