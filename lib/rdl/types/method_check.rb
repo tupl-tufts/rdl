@@ -1,7 +1,18 @@
 module RDL::MethodCheck
   def self.select_and_check_args(method_types, method_name, args, has_block=false)
+    if not (method_types.instance_of? RDL::Type::MethodType or 
+            method_types.instance_of? RDL::Type::IntersectionType)
+      raise Exception, "method_type.class has to be MethodType or IntersectionType"
+    end
+    
     possible_types = []
     num_actual_args = args.length
+
+    if method_types.instance_of?(RDL::Type::IntersectionType)
+      method_types = method_types.types
+    else
+      method_types = [method_types]
+    end
 
     for m in method_types
       next if num_actual_args < m.min_args
@@ -16,11 +27,11 @@ module RDL::MethodCheck
     end
 
     if possible_types.size > 1
-      raise Exception, "cannot infer type in intersecton type for method #{method_name}, whose types are #{method_types.inspect}"
+      raise Exception, "cannot infer type in intersection type for method #{method_name}, whose types are #{method_types.inspect}"
     elsif possible_types.size == 0 
       arg_types = args.map {|a| a.rdl_type}
 
-      raise RDL::TypesigException, "In method #{method_name}, annotated types are #{method_types.inspect}, but actual arguments are #{args.inspect} and has_block = #{has_block}, with types #{arg_types.inspect}" 
+      raise RDL::TypesigException, "In method #{method_name}, annotated types are #{method_types.inspect}, but actual arguments are #{args.inspect}, with types #{arg_types.inspect}" 
     else
       chosen_type = possible_types[0]
     end
