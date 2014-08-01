@@ -22,7 +22,7 @@ module RDL::Type
       return t
     end
 
-    def initialize(base, params, dynamic = false)
+    def initialize(base, params)
       raise "base must be NominalType" unless base.instance_of? NominalType
 
       @base = base
