@@ -10,6 +10,7 @@ end
  'generic.rb',
  'intersection.rb',
  'method.rb',
+ 'method_check.rb',
  'nil.rb',
  'named.rb',
  'named_arg.rb',
@@ -28,7 +29,7 @@ class Object
       RDL::Type::SymbolType.new(self)
     else
       class_obj = RDL::Type::NominalType.new self.class
-
+      
       if class_obj.name.to_s == "Array"
         t = RDL::TypeInferencer.infer_type(self.each)
         RDL::Type::GenericType.new(class_obj, *[t])
@@ -49,10 +50,10 @@ class Object
 
   def rdl_inst(types)
     parser = RDL::Type::Parser.new
-
+    
     if types.class == Hash
       h = {}
-
+      
       types.each {|parameter, type|
         if type.class == String
           type_str = "##" + type
@@ -63,7 +64,7 @@ class Object
           h[parameter] = RDL::Type::NominalType.new(type)
         end
       }
-
+      
       tp = self.instance_variable_get(:@__rdl_s_type_parameters)
       h = self.instance_variable_get(:@__rdl_s_type_parameters).merge(h) if tp
       self.instance_variable_set(:@__rdl_s_type_parameters, h)
