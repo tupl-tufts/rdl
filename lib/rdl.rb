@@ -1,3 +1,4 @@
+require_relative 'rdl/master_switch'
 require 'set'
 require_relative 'rdl_ctc'
 require_relative 'rdl_sig'
@@ -65,20 +66,10 @@ module RDL
       end
     }
 
-    t_parameters.map! {|p| RDL::Type::TypeParameter.new(p)}
-    
-    RDL::Type::NominalType.new(self).type_parameters = t_parameters
-    define_iterators(iterators)
+    t_parameters.map! {|p| RDL::Type::VarType.new(p)}
+    self.instance_variable_set :@__cls_params, iterators
   end
 
-  def define_iterator(param_name,iterator_name)
-    rtc_meta.fetch(:iterators)[param_name] = iterator_name
-  end
-
-  def define_iterators(iter_hash)
-    rtc_meta.fetch(:iterators).merge!(iter_hash)
-  end
-  
   def spec(mname, *args, &blk)
     mname = mname.to_sym
 
@@ -121,42 +112,45 @@ end
 #
 def self.extended(extendee)
   extendee.instance_variable_set(:@__deferred_specs, {})
+  extendee.instance_variable_set(:@__cls_params, {})
+  extendee.instance_variable_set(:@__typesigs, {})
 end
 
 end #End of Module:RDL
 
 
 class Object
-    # Handles internal typesig routing
-    # See rdl_sig.rb
-    def typesig(cls, mname, sig, meta={})
-        if cls.class == Symbol
-            cls = eval(cls.to_s)
-        elsif cls.class == String
-            cls = eval(cls)
-        end
-        
-        typesig_call = "
-        extend RDL if not #{cls}.singleton_class.included_modules.include?(RDL)
-        spec :#{mname.to_s} do
-        typesig(\"#{sig}\", #{meta})
-        end"
+  # Handles internal typesig routing
+  # See rdl_sig.rb
+  def typesig(cls, mname, sig, meta={})
+    if cls.class == Symbol
+      cls = eval(cls.to_s)
+    elsif cls.class == String
+      cls = eval(cls)
+    end
     
-    #    if cls.instance_methods(false).include?(mname)
-        cls.instance_eval(typesig_call)
-    #    else
-    #    dss = cls.instance_variable_get(:@deferred_specs)
-    #    dss[mname] = typesig_call
-    #    end
+    cls.instance_eval do
+      extend RDL if not cls.singleton_class.included_modules.include?(RDL)
+      spec mname.to_sym do
+        typesig sig, meta
+      end
+    end
   end
 end
 
+status = RDL.on?
+RDL.turn_off if status
+
+begin
+  require_relative 'rdl/types'
+  require_relative '../types/ruby-2.1/core/array.rb'
+
+  # stops RDL code from checking itself and eliminates
+  # the old RTC NativeArray, NativeHash, etc.
+  require_relative 'rdl/turn_off'
+  RDL::TurnOffCheck.turn_off_check
+ensure
+  RDL.turn_on if status
+end
 
 #RDL.print_warning = false
-#status = RDL::MasterSwitch.is_on?
-#RDL::MasterSwitch.turn_off if status
-require_relative 'rdl/types'
-#require_relative 'type/base_types'
-#RDL::MasterSwitch.turn_on if status
-
-
