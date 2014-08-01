@@ -5,6 +5,50 @@
 
 module RDL
 
+
+  class Contract2
+    def apply(v); end
+    def check(v); end
+    def to_s; end
+    def to_proc
+      x = self
+      Proc.new { |v| x.check v }
+    end
+  end
+
+  class MyCtc < Contract2
+    def initialize(s = "myctc", &p)
+      @str = s.to_s; @pred = p
+    end
+
+    def apply(*v)
+      (check v) ? v : (raise "MyCtc Value #{v.inspect} does not match contract #{self}")
+    end
+
+    def check(*v)
+      @pred.call *v
+    end
+
+    def to_s; "#<MyCtc:#{@str}>" end
+  end
+
+  class MyCtc2 < Contract2
+    def initialize(s = "myctc2", &p)
+      @str = s.to_s; @pred = p
+    end
+
+    def apply(v)
+      (check v) ? v : (raise "MyCtc Value #{v.inspect} does not match contract #{self}")
+    end
+
+    def check(v)
+      @pred.call v
+    end
+
+    def to_s; "#<MyCtc:#{@str}>" end
+  end
+
+
 ##########################
 ### Contract Structure ###
 
