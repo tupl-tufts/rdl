@@ -15,6 +15,9 @@ module RDL::Type
       types.each { |t|
         if t.instance_of? NilType
           next
+        elsif t.instance_of? TopType
+          ts = [t]
+          break
         elsif t.instance_of? UnionType
           ts.concat t.types
         else
@@ -70,12 +73,8 @@ module RDL::Type
         end
 
         true
-      elsif other.instance_of? UnionType
-         super(le, h)
       else
-        @types.all? do |t|
-          t.le(other, h)
-        end
+        @types.all? {|t| t.le(other, h)}
       end
     end
 

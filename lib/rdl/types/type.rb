@@ -31,10 +31,6 @@ module RDL::Type
       end
     end
 
-    def parameterized?
-      false
-    end
-
     def replace_vartypes(type_vars)
       map {|t| t.replace_vartypes(type_vars)}
     end

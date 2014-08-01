@@ -42,10 +42,12 @@ module RDL::Type
     end
 
     def le(other, h={})
-      if h.keys.include? other.name
-        h[other.name] = UnionType.new(h[other.name], self)
-      else
-        h[other.name] ||= self
+      if other.instance_of? VarType
+        if h.keys.include? other.name
+          h[other.name] = UnionType.new(h[other.name], self)
+        else
+          h[other.name] ||= self
+        end
       end
 
       true

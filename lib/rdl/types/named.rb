@@ -122,6 +122,8 @@ module RDL::Type
         end
 
         true
+      elsif other.instance_of? GenericType
+        false
       else
         super(other, h)
       end
