@@ -13,7 +13,7 @@ class GenericTest < Minitest::Test
     @hash = NominalType.new(Hash)
     @true_n = NominalType.new(TrueClass)
 
-    @tparam_t = TypeParameter.new(:t)
+    @tparam_t = VarType.new(:t)
     
     @f_or_s = UnionType.new(@fixnum, @string)
     @string_or_true = UnionType.new(@string, @true_n)
@@ -51,7 +51,6 @@ class GenericTest < Minitest::Test
     ct = GenericType.new(@array, u)
     ct = GenericType.new(@array, ct)
     # ct = Array<Array<(Array<Fixnum> or String or TrueClass)>>
-
     assert_equal(ct, t)
   end
 
@@ -104,27 +103,27 @@ class GenericTest < Minitest::Test
   def test_type_params
     t = "(t) -> t"
     t = @parser.scan_str(t)
-    tps = t.get_method_parameters
+    tps = t.get_vartypes
     assert_equal([:t].to_set, tps.to_set)
 
     t = "(String, Array<TrueClass>) -> Hash<u, Array<Array<abc>>>"
     t = @parser.scan_str(t)
-    tps = t.get_method_parameters
+    tps = t.get_vartypes
     assert_equal([:u, :abc].to_set, tps.to_set)
 
     t = "(t) -> abcd"
     t = @parser.scan_str(t)
-    tps = t.get_method_parameters
+    tps = t.get_vartypes
     assert_equal([:t, :abcd].to_set, tps.to_set)
 
     t = "(a, b, Array<c>, Array<Hash<d, Array<e>>>) -> f"
     t = @parser.scan_str(t)
-    tps = t.get_method_parameters
+    tps = t.get_vartypes
     assert_equal([:a, :b, :c, :d, :e, :f].to_set, tps.to_set)
 
     t = "(String) -> %any"
     t = @parser.scan_str(t)
-    tps = t.get_method_parameters
+    tps = t.get_vartypes
     assert_equal([].to_set, tps.to_set)
   end
 end
