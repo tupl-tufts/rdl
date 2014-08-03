@@ -1,4 +1,7 @@
 module RDL
+  class << self
+    attr_accessor :bp_stack
+  end
 
 class Spec
     def initialize(cls, mname)
@@ -145,45 +148,60 @@ class Spec
         cls_typesigs[mname] = type
       end
 
-      chosen_type = nil
+      arg_chosen_type = nil
+      ret_chosen_type = nil
       method_types = cls_typesigs[mname]
       status = nil
       method_blk = nil
+      RDL.bp_stack = [] if not RDL.bp_stack
 
       c = Proc.new {|args| 
         if method_blk
-          chosen_type = RDL::MethodCheck.select_and_check_args(method_types, mname, args, true)
+          arg_chosen_type = RDL::MethodCheck.select_and_check_args(method_types, mname, args, true)
         else
-          chosen_type = RDL::MethodCheck.select_and_check_args(method_types, mname, args)
+          arg_chosen_type = RDL::MethodCheck.select_and_check_args(method_types, mname, args)
         end
 
-        chosen_type
+        arg_chosen_type
       }
 
       bp = nil
 
       c2 = Proc.new {|ret|
+        ret_chosen_type = nil
+
+        bp = RDL.bp_stack[-1]
+
         if bp
           vm = bp.var_map
+          vm2 = {}
           if not vm.empty?
-            chosen_type = chosen_type.replace_vartypes vm
+            vm.each {|vmk, vmv|
+              uv = RDL::TypeInferencer.unify_param_types vmv
+              vm2[vmk] =  RDL::Type::UnionType.new(*uv)
+            }
+
+            ret_chosen_type = arg_chosen_type.replace_vartypes vm2
           end
         end
 
-        ret_valid = RDL::MethodCheck.check_return(chosen_type, ret)
+        ret_chosen_type = arg_chosen_type if not ret_chosen_type
+        ret_valid = RDL::MethodCheck.check_return(ret_chosen_type, ret)
         ret_valid
       }
 
       ctc = MyCtc.new(&c)
-      ctc_r = MyCtc2.new(&c2)
+      ctc_r = MyCtc2.new("regular_ret #{mname}", &c2)
       status = nil
 
       arg_check_name = define_method_gensym("check_args") do |*args, &blk|
         args = ctc.apply(*args)
-        
+
+
         if blk
-          bp = BlockProxy.new(blk, chosen_type.block, self.class, mname)
+          bp = BlockProxy.new(blk, arg_chosen_type.block, self.class, mname)
           blk = BlockProxy.wrap_block bp
+          RDL.bp_stack.push bp
         end
 
         { args: args, block: blk }
@@ -194,7 +212,9 @@ class Spec
       end
 
       ret_check_name = define_method_gensym("check_ret") do |ret, *args, &blk|
-        ctc_r.apply(ret)
+        r = ctc_r.apply(ret)
+        RDL.bp_stack.pop
+        r
       end
 
       no_ret_check_name = define_method_gensym("check_ret") do |ret, *args, &blk|
@@ -205,9 +225,8 @@ class Spec
         status = RDL.on?
         
         if status
-          RDL.turn_off
-          
           begin
+            RDL.turn_off
             tp = self.instance_variable_get :@__rdl_s_type_parameters
             tp = {} if not tp
             uninstantiated_params = cls_param_symbols - tp.keys
@@ -517,19 +536,19 @@ module RDL
         ret.rdl_type.le(chosen_type.ret, ret_var_map)
       }
 
-
       ctc = MyCtc.new(&c)
       ctc_r = MyCtc2.new(&c2)
 
       ctc.apply *args
+
       ret = @blk.call *args
       ctc_r.apply ret
 
       ret_var_map.each {|k, v|
         if @var_map.keys.include? k
-          @var_map[k] = RDL::Type::UnionType.new(v, @var_map[k])
+          @var_map[k] = @var_map[k].add v
         else
-          @var_map[k] = v
+          @var_map[k] = Set.new v
         end
       }
 
