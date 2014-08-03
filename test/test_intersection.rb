@@ -13,7 +13,7 @@ class IntersectionTest < Minitest::Test
     @hash = NominalType.new(Hash)
     @true_n = NominalType.new(TrueClass)
 
-    @tparam_t = TypeParameter.new(:t)
+    @tparam_t = VarType.new(:t)
     
     @f_or_s = UnionType.new(@fixnum, @string)
     @string_or_true = UnionType.new(@string, @true_n)
