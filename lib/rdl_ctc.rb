@@ -53,8 +53,12 @@ module RDL
 ### Contract Structure ###
 
 class Contract
+    @noerr = true
     def apply(*v)
-        (check *v) ? v : false #(raise "Value(s) #{v.inspect} does not match contract(s) #{self}")
+        (check *v) ? v : errcase(v)
+    end
+    def errcase(v)
+        @noerr ? false : (raise "Value(s) #{v.inspect} does not match contract(s) #{self}")
     end
     def check(*v); end
     def to_s; end
@@ -65,8 +69,8 @@ class Contract
     def implies(&ctc)
         #TODO
     end
-    def getCtcInfo
-        #TODO Returns inner data for rdoc use; in format where code can recognize contract logic
+    def rdoc_gen
+        "Empty Contract"
     end
 end
 
@@ -105,6 +109,16 @@ class PostCtc < CtcLabel
     end
 end
 
+class NamedCtc < CtcLabel
+    def initialize(wctc,desc)
+        super(wctc)
+        @lbl = desc
+    end
+    def rdoc_gen
+        "#{@lbl}:#{@ctc.rdoc_gen}"
+    end
+end
+
 ######################
 ### Flat Contracts ###
 
@@ -113,7 +127,7 @@ class RootCtc < Contract
     def initialize(desc="No Description", &ctc)
         @pred = ctc
         @str = desc
-        @bindings = [] # TODO: Add node bindings for CbD-CSP
+        @node_bindings = [] # TODO: Add node bindings for CbD-CSP
     end
     def check(*v)
         @pred.call(*v) unless ((@pred.arity < 0) ? @pred.arity.abs <= v.size : @pred.arity == v.size)
@@ -121,14 +135,27 @@ class RootCtc < Contract
     def to_s
         "#<RootCtc:#{@str}>"
     end
+    def rdoc_gen
+        #TODO:
+        ""
+    end
 end
 
 # Shortcut for creating contracts from typesigs
 class TypeCtc < RootCtc
     def initialize(desc="No Description", typ)
         @str = desc
-        @typeannot = typ
-        # TODO: Convert TypeAnnot typ into block and assign to @pred
+        @typeannot = typ #B: typ should be Class or some RDLClass with to_s
+        #B TODO: Convert TypeAnnot typ into block and assign to @pred
+    end
+    def getType
+        @typeannot
+    end
+    def getTypeS
+        return @typeannot.to_s
+    end
+    def rdoc_gen
+        return @typeannot.to_s
     end
 end
 
@@ -142,6 +169,7 @@ class OrdNCtc < Contract
         @str = desc
         @ctcls = ctcs
         @emp = false
+        @connect = ", "
         init()
     end
     def init; end
@@ -152,14 +180,19 @@ class OrdNCtc < Contract
         tmp = (nt>=@ctcls.length ? @emp : check(*v,nt+1))
         @cond.call(tmp,@ctcls[nt],v)
     end
+    def rdoc_gen
+        ret=""
+        @ctcls.each {|x| ret +=x.rdoc_gen; ret +=@connect;}
+        ret[0...-@connect.size]
+    end
 end
 
 # Contract where all child contracts must be held
-# TODO: Rename AndCtc once deprecated moved
-class AandCtc < OrdNCtc
+class AndCtc < OrdNCtc
     def init
         @emp=true
         @cond = Proc.new{|l,r,v| l && r.check(*v)}
+        @connect = " AND "
     end
     def to_s
         "#<ANDCtc:#{@str}>"
@@ -170,6 +203,7 @@ end
 class OrCtc < OrdNCtc
     def init
         @cond = Proc.new{|l,r,v| l || r.check(*v)}
+        @connect = " OR "
     end
     def to_s
         "#<ORCtc:#{@str}>"
@@ -191,16 +225,22 @@ class MethodCtc < OrdNCtc
         "#<TypesigMethodCtc:#{@str}>"
     end
     def rdoc_gen
-        pg = RDoc::AnyMethod.new("",@mname)
-        ctx = RDoc::Context.new
-        # TODO: Implementation
-        ctx.add_method(pg)
-        
+        "#{@mname}(#{@lctc.rdoc_gen}) -> @{@rctc.rdoc_gen}"
     end #TODO: RI support
 end
 
-#################################### V DEPRECATED V #######################################
+class BlockCtc < MethodCtc
+    # Initialized with block as first arg instead of mname
+    def check(*v)
+        false unless @lctc.check(*v) && @rctc.check(*v,@mname.call(*v))
+    end
+    def rdoc_gen
+        "Block{|#{@lctc.rdoc_gen}| -> #{@rctc.rdoc_gen}}"
+    end
+end
 
+#################################### V DEPRECATED V #######################################
+=begin
 class FlatCtc < Contract
     def initialize(s = "FlatCtc:Predicate", &p)
         raise "Expected predicate, got #{p}" unless p.arity.abs == 1
@@ -279,7 +319,7 @@ end
 def self.implies(lhs, rhs)
 ImpliesCtc.new lhs, rhs
 end
-
+=end
 #################################### ^ DEPRECATED ^ #######################################
 
 end

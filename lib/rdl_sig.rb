@@ -58,6 +58,7 @@ class Spec
     end
     
     # DEPRECATED: Use typesig instead
+    #B Can this be removed? or commented out?
     def typesig_c(sig)
         parser = RDL::Type::Parser.new
         t = parser.scan_str(sig)
@@ -292,6 +293,8 @@ class Spec
             
             # TODO: Or Contracts and Optional Vars, Etc
             # Handling pre conditions and input types
+            
+            #B: following code may be useful
             ctcmeta.each{|typ|
                 if typ.is_a? Contract
                     prmctc = ((prmctc && (typ.is_a? PreCtc)) ? AandCtc.new("User Precondition",typ, prmctc):typ)
@@ -309,6 +312,9 @@ class Spec
                     prmctc = TypeCtc.new("Type",typ)
                 end
             }
+            
+            tsig = MethodCtc.new(@mname,self,prmctc,retctc)
+            #B: end of useful code chunk
             
             #TODO: Return Type
             

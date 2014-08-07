@@ -83,7 +83,7 @@ module RDL
   end
 
 # Typesig annotations for method types
-# TODO: meta vs *conds
+#B TODO: allow both optional meta and splat *pre/postconds
 def typesig(mname, sig, meta={})
     Object.new.typesig(self, mname, sig, meta)
 end
@@ -116,12 +116,18 @@ def self.extended(extendee)
   extendee.instance_variable_set(:@__typesigs, {})
 end
 
+def pull_typesig_rdoc(klass)
+    # TODO
+end
+
+
 end #End of Module:RDL
 
 
 class Object
   # Handles internal typesig routing
   # See rdl_sig.rb
+  #B TODO: See RDL::typesig()
   def typesig(cls, mname, sig, meta={})
     if cls.class == Symbol
       cls = eval(cls.to_s)
