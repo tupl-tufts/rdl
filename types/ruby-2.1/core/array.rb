@@ -1,4 +1,6 @@
-require 'rdl'
+#require 'rdl'
+require_relative '../../../lib/rdl.rb'
+
 
 class Array
   extend RDL

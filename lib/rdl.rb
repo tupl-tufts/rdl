@@ -3,6 +3,7 @@ require 'set'
 require_relative 'rdl_ctc'
 require_relative 'rdl_sig'
 require_relative 'rdl_dsl'
+require_relative 'rdl_rdc'
 
 class Object
   def self.method_added(mname)
@@ -116,8 +117,10 @@ def self.extended(extendee)
   extendee.instance_variable_set(:@__typesigs, {})
 end
 
-def pull_typesig_rdoc(klass)
-    # TODO
+def rdocTypesigFor(klass)
+    tmp = RDLdocObj.new
+    tmp.add_klass(klass)
+    tmp.rdoc_gen
 end
 
 
@@ -141,6 +144,10 @@ class Object
         typesig sig, meta
       end
     end
+  end
+  
+  def rdocTypesigFor(klass)
+    
   end
 end
 

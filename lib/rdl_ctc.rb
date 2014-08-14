@@ -95,6 +95,14 @@ class CtcLabel < Contract
     def implies(&ctc)
         @ctc.implies(&ctc)
     end
+    alias :old_is_a? :is_a?
+    def is_a?(klass)
+        tmp = old_is_a?(klass)
+        if (@ctc.is_a? CtcLabel) then
+            return (tmp||@ctc.is_a?(klass))
+        end
+        tmp
+    end
 end
 
 class PreCtc < CtcLabel
@@ -130,7 +138,7 @@ class RootCtc < Contract
         @node_bindings = [] # TODO: Add node bindings for CbD-CSP
     end
     def check(*v)
-        @pred.call(*v) unless ((@pred.arity < 0) ? @pred.arity.abs <= v.size : @pred.arity == v.size)
+        @pred.call(*v) if ((@pred.arity < 0) ? @pred.arity.abs <= v.size : @pred.arity == v.size)
     end
     def to_s
         "#<RootCtc:#{@str}>"
@@ -227,6 +235,13 @@ class MethodCtc < OrdNCtc
     def rdoc_gen
         "#{@mname}(#{@lctc.rdoc_gen}) -> @{@rctc.rdoc_gen}"
     end #TODO: RI support
+end
+
+class IntersectMCtc < MethodCtc
+    def check(*v)
+        tempbool = @lctc.check(*v)
+    end
+    
 end
 
 class BlockCtc < MethodCtc

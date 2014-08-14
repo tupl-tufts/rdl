@@ -5,32 +5,70 @@
 ## Generating Typesigs
 
 ```
-spec :mthd_name do
-	typesig "ANNOTATION"
-end
+extend RDL
+typesig :method_name, “ANNOTATION”, {Optional Hash of Parameterized Types}, *Additional_Contracts
+#eg typesig :foo, “(Array<t>)->Array<t>”, {:t}, pre{|arr| arr.size<5}, post{|ret| ret.size<3}, post{|ret| ret.foobar}
 ```
 
 
 ## Annotation Syntax
 
-"( arg0, arg1, … argN ) { Annotation } -> Type" ### Method Arguments, Block, and Return
-
+```
+# ( Method Arguments   ) { Block      } -> Return
+" ( arg0, arg1, … argN ) { Annotation } -> Type" 
+```
 
 ## Argument Syntax
+```
+# Standard Argument
+"Type …"
 
-"Type …" ### Standard Argument
-"typevar …" ### Lowercase Type Variable for Generic Types
-"?Type …" ### Optional Argument
-"*Type …" ### Variable Number of Arguments (Splat)
+# Optional Argument
+"?Type …"
 
+# Variable Number of Arguments (Splat)
+"*Type …"
+```
 
 ## Type Syntax
+```
+# Standard Type Definition
+"… Class"
 
-"… Class" ### Standard Type Definition
-"… :sym" ### Symbol
-"… %any" ### Type Placeholder (Any Type)
-"… %bool" ### Boolean Value (TrueClass and FalseClass)
-"… Type0 OR Type1" ### Union Types
+# Parameterized Type
+“Type<t> …”, {:t}
+
+# Symbol Equivalence
+"… :sym" 
+
+# Type Placeholder (any Type)
+"… %any" 
+
+# Boolean Value (TrueClass and FalseClass)
+"… %false”
+“… %true”
+
+# Nil Value (NilClass)
+“… nil”
+ 
+# Union Types
+"… Type0 or Type1"
+
+# Labeling (for reference in Contracts)
+“… Label:Type”
+```
+
+## Contracts
+```
+<span style="color:red">TODO</span>
+```
+
+## Generating RDoc
+```
+rdocTypesigFor(Klass)
+```
+
+
 
 # RDL Quick Reference
 
