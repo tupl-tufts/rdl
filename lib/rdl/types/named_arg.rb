@@ -28,5 +28,19 @@ module RDL::Type
     def hash # :nodoc:
       return (57 + @name.hash) * @type.hash
     end
+
+    def each
+      yield self
+    end
+
+    def map
+      new_type = yield @type
+      NamedArgType.new(@name, new_type)
+    end
+
+    def le(other, h={})
+      other = other.type if other.instance_of?(RDL::Type::NamedArgType)
+      @type.le(other, h)
+    end
   end
 end
