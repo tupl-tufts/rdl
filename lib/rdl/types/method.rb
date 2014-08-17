@@ -36,7 +36,7 @@ module RDL::Type
                      )
     end
 
-    def le(other, h)
+    def le(other, h={})
       raise Exception, "should not be called"
     end
 
