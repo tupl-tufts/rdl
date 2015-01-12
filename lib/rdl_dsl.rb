@@ -5,12 +5,15 @@
 module RDL
 
 module Gensym
+    
+    # Track unique method IDs for generation of unique method names
     def self.gensym
-    @gensym = 0 unless @gensym
-    gsym = @gensym
-    @gensym = gsym + 1
-    gsym
-end
+        @gensym = 0 unless @gensym
+        gsym = @gensym
+        @gensym = gsym + 1
+        gsym
+    end
+
 end
 
 class Dsl
@@ -20,56 +23,62 @@ class Dsl
         instance_eval(*a, &blk) if block_given?
     end
     
+    # Define reserved word in DSL
     def keyword(mname, &blk)
         @keywords ||= {}
         raise "Keyword definition already exists for #{mname}" if @keywords[mname]
         @keywords[mname] = blk
     end
     
+    # Define RDL::Spec
     def spec(mname, &blk)
         @specs ||= {}
         @specs[mname] ||= []
         @specs[mname].push(blk)
     end
     
+    # Reference other RDL::Spec
     def self.extend(spec, &blk)
-    raise "Expected a DSL spec, got #{spec}" unless spec.is_a?(Dsl)
-    new_spec = Dsl.new
-    old_keywords = spec.keywords
-    if old_keywords
-    new_spec.instance_variable_set(:@keywords, old_keywords.clone)
-end
-old_specs = spec.specs
-# FIXME: Probably need to do one more level down of cloning
-new_spec.instance_variable_set(:@specs, old_specs.clone) if old_specs
-new_spec.instance_eval(&blk) if block_given?
-new_spec
-end
+        raise "Expected a DSL spec, got #{spec}" unless spec.is_a?(Dsl)
+        new_spec = Dsl.new
+        old_keywords = spec.keywords
+        if old_keywords
+            new_spec.instance_variable_set(:@keywords, old_keywords.clone)
+        end
+        old_specs = spec.specs
+        # FIXME: Probably need to do one more level down of cloning
+        new_spec.instance_variable_set(:@specs, old_specs.clone) if old_specs
+        new_spec.instance_eval(&blk) if block_given?
+        new_spec
+    end
 
-def apply(cls)
-    if @keywords
-        @keywords.each_pair do |m, b|
-            if cls.method_defined? m
-                raise "Method #{m} listed in spec already defined in #{cls}"
-            end
-            Keyword.new(cls, m).instance_eval(&b)
-        end
-    end
-    if @specs
-        @specs.each_pair do |m, bl|
-            bl.each do |b|
-                unless cls.method_defined? m
-                    raise "Method #{m} listed in spec not defined in #{cls}"
+    # TODO: describe
+    def apply(cls)
+        if @keywords
+            @keywords.each_pair do |m, b|
+                if cls.method_defined? m
+                    raise "Method #{m} listed in spec already defined in #{cls}"
                 end
-                Spec.new(cls, m).instance_eval(&b)
+                Keyword.new(cls, m).instance_eval(&b)
+            end
+        end
+        if @specs
+            @specs.each_pair do |m, bl|
+                bl.each do |b|
+                    unless cls.method_defined? m
+                        raise "Method #{m} listed in spec not defined in #{cls}"
+                    end
+                    Spec.new(cls, m).instance_eval(&b)
+                end
             end
         end
     end
-end
+
 end
 
 
 class Keyword < Spec
+    
     def initialize(cls, mname)
         if cls.method_defined? mname
             raise "Method #{mname} already defined for #{cls}"
@@ -90,7 +99,7 @@ class Keyword < Spec
         end
     end
     
-    # For keywords that take the same DSL they are in.
+    # For keywords that take the same DSL they are in
     def dsl_rec
         action do |*args, &blk|
             instance_exec(*args, &blk)
@@ -98,7 +107,7 @@ class Keyword < Spec
         end
     end
     
-    # For keywords that take a different DSL than they are in.
+    # For keywords that take a different DSL than they are in
     def dsl(cls = nil, *a, &b)
         mname = @mname
         
@@ -118,7 +127,9 @@ class Keyword < Spec
     end
 end
 
+# TODO: Purpose of class?
 class Proxy
+    
     def initialize(warn = false)
         @class = Class.new(BasicObject) do
             include Kernel
@@ -126,76 +137,89 @@ class Proxy
             attr_reader :obj
             
             def initialize(obj)
-            @obj = obj
+                @obj = obj
+            end
         end
-    end
     
-    if warn
-    @class.class_eval do
-    def method_missing(mname, *args, &blk)
-        $stderr.puts "Attempt to call method #{mname} not in DSL at"
-        caller.each { |s| $stderr.puts "  #{s}"}
-        @obj.__send__ mname, *args, &blk
-    end
-end
-else
-@class.class_eval do
-    def method_missing(mname, *args, &blk)
-    raise "Attempt to call method #{mname} not in DSL"
-end
-end
-end
-end
-
-def apply(obj)
-    @methods.each do |m|
-        unless obj.respond_to? m
-            raise "Method #{m} not found in DSL object #{obj}"
+        if warn
+            @class.class_eval do
+                def method_missing(mname, *args, &blk)
+                    $stderr.puts "Attempt to call method #{mname} not in DSL at"
+                    caller.each { |s| $stderr.puts "  #{s}"}
+                    @obj.__send__ mname, *args, &blk
+                end
+            end
+        else
+            @class.class_eval do
+                def method_missing(mname, *args, &blk)
+                    raise "Attempt to call method #{mname} not in DSL"
+                end
+            end
         end
     end
-    @class.new(obj)
-end
 
-def add_method(mname)
-    @methods ||= []
-    @methods.push(mname)
-    @class.class_eval do
-        define_method mname do |*args, &blk|
-            @obj.__send__ mname, *args, &blk
+    # TODO: desc
+    def apply(obj)
+        @methods.each do |m|
+            unless obj.respond_to? m
+                raise "Method #{m} not found in DSL object #{obj}"
+            end
+        end
+        @class.new(obj)
+    end
+
+    # TODO: desc
+    def add_method(mname)
+        @methods ||= []
+        @methods.push(mname)
+        @class.class_eval do
+            define_method mname do |*args, &blk|
+                @obj.__send__ mname, *args, &blk
+            end
         end
     end
-end
+
 end
 
+# DSL Class
 class Lang
+    
     def initialize(cls)
         @class = cls
     end
     
+    # Creates keyword
     def keyword(mname, *args, &blk)
         Keyword.new(@class, mname).instance_exec(*args, &blk)
     end
     
+    # Enables contract verification
     def spec(mname, *args, &blk)
         Spec.new(@class, mname).instance_exec(*args, &blk)
     end
+    
 end
 
+# TODO: Purpose of class?
 class Range
+    
     alias :old_initialize :initialize
     
     def initialize(*args)
         old_initialize(*args)
     end
     
+    # TODO: desc and verify
     def no_iter
         []
     end
     
+    # TODO: desc
     def step_iter(step_num)
         self.step(step_num)
     end
     
+    # TODO: desc
     def random_iter(iter = (self.max - self.min) / 2)
         rand_set = Set.new
         prng = Random.new
@@ -206,9 +230,7 @@ class Range
         
         rand_set.to_a
     end
+    
 end
 
-
-
-
-end
+end # End of module RDL

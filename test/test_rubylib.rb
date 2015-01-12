@@ -1,10 +1,7 @@
 require 'minitest/autorun'
 
+# Tests basic Ruby library functions as used in RDL
 class LibTest < Minitest::Test
-
-    def setup
-        
-    end
     
     def foo1 (obj)
         return obj unless block_given?
@@ -18,9 +15,10 @@ class LibTest < Minitest::Test
         return block_given?
     end
     
+    # Tests unparenthesized block passing
     def test_block_order()
-        assert(foo1 foo2 {p "hi"})
-        assert(foo1 foo3 {p "hi"})
+        assert((foo1 foo2 {p "hi"}), "ERR 1.1 Unparenthesized block passing error")
+        assert((foo1 foo3 {p "hi"}), "ERR 1.2 Unparenthesized block (expecting block arg) passing error")
     end
 
 end

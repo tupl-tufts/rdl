@@ -75,6 +75,10 @@ module RDL::Type
         t.to_actual_type
       }
     end
+    
+    def rdoc_str
+        _to_actual_type.to_s
+    end
   end
 end
 

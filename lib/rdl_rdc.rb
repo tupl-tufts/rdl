@@ -1,6 +1,7 @@
 module RDL
 
 class RDLdocObj
+    
     def initialize()
         @klasses = {}
         if (not $RDLdoc) then
@@ -46,8 +47,6 @@ class RDLdocObj
         
         @top_level = @store.add_file 'file.rb'
         @top_level.parser = RDoc::Parser::Ruby
-        
-
     end
 
     def add_klass(kls)
@@ -59,11 +58,8 @@ class RDLdocObj
         
         kls.instance_variable_get(:@__typesigs).each{|mname,mthd| rdocklass.add_method( add_method(mname.to_s,mthd) )}
         
-        
-        
         @klasses[kls.to_s] = rdocklass
     end
-
 
     # TODO
     def add_alias()
@@ -91,7 +87,7 @@ class RDLdocObj
         msig = "("
         desc = "Takes input {Params} and outputs {Return}"
         
-        tsinfo.args.each{|arg| msig +=arg; msig +=",";}
+        tsinfo.args.each{|arg| msig +=arg.to_s; msig +=",";}
         if(msig[-1]==",")then
             msig = msig[0...-1]
         end
@@ -119,17 +115,18 @@ class RDLdocObj
         return mthd
 
     end
-private :initOnce, :add_alias, :add_ignore, :add_method, :add_attribute
 
+    private :initOnce, :add_alias, :add_ignore, :add_method, :add_attribute
+
+    # TODO
     def rdoc_gen()
-        
-        
         #@store.complete :private
         @object = @store.find_class_or_module 'Object'
         #@top_level.add_class klass.class, klass.name
         @g.generate
         puts "Successful?: %s" %[File.file?('index.html').to_s]
     end
+    
 end
 
 end

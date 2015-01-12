@@ -1,4 +1,3 @@
-#require 'rdl'
 require_relative '../../../lib/rdl.rb'
 
 
@@ -6,6 +5,7 @@ class Array
   extend RDL
   type_params [:t, :each]
   
+
   typesig(:[], "(Range) -> Array<t>")
   typesig(:[], "(Fixnum) -> t")
   typesig(:[], "(Fixnum, Fixnum) -> Array<t>")
@@ -20,8 +20,8 @@ class Array
   typesig(:slice, "(Fixnum, Fixnum) -> Array<t>")
   typesig(:[]=, "(Fixnum, t) -> t")
   typesig(:[]=, "(Fixnum, Fixnum, t) -> t")
-  #typesig(:[]=, "(Fixnum, Fixnum, Array<t>) -> Array<t>")
-  #typesig(:[]=, "(Range, Array<t>) -> Array<t>")
+  typesig(:[]=, "(Fixnum, Fixnum, Array<t>) -> Array<t>")
+  typesig(:[]=, "(Range, Array<t>) -> Array<t>")
   typesig(:[]=, "(Range, t) -> t")
   typesig(:assoc, "(t) -> Array<t>")
   typesig(:at, "(Fixnum) -> t")
@@ -49,6 +49,7 @@ class Array
   typesig(:drop, "(Fixnum) -> Array<t>")
   typesig(:drop_while, "() { (t) -> %bool } -> Array<t>")
   typesig(:drop_while, "() -> Enumerator")
+
   typesig(:each, "() -> Enumerator")
   typesig(:each, "() { (t) -> %any } -> Array<t>")
   typesig(:each_index, "() { (Fixnum) -> %any } -> Array<t>")
