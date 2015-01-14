@@ -5,54 +5,6 @@
 
 module RDL
     
-    # Deprecated
-    class Contract2
-        def apply(v); end
-        def check(v); end
-        def to_s; end
-        def to_proc
-            x = self
-            Proc.new { |v| x.check v }
-        end
-    end
-    
-    # Deprecated
-    class MyCtc < Contract2
-        def initialize(s = "myctc", &p)
-            @str = s.to_s; @pred = p
-        end
-        
-        def apply(*v)
-            (check v) ? v : (raise "MyCtc Value #{v.inspect} does not match contract #{self}")
-        end
-        
-        def check(*v)
-            @pred.call *v
-        end
-        
-        def to_s; "#<MyCtc:#{@str}>" end
-    end
-    
-    # Deprecated
-    class MyCtc2 < Contract2
-        def initialize(s = "myctc2", &p)
-            @str = s.to_s; @pred = p
-        end
-        
-        def apply(v)
-            (check v) ? v : (raise "MyCtc Value #{v.inspect} does not match contract #{self.rdoc_gen}")
-        end
-        
-        def check(v)
-            @pred.call v
-        end
-        
-        def to_s; "#<MyCtc:#{@str}>" end
-    end
-    
-    ##########################
-    
-    
     ##########################
     ### Contract Structure ###
     
@@ -173,7 +125,7 @@ module RDL
             @mname = mname
             @lctc = lctc
             @rctc = rctc
-            @pred = Proc.new{|env, *v| @lctc.check(*v) && @pred_sub.call(env, *v)}
+            @pred = Proc.new{|env, *v| @args = v; @lctc.check(*@args) && @pred_sub.call(env, *@args)}
             @pred_sub = Proc.new{|env, *v| @self = env; @ret = env.send(@mname.to_sym,*v); @rctc.check(*v, @ret)}
         end
         def add_pre(ctc)

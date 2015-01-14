@@ -3,12 +3,17 @@ module RDL
     attr_accessor :bp_stack
 end
 
-# Wrapper binding for DSLs
+# Wrapper binding for
 class Spec
+    attr_accessor :ctc_list
+    
     
     def initialize(cls, mname)
         @class = cls
         @mname = mname
+        
+        # Initialize ctc_list (List of Method Contracts)
+        store_get_contract()
         
         # TODO: Fix typesig before method definition feature
         unless cls.method_defined? mname or mname.to_sym == :initialize
@@ -21,44 +26,6 @@ class Spec
             raise "Expected a Proc, got #{blk.inspect}"
         end
         instance_exec(*args, &blk)
-    end
-    
-    # DEPRECATED
-    # Takes a block that transforms the incoming arguments
-    # into (possibly) new arguments to be fed to the method.
-    def pre(&b)
-        mname = @mname
-        old_mname = "__dsl_old_#{mname}_#{gensym}"
-        pre_name = define_method_gensym("pre", &b)
-        
-        @class.class_eval do
-            alias_method old_mname, mname
-            define_method mname do |*args, &blk|
-                results = self.__send__ pre_name, *args, &blk
-                new_args = results[:args]
-                new_blk = results[:block]
-                self.__send__ old_mname, *new_args, &new_blk
-            end
-        end
-    end
-    
-    # DEPRECATED
-    # Takes a block that transforms the return value
-    # into a (possibly) return value to be returned from the method.
-    # The block also gets handed the original arguments.
-    def post(&b)
-        mname = @mname
-        old_mname = "__dsl_old_#{mname}_#{gensym}"
-        post_name = define_method_gensym("post", &b)
-        
-        @class.class_eval do
-            alias_method old_mname, mname
-            
-            define_method mname do |*args, &blk|
-                res = self.__send__ old_mname, *args, &blk
-                self.__send__ post_name, res, *args, &blk
-            end
-        end
     end
     
     # Wraps a method with type contracts
@@ -284,6 +251,7 @@ class Spec
     
     end
 
+
     # Get typesig contract
     def store_get_contract()
         # Create or append Method Contract
@@ -298,9 +266,6 @@ class Spec
         return ctcls[@mname]
     end
 
-    # DEPRECATED
-    #class PreConditionFailure < Exception; end
-    #class PostConditionFailure < Exception; end
 
     # Shortcut Methods for appending Preconditions and Postconditions
 
@@ -313,6 +278,7 @@ class Spec
         RDL.debug "post_cond_called", 8
         store_get_contract().add_post PostCtc.new FlatCtc.new(desc, &blk)
     end
+
 
     # TODO Update this chunk of code
     # Since we're describing an existing method, not creating a new DSL,
@@ -346,84 +312,4 @@ class Spec
         end
     end
 
-private
-
-    # Define a method with unique name and return new name
-    def define_method_gensym(desc="blk",&blk)
-        blk_name = "__dsl_#{desc}_#{@mname}_#{gensym}"
-        RDL.debug "\nIN 432 DEFINING #{blk_name} \n", 7
-        #blk_name = "dsl_#{desc}_#{@mname}_#{gensym}".parameterize.to_sym
-    
-        @class.class_eval do
-            define_method blk_name, &blk
-        end
-    
-        blk_name
-    end
-
-    # See rdl_dsl.rb
-    def gensym
-        RDL::Gensym.gensym
-    end
-
-end
-
 end # End of class RDL::Spec
-
-module RDL
-    
-    # TODO: desc
-    class BlockProxy < Spec
-        attr_reader :blk
-        attr_reader :blk_type
-        attr_reader :mname
-        attr_reader :class
-        attr_reader :var_map
-            
-        def initialize(blk, blk_type, cls, method_name)
-            @blk = blk
-            @blk_type = blk_type
-            @class = cls
-            @mname = method_name
-            @var_map = {}
-        end
-            
-        def call(*args)
-            chosen_type = nil
-            ret_var_map = {}
-                
-            c = Proc.new {|args|
-                chosen_type = RDL::MethodCheck.select_and_check_args(@blk_type, @method_name, args)
-                chosen_type
-            }
-                
-            c2 = Proc.new {|ret|
-                ret.rdl_type.le(chosen_type.ret, ret_var_map)
-            }
-                
-            ctc = MyCtc.new(&c)
-            ctc_r = MyCtc2.new(&c2)
-                
-            ctc.apply *args
-                
-            ret = @blk.call *args
-            ctc_r.apply ret
-                
-            ret_var_map.each {|k, v|
-                if @var_map.keys.include? k
-                    @var_map[k] = @var_map[k].add v
-                else
-                    @var_map[k] = Set.new v
-                end
-            }
-                
-            ret
-        end
-            
-        def self.wrap_block(x)
-            Proc.new {|*v| x.call(*v)}
-        end
-        
-    end
-    
-end

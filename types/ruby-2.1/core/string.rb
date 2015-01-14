@@ -43,7 +43,7 @@ class String
     typesig  :byteslice , " ( Fixnum, ? Fixnum ) -> String or nil "
     
     typesig  :byteslice , " ( Range ) -> String or nil "
-    
+        
     typesig  :capitalize , " ( ) -> String ", post { |*arg, ret|  ret=~/[A-Z]/ && ret[1,ret.length]=~/^[A-Z]/ }
     
     typesig  :capitalize! , " ( ) -> String or nil ", post { |*arg, ret| ret=~/[A-Z]/ && ret[1,ret.length]=~/^[A-Z]/ && ret.eql?(@self) }
@@ -232,7 +232,7 @@ class String
     
     typesig  :to_f , " ( ) -> Float "
     
-    typesig  :fo_i , " ( ? Fixnum ) -> Fixnum ", post { |*arg, ret| x = (arg[0] ? arg[0]:10); (x>=2 && x<=36)}
+    typesig  :to_i , " ( ? Fixnum ) -> Fixnum ", post { |*arg, ret| x = (arg[0] ? arg[0]:10); (x>=2 && x<=36)}
     
     typesig  :to_r , " ( ) -> Rational "
     

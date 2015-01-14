@@ -24,7 +24,7 @@ module RDL
     # Debug mode
 
     @@debug = true
-    @@debug_channels = 0b00001001
+    @@debug_channels = 0b00010001
 
     def self.debug?()
         @@debug
@@ -69,3 +69,14 @@ module RDL
     # 16 #
 end
 
+# RDL Check Stack for Recursion Management
+
+class CheckStack < Array
+
+    def push(obj)
+        status = true
+        self.each {|elem| if elem==obj then status = false; next true; end}
+        status && super(obj)
+    end
+
+end

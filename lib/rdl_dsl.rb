@@ -4,18 +4,6 @@
 
 module RDL
 
-module Gensym
-    
-    # Track unique method IDs for generation of unique method names
-    def self.gensym
-        @gensym = 0 unless @gensym
-        gsym = @gensym
-        @gensym = gsym + 1
-        gsym
-    end
-
-end
-
 class Dsl
     attr_accessor :keywords, :specs
     
@@ -127,6 +115,28 @@ class Keyword < Spec
     end
 end
 
+# DSLang Class
+class Lang
+    
+    def initialize(cls)
+        @class = cls
+    end
+    
+    # Creates keyword
+    def keyword(mname, *args, &blk)
+        Keyword.new(@class, mname).instance_exec(*args, &blk)
+    end
+    
+    # Enables contract verification
+    def spec(mname, *args, &blk)
+        Spec.new(@class, mname).instance_exec(*args, &blk)
+    end
+    
+end
+
+#V#V#V#V#V#V#V#V#V#V#V# TO DELETE #V#V#V#V#V#V#V#V#V#V#V#V#V#V#V#V#V#V#V
+
+
 # TODO: Purpose of class?
 class Proxy
     
@@ -181,21 +191,56 @@ class Proxy
 
 end
 
-# DSL Class
-class Lang
-    
-    def initialize(cls)
-        @class = cls
-    end
-    
-    # Creates keyword
-    def keyword(mname, *args, &blk)
-        Keyword.new(@class, mname).instance_exec(*args, &blk)
-    end
-    
-    # Enables contract verification
-    def spec(mname, *args, &blk)
-        Spec.new(@class, mname).instance_exec(*args, &blk)
+# TODO: desc
+class BlockProxy < Spec
+    attr_reader :blk
+    attr_reader :blk_type
+    attr_reader :mname
+    attr_reader :class
+        attr_reader :var_map
+        
+        def initialize(blk, blk_type, cls, method_name)
+            @blk = blk
+            @blk_type = blk_type
+            @class = cls
+            @mname = method_name
+            @var_map = {}
+        end
+        
+        def call(*args)
+            chosen_type = nil
+            ret_var_map = {}
+            
+            c = Proc.new {|args|
+                chosen_type = RDL::MethodCheck.select_and_check_args(@blk_type, @method_name, args)
+                chosen_type
+            }
+            
+            c2 = Proc.new {|ret|
+                ret.rdl_type.le(chosen_type.ret, ret_var_map)
+            }
+            
+            ctc = MyCtc.new(&c)
+            ctc_r = MyCtc2.new(&c2)
+            
+            ctc.apply *args
+            
+            ret = @blk.call *args
+            ctc_r.apply ret
+            
+            ret_var_map.each {|k, v|
+                if @var_map.keys.include? k
+                    @var_map[k] = @var_map[k].add v
+                    else
+                    @var_map[k] = Set.new v
+                end
+            }
+            
+            ret
+        end
+        
+        def self.wrap_block(x)
+        Proc.new {|*v| x.call(*v)}
     end
     
 end
@@ -232,5 +277,7 @@ class Range
     end
     
 end
+
+#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#^#
 
 end # End of module RDL

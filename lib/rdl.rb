@@ -8,8 +8,6 @@ require_relative 'rdl_rdc'
 
 module RDL
     
-    @@master_switch = true
-    
     class << self
         attr_accessor :print_warning
     end
@@ -40,7 +38,7 @@ module RDL
 
     alias :entry :keyword
 
-    # TODO desc
+    # Type parameters for defining typesigs
     def type_params(*t_params)
         return if t_params.empty?
     
@@ -68,7 +66,7 @@ module RDL
             RDL.debug "spec truecase", 4
             Lang.new(self).spec(mname, *args, &blk)
         else
-            RDL.debug "spec for :#{mname} falsecase #{self.instance_methods(false)}", 4
+            RDL.debug "spec for :#{mname} falsecase #{self.instance_methods(false)}", 5
             deferred_specs = self.instance_variable_get(:@__deferred_specs)
             deferred_specs[mname] = [] if not deferred_specs.keys.include? mname
             deferred_specs[mname].push([args, blk])
