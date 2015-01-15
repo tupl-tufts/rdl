@@ -24,7 +24,7 @@ module RDL
     # Debug mode
 
     @@debug = true
-    @@debug_channels = 0b00010001
+    @@debug_channels = 0b00000001
 
     def self.debug?()
         @@debug

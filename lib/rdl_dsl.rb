@@ -64,6 +64,13 @@ class Dsl
 
 end
 
+=begin
+ def dsl(*a, &b)
+ spec = Dsl.new *a, &b
+ dsl_from spec
+ end
+=end
+
 
 class Keyword < Spec
     

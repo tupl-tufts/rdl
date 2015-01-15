@@ -1,15 +1,15 @@
 module RDL
-    class << self
+    
+class << self
     attr_accessor :bp_stack
 end
 
 # Wrapper binding for
 class Spec
-    attr_accessor :ctc_list
-    
+    attr_accessor :klass, :mname, :contract
     
     def initialize(cls, mname)
-        @class = cls
+        @klass = cls
         @mname = mname
         
         # Initialize ctc_list (List of Method Contracts)
@@ -21,13 +21,6 @@ class Spec
         end
     end
     
-    def include_spec(blk, *args)
-        unless blk.is_a?(Proc)
-            raise "Expected a Proc, got #{blk.inspect}"
-        end
-        instance_exec(*args, &blk)
-    end
-    
     # Wraps a method with type contracts
     # @params String:sig ?Hash:meta *Contract:ctcls
     def typesig(sig, *metactc)
@@ -36,7 +29,7 @@ class Spec
         if(metactc[0].is_a? Hash)then
             meta = metactc[0]
             ctcls = metactc[1..-1]
-            else
+        else
             meta = {}
             ctcls = metactc
         end
@@ -48,9 +41,9 @@ class Spec
         # Parameterized type handler
         tvars = meta[:vars].nil? ? [] : meta[:vars]
         
-        cls_typesigs = @class.instance_variable_get :@__typesigs
+        cls_typesigs = @klass.instance_variable_get :@__typesigs
         
-        cls_param_symbols = @class.instance_variable_get(:@__cls_params).keys # gets the :t in Array
+        cls_param_symbols = @klass.instance_variable_get(:@__cls_params).keys # gets the :t in Array
         valid_param_symbols = tvars + cls_param_symbols
         
         common_tparams = tvars & cls_param_symbols
@@ -65,7 +58,7 @@ class Spec
             invalid_tparams.push(p) if not valid_param_symbols.include?(p)
         }
         if not invalid_tparams.empty?
-            raise RDL::InvalidParameterException, "Invalid parameters #{invalid_tparams.inspect} in #{@class}##{@mname} typesig #{sig}"
+            raise RDL::InvalidParameterException, "Invalid parameters #{invalid_tparams.inspect} in #{@klass}##{@mname} typesig #{sig}"
         end
         
         # Intersection type handler
@@ -74,12 +67,12 @@ class Spec
             
             if extant_type.instance_of? RDL::Type::IntersectionType
                 type = [type] + extant_type.types.to_a
-                else
+            else
                 type = [type, extant_type]
             end
             
             cls_typesigs[mname] = RDL::Type::IntersectionType.new(*type)
-            else
+        else
             cls_typesigs[mname] = type
         end
         
@@ -133,7 +126,7 @@ class Spec
         }
         
         # Postconditions
-        mcheck_post = FlatCtc.new "Typesig Postcondition", &Proc.new{|*args,ret|
+        mcheck_post = FlatCtc.new "Typesig Postcondition", &Proc.new{ |*args,ret|
             
             RDL.debug "POST called", 3
             
@@ -185,24 +178,8 @@ class Spec
             
         }
         
-        # Wrap method
-        mname = @mname
-        mname_old = (mname.to_s+"_old#{RDL::Gensym.gensym}").to_s
-        
-        RDL.debug "MNAME #{mname}", 2
-        RDL.debug "MNAME.TO_S #{mname.to_s}", 2
-        RDL.debug "MNAME_OLD #{mname_old}", 2
-        
-        kls = @class
-        
         ctc = store_get_contract()
-        
-        RDL.debug ctc.rdoc_gen, 3
-        
         ctc.add_pre mcheck_pre
-        
-        RDL.debug ctc.rdoc_gen, 3
-        
         ctc.add_post mcheck_post
         
         RDL.debug ctc.rdoc_gen, 1
@@ -212,28 +189,26 @@ class Spec
                 
     end
     
-    
     # Patches method :@mname to check when called
     def wrap_method()
         
-        # TODO
         args_val = []
         ret_val = nil
         
         mname = @mname
         mname_old = mname.to_s + "_old"
-        kls = @class
+        kls = @klass
         
         # Only need to wrap once
-        if @class.instance_methods.include?(mname_old) then
+        if kls.instance_methods.include?(mname_old) then
             return
         end
         
-        @class.class_eval do
+        kls.class_eval do
             alias_method mname_old, mname
             define_method mname do |*v|
                 if RDL.on?
-                    mctc = kls.instance_variable_get(:@__typesigContracts)[mname]
+                    mctc = kls.instance_variable_get(:@__rdlcontracts)[mname].contract
                     mctc.check(self,*v)
                     return mctc.instance_variable_get(:@ret)
                 end
@@ -251,19 +226,18 @@ class Spec
     
     end
 
-
-    # Get typesig contract
+    # Stores and/or Retrieves typesig contract
     def store_get_contract()
+        
         # Create or append Method Contract
-        ctcls = @class.instance_variable_get(:@__typesigContracts)
-        @class.instance_variable_set(:@__typesigContracts, {}) unless !ctcls.nil?
-        ctcls = @class.instance_variable_get(:@__typesigContracts)
         mname_old = @mname.to_s + "_old"
-        if ctcls[@mname].nil? then
+        
+        if @contract.nil? then
             wrap_method()
-            ctcls[@mname] = MethodCtc.new(mname_old, FlatCtc.new("StudT") {|*v| true}, FlatCtc.new("StudT") {|*v| true})
+            @contract = MethodCtc.new(mname_old, FlatCtc.new("StudT") {|*v| true}, FlatCtc.new("StudT") {|*v| true})
         end
-        return ctcls[@mname]
+        
+        return @contract
     end
 
 
@@ -279,37 +253,6 @@ class Spec
         store_get_contract().add_post PostCtc.new FlatCtc.new(desc, &blk)
     end
 
-
-    # TODO Update this chunk of code
-    # Since we're describing an existing method, not creating a new DSL,
-    # here we want the dsl keyword to just intercept the block and add
-    # our checks. We'll overwrite this functionality inside the entry version.
-    def dsl(*a, &b)
-        spec = Dsl.new *a, &b
-        dsl_from spec
-    end
-
-    def dsl_from(spec, flags = {})
-        p = Proxy.new flags[:warn]
-        spec.specs.each_pair { |m, b| p.add_method m }
-        spec.apply(p.instance_variable_get(:@class))
-        pre do |*args, &blk|
-            # Allow for methods that only sometimes take DSL blocks.
-            if blk
-                new_blk = Proc.new do |*args|
-                    unless self.is_a? RDL::Proxy
-                        obj = p.apply(self)
-                    else
-                        spec.specs.each_pair { |m, b| add_method m }
-                        spec.apply(class << self; self; end)
-                        obj = self
-                    end
-                    obj.instance_exec(*args, &blk)
-                end
-                { args: args, block: new_blk }
-            else { args: args, block: blk }
-            end
-        end
-    end
-
 end # End of class RDL::Spec
+
+end # End of Module RDL
