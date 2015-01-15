@@ -1,5 +1,4 @@
-require_relative 'rdl/master_switch'
-#require 'set'
+require_relative 'rdl/utilities'
 require_relative 'rdl_ctc'
 require_relative 'rdl_sig'
 require_relative 'rdl_dsl'
@@ -10,6 +9,17 @@ module RDL
     
     class << self
         attr_accessor :print_warning
+    end
+
+    # Syntactic sugar for creating new DSLs
+    # See rdl_dsl.rb
+    def dsl(*a, &blk)
+        DSL.new(*a, &blk)
+    end
+
+    # Accessor for Array<Spec>
+    def contracts
+        @__rdlcontracts
     end
 
     # Get RDL type representation from String in format Superklass#klass or Superklass.klass
@@ -23,7 +33,7 @@ module RDL
             cls = eval(s[0])
             nt = eval("#{s[0]}.rdl_type")
         else
-            raise Exception, "argument to get_type must be or the form \"Talks#list\" or \"Talks.list\""
+            raise Exception, "Argument to :get_type must be or the form \"Talks#list\" or \"Talks.list\""
         end
 
         m = s[1]
@@ -53,7 +63,7 @@ module RDL
     # Typesig annotations for method types
     # See rdl_sig.rb
     def typesig(mname, sig, *metactc)
-        RDL.debug "module RDL::typesig called", 4
+        RDL.debug "Module RDL::typesig called", 4
         
         cls = self
         if cls.class == Symbol
@@ -68,13 +78,12 @@ module RDL
             @__rdlcontracts ||= {}
             
             if self.instance_methods(true).include? mname
-                RDL.debug "spec truecase", 4
-                @__rdlcontracts[mname] = Spec.new(self, mname.to_sym)
+                @__rdlcontracts[mname] ||= Spec.new(self, mname.to_sym)
                 @__rdlcontracts[mname].typesig sig, *metactc
             else
-                RDL.debug "spec for :#{mname} falsecase #{self.instance_methods(false)}", 5
+                RDL.debug "Typesig definition for :#{mname} deferred", 1
                 deferred_specs = self.instance_variable_get(:@__deferred_specs)
-                deferred_specs[mname] = [] if not deferred_specs.keys.include? mname
+                deferred_specs[mname] = [mname, sig, *metactc] if not deferred_specs.keys.include? mname
             end
             
         end
@@ -82,23 +91,28 @@ module RDL
     end
 
     # Pre condition generator for use in :typesig annotations
+    # See rdl_ctc.rb
     def pre(desc = "User Precondition", &blk)
         PreCtc.new(FlatCtc.new(desc,&blk))
     end
 
     # Post condition generator for use in :typesig annotations
+    # See rdl_ctc.rb
     def post(desc = "User Postcondition", &blk)
         PostCtc.new(FlatCtc.new(desc,&blk))
     end
 
     # Provide subclasses with access to superclass rdl information
+    # See rdl_sig.rb
     def self.extended(extendee)
         extendee.instance_variable_set(:@__deferred_specs, {})
         extendee.instance_variable_set(:@__cls_params, {})
         extendee.instance_variable_set(:@__typesigs, {})
     end
 
-    # TODO needs updating; see rdl_rdc.rb
+    # TODO needs updating
+    # RDoc Generation tool
+    # See rdl_rdc.rb
     def rdocTypesigFor(klass)
         tmp = RDLdocObj.new
         tmp.add_klass(klass)
@@ -108,38 +122,19 @@ module RDL
 end #End of Module:RDL
 
 
-class Object
-    
-    # Typesig method wrapping in the case of not yet defined methods
-    def self.method_added(mname)
-        specs = self.instance_variable_get :@__deferred_specs
-    
-        if specs and specs.keys.include? mname
-            sm = specs[mname]
-            specs.delete mname
-            sm.each {|args, blk| self.spec(mname, *args, &blk)}
-        end
-    end
 
-end
+# RDL Recursion Protection
 
-##########################################################################################
-
-# TODO update this with RDL Master Switch fix
-# TODO clean up following code
 status = RDL.on?
 RDL.turn_off if status
 
 begin
     require_relative 'rdl/types'
-    # require_relative '../types/ruby-2.1/core/array.rb'
     
     # stops RDL code from checking itself and eliminates
     # the old RTC NativeArray, NativeHash, etc.
     require_relative 'rdl/turn_off'
     RDL::TurnOffCheck.turn_off_check
-    ensure
+ensure
     RDL.turn_on if status
 end
-
-#RDL.print_warning = false

@@ -5,200 +5,52 @@
 module RDL
 
 class Dsl
-    attr_accessor :keywords, :specs
+    attr_accessor :keywords
     
+    # Creates dsl and executes block using dsl
     def initialize(*a, &blk)
-        instance_eval(*a, &blk) if block_given?
+        @keywords ||= {}
+        @keywords[:keyword] = 0 # Prevent :keyword from being overwritten
+        apply(*a, &blk)
+    end
+    
+    # Syntactic sugar for creating new DSLs
+    def dsl(*a, &blk)
+        DSL.new(*a, &blk)
     end
     
     # Define reserved word in DSL
     def keyword(mname, &blk)
-        @keywords ||= {}
         raise "Keyword definition already exists for #{mname}" if @keywords[mname]
+        instance_exec do
+            define_method mname do |*args|
+                @keywords[mname].call(*args)
+            end
+        end
         @keywords[mname] = blk
     end
     
-    # Define RDL::Spec
-    def spec(mname, &blk)
-        @specs ||= {}
-        @specs[mname] ||= []
-        @specs[mname].push(blk)
-    end
-    
-    # Reference other RDL::Spec
-    def self.extend(spec, &blk)
-        raise "Expected a DSL spec, got #{spec}" unless spec.is_a?(Dsl)
-        new_spec = Dsl.new
-        old_keywords = spec.keywords
-        if old_keywords
-            new_spec.instance_variable_set(:@keywords, old_keywords.clone)
-        end
-        old_specs = spec.specs
-        # FIXME: Probably need to do one more level down of cloning
-        new_spec.instance_variable_set(:@specs, old_specs.clone) if old_specs
-        new_spec.instance_eval(&blk) if block_given?
-        new_spec
+    # Import other DSL keywords
+    def self.extend(other, &blk)
+        raise "Expected a DSL spec, got #{spec}" unless other.is_a?(Dsl)
+        otherkeys = other.keywords
+        otherkeys.keys.each { |key|
+            keyword(key, otherkeys[key]) unless self.keywords.include?(key)
+        }
+        apply(&blk)
     end
 
-    # TODO: describe
-    def apply(cls)
-        if @keywords
-            @keywords.each_pair do |m, b|
-                if cls.method_defined? m
-                    raise "Method #{m} listed in spec already defined in #{cls}"
-                end
-                Keyword.new(cls, m).instance_eval(&b)
-            end
-        end
-        if @specs
-            @specs.each_pair do |m, bl|
-                bl.each do |b|
-                    unless cls.method_defined? m
-                        raise "Method #{m} listed in spec not defined in #{cls}"
-                    end
-                    Spec.new(cls, m).instance_eval(&b)
-                end
-            end
-        end
+    # Executes block using dsl
+    def apply(*a, &blk)
+        instance_exec(*a, &blk) if block_given?
     end
 
 end
 
-=begin
- def dsl(*a, &b)
- spec = Dsl.new *a, &b
- dsl_from spec
- end
-=end
 
+#V#V#V#V#V#V#V#V#V#V#V# TO CHANGE / REMOVE #V#V#V#V#V#V#V#V#V#V#V#V#V#V#V#V#V#V#V
 
-class Keyword < Spec
-    
-    def initialize(cls, mname)
-        if cls.method_defined? mname
-            raise "Method #{mname} already defined for #{cls}"
-        end
-        
-        @class = cls
-        @mname = mname
-        
-        action { |*args| nil }
-    end
-    
-    # For non-DSL keywords
-    def action(&blk)
-        mname = @mname
-        
-        @class.class_eval do
-            define_method mname, &blk
-        end
-    end
-    
-    # For keywords that take the same DSL they are in
-    def dsl_rec
-        action do |*args, &blk|
-            instance_exec(*args, &blk)
-            self
-        end
-    end
-    
-    # For keywords that take a different DSL than they are in
-    def dsl(cls = nil, *a, &b)
-        mname = @mname
-        
-        raise "Need a class or block" unless cls or b
-        
-        unless b.nil?
-            cls = Class.new(BasicObject) if cls.nil?
-            cls.class_eval do include Kernel end
-            Lang.new(cls).instance_exec(*a, &b)
-        end
-        
-        action do |*args, &blk|
-            c = cls.new(*a)
-            c.instance_exec(*args, &blk)
-            c
-        end
-    end
-end
-
-# DSLang Class
-class Lang
-    
-    def initialize(cls)
-        @class = cls
-    end
-    
-    # Creates keyword
-    def keyword(mname, *args, &blk)
-        Keyword.new(@class, mname).instance_exec(*args, &blk)
-    end
-    
-    # Enables contract verification
-    def spec(mname, *args, &blk)
-        Spec.new(@class, mname).instance_exec(*args, &blk)
-    end
-    
-end
-
-#V#V#V#V#V#V#V#V#V#V#V# TO DELETE #V#V#V#V#V#V#V#V#V#V#V#V#V#V#V#V#V#V#V
-
-
-# TODO: Purpose of class?
-class Proxy
-    
-    def initialize(warn = false)
-        @class = Class.new(BasicObject) do
-            include Kernel
-            
-            attr_reader :obj
-            
-            def initialize(obj)
-                @obj = obj
-            end
-        end
-    
-        if warn
-            @class.class_eval do
-                def method_missing(mname, *args, &blk)
-                    $stderr.puts "Attempt to call method #{mname} not in DSL at"
-                    caller.each { |s| $stderr.puts "  #{s}"}
-                    @obj.__send__ mname, *args, &blk
-                end
-            end
-        else
-            @class.class_eval do
-                def method_missing(mname, *args, &blk)
-                    raise "Attempt to call method #{mname} not in DSL"
-                end
-            end
-        end
-    end
-
-    # TODO: desc
-    def apply(obj)
-        @methods.each do |m|
-            unless obj.respond_to? m
-                raise "Method #{m} not found in DSL object #{obj}"
-            end
-        end
-        @class.new(obj)
-    end
-
-    # TODO: desc
-    def add_method(mname)
-        @methods ||= []
-        @methods.push(mname)
-        @class.class_eval do
-            define_method mname do |*args, &blk|
-                @obj.__send__ mname, *args, &blk
-            end
-        end
-    end
-
-end
-
-# TODO: desc
+# TODO: transform this into BlockCtc
 class BlockProxy < Spec
     attr_reader :blk
     attr_reader :blk_type

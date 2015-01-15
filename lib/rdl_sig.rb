@@ -256,3 +256,20 @@ class Spec
 end # End of class RDL::Spec
 
 end # End of Module RDL
+
+
+class Object
+    
+    # Typesig method wrapping in the case of not yet defined methods
+    def self.method_added(mname)
+        specs = self.instance_variable_get :@__deferred_specs
+    
+        if specs and specs.keys.include? mname
+            typesig(specs[mname])
+            specs.delete mname
+            RDL.debug "Deferred typesig #{mname} created", 1
+        end
+
+    end
+
+end
