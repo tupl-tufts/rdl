@@ -136,6 +136,7 @@ class Spec
                 begin
                     RDL.turn_off
                     
+                    # TODO: Add bp
                     if bp
                         vm = bp.var_map
                         vm2 = {}
