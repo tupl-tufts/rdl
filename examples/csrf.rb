@@ -21,7 +21,7 @@ module ActionController
            CSRFHelper.special_include?(rpm[self.class][:except], self.action_name.to_sym))
       end
 
-      post_task do
+      post_cond do
         RDL.state[:rtc_pff_called] = false
       end
     end
@@ -42,7 +42,7 @@ module ActionController
     end
     
     spec :verify_authenticity_token do
-      pre_task do
+      pre_cond do
         RDL.state[:rtc_pff_called] = true
       end
     end

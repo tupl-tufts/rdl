@@ -5,6 +5,13 @@ require_relative 'rdl_dsl'
 require_relative 'rdl_rdc'
 
 
+require_relative 'rdl/types'
+# Stop RDL code from checking itself and eliminate
+# the old RTC NativeArray, NativeHash, etc.
+require_relative 'rdl/turn_off'
+RDL::TurnOffCheck.turn_off_check
+
+
 module RDL
     
     class << self
@@ -14,12 +21,34 @@ module RDL
     # Syntactic sugar for creating new DSLs
     # See rdl_dsl.rb
     def dsl(*a, &blk)
-        DSL.new(*a, &blk)
+        Dsl.new(*a, &blk)
     end
 
-    # Accessor for Array<Spec>
+    # Provide subclasses with access to superclass rdl information
+    def self.extended(extendee)
+        extendee.instance_variable_set(:@__deferred_specs, {})
+        extendee.instance_variable_set(:@__cls_params, {})
+        extendee.instance_variable_set(:@__typesigs, {})
+    end
+
+    # Attr Accessor for Array<Spec>
     def contracts
         @__rdlcontracts
+    end
+
+    # Constructor for Spec
+    def spec(mname, &blk)
+        @__rdlcontracts ||= {}
+        
+        if self.instance_methods(true).include? mname
+            @__rdlcontracts[mname] ||= Spec.new(self, mname.to_sym)
+            @__rdlcontracts[mname].instance_exec(&blk) if block_given?
+        else
+            RDL.debug "Spec definition for :#{mname} deferred", 1
+            @__deferred_specs ||= {}
+            deferred_specs = self.instance_variable_get(:@__deferred_specs)
+            deferred_specs[mname] = blk if not deferred_specs.keys.include? mname
+        end
     end
 
     # Get RDL type representation from String in format Superklass#klass or Superklass.klass
@@ -82,7 +111,8 @@ module RDL
                 @__rdlcontracts[mname].typesig sig, *metactc
             else
                 RDL.debug "Typesig definition for :#{mname} deferred", 1
-                deferred_specs = self.instance_variable_get(:@__deferred_specs)
+                @__deferred_typesigs ||= {}
+                deferred_specs = self.instance_variable_get(:@__deferred_typesigs)
                 deferred_specs[mname] = [mname, sig, *metactc] if not deferred_specs.keys.include? mname
             end
             
@@ -102,14 +132,6 @@ module RDL
         PostCtc.new(FlatCtc.new(desc,&blk))
     end
 
-    # Provide subclasses with access to superclass rdl information
-    # See rdl_sig.rb
-    def self.extended(extendee)
-        extendee.instance_variable_set(:@__deferred_specs, {})
-        extendee.instance_variable_set(:@__cls_params, {})
-        extendee.instance_variable_set(:@__typesigs, {})
-    end
-
     # TODO needs updating
     # RDoc Generation tool
     # See rdl_rdc.rb
@@ -120,21 +142,3 @@ module RDL
     end
 
 end #End of Module:RDL
-
-
-
-# RDL Recursion Protection
-
-status = RDL.on?
-RDL.turn_off if status
-
-begin
-    require_relative 'rdl/types'
-    
-    # stops RDL code from checking itself and eliminates
-    # the old RTC NativeArray, NativeHash, etc.
-    require_relative 'rdl/turn_off'
-    RDL::TurnOffCheck.turn_off_check
-ensure
-    RDL.turn_on if status
-end

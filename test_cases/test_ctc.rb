@@ -15,19 +15,15 @@ class Test_Ctc < Minitest::Test
                      "ERR 1.1 FlatCtc failed to assign @pred")
         
         # Test :check() truecase
-        assert ctc.check(true), "ERR 1.2 FlatCtc.check failed truecase"
+        assert ctc.check(true).nil?, "ERR 1.2 FlatCtc.check failed truecase"
         
-        # Test :apply() truecase
-        assert ctc.apply(true), "ERR 1.3 FlatCtc.apply failed truecase"
         
         # Test :check() errorcase
         # assert_raises Error ctc.check(false)
-        assert_raises(RuntimeError, "ERR 1.4 FlatCtc.check failed errorcase") do
+        assert_raises(RDL::ContractViolationException, "ERR 1.3 FlatCtc.check failed errorcase") do
            ctc.check(false)
         end
         
-        # Test :apply() falsecase
-        assert !ctc.apply(false), "ERR 1.5 FlatCtc.check failed falsecase"
     end
     
     # Test Contract and OrdNCtc class methods
@@ -45,14 +41,12 @@ class Test_Ctc < Minitest::Test
         assert_instance_of(RDL::AndCtc, ctc, "ERR 2.2 Contract.AND failed")
         
         # Test <(x OR F) AND T>
-        assert ctc.check(true), "ERR 2.3 Combinator Contract.check failed"
+        assert ctc.check(true).nil?, "ERR 2.3 Combinator Contract.check failed"
         
-        assert_raises(RuntimeError, "ERR 2.4 Contract.check error case failed") do
+        assert_raises(RDL::ContractViolationException, "ERR 2.4 Contract.check error case failed") do
             ctc.check(false)
         end
         
-        # Test errorcase
-        assert !ctc.apply(false), "ERR 2.5 Contract.apply falsecase failed"
     end
     
     # Test contract label functionality

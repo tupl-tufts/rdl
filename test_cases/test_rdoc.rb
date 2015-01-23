@@ -18,10 +18,10 @@ class String
     
     rdocTypesigFor(String);
 end
-=end
 
 require_relative '../types/ruby-2.1/core/string.rb'
 class TestRDLRDoc
     extend RDL
     rdocTypesigFor(String)
 end
+=end

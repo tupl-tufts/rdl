@@ -4,7 +4,7 @@ class << self
     attr_accessor :bp_stack
 end
 
-# Wrapper binding for
+# Wrapper for method
 class Spec
     attr_accessor :klass, :mname, :contract
     
@@ -19,6 +19,31 @@ class Spec
         unless cls.method_defined? mname or mname.to_sym == :initialize
             raise "Method #{mname} not defined for #{cls}"
         end
+    end
+    
+    # Stores and/or Retrieves typesig contract
+    def store_get_contract()
+        
+        # Create or append Method Contract
+        mname_old = @mname.to_s + "_old"
+        
+        if @contract.nil? then
+            wrap_method()
+            @contract = MethodCtc.new(mname_old, FlatCtc.new("StudT") {|*v| true}, FlatCtc.new("StudT") {|*v| true})
+        end
+        
+        return @contract
+    end
+    
+    # Shortcut Methods for appending Preconditions and Postconditions
+    def pre_cond(desc = "User Precondition", &blk)
+        RDL.debug "pre_cond_called", 8
+        store_get_contract().add_pre PreCtc.new FlatCtc.new(desc, &blk)
+    end
+    
+    def post_cond(desc = "User Postcondition", &blk)
+        RDL.debug "post_cond_called", 8
+        store_get_contract().add_post PostCtc.new FlatCtc.new(desc, &blk)
     end
     
     # Wraps a method with type contracts
@@ -210,8 +235,7 @@ class Spec
             define_method mname do |*v|
                 if RDL.on?
                     mctc = kls.instance_variable_get(:@__rdlcontracts)[mname].contract
-                    mctc.check(self,*v)
-                    return mctc.instance_variable_get(:@ret)
+                    return mctc.check(self,*v) #TODO: attr_accessor for :@ret, contract return pair <TF, ret>
                 end
                 
                 return send(mname_old, *v)
@@ -227,33 +251,6 @@ class Spec
     
     end
 
-    # Stores and/or Retrieves typesig contract
-    def store_get_contract()
-        
-        # Create or append Method Contract
-        mname_old = @mname.to_s + "_old"
-        
-        if @contract.nil? then
-            wrap_method()
-            @contract = MethodCtc.new(mname_old, FlatCtc.new("StudT") {|*v| true}, FlatCtc.new("StudT") {|*v| true})
-        end
-        
-        return @contract
-    end
-
-
-    # Shortcut Methods for appending Preconditions and Postconditions
-
-    def pre_cond(desc = "User Precondition", &blk)
-        RDL.debug "pre_cond_called", 8
-        store_get_contract().add_pre PreCtc.new FlatCtc.new(desc, &blk)
-    end
-
-    def post_cond(desc = "User Postcondition", &blk)
-        RDL.debug "post_cond_called", 8
-        store_get_contract().add_post PostCtc.new FlatCtc.new(desc, &blk)
-    end
-
 end # End of class RDL::Spec
 
 end # End of Module RDL
@@ -264,10 +261,17 @@ class Object
     # Typesig method wrapping in the case of not yet defined methods
     def self.method_added(mname)
         specs = self.instance_variable_get :@__deferred_specs
+        typesigs = self.instance_variable_get :@__deferred_typesigs
     
         if specs and specs.keys.include? mname
-            typesig(specs[mname])
+            spec &(specs[mname])
             specs.delete mname
+            RDL.debug "Deferred typesig #{mname} created", 1
+        end
+
+        if typesigs and typesigs.include? mname
+            typesig(*(typesigs[mname]))
+            typesigs.delete mname
             RDL.debug "Deferred typesig #{mname} created", 1
         end
 

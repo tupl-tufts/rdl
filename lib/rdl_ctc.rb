@@ -1,31 +1,36 @@
 
-
-
-
-
 module RDL
+    
+    class ContractViolationException < StandardError; end
     
     ##########################
     ### Contract Structure ###
     
     class Contract
+        def initialize(desc="No Description", &ctc)
+            @pred = ctc
+            @str = desc
+            @node_bindings = [] # TODO: Add node bindings for CbD-CSP
+        end
+        def check(*v)
+            #p "checksize #{v.size}:#{v} arity #{@pred.arity}"
+            if (@pred && ((@pred.arity < 0) ? (@pred.arity.abs - 1) <= v.size : @pred.arity == v.size)) then
+                # TODO: Labels and proc.parameters :lbl, :rest
+                raise ContractViolationException, "Value(s) #{v.inspect} does not match contract(s) #{self.rdoc_gen}" unless @pred.call(*v)
+            else
+                #puts "Checksize failed: Given<#{v.size}> Expecting:<#{@pred.arity}>"
+                raise ContractViolationException, "Error: Invalid number of arguments in Contract #{self.rdoc_gen}: Expecting arity #{@pred.arity}, got #{v}"
+            end
+        end
         def name(desc="Contract<#{self}>")
             @name = desc;
         end
         def get_name()
             @name
         end
-        def apply(*v)
-            begin
-                check *v
-            rescue
-                #p "founderr #{$!}"
-                return false
-            end
-            true
+        def to_s
+            rdoc_gen
         end
-        def check(*v); end
-        def to_s; end
         def to_proc
             x = self
             Proc.new { |v| x.check v }
@@ -54,9 +59,6 @@ module RDL
         def initialize(wctc)
             @ctc = wctc
         end
-        def apply(*v)
-            @ctc.apply(*v)
-        end
         def check(*v)
             @ctc.check(*v)
         end
@@ -68,7 +70,7 @@ module RDL
         end
         alias :old_is_a? :is_a?
         def is_a?(klass)
-            #puts "IS_A #{self.to_s}"
+            RDL.debug "IS_A #{self.to_s}", 8 # TODO label debug channels
             tmp = old_is_a?(klass)
             return (tmp||@ctc.is_a?(klass))
         end
@@ -88,45 +90,23 @@ module RDL
     
     # Contract using user-defined block
     class FlatCtc < Contract
-        def initialize(desc="No Description", &ctc)
-            @pred = ctc
-            @str = desc
-            #@str = @pred.to_source(:strip_enclosure => true)
-            @node_bindings = [] # TODO: Add node bindings for CbD-CSP
-        end
-        def check(*v)
-            #p "checksize #{v.size}:#{v} arity #{@pred.arity}"
-            if (@pred && ((@pred.arity < 0) ? (@pred.arity.abs - 1) <= v.size : @pred.arity == v.size)) then
-                # TODO: Labels and proc.parameters :lbl, :rest
-                ret = @pred.call(*v)
-                return ret ? ret : (raise "Value(s) #{v.inspect} does not match contract(s) #{self.rdoc_gen}");
-            else
-                #puts "Checksize failed: Given<#{v.size}> Expecting:<#{@pred.arity}>"
-                raise "Error: Invalid number of arguments in Contract #{self.rdoc_gen}: Expecting arity #{@pred.arity}, got #{v}"
-                return false
-            end
-            return true
-        end
         def rdoc_gen
             "{FlatCtc:#{@str}}"
         end
     end
     
-    # Deprecated
-    # Contract enforcing types
-    class TypeCtc < FlatCtc
-        def rdoc_gen
-        end
-    end
-    
     # Contract that applies pre(left) and post(right) condition
-    class MethodCtc < FlatCtc
+    class MethodCtc < Contract
         def initialize(mname,lctc,rctc)
             @mname = mname
             @lctc = lctc
             @rctc = rctc
-            @pred = Proc.new{|env, *v| @args = v; @lctc.check(*@args) && @pred_sub.call(env, *@args)}
-            @pred_sub = Proc.new{|env, *v| @self = env; @ret = env.send(@mname.to_sym,*v); @rctc.check(*v, @ret)}
+            @pred = Proc.new{|env, *v| @lctc.check(*v); @self=env; @ret=env.send(@mname.to_sym, *v); @rctc.check(*v, @ret); true}
+            # TODO: combine @self.clone fix
+        end
+        def check(*v)
+            super(*v)
+            return @ret
         end
         def add_pre(ctc)
             @lctc = AndCtc.new(@lctc,ctc) # TODO eval order
@@ -143,7 +123,7 @@ module RDL
     
     class BlockCtc < MethodCtc
         # Initialized with block as first arg instead of mname
-        # TODO
+        # TODO BlockCtc
         def rdoc_gen
             x = ""
             y = ""
@@ -165,17 +145,14 @@ module RDL
         end
         def init; end
         def check(*v)
-            ret = check_aux(v,0)
-            ret ? ret : (raise "Contract #{self.class}<#{get_name}> not fulfilled")
+            raise ContractViolationException, "Contract #{self.class}<#{get_name}> not fulfilled" unless check_aux(v,0)
         end
         def check_aux(v, nt)
-            #puts "check aux begin from v: #{v} and nt: #{nt}"
             ret = (nt >= @ctcls.length) ? @emp : @cond.call(@ctcls[nt], v, nt)
-            #puts "check aux return: #{ret} from v: #{v} and nt: #{nt}"
             ret
         end
         def add_ctc(ctc)
-            (ctc.is_a? Contract) ? (@ctcls<<ctc):(raise "Attempting to add non-Contract to Contract bundle")
+            (ctc.is_a? Contract) ? (@ctcls<<ctc):(raise ContractViolationException, "Attempting to add non-Contract to Contract bundle")
         end
         def rdoc_gen
             rdc=""
@@ -188,7 +165,7 @@ module RDL
     class AndCtc < OrdNCtc
         def init
             @emp=true
-            @cond = Proc.new{|l, v, nt| l.check(*v) && check_aux(v, nt+1)}
+            @cond = Proc.new{|l, v, nt| l.check(*v); check_aux(v, nt+1); true}
             @connect = " AND "
         end
     end
@@ -196,7 +173,15 @@ module RDL
     # Contract where any one child contract must be held
     class OrCtc < OrdNCtc
         def init
-            @cond = Proc.new{|l, v, nt| l.apply(*v) || check_aux(v, nt+1)}
+            @cond = Proc.new do |l, v, nt|
+                begin
+                    l.check(*v)
+                rescue
+                    check_aux(v, nt+1)
+                ensure
+                    next true
+                end
+        end
             @connect = " OR "
         end
     end

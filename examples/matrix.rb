@@ -1,5 +1,5 @@
 require 'matrix'
-require 'rdl'
+require_relative '../lib/rdl'
 
 $error_threshold = 0.000001
 
@@ -8,7 +8,7 @@ class Matrix
     extend RDL
 
     spec :identity do
-      pre_task do |arg|
+      pre_cond do |arg|
         $matrix_identity_arg = arg
       end
 
@@ -35,7 +35,7 @@ class Matrix
     end
 
     spec :[] do
-      pre_task do |*args|
+      pre_cond do |*args|
         $matrix_create_args = args
       end
 
@@ -53,7 +53,7 @@ class Matrix
     end
 
     spec :build do
-      pre_task do |*args|
+      pre_cond do |*args|
         $matrix_build_args = args
       end
 
@@ -83,7 +83,7 @@ class Matrix
     end
 
     spec :column_vector do
-      pre_task do |arg|
+      pre_cond do |arg|
         $matrix_column_vector_arg = arg
       end
 
@@ -105,7 +105,7 @@ class Matrix
     end
 
     spec :columns do
-      pre_task do |arg|
+      pre_cond do |arg|
         $matrix_columns_arg = arg
       end
 
@@ -118,7 +118,7 @@ class Matrix
     end
 
     spec :diagonal do
-      pre_task do |*args|
+      pre_cond do |*args|
         $matrix_diagonal_args = args
       end
 
@@ -144,7 +144,7 @@ class Matrix
     end
 
     spec :empty do
-      pre_task do |*args|
+      pre_cond do |*args|
         $matrix_empty_args = args
       end
 
@@ -188,7 +188,7 @@ class Matrix
     end
 
     spec :row_vector do
-      pre_task do |arg|
+      pre_cond do |arg|
         $matrix_row_vector_arg = arg
       end
 
@@ -204,7 +204,7 @@ class Matrix
     end
 
     spec :rows do
-      pre_task do |*args|
+      pre_cond do |*args|
         $matrix_rows_args = args
       end
 
@@ -227,7 +227,7 @@ class Matrix
     end
 
     spec :scalar do
-      pre_task do |*args|
+      pre_cond do |*args|
         $matrix_scalar_args = args
       end
 
@@ -257,7 +257,7 @@ class Matrix
     end
 
     spec :zero do
-      pre_task do |arg|
+      pre_cond do |arg|
         $matrix_zero_arg = arg
       end
 
@@ -287,7 +287,7 @@ class Matrix
   extend RDL
 
   spec :* do
-    pre_task do |arg|
+    pre_cond do |arg|
       $matrix_mult_arg = arg
       $matrix_mult_self = self
     end
@@ -309,7 +309,7 @@ class Matrix
   end
 
   spec :** do
-    pre_task do |arg|
+    pre_cond do |arg|
       $matrix_exp_arg = arg
       $matrix_exp_self = self
     end
@@ -327,7 +327,7 @@ class Matrix
   end
 
   spec :- do
-    pre_task do |arg|
+    pre_cond do |arg|
       $matrix_minus_arg = arg
       $matrix_minus_slf = self
     end
@@ -355,7 +355,7 @@ class Matrix
   end
 
   spec :+ do
-    pre_task do |arg|
+    pre_cond do |arg|
       $matrix_add_arg = arg
       $matrix_add_slf = self
     end
@@ -383,7 +383,7 @@ class Matrix
   end
 
   spec :/ do
-    pre_task do |arg|
+    pre_cond do |arg|
       $matrix_div_arg = arg
       $matrix_div_slf = self
     end
@@ -416,7 +416,7 @@ class Matrix
   end
 
   spec :== do
-    pre_task do |arg|
+    pre_cond do |arg|
       $matrix_eq_arg = arg
       $matrix_eq_slf = self
     end
@@ -448,7 +448,7 @@ class Matrix
   end
 
   spec :[] do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_index_args = args
       $matrix_index_slf = self
     end
@@ -481,7 +481,7 @@ class Matrix
   end
 
   spec :collect do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_collect_slf = self
     end
     
@@ -499,7 +499,7 @@ class Matrix
   end
 
   spec :column do
-    pre_task do |arg, &blk|
+    pre_cond do |arg, &blk|
       $matrix_column_arg = arg
       $matrix_column_blk = blk
       $matrix_column_slf = self
@@ -526,7 +526,7 @@ class Matrix
   end
 
   spec :column_vectors do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_column_vectors_slf = self
     end
     
@@ -547,7 +547,7 @@ class Matrix
   end
 
   spec :conjugate do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_conjugate_slf = self
     end
     
@@ -565,7 +565,7 @@ class Matrix
   end
 
   spec :determinant do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_determinant_slf = self
     end
     
@@ -591,7 +591,7 @@ class Matrix
   end
 
   spec :elements_to_f do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_elements_to_f_slf = self
     end
     
@@ -618,7 +618,7 @@ class Matrix
   end
 
   spec :elements_to_i do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_elements_to_f_slf = self
     end
     
@@ -645,7 +645,7 @@ class Matrix
   end
 
   spec :elements_to_r do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_elements_to_f_slf = self
     end
     
@@ -672,7 +672,7 @@ class Matrix
   end
 
   spec :empty? do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_empty_q_slf = self
     end
     
@@ -698,7 +698,7 @@ class Matrix
   end
 
   spec :imaginary do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_imaginary_slf = self
     end
     
@@ -720,7 +720,7 @@ class Matrix
   end
 
   spec :inverse do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_inverse_slf = self
     end
 
@@ -745,7 +745,7 @@ class Matrix
   end
 
   spec :minor do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_minor_slf = self
     end
     
@@ -771,7 +771,7 @@ class Matrix
   end
   
   spec :rank do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_rank_slf = self
     end
     
@@ -783,7 +783,7 @@ class Matrix
   end
 
   spec :real do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_real_slf = self
     end
     
@@ -801,7 +801,7 @@ class Matrix
   end
 
   spec :real? do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_real_q_slf = self
     end
     
@@ -814,7 +814,7 @@ class Matrix
   end
 
   spec :row do
-    pre_task do |arg, &blk|
+    pre_cond do |arg, &blk|
       $matrix_row_arg = arg
       $matrix_row_blk = blk
       $matrix_row_slf = self
@@ -841,7 +841,7 @@ class Matrix
   end
 
   spec :regular? do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_regular_q_slf = self
     end
     
@@ -859,7 +859,7 @@ class Matrix
   end
 
   spec :row_vectors do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_row_vectors_slf = self
     end
     
@@ -880,7 +880,7 @@ class Matrix
   end
 
   spec :singular? do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_singular_q_slf = self
     end
     
@@ -892,7 +892,7 @@ class Matrix
   end
 
   spec :square? do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_square_q_slf = self
     end
     
@@ -907,7 +907,7 @@ class Matrix
   end
 
   spec :to_a do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_trace_slf = self
     end
     
@@ -927,7 +927,7 @@ class Matrix
   end
 
   spec :trace do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_trace_slf = self
     end
     
@@ -950,7 +950,7 @@ class Matrix
   end
 
   spec :transpose do
-    pre_task do |*args|
+    pre_cond do |*args|
       $matrix_transpose_slf = self
     end
     

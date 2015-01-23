@@ -16,14 +16,14 @@ class Dsl
     
     # Syntactic sugar for creating new DSLs
     def dsl(*a, &blk)
-        DSL.new(*a, &blk)
+        Dsl.new(*a, &blk)
     end
     
     # Define reserved word in DSL
     def keyword(mname, &blk)
         raise "Keyword definition already exists for #{mname}" if @keywords[mname]
         instance_exec do
-            define_method mname do |*args|
+            define_singleton_method mname do |*args|
                 @keywords[mname].call(*args)
             end
         end
