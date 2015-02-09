@@ -26,6 +26,7 @@ class Spec
         
         # Create or append Method Contract
         mname_old = @mname.to_s + "_old"
+        mname_old = mname_old[0]=="\"" ? mname_old : "\"#{mname_old}\"".to_sym
         
         if @contract.nil? then
             wrap_method()
@@ -224,6 +225,7 @@ class Spec
         
         mname = @mname
         mname_old = (mname.to_s + "_old").to_sym
+        mname_old = mname_old[0]=="\"" ? mname_old : "\"#{mname_old}\"".to_sym
         
         # TODO Corner case error: "[]_old".to_sym == :"[]_old" instead of :[]_old
         
