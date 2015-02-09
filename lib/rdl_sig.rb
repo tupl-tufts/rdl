@@ -120,10 +120,11 @@ class Spec
             
             # Recursion Security
 
-            status = RDL.on?
-            if status
+#status = RDL.on?
+#            p status
+#            if status
                 begin
-                    RDL.turn_off
+                    #                    RDL.turn_off
                     tp = self.instance_variable_get :@__rdl_s_type_parameters
                     tp = {} if not tp
                     uninstantiated_params = cls_param_symbols - tp.keys
@@ -142,9 +143,9 @@ class Spec
                     RDL.debug "PRE arg_chosen_type #{arg_chosen_type}", 3
             
                 ensure
-                    RDL.turn_on
+                #    RDL.turn_on
                 end
-            end
+                #end
             
             next true # Passes pre-check if there exists a valid method type for input params or if no checks are necessary
             
@@ -156,10 +157,10 @@ class Spec
             RDL.debug "POST called", 3
             
             # Handle checking and return
-            status = RDL.on?
-            if status
+            #status = RDL.on?
+            #if status
                 begin
-                    RDL.turn_off
+            #        RDL.turn_off
                     
                     # TODO: Add bp
                     if bp
@@ -183,11 +184,11 @@ class Spec
                     
                     next ret_valid
                 ensure
-                    RDL.turn_on
+                # RDL.turn_on
                 end
-            else
-                next true # Does not finish check or guarantee anything if RDL is currently off
-            end
+                #  else
+                #next true # Does not finish check or guarantee anything if RDL is currently off
+                #end
             
         }
         
@@ -222,7 +223,11 @@ class Spec
         ret_val = nil
         
         mname = @mname
-        mname_old = mname.to_s + "_old"
+        mname_old = (mname.to_s + "_old").to_sym
+        
+        # TODO Corner case error: "[]_old".to_sym == :"[]_old" instead of :[]_old
+        
+        
         kls = @klass
         
         # Only need to wrap once
@@ -235,7 +240,7 @@ class Spec
             define_method mname do |*v|
                 if RDL.on?
                     mctc = kls.instance_variable_get(:@__rdlcontracts)[mname].contract
-                    return mctc.check(self,*v) #TODO: attr_accessor for :@ret, contract return pair <TF, ret>
+                    return mctc.ret if mctc.check(self,*v).nil? #TODO: attr_accessor for :@ret, contract return pair <TF, ret>
                 end
                 
                 return send(mname_old, *v)

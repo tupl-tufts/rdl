@@ -28,9 +28,9 @@ class Test_Ctc < Minitest::Test
     
     # Test Contract and OrdNCtc class methods
     def test_combinator
-        ctc = RDL::FlatCtc.new &Proc.new{ |x| x}
-        ctcT = RDL::FlatCtc.new &Proc.new{ |x| true}
-        ctcF = RDL::FlatCtc.new &Proc.new{ |x| false}
+        ctc = RDL::FlatCtc.new "Stub", &Proc.new{ |x| next x}
+        ctcT = RDL::FlatCtc.new "TRUE", &Proc.new{ |x| next true}
+        ctcF = RDL::FlatCtc.new "FALSE", &Proc.new{ |x| next false}
         
         # Test :OR()
         ctc = ctc.OR(ctcF)

@@ -37,13 +37,19 @@ class Typesig_test < Minitest::Test
         end
         return x;
     end
-    typesig(:foo2, "(Fixnum)->Fixnum")
+    typesig(:foo2, "(Fixnum)->Fixnum", post {|*args, ret| p "post"; true})
 
     def test_typesig
         assert_equal(foo2(4), 4, "ERR 3.1 Typesig success case failed")
-        assert_raises RDL::ContractViolationException, "ERR 3.2 Typesig error case failed" do
+        
+        assert_raises RDL::ContractViolationException, "ERR 3.2 Typesig error return case failed" do
             foo2(5)
         end
+        
+        assert_raises RDL::TypesigException, "ERR 3.3 Typesig error input case failed" do
+            foo2(false)
+        end
+
     end
     
     ##################################################

@@ -50,12 +50,12 @@ class RDLTest < Minitest::Test
         assert dsl.foo("hi") == "hi", "ERR 1.2 Precondition nonmutating truecase error"
     
         # Test nonmutating pre_cond falsecase
-        assert_raises RuntimeError, "ERR 1.3 Precondition nonmutating falsecase error" do
+        assert_raises RDL::ContractViolationException, "ERR 1.3 Precondition nonmutating falsecase error" do
             dsl.foo(dsl)
         end
     
         # Test nonmutating post_cond falsecase
-        assert_raises RuntimeError, "ERR 1.4 Postcondition nonmutating falsecase error" do
+        assert_raises RDL::ContractViolationException, "ERR 1.4 Postcondition nonmutating falsecase error" do
             dsl.foo(101)
         end
     

@@ -97,11 +97,34 @@ module RDL
     
     # Contract that applies pre(left) and post(right) condition
     class MethodCtc < Contract
+        attr_accessor :ret
         def initialize(mname,lctc,rctc)
             @mname = mname
             @lctc = lctc
             @rctc = rctc
-            @pred = Proc.new{|env, *v| @lctc.check(*v); @self=env; @ret=env.send(@mname.to_sym, *v); @rctc.check(*v, @ret); true}
+            @pred = Proc.new{|env, *v|
+                begin
+                    @lctc.check(*v)
+                rescue ContractViolationException => err
+                    raise ContractViolationException, "#{rdoc_gen} PRECONDITION FAILED\n\tBLAMING INPUT\n\tError Received: #{err}"
+                end
+                
+                @self=env
+                
+                begin
+                    @ret=env.send(@mname.to_sym, *v)
+                rescue Exception => err
+                    @ret = err # TODO allow checking error
+                end
+                
+                begin
+                    @rctc.check(*v, @ret)
+                rescue ContractViolationException => err
+                    raise ContractViolationException, "#{rdoc_gen} POSTCONDITION FAILED\n\tBLAMING METHOD #{mname}\n\tError Received: #{err}"
+                end
+                
+                next true
+            }
             # TODO: combine @self.clone fix
         end
         def check(*v)
@@ -145,7 +168,11 @@ module RDL
         end
         def init; end
         def check(*v)
-            raise ContractViolationException, "Contract #{self.class}<#{get_name}> not fulfilled" unless check_aux(v,0)
+            begin
+                raise ContractViolationException, "Contract #{self.class}<#{get_name}> not fulfilled" unless check_aux(v,0)
+            rescue ContractViolationException => err
+                raise ContractViolationException, "Higher Order Contract #{self.class}#{get_name}> failed\n\tError at: #{err}"
+            end
         end
         def check_aux(v, nt)
             ret = (nt >= @ctcls.length) ? @emp : @cond.call(@ctcls[nt], v, nt)
@@ -155,9 +182,11 @@ module RDL
             (ctc.is_a? Contract) ? (@ctcls<<ctc):(raise ContractViolationException, "Attempting to add non-Contract to Contract bundle")
         end
         def rdoc_gen
-            rdc=""
+            rdc="{"
             @ctcls.each {|x| rdc +=x.rdoc_gen; rdc +=@connect;}
-            rdc[0...-@connect.size]
+            rdc = rdc[0...-@connect.size]
+            rdc +="}"
+            rdc
         end
     end
     
@@ -165,7 +194,7 @@ module RDL
     class AndCtc < OrdNCtc
         def init
             @emp=true
-            @cond = Proc.new{|l, v, nt| l.check(*v); check_aux(v, nt+1); true}
+            @cond = Proc.new{|l, v, nt| l.check(*v); next check_aux(v, nt+1);}
             @connect = " AND "
         end
     end
@@ -177,11 +206,11 @@ module RDL
                 begin
                     l.check(*v)
                 rescue
-                    check_aux(v, nt+1)
-                ensure
-                    next true
+                    next check_aux(v, nt+1)
                 end
-        end
+                
+                next true
+            end
             @connect = " OR "
         end
     end

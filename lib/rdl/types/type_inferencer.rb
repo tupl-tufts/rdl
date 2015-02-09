@@ -1,3 +1,5 @@
+require 'set'
+
 module RDL
   class TypeInferencer
     def self.infer_type(it)
