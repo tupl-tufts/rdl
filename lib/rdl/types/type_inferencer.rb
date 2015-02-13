@@ -44,11 +44,13 @@ module RDL
           tparam_set = parameterized_classes.fetch(nominal_type) {|n_type|
             cls = eval(n_type.name.to_s)
             type_parameters = cls.instance_variable_get :@__cls_params
+            type_parameters ||= {}
             [].fill([], 0, type_parameters.size)
           }
 
           cls = eval(nominal_type.name.to_s)
           type_parameters = cls.instance_variable_get :@__cls_params
+          type_parameters ||= {}
           ((0..(type_parameters.size - 1)).map {|tparam_index|
              extract_types(member_type.params[tparam_index])
            }).each_with_index {|type_parameter,index|            

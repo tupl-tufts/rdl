@@ -1,3 +1,4 @@
+#!/usr/bin/ruby
 require_relative 'rdl/utilities'
 require_relative 'rdl_ctc'
 require_relative 'rdl_sig'

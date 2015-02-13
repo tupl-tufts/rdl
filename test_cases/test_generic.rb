@@ -54,7 +54,7 @@ class GenericTest < Minitest::Test
         ct = GenericType.new(@array, u)
         ct = GenericType.new(@array, ct)
         # ct = Array<Array<(Array<Fixnum> or String or TrueClass)>>
-        assert_equal(ct, t, "ERR 2.4 Nested mixed array error")
+        assert_equal(ct, t, "ERR 2.4 Nested mixed array error") # TODO append @__cls_params in Array as only typesigs do that now
     end
     
     # Tests Hash Type with varying composition

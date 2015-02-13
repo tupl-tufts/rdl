@@ -3,15 +3,14 @@ module RDL
 class RDLdocObj
     
     def initialize()
-        @klasses = {}
-        if (not $RDLdoc) then
-            initOnce()
-        end
-        return $RDLdoc
+        @klasses ||= {} # List of classes to document
+        @RDLdoc ||= setup() # Ensures setup is called only once
     end
     
-    def initOnce()
-        # Borrowed from RDoc Test Case
+    # Borrowed from RDoc Test Case
+    # Sets up RDoc Generation with Darkfish
+    def setup()
+        
         @have_encoding = Object.const_defined? :Encoding
         @RM = RDoc::Markup
         RDoc::Markup::PreProcess.reset
@@ -33,6 +32,7 @@ class RDLdocObj
         @options.op_dir = @tmpdir
         @options.generator = RDoc::Generator::Darkfish
         
+        # Generate path to directory storing Darkfish generator template
         $LOAD_PATH.each do |path|
             darkfish_dir = File.join path, 'rdoc/generator/template/darkfish/'
             next unless File.directory? darkfish_dir
@@ -47,6 +47,8 @@ class RDLdocObj
         
         @top_level = @store.add_file 'file.rb'
         @top_level.parser = RDoc::Parser::Ruby
+        
+        return 1
     end
 
     def add_klass(kls)
@@ -116,7 +118,7 @@ class RDLdocObj
 
     end
 
-    private :initOnce, :add_alias, :add_ignore, :add_method, :add_attribute
+    private :setup, :add_alias, :add_ignore, :add_method, :add_attribute
 
     # TODO
     def rdoc_gen()
