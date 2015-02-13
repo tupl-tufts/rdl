@@ -37,7 +37,7 @@ class Typesig_test < Minitest::Test
         end
         return x;
     end
-    typesig(:foo2, "(Fixnum)->Fixnum", post {|*args, ret| p "post"; true})
+    typesig(:foo2, "(Fixnum)->Fixnum", post {|*args, ret| true})
 
     def test_typesig
         assert_equal(foo2(4), 4, "ERR 3.1 Typesig success case failed")

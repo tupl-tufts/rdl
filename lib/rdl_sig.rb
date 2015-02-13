@@ -37,14 +37,14 @@ class Spec
     end
     
     # Shortcut Methods for appending Preconditions and Postconditions
-    def pre_cond(desc = "User Precondition", ctc=nil &blk)
+    def pre_cond(desc = "User Precondition", ctc=nil, &blk)
         RDL.debug "pre_cond_called", 8
-        store_get_contract().add_pre (ctc && ctc.is_a?(Contract) ? ctc : PreCtc.new FlatCtc.new(desc, &blk))
+        store_get_contract().add_pre (ctc && ctc.is_a?(Contract) ? ctc : PreCtc.new(FlatCtc.new(desc, &blk)))
     end
     
-    def post_cond(desc = "User Postcondition", &blk)
+    def post_cond(desc = "User Postcondition", ctc=nil, &blk)
         RDL.debug "post_cond_called", 8
-        store_get_contract().add_post (ctc && ctc.is_a?(Contract) ? ctc : PostCtc.new FlatCtc.new(desc, &blk))
+        store_get_contract().add_post (ctc && ctc.is_a?(Contract) ? ctc : PostCtc.new(FlatCtc.new(desc, &blk)))
     end
     
     # Wraps a method with type contracts

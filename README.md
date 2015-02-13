@@ -83,8 +83,8 @@ spec :my_method_name do
   post “Additional Descripton”, postcond
 
   # Create and add contract from Block
-  pre(“My Precondition”) {|…| …}
-  post(“My Postcondition”) {|…| …}
+  pre_cond(“My Precondition”) {|…| …}
+  post_cond(“My Postcondition”) {|…| …}
 
 end
 
