@@ -1,24 +1,31 @@
 # Introduction
 
-# Typesigs
+# What is RDL?
 
-## Generating Typesigs
+RDL is a Ruby library designed for the annotation of Ruby code with run-time contracts. The RDL Typesig System is a user annotation shortcut for generating Type Contracts. RDL’s Domain Specific Language functionality further provides syntactic sugar for creating DSL contexts, while RDL’s RubyDoc support helps export Typesig and Contract information to html format.
+
+# How to use RDL
+
+## Writing Typesigs
+```
+class MyClass
+  extend RDL
+
+  def my_method …
+
+  typesig :method_name, “ANNOTATION”, {Optional Hash of Parameterized Types}, *Additional_Contracts
+  #i.e. typesig :my_method, “(Array<t>)->Array<t>”, {:t}, pre{|arr| arr.size<5}, post{|ret| ret.size<3}, post{|ret| ret.foobar}
+```
+
+
+### Annotation Syntax
+```
+#               ( Method Arguments     ) { Block      } -> Return
+typesig :foo, ” ( arg0Type, … argNType ) { Annotation } -> ReturnType " 
 
 ```
-extend RDL
-typesig :method_name, “ANNOTATION”, {Optional Hash of Parameterized Types}, *Additional_Contracts
-#eg typesig :foo, “(Array<t>)->Array<t>”, {:t}, pre{|arr| arr.size<5}, post{|ret| ret.size<3}, post{|ret| ret.foobar}
-```
 
-
-## Annotation Syntax
-
-```
-# ( Method Arguments   ) { Block      } -> Return
-" ( arg0, arg1, … argN ) { Annotation } -> Type" 
-```
-
-## Argument Syntax
+### Argument Syntax
 ```
 # Standard Argument
 "Type …"
@@ -30,23 +37,22 @@ typesig :method_name, “ANNOTATION”, {Optional Hash of Parameterized Types}, 
 "*Type …"
 ```
 
-## Type Syntax
+### Type Syntax
 ```
 # Standard Type Definition
-"… Class"
+"… Type”
 
 # Parameterized Type
 “Type<t> …”, {:t}
 
-# Symbol Equivalence
+# Symbol Value
 "… :sym" 
 
 # Type Placeholder (any Type)
 "… %any" 
 
 # Boolean Value (TrueClass and FalseClass)
-"… %false”
-“… %true”
+"… %bool”
 
 # Nil Value (NilClass)
 “… nil”
@@ -58,30 +64,60 @@ typesig :method_name, “ANNOTATION”, {Optional Hash of Parameterized Types}, 
 “… Label:Type”
 ```
 
-## Contracts
+## Using Contracts
 ```
-<span style="color:red">TODO</span>
+# Basic Contract
+contract = FlatCtc.new(“My Contract Description”) {|…| …}
+
+# Precondition Contract
+precond = pre(“My Precondition”) {|…| …}
+
+# Postcondition Contract
+postcond = post(“My Postcondition”) {|…| …}
+
+# Bind Contract
+spec :my_method_name do
+
+  # Add contract with Contract object
+  pre “Additional Description”, precond
+  post “Additional Descripton”, postcond
+
+  # Create and add contract from Block
+  pre(“My Precondition”) {|…| …}
+  post(“My Postcondition”) {|…| …}
+
+end
+
+# Check Contract
+contract.check()
+```
+
+## Creating DSLs
+```
+dsl do
+
+  # Create new keyword
+  keyword :action {…}
+
+  # Create and store nested dsl
+  nested_dsl = dsl do
+    …
+  end
+
+  # Include keywords from other dsl
+  extend other_dsl
+
+  # Use previously declared del context
+  nested_dsl.apply {…}
+
+end
 ```
 
 ## Generating RDoc
 ```
-rdocTypesigFor(Klass)
+rdocTypesigFor(Klass) # Deprecated FIXME
 ```
 
+## RDL Quick Reference
 
-
-# RDL Quick Reference
-
-* `spec :method { block }` - Apply contracts in `block` to existing `method`
-* `keyword :method { block }` - Define new `method` with contracts in `block`
-* `dsl { block }` - Define a DSL where `spec`s and `keyword`s inside `block` may be used within the block argument of the method being contracted.
-* `action { |args| block }` - Set `block` to be the body of the method being contracted (valid only within `keyword`), taking `args` as arguments.
-* `pre_cond { |args| block }` - Invoke `block` before executing the method being contracted, and abort if the block returns `false` or `nil`. The method arguments are passed as `args`.
-* `pre_task { |args| block }` - <span style="color:red">FIXME</span>
-* `post_cond { |args, ret| block }` - Invoke `block` after executing the method being contracted, and abort if the block returns `false` or `nil`. The method arguments and return values are passed as `args`.
-* `post_task { block }` - <span style="color:red">FIXME</span>
-* `dsl_from { block }` - <span style="color:red">FIXME</span>
-* `arg` - <span style="color:red">FIXME</span>
-* `ret` - <span style="color:red">FIXME</span>
-* `ret_dep` - <span style="color:red">FIXME</span>
-* `Spec.new` - <span style="color:red">FIXME</span>
+* TODO
