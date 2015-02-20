@@ -1,0 +1,20 @@
+languae: ruby
+
+env:
+
+before_install:
+
+rvm:
+ - 1.9.3
+ - 2.1.2
+
+install:
+
+after_install:
+
+before_script:
+
+script:
+ - ruby /test_cases/test_ctc.rb
+
+after_script:
