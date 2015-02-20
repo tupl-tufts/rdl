@@ -15,6 +15,6 @@ after_install:
 before_script:
 
 script:
- - ruby test_cases/test_ctc.rb
+ - ruby -Ilib test_cases/test_ctc.rb
 
 after_script:

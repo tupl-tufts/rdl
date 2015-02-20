@@ -1,4 +1,6 @@
-# Introduction
+# RDL Build Status
+
+[![Build Status](https://travis-ci.org/plum-umd/rdl.png?branch=cRDL)](https://travis-ci.org/plum-umd/rdl)
 
 # What is RDL?
 
