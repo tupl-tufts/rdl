@@ -15,6 +15,7 @@ after_install:
 before_script:
 
 script:
+ - cd rdl/
  - ruby -Ilib test_cases/test_ctc.rb
 
 after_script:
