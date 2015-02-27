@@ -1,0 +1,21 @@
+languae: ruby
+
+env:
+
+before_install:
+ - gem install minitest
+
+rvm:
+ - 1.9.3
+ - 2.1.2
+
+install:
+
+after_install:
+
+before_script:
+
+script:
+ - ruby -Ilib test_cases/test_ctc.rb
+
+after_script:
