@@ -4,6 +4,7 @@ env:
 
 before_install:
  - gem install minitest
+ - gem install test-unit 
 
 rvm:
  - 1.9.3
@@ -17,5 +18,7 @@ before_script:
 
 script:
  - ruby -Ilib test_cases/test_ctc.rb
+ - ruby -Ilib test_cases/test_integer.rb
+ - ruby -Ilib test_cases/test_set.rb
 
 after_script:
