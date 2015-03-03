@@ -1,6 +1,6 @@
 #gem 'test-unit'
 require 'test/unit'
-#require 'set'
+require 'set'
 require_relative '../lib/rdl/core_typesigs/ruby-2.1/core/set.rb'
 
 class TC_Set < Test::Unit::TestCase
