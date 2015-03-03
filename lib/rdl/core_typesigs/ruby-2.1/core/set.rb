@@ -1,5 +1,5 @@
 require 'rdl'
-require 'Set'
+require 'set'
 
 class Set
   extend RDL
