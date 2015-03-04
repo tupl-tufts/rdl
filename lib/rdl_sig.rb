@@ -121,11 +121,11 @@ class Spec
             
             # Recursion Security
 
-#status = RDL.on?
-#            p status
-#            if status
+        status = RDL.on?
+        #            p status
+        if status
                 begin
-                    #                    RDL.turn_off
+                  RDL.turn_off
                     tp = self.instance_variable_get :@__rdl_s_type_parameters
                     tp = {} if not tp
                     uninstantiated_params = cls_param_symbols - tp.keys
@@ -144,9 +144,9 @@ class Spec
                     RDL.debug "PRE arg_chosen_type #{arg_chosen_type}", 3
             
                 ensure
-                #    RDL.turn_on
+                  RDL.turn_on
                 end
-                #end
+        end
             
             next true # Passes pre-check if there exists a valid method type for input params or if no checks are necessary
             
