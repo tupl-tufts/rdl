@@ -158,10 +158,10 @@ class Spec
             RDL.debug "POST called", 3
             
             # Handle checking and return
-            #status = RDL.on?
-            #if status
+            status = RDL.on?
+            if status
                 begin
-            #        RDL.turn_off
+                    RDL.turn_off
                     
                     # TODO: Add bp
                     if bp
@@ -185,11 +185,11 @@ class Spec
                     
                     next ret_valid
                 ensure
-                # RDL.turn_on
+                 RDL.turn_on
                 end
-                #  else
-                #next true # Does not finish check or guarantee anything if RDL is currently off
-                #end
+                  else
+                next true # Does not finish check or guarantee anything if RDL is currently off
+                end
             
         }
         
