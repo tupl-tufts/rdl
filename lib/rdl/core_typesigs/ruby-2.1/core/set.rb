@@ -30,6 +30,30 @@ class Set
   typesig(:difference, "(Enumberable<t>) -> Set<t>", :vars => [:t])
   typesig(:disjoint?, "(Set) -> %bool")
   typesig(:divide, "() {(t,?t) -> %any} -> Set<Set<t>>", :vars =>[:t])
+  typesig(:each, "() {(t) -> %any} -> Set or Enumerator", :vars => [:t])
+  typesig(:empty?, "() -> %bool")
+  typesig(:flatten, "() -> Set")
+  typesig(:flatten!, "() -> Set or nil")
+  typesig(:include, "(Object) -> %bool")
+  #typesig(:initialize_copy) Not sure what this does
+  typesig(:inspect, "() -> String")
+  typesig(:intersect?, "(Set) -> %bool")
+  typesig(:delete_if, "() { (t) -> %bool } -> Set<t>", :vars => [:t])
+  typesig(:length, "() -> Integer")
+  typesig(:merge, "(Enumerable) -> Set")
+  typesig(:proper_subset?, "(Set) -> %bool")
+  typesig(:proper_superset?, "(Set) -> %bool")
+  typesig(:reject!, "() { (t) -> %bool } -> Set<t> or nil", :vars => [:t])
+  typesig(:replace, "(Enumerable) -> Set")
+  typesig(:size, "() -> Integer")
+  typesig(:subset?, "(Set) -> %bool")
+  typesig(:subtract, "(Enumerable) -> Set")
+  typesig(:superset?, "(Set) -> %bool")
+  typesig(:to_a, "() -> Array")
+  typesig(:union, "(Enumerable) -> Set")
+  typesig(:|, "(Enumerable) -> Set")
 
+
+  
 end
 
