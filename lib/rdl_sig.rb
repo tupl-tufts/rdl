@@ -239,13 +239,13 @@ class Spec
         
         kls.class_eval do
             alias_method mname_old, mname
-            define_method mname do |*v|
+            define_method mname do |*v, &blk|
                 if RDL.on?
                     mctc = kls.instance_variable_get(:@__rdlcontracts)[mname].contract
                     return mctc.ret if mctc.check(self,*v).nil? #TODO: attr_accessor for :@ret, contract return pair <TF, ret>
                 end
-                
-                return send(mname_old, *v)
+          
+                return send(mname_old, *v, &blk)
 
             end
             def args
