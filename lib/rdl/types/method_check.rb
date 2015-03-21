@@ -1,7 +1,7 @@
 module RDL::MethodCheck
   def self.select_and_check_args(method_types, method_name, args, has_block=false)
-    if not (method_types.instance_of? RDL::Type::MethodType or 
-            method_types.instance_of? RDL::Type::IntersectionType)
+    if !((method_types.instance_of? RDL::Type::MethodType) || 
+            (method_types.instance_of? RDL::Type::IntersectionType))
       raise Exception, "method_type.class has to be MethodType or IntersectionType"
     end
     
@@ -16,11 +16,11 @@ module RDL::MethodCheck
 
     for m in method_types
       next if num_actual_args < m.min_args
-      next if m.max_args != -1 and num_actual_args > m.max_args
+      next if m.max_args != -1 && num_actual_args > m.max_args
       next if (not m.block.nil?) != has_block
 
+      p "M: #{m}, Args: #{args}"
       arg_impl_valid, vartype_map = self.check_arg_impl(m, args)  
-
       if arg_impl_valid
         possible_types.push(m)
       end
@@ -40,7 +40,8 @@ module RDL::MethodCheck
   end
 
   def self.check_return(method_type, ret_value)
-    ret_value.rdl_type.le method_type.ret
+    ret = ret_value.rdl_type.le method_type.ret
+    ret
   end
 
   def self.check_arg_impl(m_type, args)
@@ -70,7 +71,11 @@ module RDL::MethodCheck
         if expected_arg_types[type_index].instance_of?(RDL::Type::MethodType)
           raise Exception, "not implemented"
         else
-          unless args[value_index].rdl_type.le(expected_arg_types[type_index], le_h)
+          if !args[value_index].rdl_type.le(expected_arg_types[type_index], le_h)
+            p "INVALID!!"
+            p args[value_index].rdl_type
+            p expected_arg_types[type_index]
+            p args[value_index].rdl_type.le(expected_arg_types[type_index])
             valid = false
             break
           end
@@ -78,7 +83,7 @@ module RDL::MethodCheck
 
         i = i + 1
       end
-      break if not valid
+      break if !valid
     end
 
     return [false, le_h] if not valid

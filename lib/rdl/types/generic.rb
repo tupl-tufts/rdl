@@ -53,7 +53,7 @@ module RDL::Type
         zipped = @params.zip(other.params)
         zipped.all? {|t, u| t.le(u, h)}
       when NominalType
-        if other.name.to_s == "Object"
+        if @base.le other #other.name.to_s == "Object"
           true
         else
           false

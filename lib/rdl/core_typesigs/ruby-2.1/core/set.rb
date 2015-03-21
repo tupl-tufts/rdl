@@ -1,4 +1,4 @@
-require 'rdl'
+require_relative '../../../../rdl.rb'
 require 'set'
 
 class Set
@@ -6,7 +6,7 @@ class Set
   
   ## Public Class Methods
   typesig(:[], "(Array<t>) -> Set<t>", :vars => [:t])
-#  typesig(:new, "(?Enumerable<t>) -> Set<t>", :vars => [:t])
+  typesig(:new, "(?Enumerable<t>) -> Set<t>", :vars => [:t])
 
   ## Public Instance Methods
   typesig(:+, "(Enumberable<t>) -> Set<t>", :vars => [:t])
@@ -19,7 +19,7 @@ class Set
   typesig(:>=, "(Set) -> %bool")
   typesig(:^, "(Enumerable) -> Set")
 
-  typesig(:add, "(Object) -> Set")
+#typesig(:add, "(Object) -> Set")
   typesig(:add?, "(Object) -> Set or nil")
   typesig(:classify, "() { (u) -> t } -> Hash<u, Set<t>>", :vars => [:u, :t])
   typesig(:clear, "() -> Set")
@@ -49,7 +49,7 @@ class Set
   typesig(:subset?, "(Set) -> %bool")
   typesig(:subtract, "(Enumerable) -> Set")
   typesig(:superset?, "(Set) -> %bool")
-  typesig(:to_a, "() -> Array")
+  #typesig(:to_a, "() -> Array")
   typesig(:union, "(Enumerable) -> Set")
   typesig(:|, "(Enumerable) -> Set")
 

@@ -25,8 +25,7 @@ class Spec
     def store_get_contract()
         
         # Create or append Method Contract
-        mname_old = @mname.to_s + "_old"
-        mname_old = mname_old[0]=="\"" ? mname_old : "\"#{mname_old}\"".to_sym
+        mname_old = "rdl" + @mname.to_s + "_old"
         
         if @contract.nil? then
             wrap_method()
@@ -63,6 +62,9 @@ class Spec
         # Scan typesig annotation into MethodType<:arg_type, :ret_type, :block_type>
         parser = RDL::Type::Parser.new
         type = parser.scan_str(sig)
+      if type.block != nil
+        @contract.blk = nil
+      end
         
         # Parameterized type handler
         tvars = meta[:vars].nil? ? [] : meta[:vars]
@@ -120,12 +122,13 @@ class Spec
             RDL.debug "PRE called", 3
             
             # Recursion Security
-
-        status = RDL.on?
-        #            p status
-        if status
+            status = RDL.on?
+            if status
                 begin
-                  RDL.turn_off
+                    
+                    RDL.debug "Checking Precondition in #{mname}", 1
+                    
+                    RDL.turn_off
                     tp = self.instance_variable_get :@__rdl_s_type_parameters
                     tp = {} if not tp
                     uninstantiated_params = cls_param_symbols - tp.keys
@@ -144,9 +147,11 @@ class Spec
                     RDL.debug "PRE arg_chosen_type #{arg_chosen_type}", 3
             
                 ensure
-                  RDL.turn_on
+                    RDL.turn_on
                 end
-        end
+            else
+                RDL.debug "Skipping Precondition in #{mname} due to RDL.off", 1
+            end
             
             next true # Passes pre-check if there exists a valid method type for input params or if no checks are necessary
             
@@ -161,13 +166,16 @@ class Spec
             status = RDL.on?
             if status
                 begin
+                    
+                    RDL.debug "Checking Postcondition in #{mname}", 1
+                    
                     RDL.turn_off
                     
                     # TODO: Add bp
-                    if bp
+                    if bp then
                         vm = bp.var_map
                         vm2 = {}
-                        if not vm.empty?
+                        if not vm.empty? then
                             vm.each {|vmk, vmv|
                                 uv = RDL::TypeInferencer.unify_param_types vmv
                                 vm2[vmk] =  RDL::Type::UnionType.new(*uv)
@@ -181,15 +189,18 @@ class Spec
                     ret_chosen_type = arg_chosen_type if not ret_chosen_type
                     ret_valid = RDL::MethodCheck.check_return(ret_chosen_type, ret)
                     
+                    p "POST:#{ret_valid} METHOD_SIGNATURE:#{ret_chosen_type} ACTUAL:#{ret} of class #{ret.class}" ################### TODO REMOVE
+                    
                     RDL.debug "POST ret_chosen_type_final #{ret_chosen_type}", 3
                     
-                    next ret_valid
                 ensure
-                 RDL.turn_on
+                    RDL.turn_on
                 end
-                  else
+                next ret_valid
+            else
+              RDL.debug "Skipping Postcondition in #{mname} due to RDL.off", 1
                 next true # Does not finish check or guarantee anything if RDL is currently off
-                end
+            end
             
         }
         
@@ -224,9 +235,7 @@ class Spec
         ret_val = nil
         
         mname = @mname
-        mname_old = (mname.to_s + "_old").to_sym
-        
-        # TODO Corner case error: "[]_old".to_sym == :"[]_old" instead of :[]_old
+        mname_old = ("rdl" + mname.to_s + "_old").to_sym # Corner case error: "[]_old".to_sym == :"[]_old" instead of :[]_old
         
         
         kls = @klass
@@ -240,11 +249,14 @@ class Spec
             alias_method mname_old, mname
             define_method mname do |*v, &blk|
                 if RDL.on?
+                    RDL.debug "Checking method #{mname} with args #{v}", 1
                     mctc = kls.instance_variable_get(:@__rdlcontracts)[mname].contract
-                    return mctc.ret if mctc.check(self,*v).nil? #TODO: attr_accessor for :@ret, contract return pair <TF, ret>
+                  mctc.blk = blk
+                  ret = (mctc.check(self,*v))
+                    return ret
                 end
-          
-                return send(mname_old, *v, &blk)
+          #RDL.debug "Skipping method #{mname} with args #{v}",1
+                return send(mname_old, *v,&blk)
 
             end
             def args

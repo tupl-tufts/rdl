@@ -23,7 +23,7 @@ module RDL
 
     # Debug mode
 
-    @@debug = false
+    @@debug = true
     @@debug_channels = 0b00000001
 
     def self.debug?()
@@ -45,7 +45,7 @@ module RDL
     def self.debug(str, channel_num, opt=false) # Opt:true uses :p and Opt:false uses :puts
         !@@debug ||
             ((0b1 << (channel_num - 1)) & @@debug_channels)==0 ||
-            (opt ? (p "RDL Debug Channel #{channel_num}:"; p str; p ""):(puts "RDL Debug Channel #{channel_num}:\n#{str}\n "))
+            (opt ? (p "RDL Debug Channel #{channel_num}:"; p str; p ""):(puts "RDL Debug Channel #{channel_num}: #{str}"))
     end # Returns true if failed, nil otherwise
 
 

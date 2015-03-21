@@ -1,4 +1,4 @@
-require 'rdl'
+require_relative '../../../../rdl.rb'
 
 class Integer
   extend RDL
@@ -21,14 +21,12 @@ class Integer
   typesig(:ord, "() -> Integer")
   typesig(:pred, "() -> Integer")
 
-#  typesig(:rationalize, "(%any) -> %rational")
+  typesig(:rationalize, "() -> Rational")
   typesig(:round, "(?Integer) -> Integer or Float")
   typesig(:succ, "() -> Integer")
-#  typesig(:times, "{(Integer) -> %any} -> Integer")
   typesig(:times, "() -> Enumerator")
   typesig(:to_i, "(Integer) -> Integer") #{ret == self}
-#  typesig(:to_r, " () -> %rational") #{ ret.* 1 == self}
-#  typesig(:upto, "(Integer, {(Integer) -> %any} ) -> Integer")
+  typesig(:to_r, " () -> Rational")
   typesig(:upto, "(Integer) -> Enumerator")
 
 end
