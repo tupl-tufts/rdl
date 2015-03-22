@@ -75,6 +75,9 @@ module RDL::Type
       when NominalType
         s_type = eval(@name.to_s)
         o_type = eval(other.name.to_s)
+        if s_type == nil || s_type == NilClass
+          return true
+        end
         s_type <= o_type
       when VarType
         if h.keys.include? other.name
