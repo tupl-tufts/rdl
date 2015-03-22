@@ -175,7 +175,7 @@ class TC_Set < Test::Unit::TestCase
 
     assert_equal(x, y)
   end
-
+=end
   def test_include?
     set = Set[1,2,3]
 
@@ -192,7 +192,7 @@ class TC_Set < Test::Unit::TestCase
     assert_equal(false, set.include?(0))
     assert_equal(false, set.include?(true))
   end
-=end
+
   def test_superset?
     set = Set[1,2,3]
 
@@ -251,6 +251,7 @@ class TC_Set < Test::Unit::TestCase
     set = Set[1,2,3]
 
     assert_raises(RDL::TypesigException) {
+      p "before call"
       set.subset?()
     }
 
