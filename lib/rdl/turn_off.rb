@@ -1,8 +1,8 @@
 module RDL
-    
+
     # RDL Recursion Security
     module TurnOffCheck
-        
+
         def self.turn_off_check
             ms = get_methods_to_turn_off
             make_aliases(ms)
