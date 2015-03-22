@@ -144,7 +144,12 @@ class TestInteger < Test::Unit::TestCase
 
   def test_upto
     a = []
-    1.upto(3) {|x| a << x }
+    1.upto(3) {|x| 
+      a << x 
+      puts "BLOCK CALLED!!!"
+      -14
+    }
+    puts a.to_s
     assert_equal([1, 2, 3], a)
 
     a = []

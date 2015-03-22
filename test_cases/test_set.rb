@@ -1,5 +1,6 @@
 #gem 'test-unit'
 require 'test/unit'
+require 'rdl'
 require 'set'
 require_relative '../lib/rdl/core_typesigs/ruby-2.1/core/set.rb'
 
@@ -28,10 +29,10 @@ class TC_Set < Test::Unit::TestCase
       Set.new([1,2])
       Set.new('a'..'c')
     }
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       Set.new(false)
     }
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       Set.new(1)
     }
     assert_raises(ArgumentError) {
@@ -153,7 +154,7 @@ class TC_Set < Test::Unit::TestCase
     set1 = Set[1, set2]
     set2.add(set1)
 
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       set1.flatten!
     }
 
@@ -195,15 +196,15 @@ class TC_Set < Test::Unit::TestCase
   def test_superset?
     set = Set[1,2,3]
 
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       set.superset?()
     }
 
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       set.superset?(2)
     }
 
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       set.superset?([2])
     }
 
@@ -222,15 +223,15 @@ class TC_Set < Test::Unit::TestCase
   def test_proper_superset?
     set = Set[1,2,3]
 
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       set.proper_superset?()
     }
 
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       set.proper_superset?(2)
     }
 
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       set.proper_superset?([2])
     }
 
@@ -249,15 +250,15 @@ class TC_Set < Test::Unit::TestCase
   def test_subset?
     set = Set[1,2,3]
 
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       set.subset?()
     }
 
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       set.subset?(2)
     }
 
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       set.subset?([2])
     }
 
@@ -276,15 +277,15 @@ class TC_Set < Test::Unit::TestCase
   def test_proper_subset?
     set = Set[1,2,3]
 
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       set.proper_subset?()
     }
 
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       set.proper_subset?(2)
     }
 
-    assert_raises(ArgumentError) {
+    assert_raises(RDL::TypesigException) {
       set.proper_subset?([2])
     }
 
@@ -606,7 +607,7 @@ end
 
 # class TC_RestricedSet < Test::Unit::TestCase
 #   def test_s_new
-#     assert_raises(ArgumentError) { RestricedSet.new }
+#     assert_raises(RDL::TypesigException) { RestricedSet.new }
 #
 #     s = RestricedSet.new([-1,2,3]) { |o| o > 0 }
 #     assert_equal([2,3], s.sort)
