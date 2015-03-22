@@ -194,7 +194,7 @@ class Spec
                     RDL.turn_on
                 end
                 next ret_valid
-            else
+            else 
               RDL.debug "Skipping Postcondition in #{mname} due to RDL.off", 1
                 next true # Does not finish check or guarantee anything if RDL is currently off
             end

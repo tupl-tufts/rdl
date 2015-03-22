@@ -113,11 +113,7 @@ module RDL
                 @ret = env.send(@mname.to_sym, *v)
                 ret2 = nil
                 if @ret.class <= Enumerable && @blk != nil
-                  begin
-                    ret2 = @ret.send(:each, &@blk)
-                  ensure
-                    @blk = nil
-                  end
+                  ret2 = @ret.send(:each, &@blk)
                 end
               end
             ensure

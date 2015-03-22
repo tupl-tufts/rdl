@@ -9,8 +9,8 @@ require_relative 'rdl_rdc'
 require_relative 'rdl/types'
 # Stop RDL code from checking itself and eliminate
 # the old RTC NativeArray, NativeHash, etc.
-require_relative 'rdl/turn_off'
-RDL::TurnOffCheck.turn_off_check
+#require_relative 'rdl/turn_off'
+#RDL::TurnOffCheck.turn_off_check
 
 
 module RDL
@@ -41,7 +41,7 @@ module RDL
     def spec(mname, &blk)
         @__rdlcontracts ||= {}
         
-        if self.instance_methods(true).include? mname
+        if self.instance_methods(true).include? mname.to_sym
             @__rdlcontracts[mname] ||= Spec.new(self, mname.to_sym)
             @__rdlcontracts[mname].instance_exec(&blk) if block_given?
         else
@@ -107,7 +107,7 @@ module RDL
             
             @__rdlcontracts ||= {}
             
-            if self.instance_methods(true).include? mname
+            if self.instance_methods(true).include? mname.to_sym # TODO methods vs instance
                 @__rdlcontracts[mname] ||= Spec.new(self, mname.to_sym)
                 @__rdlcontracts[mname].typesig sig, *metactc
             else
