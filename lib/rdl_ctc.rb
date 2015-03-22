@@ -95,35 +95,40 @@ module RDL
     
     # Contract that applies pre(left) and post(right) condition
     class MethodCtc < Contract
-        attr_accessor :ret, :blk
+        attr_accessor :ret, :blk, :has_block_ctc
         def initialize(mname,lctc,rctc)
             @mname = mname
             @lctc = lctc
             @rctc = rctc
             @pred = Proc.new{|env, *v|
                 @self = env
+
                 @lctc.check(*v, prev:"PRECONDITION in #{rdoc_gen}", blame:1)
-                
+            begin
+              RDL.turn_off
+              ### ADDED TO CALL BLOCKS #####
+              if @has_block_ctc
+                @ret = env.send(@mname.to_sym, *v, &@blk)
+              else
                 @ret = env.send(@mname.to_sym, *v)
-            ### ADDED TO CALL BLOCKS #####
-
-            ret2 = nil
-            if @ret.class <= Enumerator
-              begin
-                RDL.turn_off
-                ret2 = @ret.send(:each, &@blk)
-              ensure
-                RDL.turn_on
-                @blk = nil
+                ret2 = nil
+                if @ret.class <= Enumerable && @blk != nil
+                  begin
+                    ret2 = @ret.send(:each, &@blk)
+                  ensure
+                    @blk = nil
+                  end
+                end
               end
+            ensure
+              RDL.turn_on
+              ##############################
             end
-
-            ##############################
-                
+            
             @rctc.check(*v, @ret, prev:"POSTCONDITION in #{rdoc_gen}", blame:1)
             @ret = ret2 if !ret2.nil?
             ret2 = nil
-                next true
+            next true
             }
         end
         def check(*v, prev:"", blame:0)

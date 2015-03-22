@@ -25,7 +25,7 @@ class Spec
     def store_get_contract()
         
         # Create or append Method Contract
-        mname_old = "rdl" + @mname.to_s + "_old"
+        mname_old = "__rdl_" + @mname.to_s + "_old"
         
         if @contract.nil? then
             wrap_method()
@@ -62,10 +62,7 @@ class Spec
         # Scan typesig annotation into MethodType<:arg_type, :ret_type, :block_type>
         parser = RDL::Type::Parser.new
         type = parser.scan_str(sig)
-      if type.block != nil
-        @contract.blk = nil
-      end
-        
+      has_block_ctc = !type.block.nil?
         # Parameterized type handler
         tvars = meta[:vars].nil? ? [] : meta[:vars]
         
@@ -141,7 +138,7 @@ class Spec
                     if method_blk
                         arg_chosen_type = RDL::MethodCheck.select_and_check_args(method_types, mname, args, true)
                     else
-                        arg_chosen_type = RDL::MethodCheck.select_and_check_args(method_types, mname, args)
+                      arg_chosen_type = RDL::MethodCheck.select_and_check_args(method_types, mname, args)
                     end
             
                     RDL.debug "PRE arg_chosen_type #{arg_chosen_type}", 3
@@ -186,10 +183,10 @@ class Spec
                     
                     RDL.debug "POST arg_chosen_type #{arg_chosen_type}\nPOST ret_chosen_type #{ret_chosen_type}", 3
                     
-                    ret_chosen_type = arg_chosen_type if not ret_chosen_type
+                    ret_chosen_type = arg_chosen_type if !ret_chosen_type
                     ret_valid = RDL::MethodCheck.check_return(ret_chosen_type, ret)
                     
-                    p "POST:#{ret_valid} METHOD_SIGNATURE:#{ret_chosen_type} ACTUAL:#{ret} of class #{ret.class}" ################### TODO REMOVE
+                  #p "POST:#{ret_valid} METHOD_SIGNATURE:#{ret_chosen_type} ACTUAL:#{ret} of class #{ret.class}" ################### TODO REMOVE
                     
                     RDL.debug "POST ret_chosen_type_final #{ret_chosen_type}", 3
                     
@@ -218,6 +215,7 @@ class Spec
         }
         
         ctc = store_get_contract()
+      ctc.has_block_ctc = has_block_ctc
         ctc.add_pre mcheck_pre
         ctc.add_post mcheck_post
         
@@ -235,7 +233,7 @@ class Spec
         ret_val = nil
         
         mname = @mname
-        mname_old = ("rdl" + mname.to_s + "_old").to_sym # Corner case error: "[]_old".to_sym == :"[]_old" instead of :[]_old
+        mname_old = ("__rdl_" + mname.to_s + "_old").to_sym # Corner case error: "[]_old".to_sym == :"[]_old" instead of :[]_old
         
         
         kls = @klass
@@ -249,7 +247,7 @@ class Spec
             alias_method mname_old, mname
             define_method mname do |*v, &blk|
                 if RDL.on?
-                    RDL.debug "Checking method #{mname} with args #{v}", 1
+                    RDL.debug "Checking method #{mname} with args #{v}, block? #{blk}", 1
                     mctc = kls.instance_variable_get(:@__rdlcontracts)[mname].contract
                   mctc.blk = blk
                   ret = (mctc.check(self,*v))
