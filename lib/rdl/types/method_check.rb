@@ -79,12 +79,6 @@ module RDL::MethodCheck
           raise Exception, "not implemented"
         else
           if !args[value_index].rdl_type.le(expected_arg_types[type_index], le_h)
-=begin
-            p "INVALID!!"
-            p args[value_index].rdl_type
-            p expected_arg_types[type_index]
-=end
-            p args[value_index].rdl_type.le(expected_arg_types[type_index])
             valid = false
             break
           end
