@@ -1,4 +1,6 @@
 module RDL::MethodCheck
+  
+  # Need to add block checking to this method
   def self.select_and_check_args(method_types, method_name, args, has_block=false)
     if !((method_types.instance_of? RDL::Type::MethodType) || 
             (method_types.instance_of? RDL::Type::IntersectionType))
@@ -17,9 +19,8 @@ module RDL::MethodCheck
     for m in method_types
       next if num_actual_args < m.min_args
       next if m.max_args != -1 && num_actual_args > m.max_args
-      next if (not m.block.nil?) != has_block
+      next if (!m.block.nil?) != has_block
 
-      p "M: #{m}, Args: #{args}"
       arg_impl_valid, vartype_map = self.check_arg_impl(m, args)  
       if arg_impl_valid
         possible_types.push(m)
@@ -31,11 +32,17 @@ module RDL::MethodCheck
     elsif possible_types.size == 0 
       arg_types = args.map {|a| a.rdl_type}
 
+      # Added to account for no arguments
+      if method_types[0].args == [] && args == []
+        return method_types[0]
+      end
+
       raise RDL::TypesigException, "In method #{method_name}, annotated types are #{method_types.inspect}, but actual arguments are #{args.inspect}, with types #{arg_types.inspect}" 
+      
     else
       chosen_type = possible_types[0]
     end
-
+    
     vartype_map.empty? ? chosen_type : chosen_type.replace_vartypes(vartype_map)
   end
 
@@ -72,9 +79,11 @@ module RDL::MethodCheck
           raise Exception, "not implemented"
         else
           if !args[value_index].rdl_type.le(expected_arg_types[type_index], le_h)
+=begin
             p "INVALID!!"
             p args[value_index].rdl_type
             p expected_arg_types[type_index]
+=end
             p args[value_index].rdl_type.le(expected_arg_types[type_index])
             valid = false
             break
