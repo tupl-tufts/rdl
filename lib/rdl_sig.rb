@@ -62,7 +62,6 @@ class Spec
         # Scan typesig annotation into MethodType<:arg_type, :ret_type, :block_type>
         parser = RDL::Type::Parser.new
         type = parser.scan_str(sig)
-      has_block_ctc = !type.block.nil?
         # Parameterized type handler
         tvars = meta[:vars].nil? ? [] : meta[:vars]
         
@@ -215,7 +214,6 @@ class Spec
         }
         
         ctc = store_get_contract()
-      ctc.has_block_ctc = has_block_ctc
         ctc.add_pre mcheck_pre
         ctc.add_post mcheck_post
         
@@ -249,13 +247,11 @@ class Spec
                 if RDL.on?
                     RDL.debug "Checking method #{mname} with args #{v}, block? #{blk}", 1
                     mctc = kls.instance_variable_get(:@__rdlcontracts)[mname].contract
-                  mctc.blk = blk
-                  ret = (mctc.check(self,*v))
+                    ret = mctc.check(self,*v,&blk)
                     return ret
                 end
-          #RDL.debug "Skipping method #{mname} with args #{v}",1
+                #RDL.debug "Skipping method #{mname} with args #{v}",1
                 return send(mname_old, *v,&blk)
-
             end
             def args
                 args_val

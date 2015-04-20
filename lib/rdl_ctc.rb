@@ -12,10 +12,10 @@ module RDL
             @str = desc
             @node_bindings = [] # TODO: Add node bindings for CbD-CSP
         end
-        def check(*v,prev:"", blame:0)
+        def check(*v, prev:"", blame:0, &blk)
           if (@pred && ((@pred.arity < 0) ? (@pred.arity.abs - 1) <= v.size : @pred.arity == v.size)) then
               # TODO: Labels and proc.parameters :lbl, :rest
-              raise ContractViolationException, "Value(s) #{v.inspect} does not match contract(s) #{self.rdoc_gen}\n    Blaming: #{prev}." unless (@pred.call(*v))
+              raise ContractViolationException, "Value(s) #{v.inspect} does not match contract(s) #{self.rdoc_gen}\n    Blaming: #{prev}." unless (@pred.call(*v, &blk))
             else
                 raise ContractViolationException, "Error: Invalid number of arguments in Contract #{self.rdoc_gen}: Expecting arity #{@pred.arity}, got #{v}"
             end
@@ -57,8 +57,8 @@ module RDL
         def initialize(wctc)
             @ctc = wctc
         end
-        def check(*v, prev:"", blame:0)
-            @ctc.check(*v, prev:"#{prev}\n  #{rdoc_gen}", blame:blame)
+        def check(*v, prev:"", blame:0, &blk)
+            @ctc.check(*v, prev:"#{prev}\n  #{rdoc_gen}", blame:blame, &blk)
         end
         def to_proc
             @ctc.to_proc
@@ -95,40 +95,33 @@ module RDL
     
     # Contract that applies pre(left) and post(right) condition
     class MethodCtc < Contract
-        attr_accessor :ret, :blk, :has_block_ctc
-        def initialize(mname,lctc,rctc)
+        attr_accessor :ret, :blkctc
+        def initialize(mname,lctc,rctc,&blk) #Blk is an RDLProc
             @mname = mname
             @lctc = lctc
             @rctc = rctc
-            @pred = Proc.new{|env, *v|
+            @blkctc = blk
+            @pred = Proc.new{|env, *v, &blok|
                 @self = env
-
-                @lctc.check(*v, prev:"PRECONDITION in #{rdoc_gen}", blame:1)
-            begin
-              RDL.turn_off
-              ### ADDED TO CALL BLOCKS #####
-              if @has_block_ctc
-                @ret = env.send(@mname.to_sym, *v, &@blk)
-              else
-                @ret = env.send(@mname.to_sym, *v)
-                ret2 = nil
-                if @ret.class <= Enumerable && @blk != nil
-                  ret2 = @ret.send(:each, &@blk)
+                @lctc.check(*v, prev:"PRECONDITION in #{rdoc_gen}", blame:1, &blok)
+                begin
+                    RDL.turn_off
+                    if @blkctc
+                        @blkctc.nextblk(blok) # Attaches contract to block
+                        @ret = env.send(@mname.to_sym, *v, &@blkctc)
+                    else
+                        @ret = env.send(@mname.to_sym, *v)
+                    end
+                ensure
+                    RDL.turn_on
                 end
-              end
-            ensure
-              RDL.turn_on
-              ##############################
-            end
             
-            @rctc.check(*v, @ret, prev:"POSTCONDITION in #{rdoc_gen}", blame:1)
-            @ret = ret2 if !ret2.nil?
-            ret2 = nil
-            next true
+                @rctc.check(*v, @ret, prev:"POSTCONDITION in #{rdoc_gen}", blame:1, &blok)
+                next true
             }
         end
-        def check(*v, prev:"", blame:0)
-            super(*v, prev:prev, blame:blame)
+        def check(*v, prev:"", blame:0, &blk)
+            super(*v, prev:prev, blame:blame, &blk)
             return @ret
         end
         def add_pre(ctc)
@@ -137,21 +130,64 @@ module RDL
         def add_post(ctc)
             @rctc = AndCtc.new(@rctc,ctc)
         end
+        def add_blkctc(ctc) # Expects RDLProc
+            @blkctc = ctc
+        end
         def rdoc_gen
             x = (@lctc.class == Array) ? (@lctc.each {|t| t.rdoc_gen} ).join(',') : @lctc.rdoc_gen
             y = (@rctc.class == Array) ? (@rctc.each {|t| t.rdoc_gen} ).join(',') : @rctc.rdoc_gen
-            "CONTRACT for METHOD #{@mname}\n\t(#{x})\n\t-> #{y}"
+            "CONTRACT for METHOD #{@mname}\n\t(#{x})\n\t-> #{y} #{(@blk ? @blk.rdoc_gen : @blk)}"
         end #TODO: RI support, rename rdoc_gen to to_s
     end
     
-    class BlockCtc < MethodCtc
-        # Initialized with block as first arg instead of mname
-        # TODO BlockCtc
-        def rdoc_gen
-            x = ""
-            y = ""
-            "Block{|#{x}| -> #{y}}"
+    class RDLProc < Proc
+        attr_accessor :blkctc, :blk
+        
+        def initialize(b=nil, &blk)
+            @blkctc = (b && b.instance_of?(BlockCtc)) ? b : BlockCtc.new(FlatCtc.new("Block Stud"){|*v| true}, FlatCtc.new("Block Contract created via RDLProc.init", &blk));
         end
+        
+        def nextblk(blk)
+            @blk=blk
+        end
+        
+        def call (*v, &blk) # TODO Blame
+            @blkctc.check(@blk, *v, prev:"", blame:"", &blk)
+        end
+        
+    end
+    
+    class BlockCtc < MethodCtc
+        attr_accessor :ret, :blkctc
+        
+        def initialize(lctc,rctc,&blk) # blk is an RDLProc
+            @lctc = lctc
+            @rctc = rctc
+            @blkctc = blk
+            @pred = Proc.new{|env, *v, &blok|
+                @lctc.check(*v, prev:"PRECONDITION in #{rdoc_gen}", blame:1, &blok)
+                begin
+                    RDL.turn_off # TODO this may not be necessary
+                    if blok && @blkctc
+                        @blkctc.nextblk(blok) # Attaches contract to block
+                        @ret = env.call(*v, &@blkctc)
+                    else
+                        @ret = env.call(*v)
+                    end
+                ensure
+                    RDL.turn_on
+                end
+                
+                @rctc.check(*v, @ret, prev:"POSTCONDITION in #{rdoc_gen}", blame:1, &blok)
+                next true
+            }
+        end
+
+        def rdoc_gen
+            x = (@lctc.class == Array) ? (@lctc.each {|t| t.rdoc_gen} ).join(',') : @lctc.rdoc_gen
+            y = (@rctc.class == Array) ? (@rctc.each {|t| t.rdoc_gen} ).join(',') : @rctc.rdoc_gen
+            "BLOCK\t(#{x})\n\t-> #{y}"
+        end #TODO: RI support, rename rdoc_gen to to_s
     end
     
     ############################
