@@ -18,7 +18,6 @@ module RDL
         RDL::Type::NilType.new
       else
         x = RDL::Type::UnionType.new(*self.unify_param_types(current_types))
-#puts "x #{x} curr #{current_types.inspect}\n\n"
         x
       end
     end
@@ -28,7 +27,8 @@ module RDL
     def self.extract_types(param_type)
       param_type.instance_of?(RDL::Type::UnionType) ? param_type.types.to_a : [param_type]
     end
-    
+
+=begin DEPRECATED
     # Unifies i.e. #<Set: {Array<String>, Array<Array<String>>}> into
     # Array<(Array<String> or String)>
     # If this step is not called, then infer_type for 
@@ -38,7 +38,6 @@ module RDL
     def self.unify_param_types_old(type_set)
       non_param_classes = []
       parameterized_classes = {}
-p "UNIFYING #{type_set.inspect}"
       type_set.each {|member_type|
         if member_type.instance_of? RDL::Type::GenericType
           nominal_type = member_type.base
@@ -54,9 +53,7 @@ p "UNIFYING #{type_set.inspect}"
           type_parameters ||= {}
           ((0...(type_parameters.size)).map {|tparam_index|
              extract_types(member_type.params[tparam_index])
-p "Extracting #{tparam_index}"
            }).each_with_index {|type_parameter,index|
-p "Type Param #{type_parameter}"
             tparam_set[index]+=type_parameter
           }
 
@@ -75,11 +72,9 @@ p "Type Param #{type_parameter}"
       }
       non_param_classes
     end
+=end
 
-$ct=0
     def self.unify_param_types(type_set)
-        c = ($ct +=1)
-puts "\n#{c} Unifying #{type_set.inspect}"
         non_param = [] # Types without another level of parameters
         param = {} # Hash of {Paramaterized Type => Parameters} to unify Parameters
 
@@ -93,19 +88,12 @@ puts "\n#{c} Unifying #{type_set.inspect}"
             end
         }
 
-puts "#{c} NON-PARAM #{non_param}"
-puts "#{c} PARAM #{param}"
-
-        # ...
         param.each{ |nominal, types|
-            #t = types.map {|unioned_type_parameter|
             t = RDL::Type::UnionType.new(*unify_param_types(types))
-            #}
             non_param << RDL::Type::GenericType.new(nominal, *t)
             non_param = non_param.uniq
         }
 
-puts "#{c} Returning #{non_param} with #{non_param.map{|x| x.instance_variable_get(:@params)}}\n"
         return non_param
     end # end of :unify_param_types_new
 

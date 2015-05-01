@@ -117,7 +117,6 @@ module RDL
                     RDL.turn_off
                     if blok && @blkctc
                         @blkctc.nextblk(blok) # Attaches contract to block
-puts "mctc attaching block #{blok} to #{@blkctc}"
                         @ret = env.send(@mname, *v, &@blkctc)
                     elsif blok
                         @ret = env.send(@mname, *v, &blok)
@@ -164,13 +163,9 @@ puts "mctc attaching block #{blok} to #{@blkctc}"
         end
         
         def call (*v, &blk) # TODO Blame
-puts "#{self}.call called. Block: #{@blk}"
             if blk then
-puts "1 checking #{@blk}"
                 @blkctc.check(@blk, *v, prev:"", blame:"", &blk)
-puts "1 done"
             else
-puts "2"
                 @blkctc.check(@blk, *v, prev:"", blame:"")
             end
         end
@@ -196,16 +191,12 @@ puts "2"
             @blkctc = blk
             @pred = Proc.new{|env, *v, &blok|
                 @lctc.check(*v, prev:"PRECONDITION in #{rdoc_gen}", blame:1, &blok)
-puts "Blkctc"
                 if blok && @blkctc
                     @blkctc.nextblk(blok) # Attaches contract to block
-puts "Blockctc case1 RDLProc #{@blkctc} with block #{blok}\n\t env #{env} called"
                     @ret = env.call(*v, &@blkctc)
                 elsif blok
-puts "Blockctc case2"
                     @ret = env.call(*v, &blok)
                 else
-puts "BlockCtc case3"
                     @ret = env.call(*v)
                 end
                 

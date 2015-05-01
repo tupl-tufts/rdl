@@ -49,14 +49,11 @@ class GenericTest < Minitest::Test
         t = [[[[1,2,3]]]].rdl_type
         assert_equal(@a_a_a_a_f, t, "ERR 2.3 Nested simple array error")
         
-        p "here V"
         t = [["a", true], [[1]]].rdl_type
-        p "here ^"
         u = UnionType.new(@string, @true_n, @array_of_fixnum)
         ct = GenericType.new(@array, u)
         ct = GenericType.new(@array, ct)
         # ct -> Array<Array<(Array<Fixnum> or String or TrueClass)>>
-        p "asserting V"
         assert_equal(ct, t, "ERR 2.4 TypeInferencer.rb :unify_param_types error")
     end
     
