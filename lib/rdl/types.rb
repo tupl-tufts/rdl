@@ -27,7 +27,7 @@ end
 class Object
     
     def rdl_type
-        
+puts "Checking type of #{self}"
         if self.class.name == "Symbol"
             RDL::Type::SymbolType.new(self)
         else

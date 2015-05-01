@@ -13,9 +13,14 @@ module RDL
             @node_bindings = [] # TODO: Add node bindings for CbD-CSP
         end
         def check(*v, prev:"", blame:0, &blk)
-          if (@pred && ((@pred.arity < 0) ? (@pred.arity.abs - 1) <= v.size : @pred.arity == v.size)) then
-              # TODO: Labels and proc.parameters :lbl, :rest
-              raise ContractViolationException, "Value(s) #{v.inspect} does not match contract(s) #{self.rdoc_gen}\n    Blaming: #{prev}." unless (@pred.call(*v, &blk))
+            if (@pred && ((@pred.arity < 0) ? (@pred.arity.abs - 1) <= v.size : @pred.arity == v.size)) then
+            # TODO: Labels and proc.parameters :lbl, :rest
+                if blk then
+                    tmp = @pred.call(*v, &blk)
+                else
+                    tmp = @pred.call(*v)
+                end
+                raise ContractViolationException, "Value(s) #{v.inspect} does not match contract(s) #{self.rdoc_gen}\n    Blaming: #{prev}." unless tmp
             else
                 raise ContractViolationException, "Error: Invalid number of arguments in Contract #{self.rdoc_gen}: Expecting arity #{@pred.arity}, got #{v}"
             end
@@ -58,7 +63,11 @@ module RDL
             @ctc = wctc
         end
         def check(*v, prev:"", blame:0, &blk)
-            @ctc.check(*v, prev:"#{prev}\n  #{rdoc_gen}", blame:blame, &blk)
+            if blk then
+                @ctc.check(*v, prev:"#{prev}\n  #{rdoc_gen}", blame:blame, &blk)
+            else
+                @ctc.check(*v, prev:"#{prev}\n  #{rdoc_gen}", blame:blame)
+            end
         end
         def to_proc
             @ctc.to_proc
@@ -106,11 +115,14 @@ module RDL
                 @lctc.check(*v, prev:"PRECONDITION in #{rdoc_gen}", blame:1, &blok)
                 begin
                     RDL.turn_off
-                    if @blkctc
+                    if blok && @blkctc
                         @blkctc.nextblk(blok) # Attaches contract to block
-                        @ret = env.send(@mname.to_sym, *v, &@blkctc)
+puts "mctc attaching block #{blok} to #{@blkctc}"
+                        @ret = env.send(@mname, *v, &@blkctc)
+                    elsif blok
+                        @ret = env.send(@mname, *v, &blok)
                     else
-                        @ret = env.send(@mname.to_sym, *v)
+                        @ret = env.send(@mname, *v)
                     end
                 ensure
                     RDL.turn_on
@@ -152,7 +164,25 @@ module RDL
         end
         
         def call (*v, &blk) # TODO Blame
-            @blkctc.check(@blk, *v, prev:"", blame:"", &blk)
+puts "#{self}.call called. Block: #{@blk}"
+            if blk then
+puts "1 checking #{@blk}"
+                @blkctc.check(@blk, *v, prev:"", blame:"", &blk)
+puts "1 done"
+            else
+puts "2"
+                @blkctc.check(@blk, *v, prev:"", blame:"")
+            end
+        end
+        
+        def yield(*v, &blk)
+            if blk then @blkctc.check(@blk, *v, prev:"", blame:"", &blk)
+            else @blkctc.check(@blk, *v, prev:"", blame:"")
+            end
+        end
+
+        def to_proc
+            self
         end
         
     end
@@ -166,16 +196,17 @@ module RDL
             @blkctc = blk
             @pred = Proc.new{|env, *v, &blok|
                 @lctc.check(*v, prev:"PRECONDITION in #{rdoc_gen}", blame:1, &blok)
-                begin
-                    RDL.turn_off # TODO this may not be necessary
-                    if blok && @blkctc
-                        @blkctc.nextblk(blok) # Attaches contract to block
-                        @ret = env.call(*v, &@blkctc)
-                    else
-                        @ret = env.call(*v)
-                    end
-                ensure
-                    RDL.turn_on
+puts "Blkctc"
+                if blok && @blkctc
+                    @blkctc.nextblk(blok) # Attaches contract to block
+puts "Blockctc case1 RDLProc #{@blkctc} with block #{blok}\n\t env #{env} called"
+                    @ret = env.call(*v, &@blkctc)
+                elsif blok
+puts "Blockctc case2"
+                    @ret = env.call(*v, &blok)
+                else
+puts "BlockCtc case3"
+                    @ret = env.call(*v)
                 end
                 
                 @rctc.check(*v, @ret, prev:"POSTCONDITION in #{rdoc_gen}", blame:1, &blok)
@@ -202,8 +233,12 @@ module RDL
             init()
         end
         def init; end
-        def check(*v, prev:"", blame:0)
-            raise ContractViolationException, "Higher Order Contract Failure #{rdoc_gen}\nat #{prev}" unless check_aux(v,0, prev:prev, blame:blame)
+        def check(*v, prev:"", blame:0, &blk)
+            if blk then
+                raise ContractViolationException, "Higher Order Contract Failure #{rdoc_gen}\nat #{prev}" unless check_aux(v,0, prev:prev, blame:blame, &blk)
+            else
+                raise ContractViolationException, "Higher Order Contract Failure #{rdoc_gen}\nat #{prev}" unless check_aux(v,0, prev:prev, blame:blame)
+            end
         end
         def check_aux(v, nt, prev:"", blame:0)
           ret = (nt >= @ctcls.length) ? @emp : @cond.call(@ctcls[nt], v, nt, prev, blame)
@@ -239,7 +274,7 @@ module RDL
             @cond = Proc.new do |l, v, nt, prev, blame|
                 begin
                     l.check(*v, prev:"#{prev}\n  #{rdoc_gen}", blame:blame)
-                    rescue
+                rescue
                     next check_aux(v, nt+1, prev:prev, blame:blame)
                 end
                 

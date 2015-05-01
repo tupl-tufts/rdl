@@ -88,27 +88,42 @@ class Test_Ctc < Minitest::Test
     end
     
     def rdl_foobar(x, y, &blk)
-        boo = Proc.new {|*args, &blk| blk.call(y)}
+        boo = Proc.new {|*args, &blk| p "BOO"; blk.call(y)}
+puts "Method foo called with block #{blk}"
         blk.call(x, &boo) # Calls the received block, which then calls boo, which then calls the block it receives
+puts "Method foo done"
     end
     
     # Test block contracts
+    #########################
+    # SAMPLE CODE
+    # def foo(*args, &blk)
+    #   blk.call {|*argz, &blok| p "hi"; blok.call(5)}
+    # end
+    #
+    # foo(){|*args, &blk| p "hello"; blk.call(){|*args| p args}}
+    #########################
+    # EXPECTED OUTPUT
+    # > "hello"
+    # > "hi"
+    # > [5]
+    #########################
     def test_blockctc
-        bctc1 = RDL::RDLProc.new {|*args, ret, &blk| args[0].class==String} # the first arg &blk receives (x) must be a String
-        bctc2 = RDL::RDLProc.new {|*args, ret, &blk| ret==Fixnum} # boo must return Fixnum
-        bctc3 = RDL::RDLProc.new {|*args, ret, &blk| args[0].class==Fixnum} # the block boo receives has a first argument of type Fixnum (y must be Fixnum)
+        bctc1 = RDL::RDLProc.new {|*args, ret, &blk| p "bctc1"; args[0].class==String} # the first arg &blk receives (x) must be a String
+        bctc2 = RDL::RDLProc.new {|*args, ret, &blk| p "bctc2"; ret==Fixnum} # boo must return Fixnum
+        bctc3 = RDL::RDLProc.new {|*args, ret, &blk| p "bctc3"; args[0].class==Fixnum} # the block boo receives has a first argument of type Fixnum (y must be Fixnum)
+        bctc2.blkctc.add_blkctc(bctc3)
         bctc1.blkctc.add_blkctc(bctc2)
-        bctc1.blkctc.blkctc.blkctc.add_blkctc(bctc3)
         
         ctc = RDL::MethodCtc.new("rdl_foobar", RDL::FlatCtc.new("BCtcPreStud") {|*args, &blk| !args[0].nil?}, RDL::FlatCtc.new("BCtcPostStud") {|*args, ret, &blk| true})
-        ctc.add_blkctc(bctc1)
+        ctc.add_blkctc(bctc1) # Comment out this line and everything works
         
-        assert_raises(RDL::ContractViolationException, "ERR 5.1 BlockCtc one level failed") do
-            ctc.check(self, 5, 5, prev:"", blame:0) {|x, &blk| blk.call(){|*args| Fixnum} }
-        end
+        #assert_raises(RDL::ContractViolationException, "ERR 5.1 BlockCtc one level failed") do
+        #    ctc.check(self, 5, 5, prev:"", blame:0) {|x, &blk| blk.call(){|*args| Fixnum} }
+        #end
         
         assert_raises(RDL::ContractViolationException, "ERR 5.2 BlockCtc two levels failed") do
-            ctc.check(self, "err", "err", prev:"", blame:0) {|x, &blk| blk.call(){|*args| 5} }
+            ctc.check(self, "err", "err", prev:"", blame:0) {|x, &blok| p "OUTER BLOCK #{blok}"; blok.call(){|*args| p "INNER_BLOCK"; "Hello World"}}
         end
         
         rslt = ctc.check(self, "err", 5, prev:"", blame:0) {|x, &blk| blk.call(){|*args| Fixnum} }
