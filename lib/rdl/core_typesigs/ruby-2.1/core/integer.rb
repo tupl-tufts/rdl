@@ -9,6 +9,7 @@ class Integer
   typesig(:denominator, "() -> Integer" ) #{ret == 1}
   typesig(:downto, "(Integer) {(Integer) -> %any } -> Integer")
   typesig(:downto, "(Integer) -> Enumerator")
+  typesig(:downto, "(Integer) {|Integer| %any} -> %any")
   typesig(:even?, "() -> %bool")  #{ret % 2 == 0}
   typesig(:gcd, "(Integer) -> Integer") #{ret <= self && ret <= prm[0] && self.% ret == 0 && prm[0] % ret == 0}
 
@@ -25,8 +26,10 @@ class Integer
   typesig(:round, "(?Integer) -> Integer or Float")
   typesig(:succ, "() -> Integer")
   typesig(:times, "() -> Enumerator")
+  typesig(:times, "(Integer) {|Integer| %any} -> %any")
   typesig(:to_i, "(Integer) -> Integer") #{ret == self}
   typesig(:to_r, " () -> Rational")
   typesig(:upto, "(Integer) -> Enumerator")
+  typesig(:upto, "(Integer) {|Integer| %any} -> %any")
 
 end
