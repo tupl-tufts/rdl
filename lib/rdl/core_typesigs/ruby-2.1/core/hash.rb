@@ -1,4 +1,4 @@
-require_relative '../../../lib/rdl.rb'
+require 'rdl'
 
 class Hash
   extend RDL
