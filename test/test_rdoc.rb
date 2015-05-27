@@ -1,3 +1,4 @@
+require 'minitest/autorun'
 require 'rdoc'
 require 'erb'
 require 'fileutils'
@@ -9,13 +10,19 @@ require 'tmpdir'
 require 'rdoc'
 require_relative '../lib/rdl.rb'
 
-class String
+class RdocTest < MiniTest::Test
+
+  class TestClass
     extend RDL
     
     typesig :size, "()->Fixnum"
     typesig :bytesize, "()->Fixnum"
-    
-    rdocTypesigFor(String);
+  end
+
+  def test_rdoc_gen
+    skip "TEST WITH NO ASSERTIONS"
+    rdocTypesigFor(TestClass)
+  end
 end
 
 class TestRDLRDoc
