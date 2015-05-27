@@ -1,0 +1,5 @@
+language: ruby
+gemfile:
+  - gemfiles/Gemfile.travis
+rvm:
+  - 2.2.2
