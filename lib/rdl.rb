@@ -1,9 +1,12 @@
-require_relative 'rdl/master_switch'
 require 'set'
+
+require_relative 'rdl/master_switch'
 require_relative 'rdl_ctc'
 require_relative 'rdl_sig'
 require_relative 'rdl_dsl'
 require_relative 'rdl_rdc'
+require_relative 'rdl/types'
+require_relative 'rdl/turn_off'
 
 class Object
   def self.method_added(mname)
@@ -19,10 +22,6 @@ end
 
 module RDL
   @@master_switch = true
-
-  class << self
-    attr_accessor :print_warning
-  end
 
   def self.get_type(m)
     if m.include?('#')
@@ -40,10 +39,6 @@ module RDL
     m = s[1]
     nt.get_method(m.to_sym)
   end
-
-
-
-
 
   def keyword(mname, *args, &blk)
     Lang.new(self).keyword(mname, *args, &blk)
@@ -155,15 +150,9 @@ status = RDL.on?
 RDL.turn_off if status
 
 begin
-  require_relative 'rdl/types'
-  require_relative '../types/ruby-2.1/core/array.rb'
-
   # stops RDL code from checking itself and eliminates
   # the old RTC NativeArray, NativeHash, etc.
-  require_relative 'rdl/turn_off'
   RDL::TurnOffCheck.turn_off_check
 ensure
   RDL.turn_on if status
 end
-
-#RDL.print_warning = false
