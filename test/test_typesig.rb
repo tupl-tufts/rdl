@@ -27,7 +27,7 @@ class Typesig_test < Minitest::Test
     
     class Err_Tests
         extend RDL
-        
+
         typesig( :foo, " () -> asdfghjkl ") {}
         def foo
             return "hello world"
