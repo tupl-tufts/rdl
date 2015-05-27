@@ -57,57 +57,6 @@ class Spec
         end
     end
     
-    # DEPRECATED: Use typesig instead
-    #B Can this be removed? or commented out?
-    def typesig_c(sig)
-        parser = RDL::Type::Parser.new
-        t = parser.scan_str(sig)
-        
-        store_method_type(t)
-        
-        c_args = []
-        
-        t.args.each {|ta|
-            ca_str = "RDL.flat {|a| a.rdl_type <= ta}"
-            ca = eval(ca_str)
-            c_args.push(ca)
-        }
-        
-        ctcs = c_args.map {|x| RDL.convert x}
-        
-        arg_check_name = define_method_gensym("check_arg") do |*args, &blk|
-            for i in 0..t.args.size-1
-                args[i] = ctcs[i].apply(args[i])
-            end
-            
-            if blk
-                bp = BlockProxy_c.new(blk, t.block)
-                blk = BlockProxy_c.wrap_block(bp)
-            end
-            
-            { args: args, block: blk }
-        end
-        
-        annotated_ret = t.ret
-        cr_str = "RDL.flat {|r| r.rdl_type <= annotated_ret}"
-        cr = eval(cr_str)
-        ctc_r = RDL.convert cr
-        
-        arg_check_name_post = define_method_gensym("check_arg_post") do |ret, *args, &blk|
-            ret = ctc_r.apply(ret)
-            
-            ret
-        end
-        
-        pre do |*args, &blk|
-            self.__send__ arg_check_name, *args, &blk
-        end
-        
-        post do |ret, *args, &blk|
-            self.__send__ arg_check_name_post, ret, *args, &blk
-        end
-    end
-    
     def typesig(sig, meta={})
       mname = @mname.to_sym
       parser = RDL::Type::Parser.new
