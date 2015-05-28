@@ -1,11 +1,3 @@
-# ######################################################################
-#
-# DRuby annotation language parser
-# Adapted directly from DRuby source file typeAnnotationParser.mly
-# Version of GitHub DRuby repo commit 0cda0264851bcdf6b301c3d7f564e9a3ee220e435
-#
-# ######################################################################
-
 class Parser
   prechigh
     left COMMA

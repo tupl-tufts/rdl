@@ -1,15 +1,3 @@
-########################################################################
-# The latest rexical generator on github supports matching against the 
-# end of string. For this file to work correctly, you MUST use the
-# latest upstream rexical.
-########################################################################
-
-
-# ######################################################################
-# DRuby annotation language parser
-# Adapted directly from DRuby source file typeAnnotationLexer.mll
-# Version of GitHub DRuby repo commit 0cda0264851bcdf6b301c3d7f564e9a3ee220e45
-# ######################################################################
 module RDL::Type
 class Parser
 
@@ -19,13 +7,6 @@ macro
   SPECIAL_ID %\w+
 
 rule
-# rules take the form:
-# [:state] pattern [actions]
-
-# ####################
-# tokens
-# ####################
-
   \s            # skip
   or            { [:OR, text] }
   =>            { [:ASSOC, text] } 
