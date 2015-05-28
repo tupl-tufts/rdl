@@ -100,13 +100,22 @@ class TypeTest < Minitest::Test
     assert_equal t10, (MethodType.new [@tsymbolx], nil, @tfixnum)
   end
 
-#def test_generic
-#    t = @p.scan_str "'[]': (Fixnum) -> t or nil"
-#  t = @p.scan_str "(t) -> Array<t>"
-#  t = @p.scan_str "() { (t) -> %bool } -> Fixnum"
-#  t = @p.scan_str "<u> : u -> t"
-#  t = @p.scan_str "<u,v> : (u) { () -> v } -> t or v"
-
+  def test_generic
+    t1 = @p.scan_str "## t"
+    assert_equal t1, (VarType.new "t")
+    t2 = @p.scan_str "## Array"
+    assert_equal t2, (NominalType.new "Array")
+    t3 = @p.scan_str "## Array<t>"
+    assert_equal t3, (GenericType.new(t2, t1))
+    t4 = @p.scan_str "## Array<Array<t>>"
+    assert_equal t4, (GenericType.new(t2, t3))
+    t5 = @p.scan_str "## Hash"
+    assert_equal t5, (NominalType.new "Hash")
+    t6 = @p.scan_str "## Hash<u, v>"
+    assert_equal t6, (GenericType.new(t5, VarType.new("u"), VarType.new("v")))
+    t7 = @p.scan_str "## Foo<String, Array<t>, Array<Array<t>>>"
+    assert_equal t7, (GenericType.new(NominalType.new("Foo"), NominalType.new("String"), t3, t4))
+  end
 
 
 end
