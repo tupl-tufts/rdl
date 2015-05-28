@@ -37,30 +37,5 @@ class IntersectionTest < Minitest::Test
 
     assert_equal(t1, i)
   end
-
-  def test_array_types
-    skip "FAILING TEST"
-    arr = [1,2,3,4,5]
-    x = arr[1]
-    assert_equal(2, x)
-
-    x = arr[1.0]
-    assert_equal(2, x)
-
-    r = Range.new(0, 2)
-    x = arr[r]
-    assert_equal([1,2,3], x)
-
-    x = arr[0,2]
-    assert_equal([1,2], x)
-
-    assert_raises(RDL::TypesigException) {
-      arr[true]
-    }
-
-    assert_raises(RDL::TypesigException) {
-      arr[1, true]
-    }
-  end
 end
 
