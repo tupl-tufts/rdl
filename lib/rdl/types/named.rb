@@ -4,6 +4,7 @@ module RDL::Type::NamedType
   def self.included(base)
     s = <<END
       attr_reader :name
+      attr_accessor :params
       @@cache = {}
 
       class << self
@@ -26,15 +27,11 @@ END
 
   def initialize(name)
     @name = name
-    @type_parameters = []
+    @params = []
   end
 
   def to_s # :nodoc:
     return @name.to_s
-  end
-
-  def klass
-    eval @name.to_s
   end
 
   def eql?(other)
@@ -48,56 +45,13 @@ END
   def hash # :nodoc:
     return @name.to_s.hash
   end
-
-  def type_parameters
-    @type_parameters
-  end
-
-  def type_parameters=(t_params)
-    @type_parameters = t_params
-  end
-
-  def each
-    yield self
-  end
-  
-  def map
-    self
-  end
 end
 
 module RDL::Type
   class NominalType < Type
     include NamedType
 
-    def le(other, h={})
-      case other
-      when NominalType
-        s_type = eval(@name.to_s)
-        o_type = eval(other.name.to_s)
-        s_type <= o_type
-      when VarType
-        if h.keys.include? other.name
-          h[other.name] = UnionType.new(h[other.name], self)
-        else
-          h[other.name] ||= self
-        end
-        
-        true
-      when TopType
-        true
-      when StructuralType
-        raise "NOT implemented"
-      when GenericType
-        false
-      when TupleType
-        false
-      else
-        super(other, h)
-      end
-    end
-
-    def inspect
+    def to_s
       "NominalType<#{@name}>"
     end
   end
@@ -108,38 +62,13 @@ module RDL::Type
     def to_s
       ":#{@name}"
     end
-
-    def le(other, h={})
-      if other.instance_of?(SymbolType)
-        self == other
-      elsif other.instance_of?(NominalType) 
-        other.name.to_s == "Symbol" ? true : false
-      elsif other.instance_of? VarType
-        if h.keys.include? other.name
-          h[other.name] = UnionType.new(h[other.name], self)
-        else
-          h[other.name] ||= self
-        end
-
-        true
-      elsif other.instance_of? GenericType
-        false
-      else
-        super(other, h)
-      end
-    end
   end
 
   class VarType < Type
     include NamedType
 
-    def le(other, h={})
-      raise RDL::TypeComparisonException, "VarType#le should not be called!"
-    end
-    
-    def replace_vartypes(type_vars)
-      return type_vars[name.to_sym] if type_vars.has_key? name.to_sym
-      self
+    def to_s
+      "#{@name}"
     end
   end
 end

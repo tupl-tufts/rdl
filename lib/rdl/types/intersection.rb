@@ -40,15 +40,6 @@ module RDL::Type
       super()
     end
 
-    def map
-      ts = types.map {|t| yield t}
-      IntersectionType.new(*ts)
-    end
-    
-    def each
-      types.each {|t| yield t}
-    end
-    
     def le(other, h={})
       raise Exception, "IntersectionType#le should not be called"
     end

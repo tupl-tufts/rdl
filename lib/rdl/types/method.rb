@@ -23,27 +23,8 @@ module RDL::Type
       super()
     end
 
-    def map
-      new_arg_types = []
-
-      args.each {|p|
-        new_arg_types << (yield p)
-      }
-
-      MethodType.new(new_arg_types,
-                     block.nil? ? nil : (yield block),
-                     (yield ret)
-                     )
-    end
-
     def le(other, h={})
       raise Exception, "should not be called"
-    end
-
-    def each
-      yield ret
-      yield block if block
-      args.each { |a| yield a }
     end
 
     #returns the minimum number of arguments required by this function

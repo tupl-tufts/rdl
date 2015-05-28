@@ -3,7 +3,6 @@ require_relative 'type'
 module RDL::Type
   class TupleType < Type
     attr_reader :ordered_params
-    attr_reader :size
 
     @@cache = {}
 
@@ -22,16 +21,7 @@ module RDL::Type
       
     def initialize(arr)
       @ordered_params = arr
-      @size = arr.size
       super()
-    end
-
-    def map
-      TupleType.new(ordered_params.map {|p| yield p})
-    end
-
-    def each
-      @ordered_params.each {|p| yield p}
     end
 
     def is_tuple
@@ -52,24 +42,6 @@ module RDL::Type
 
     def ==(other) 
       other.instance_of?(SymbolType) and other.symbol == symbol
-    end
-    
-    def <=(other)
-      case other
-      when TupleType
-        return false unless self.size == other.size
-        
-        i = 0
-        
-        for t in self.ordered_params
-          return false if not t <= other.ordered_params[i]
-          i += 1
-        end
-        
-        true
-      else
-        super
-      end
     end
     
     def hash

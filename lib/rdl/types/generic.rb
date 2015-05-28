@@ -30,18 +30,6 @@ module RDL::Type
       super()
     end
 
-    def each 
-      yield @base
-      @params.each {|p| yield p}
-    end
-
-    def map
-      new_nominal = yield @base
-      new_params = []
-      params.each {|p| new_params << (yield p)}
-      GenericType.new(new_nominal, *new_params)
-    end
-
     def le(other, h={})
       if not self.get_vartypes.empty?
         raise RDL::TypeComparisonException, "self should not contain VarTypes, self = #{self}"

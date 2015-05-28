@@ -25,10 +25,7 @@ module RDL::Type
         end
       }
 
-      # this does not work with object_id (i.e. rake vs ruby -Ilib ...)
-      # fix is added in the == method
-      ts.sort! { |a,b| a.object_id <=> b.object_id }
-      
+      ts.sort! { |a,b| a.object_id <=> b.object_id }      
       ts.uniq!
 
       return NilType.new if ts.size == 0
@@ -45,15 +42,6 @@ module RDL::Type
     def initialize(types)
       @types = types
       super()
-    end
-
-    def each
-      types.each {|t| yield t}
-    end
-
-    def map
-      ts = types.map { |t| yield t }
-      UnionType.new(*ts)
     end
 
     def to_s  # :nodoc:
@@ -86,13 +74,7 @@ module RDL::Type
       return false if not other.instance_of? UnionType
       return true if other.types == @types
       return false if @types.size != other.types.size
-
-      # this step is necessary because of some really weird error with 
-      # sorting with object_id in self.new.
-      # rake test and ruby -Ilib test/... were having different results
-      a = Set.new @types
-      b = Set.new other.types
-      a == b
+      return (a == b)
     end
 
     def hash  # :nodoc:

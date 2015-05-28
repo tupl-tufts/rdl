@@ -21,14 +21,6 @@ module RDL::Type
       "nil"
     end
 
-    def map
-      self
-    end
-    
-    def each
-      yield self
-    end
-
     def eql?(other)
       self == other
     end
@@ -39,18 +31,6 @@ module RDL::Type
 
     def hash
       13
-    end
-
-    def le(other, h={})
-      if other.instance_of? VarType
-        if h.keys.include? other.name
-          h[other.name] = UnionType.new(h[other.name], self)
-        else
-          h[other.name] ||= self
-        end
-      end
-
-      true
     end
   end
 end

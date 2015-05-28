@@ -24,14 +24,6 @@ module RDL::Type
       super()
     end
 
-    def each
-      yield @type
-    end
-
-    def map
-       VarargType.new(yield type)
-    end
-        
     def to_s
       "*(#{@type})"
     end
