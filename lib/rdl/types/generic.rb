@@ -30,37 +30,6 @@ module RDL::Type
       super()
     end
 
-    def le(other, h={})
-      if not self.get_vartypes.empty?
-        raise RDL::TypeComparisonException, "self should not contain VarTypes, self = #{self}"
-      end
-
-      case other
-      when GenericType        
-        return false unless @base.le(other.base)
-        zipped = @params.zip(other.params)
-        zipped.all? {|t, u| t.le(u, h)}
-      when NominalType
-        if other.name.to_s == "Object"
-          true
-        else
-          false
-        end
-      when TupleType
-        false
-      when VarType
-        if h.keys.include? other.name
-          h[other.name] = UnionType.new(h[other.name], self)
-        else
-          h[other.name] = self
-        end
-
-        true
-      else
-        super(other, h)
-      end
-    end
-
     def to_s
       "#{@base}<#{params.join(', ')}>"
     end
