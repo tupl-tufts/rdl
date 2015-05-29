@@ -54,7 +54,6 @@ module RDL
                          RDL::Type::MethodType,
                          RDL::Type::OptionalType,
                          RDL::Type::StructuralType,
-                         RDL::Type::TupleType,
                          RDL::Type::VarargType,
                          RDL::Type::IntersectionType,
                          RDL::Type::Type,
