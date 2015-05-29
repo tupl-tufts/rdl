@@ -5,26 +5,28 @@ class TypeTest < Minitest::Test
   include RDL::Type
 
   def setup
-    @p = RDL::Type::Parser.new
-    @tnil = RDL::Type::NilType.new
-    @ttop = RDL::Type::TopType.new
-    @tfixnum = RDL::Type::NominalType.new Fixnum
-    @tfixnumopt = RDL::Type::OptionalType.new @tfixnum
-    @tfixnumvararg = RDL::Type::VarargType.new @tfixnum
-    @tenum = RDL::Type::NominalType.new :Enumerator
-    @ttrue = RDL::Type::NominalType.new TrueClass
-    @tfalse = RDL::Type::NominalType.new FalseClass
-    @tbool = RDL::Type::UnionType.new @ttrue, @tfalse
-    @ta = RDL::Type::NominalType.new :A
-    @tb = RDL::Type::NominalType.new :B
-    @tc = RDL::Type::NominalType.new :C
-    @tfixnumx = RDL::Type::NamedArgType.new("x", @tfixnum)
-    @tfixnumy = RDL::Type::NamedArgType.new("y", @tfixnum)
-    @tfixnumret = RDL::Type::NamedArgType.new("ret", @tfixnum)
-    @tfixnumoptx = RDL::Type::NamedArgType.new("x", @tfixnumopt)
-    @tfixnumvarargx = RDL::Type::NamedArgType.new("x", @tfixnumvararg)
-    @tsymbol = RDL::Type::SymbolType.new(:symbol)
-    @tsymbolx = RDL::Type::NamedArgType.new("x", @tsymbol)
+    @p = Parser.new
+    @tnil = NilType.new
+    @ttop = TopType.new
+    @tfixnum = NominalType.new Fixnum
+    @tfixnumopt = OptionalType.new @tfixnum
+    @tfixnumvararg = VarargType.new @tfixnum
+    @tstring = NominalType.new String
+    @tenum = NominalType.new :Enumerator
+    @ttrue = NominalType.new TrueClass
+    @tfalse = NominalType.new FalseClass
+    @tbool = UnionType.new @ttrue, @tfalse
+    @ta = NominalType.new :A
+    @tb = NominalType.new :B
+    @tc = NominalType.new :C
+    @tfixnumx = NamedArgType.new("x", @tfixnum)
+    @tfixnumy = NamedArgType.new("y", @tfixnum)
+    @tfixnumret = NamedArgType.new("ret", @tfixnum)
+    @tfixnumoptx = NamedArgType.new("x", @tfixnumopt)
+    @tfixnumvarargx = NamedArgType.new("x", @tfixnumvararg)
+    @tsymbol = SymbolType.new(:symbol)
+    @tsymbolx = NamedArgType.new("x", @tsymbol)
+    @ttuple = NominalType.new("Tuple")
   end
 
   def test_basic
@@ -114,8 +116,14 @@ class TypeTest < Minitest::Test
     t6 = @p.scan_str "## Hash<u, v>"
     assert_equal t6, (GenericType.new(t5, VarType.new("u"), VarType.new("v")))
     t7 = @p.scan_str "## Foo<String, Array<t>, Array<Array<t>>>"
-    assert_equal t7, (GenericType.new(NominalType.new("Foo"), NominalType.new("String"), t3, t4))
+    assert_equal t7, (GenericType.new(NominalType.new("Foo"), @tstring, t3, t4))
   end
 
+  def test_tuple
+    t1 = @p.scan_str "## [Fixnum, String]"
+    assert_equal t1, (GenericType.new(@ttuple, @tfixnum, @tstring))
+    t2 = @p.scan_str "## [String]"
+    assert_equal t2, (GenericType.new(@ttuple, @tstring))
+  end 
 
 end

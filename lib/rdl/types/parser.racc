@@ -83,14 +83,13 @@ rule
       end
     }
     | ID LESS type_expr_comma_list GREATER { 
-        if val[0] == "Tuple" then
-          result = RDL::Type::TupleType.new(*val[2])
-        else
-          n = RDL::Type::NominalType.new(val[0])
-          result = RDL::Type::GenericType.new(n, *val[2])
-        end
+      n = RDL::Type::NominalType.new(val[0])
+      result = RDL::Type::GenericType.new(n, *val[2])
     }
-
+    | LBRACKET type_expr_comma_list RBRACKET {
+      result = RDL::Type::GenericType.new(@ttuple, *val[1])
+    }
+    
 
 ---- header ----
 
@@ -101,7 +100,10 @@ module RDL::Type
 ---- inner ----
 
 def initialize()
-  @tbool = RDL::Type::UnionType.new (RDL::Type::NominalType.new TrueClass), (RDL::Type::NominalType.new FalseClass)
+  @ttrue = RDL::Type::NominalType.new(TrueClass)
+  @tfalse = RDL::Type::NominalType.new(FalseClass)
+  @tbool = RDL::Type::UnionType.new(@ttrue, @tfalse)
+  @ttuple = RDL::Type::NominalType.new(:Tuple)
   @yydebug = true
 end
 

@@ -4,7 +4,6 @@ module RDL::Type::NamedType
   def self.included(base)
     s = <<END
       attr_reader :name
-      attr_accessor :params
       @@cache = {}
 
       class << self
@@ -27,7 +26,6 @@ END
 
   def initialize(name)
     @name = name
-    @params = []
   end
 
   def to_s # :nodoc:

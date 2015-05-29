@@ -13,10 +13,13 @@ module RDL::Type
 
 class Parser < Racc::Parser
 
-module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 102)
+module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 101)
 
 def initialize()
-  @tbool = RDL::Type::UnionType.new (RDL::Type::NominalType.new TrueClass), (RDL::Type::NominalType.new FalseClass)
+  @ttrue = RDL::Type::NominalType.new(TrueClass)
+  @tfalse = RDL::Type::NominalType.new(FalseClass)
+  @tbool = RDL::Type::UnionType.new(@ttrue, @tfalse)
+  @ttuple = RDL::Type::NominalType.new(:Tuple)
   @yydebug = true
 end
 
@@ -24,53 +27,61 @@ end
 ##### State transition tables begin ###
 
 racc_action_table = [
-    25,    43,    32,     4,    20,    11,    10,    12,    16,    10,
-    12,     5,    22,    22,    22,    17,    18,    35,    17,    18,
-    16,    10,    12,    11,    10,    12,    11,    10,    12,    36,
-    17,    18,    41,    10,    12,    11,    10,    12,    11,    10,
-    12,    11,    10,    12,    11,    10,    12,    11,    10,    12,
-    37,     5,    21,    24,    42,     6,    23 ]
+    46,    28,    11,    10,    12,    33,    34,    17,    10,    12,
+    13,    36,    27,    23,    23,    13,    26,    18,    19,    11,
+    10,    12,    39,    17,    10,    12,    23,    13,    41,    18,
+    19,    13,     5,    18,    19,    11,    10,    12,    44,    10,
+    12,     4,    22,    13,    45,    21,    13,     6,   nil,     5,
+    11,    10,    12,    11,    10,    12,   nil,   nil,    13,   nil,
+   nil,    13,    11,    10,    12,    11,    10,    12,   nil,   nil,
+    13,   nil,   nil,    13,    11,    10,    12,    11,    10,    12,
+   nil,   nil,    13,   nil,   nil,    13 ]
 
 racc_action_check = [
-    16,    41,    23,     0,     6,    25,    25,    25,    24,    24,
-    24,     0,    11,    16,    41,    25,    25,    29,    24,    24,
-     5,     5,     5,    22,    22,    22,    43,    43,    43,    30,
-     5,     5,    37,    37,    37,    35,    35,    35,    17,    17,
-    17,    18,    18,    18,    21,    21,    21,     4,     4,     4,
-    31,    32,     9,    14,    38,     1,    13 ]
+    44,    17,    13,    13,    13,    24,    25,    27,    27,    27,
+    13,    26,    15,    44,    17,    27,    14,    27,    27,    28,
+    28,    28,    32,     5,     5,     5,    11,    28,    35,    28,
+    28,     5,    36,     5,     5,    33,    33,    33,    41,    41,
+    41,     0,     9,    33,    42,     6,    41,     1,   nil,     0,
+     4,     4,     4,    46,    46,    46,   nil,   nil,     4,   nil,
+   nil,    46,    18,    18,    18,    19,    19,    19,   nil,   nil,
+    18,   nil,   nil,    19,    22,    22,    22,    23,    23,    23,
+   nil,   nil,    22,   nil,   nil,    23 ]
 
 racc_action_pointer = [
-    -2,    55,   nil,   nil,    38,    11,     4,   nil,   nil,    48,
-   nil,    -9,   nil,    42,    51,   nil,    -8,    29,    32,   nil,
-   nil,    35,    14,   -13,    -1,    -4,   nil,   nil,   nil,    15,
-     7,    47,    38,   nil,   nil,    26,   nil,    23,    38,   nil,
-   nil,    -7,   nil,    17,   nil ]
+    36,    47,   nil,   nil,    41,    14,    45,   nil,   nil,    38,
+   nil,     5,   nil,    -7,     2,    10,   nil,    -7,    53,    56,
+   nil,   nil,    65,    68,     3,   -12,    -4,    -2,    10,   nil,
+   nil,   nil,     0,    26,   nil,    25,    19,   nil,   nil,   nil,
+   nil,    29,    28,   nil,    -8,   nil,    44,   nil ]
 
 racc_action_default = [
-   -25,   -25,    -1,    -2,   -25,    -6,   -25,    -3,   -16,   -19,
-   -21,   -22,   -23,   -25,    -7,    -9,   -22,   -25,   -25,   -13,
-    45,   -25,   -25,   -14,    -6,   -25,   -11,   -12,   -20,   -17,
-   -25,   -25,   -25,    -8,   -10,   -25,   -24,   -25,   -25,   -18,
-    -4,   -22,   -15,   -25,    -5 ]
+   -26,   -26,    -1,    -2,   -26,    -6,   -26,    -3,   -16,   -19,
+   -21,   -22,   -23,   -26,   -26,    -7,    -9,   -22,   -26,   -26,
+   -13,    48,   -26,   -26,   -17,   -26,   -14,    -6,   -26,   -11,
+   -12,   -20,   -26,   -26,   -25,   -26,   -26,    -8,   -10,   -24,
+   -18,   -26,   -26,    -4,   -22,   -15,   -26,    -5 ]
 
 racc_goto_table = [
-     7,    13,     2,    30,     3,    31,    34,    28,     1,   nil,
-   nil,   nil,   nil,    26,    27,   nil,    39,   nil,    29,   nil,
-    33,   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,
-   nil,    29,   nil,    40,    38,   nil,   nil,   nil,   nil,    44 ]
+     7,    14,     2,     3,    35,    38,    25,    31,     1,    24,
+   nil,   nil,   nil,   nil,    29,    30,    32,   nil,   nil,    24,
+   nil,   nil,   nil,    37,   nil,   nil,    40,   nil,   nil,    24,
+   nil,   nil,   nil,   nil,   nil,   nil,   nil,    43,    42,   nil,
+   nil,   nil,    47 ]
 
 racc_goto_check = [
-     4,     5,     2,    10,     3,     6,     8,     9,     1,   nil,
-   nil,   nil,   nil,     4,     4,   nil,    10,   nil,     4,   nil,
-     5,   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,
-   nil,     4,   nil,     4,     2,   nil,   nil,   nil,   nil,     4 ]
+     4,     5,     2,     3,     6,     8,    10,     9,     1,     4,
+   nil,   nil,   nil,   nil,     4,     4,    10,   nil,   nil,     4,
+   nil,   nil,   nil,     5,   nil,   nil,    10,   nil,   nil,     4,
+   nil,   nil,   nil,   nil,   nil,   nil,   nil,     4,     2,   nil,
+   nil,   nil,     4 ]
 
 racc_goto_pointer = [
-   nil,     8,     2,     4,    -4,    -4,   -18,   nil,   -19,   -14,
-   -19,   nil ]
+   nil,     8,     2,     3,    -4,    -4,   -22,   nil,   -23,   -15,
+    -7,   nil ]
 
 racc_goto_default = [
-   nil,   nil,   nil,   nil,    19,   nil,   nil,    14,    15,     8,
+   nil,   nil,   nil,   nil,    20,   nil,   nil,    15,    16,     8,
    nil,     9 ]
 
 racc_reduce_table = [
@@ -98,11 +109,12 @@ racc_reduce_table = [
   1, 35, :_reduce_21,
   1, 35, :_reduce_22,
   1, 35, :_reduce_23,
-  4, 35, :_reduce_24 ]
+  4, 35, :_reduce_24,
+  3, 35, :_reduce_25 ]
 
-racc_reduce_n = 25
+racc_reduce_n = 26
 
-racc_shift_n = 45
+racc_shift_n = 48
 
 racc_token_table = {
   false => 0,
@@ -374,12 +386,16 @@ module_eval(<<'.,.,', 'parser.racc', 76)
 
 module_eval(<<'.,.,', 'parser.racc', 85)
   def _reduce_24(val, _values, result)
-            if val[0] == "Tuple" then
-          result = RDL::Type::TupleType.new(*val[2])
-        else
           n = RDL::Type::NominalType.new(val[0])
-          result = RDL::Type::GenericType.new(n, *val[2])
-        end
+      result = RDL::Type::GenericType.new(n, *val[2])
+    
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'parser.racc', 89)
+  def _reduce_25(val, _values, result)
+          result = RDL::Type::GenericType.new(@ttuple, *val[1])
     
     result
   end
