@@ -52,6 +52,10 @@ module RDL::Type
     def to_s
       "NominalType<#{@name}>"
     end
+
+    def klass
+      name.to_s.split("::").inject(Object) { |base, name| base.const_get(name) }
+    end
   end
 
   class SymbolType < Type
