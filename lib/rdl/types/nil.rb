@@ -29,6 +29,10 @@ module RDL::Type
       other.instance_of? NilType
     end
 
+    def member?(obj)
+      obj == nil
+    end
+    
     def hash
       13
     end

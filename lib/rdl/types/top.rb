@@ -29,6 +29,10 @@ module RDL::Type
       other.instance_of? TopType
     end
 
+    def member?(obj)
+      true
+    end
+
     def hash
       17
     end

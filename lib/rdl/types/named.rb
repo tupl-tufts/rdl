@@ -56,6 +56,10 @@ module RDL::Type
     def klass
       name.to_s.split("::").inject(Object) { |base, name| base.const_get(name) }
     end
+
+    def member?(obj)
+      obj.class.ancestors.member?(klass)
+    end
   end
 
   class SymbolType < Type
