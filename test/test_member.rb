@@ -76,5 +76,14 @@ class MemberTest < Minitest::Test
     assert (not (@tc.member? b))
     assert (@tc.member? c)
   end
+
+  def test_symbol
+    assert (@tsym.member? :foo)
+    assert (@tsym.member? :bar)
+    assert (not (@tsym.member? "foo"))
+    assert (@tsymfoo.member? :foo)
+    assert (not (@tsymfoo.member? :bar))
+    assert (not (@tsymfoo.member? "foo"))
+  end
   
 end

@@ -68,6 +68,10 @@ module RDL::Type
     def to_s
       ":#{@name}"
     end
+
+    def member?(obj)
+      obj == name
+    end
   end
 
   class VarType < Type
