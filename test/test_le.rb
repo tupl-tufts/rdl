@@ -24,7 +24,7 @@ class LeTest < Minitest::Test
     @tobject_and_basicobject = IntersectionType.new(@tobject, @tbasicobject)
   end
   
-  def test_le_nil
+  def test_nil
     assert (@tnil <= @ttop)
     assert (@tnil <= @tstring)
     assert (@tnil <= @tobject)
@@ -37,7 +37,7 @@ class LeTest < Minitest::Test
     assert (not (@tsymfoo <= @tnil))
   end
 
-  def test_le_top
+  def test_top
     assert (not (@ttop <= @tnil))
     assert (not (@ttop <= @tstring))
     assert (not (@ttop <= @tobject))
@@ -50,14 +50,14 @@ class LeTest < Minitest::Test
     assert (@tsymfoo <= @ttop)
   end
 
-  def test_le_sym
+  def test_sym
     assert (@tsym <= @tsym)
     assert (@tsymfoo <= @tsymfoo)
     assert (@tsymfoo <= @tsym)
     assert (not (@tsym <= @tsymfoo))
   end
 
-  def test_le_nominal
+  def test_nominal
     assert (@tstring <= @tstring)
     assert (@tsym <= @tsym)
     assert (not (@tstring <= @tsym))
@@ -70,7 +70,7 @@ class LeTest < Minitest::Test
     assert (not (@tbasicobject <= @tobject))
   end
 
-  def test_le_generic
+  def test_generic
     assert (@tarraystring <= @tarraystring)
     assert (@tarrayobject <= @tarrayobject)
     assert (@tarrayarraystring <= @tarrayarraystring)
@@ -82,7 +82,7 @@ class LeTest < Minitest::Test
     assert (not (@thashobjectobject <= @thashstringstring))
   end
 
-  def test_le_union
+  def test_union
     assert (@tstring_or_sym <= @tobject)
     assert (not (@tobject <= @tstring_or_sym))
     assert (not (@tobject_and_basicobject <= @tobject))
