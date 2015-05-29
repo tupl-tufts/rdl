@@ -17,7 +17,6 @@ end
  'optional.rb',
  'structural.rb',
  'top.rb',
- 'tuple.rb',
  'type.rb',
  'type_inferencer.rb',
  'union.rb',
