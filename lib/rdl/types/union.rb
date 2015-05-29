@@ -56,6 +56,10 @@ module RDL::Type
       return (other.instance_of? UnionType) && (other.types == @types)
     end
 
+    def member?(obj)
+      @types.any? { |t| t.member? obj }
+    end
+    
     def hash  # :nodoc:
       41 + @types.hash
     end

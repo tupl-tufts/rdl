@@ -52,6 +52,10 @@ module RDL::Type
       return (other.instance_of? IntersectionType) && (other.types == @types)
     end
 
+    def member?(obj)
+      @types.all? { |t| t.member? obj }
+    end
+
     def hash  # :nodoc:
       47 + @types.hash
     end

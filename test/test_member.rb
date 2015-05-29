@@ -30,6 +30,7 @@ class MemberTest < Minitest::Test
     @thashstringstring = GenericType.new(@thash, @tstring, @tstring)
     @thashobjectobject = GenericType.new(@thash, @tobject, @tobject)
     @tstring_or_sym = UnionType.new(@tstring, @tsym)
+    @tstring_and_sym = IntersectionType.new(@tstring, @tsym)
     @tobject_and_basicobject = IntersectionType.new(@tobject, @tbasicobject)
     @ta = NominalType.new A
     @tb = NominalType.new B
@@ -75,7 +76,10 @@ class MemberTest < Minitest::Test
     assert (not (@tc.member? a))
     assert (not (@tc.member? b))
     assert (@tc.member? c)
-  end
+
+    assert (@tstring.member? nil)
+    assert (@tobject.member? nil)
+end
 
   def test_symbol
     assert (@tsym.member? :foo)
@@ -84,6 +88,24 @@ class MemberTest < Minitest::Test
     assert (@tsymfoo.member? :foo)
     assert (not (@tsymfoo.member? :bar))
     assert (not (@tsymfoo.member? "foo"))
+    assert (@tsymfoo.member? nil)
+  end
+
+  def test_union_intersection
+    o = Object.new
+
+    assert (@tstring_or_sym.member? "foo")
+    assert (@tstring_or_sym.member? :foo)
+    assert (not (@tstring_or_sym.member? o))
+    assert (@tstring_or_sym.member? nil)
+
+    assert (not (@tstring_and_sym.member? "foo"))
+    assert (not (@tstring_and_sym.member? :foo))
+    assert (not (@tstring_and_sym.member? o))
+    assert (@tstring_and_sym.member? nil)
+
+    assert (@tobject_and_basicobject.member? o)
+    assert (@tobject_and_basicobject.member? nil)
   end
   
 end

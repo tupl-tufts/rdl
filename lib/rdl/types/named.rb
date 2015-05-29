@@ -58,7 +58,7 @@ module RDL::Type
     end
 
     def member?(obj)
-      obj.class.ancestors.member?(klass)
+      obj.nil? || obj.class.ancestors.member?(klass)
     end
   end
 
@@ -70,7 +70,7 @@ module RDL::Type
     end
 
     def member?(obj)
-      obj == name
+      obj.nil? || obj == name
     end
   end
 
