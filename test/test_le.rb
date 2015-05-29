@@ -1,55 +1,92 @@
 require 'minitest/autorun'
 require_relative '../lib/rdl.rb'
 
-class TypeTest < Minitest::Test
+class LeTest < Minitest::Test
   include RDL::Type
 
-  # Nil
-  # Top
-  # "A"
-  # :foo
-  # var "a"
-  # +
-  # &
-  # named arg
-  # opt
-  # vararg
-  # Tuple<...>
-  # Array<...>
-  # Hash<...>
-  # [...]
-  # Method...
+  def setup
+    @tnil = NilType.new
+    @ttop = TopType.new
+    @tstring = NominalType.new "String"
+    @tobject = NominalType.new "Object"
+    @tbasicobject = NominalType.new "BasicObject"
+    @tsymfoo = SymbolType.new :foo
+    @tsym = NominalType.new Symbol
+    @tarray = NominalType.new Array
+    @tarraystring = GenericType.new(@tarray, @tstring)
+    @tarrayobject = GenericType.new(@tarray, @tobject)
+    @tarrayarraystring = GenericType.new(@tarray, @tarraystring)
+    @tarrayarrayobject = GenericType.new(@tarray, @tarrayobject)
+    @thash = NominalType.new Hash
+    @thashstringstring = GenericType.new(@thash, @tstring, @tstring)
+    @thashobjectobject = GenericType.new(@thash, @tobject, @tobject)
+    @tstring_or_sym = UnionType.new(@tstring, @tsym)
+    @tobject_and_basicobject = IntersectionType.new(@tobject, @tbasicobject)
+  end
   
-  def test_le_basic
-    t1 = NilType.new
-    t2 = TopType.new
-    t3 = NominalType.new "A"
-    t4 = SymbolType.new :foo
-    t5 = VarType.new "a"
-    t6 = UnionType.new t3, t4
-    t7 = IntersectionType.new t3, t4
-    t9 = GenericType.new t3, t4, t5
-    assert (t1 <= t1)
-    assert (t1 <= t2)
-    assert (t1 <= t3)
-    assert (t1 <= t4)
-    assert (t1 <= t5)
-    assert (t1 <= t6)
-    assert (t1 <= t7)
-    assert (t1 <= t9)
-    assert (not (t2 <= t1))
-    assert (not (t3 <= t1))
-    assert (not (t4 <= t1))
-    assert (not (t5 <= t1))
-    assert (not (t6 <= t1))
-    assert (not (t7 <= t1))
-    assert (not (t9 <= t1))
-    assert (t3 <= t2)
-    assert (t4 <= t2)
-    assert (t5 <= t2)
-    assert (t6 <= t2)
-    assert (t7 <= t2)
-    assert (t9 <= t2)
+  def test_le_nil
+    assert (@tnil <= @ttop)
+    assert (@tnil <= @tstring)
+    assert (@tnil <= @tobject)
+    assert (@tnil <= @tbasicobject)
+    assert (@tnil <= @tsymfoo)
+    assert (not (@ttop <= @tnil))
+    assert (not (@tstring <= @tnil))
+    assert (not (@tobject <= @tnil))
+    assert (not (@tbasicobject <= @tnil))
+    assert (not (@tsymfoo <= @tnil))
+  end
+
+  def test_le_top
+    assert (not (@ttop <= @tnil))
+    assert (not (@ttop <= @tstring))
+    assert (not (@ttop <= @tobject))
+    assert (not (@ttop <= @tbasicobject))
+    assert (not (@ttop <= @tsymfoo))
+    assert (@ttop <= @ttop)
+    assert (@tstring <= @ttop)
+    assert (@tobject <= @ttop)
+    assert (@tbasicobject <= @ttop)
+    assert (@tsymfoo <= @ttop)
+  end
+
+  def test_le_sym
+    assert (@tsym <= @tsym)
+    assert (@tsymfoo <= @tsymfoo)
+    assert (@tsymfoo <= @tsym)
+    assert (not (@tsym <= @tsymfoo))
+  end
+
+  def test_le_nominal
+    assert (@tstring <= @tstring)
+    assert (@tsym <= @tsym)
+    assert (not (@tstring <= @tsym))
+    assert (not (@tsym <= @tstring))
+    assert (@tstring <= @tobject)
+    assert (@tstring <= @tbasicobject)
+    assert (@tobject <= @tbasicobject)
+    assert (not (@tobject <= @tstring))
+    assert (not (@tbasicobject <= @tstring))
+    assert (not (@tbasicobject <= @tobject))
+  end
+
+  def test_le_generic
+    assert (@tarraystring <= @tarraystring)
+    assert (@tarrayobject <= @tarrayobject)
+    assert (@tarrayarraystring <= @tarrayarraystring)
+    assert (@thashstringstring <= @thashstringstring)
+    assert (@thashobjectobject <= @thashobjectobject)
+    assert (not (@tarraystring <= @tarrayobject))
+    assert (not (@tarrayobject <= @tarraystring))
+    assert (not (@thashstringstring <= @thashobjectobject))
+    assert (not (@thashobjectobject <= @thashstringstring))
+  end
+
+  def test_le_union
+    assert (@tstring_or_sym <= @tobject)
+    assert (not (@tobject <= @tstring_or_sym))
+    assert (not (@tobject_and_basicobject <= @tobject))
+    assert (@tobject <= @tobject_and_basicobject)
   end
   
 end
