@@ -143,21 +143,4 @@ class TypeTest < Minitest::Test
     t2 = StructuralType.new :m1 => tm1, :m2 => tm2
     assert_equal t1, t2
   end
-
-  def test_parameterized_nil
-    tnil = NilType.new
-    tarr = NominalType.new Array
-    tfixnum = NominalType.new Fixnum
-    tarr_nil = GenericType.new(tarr, tnil)
-    tarr_fixnum = GenericType.new(tarr, tfixnum)
-
-    t = [].rdl_type
-    assert_equal(t, tarr_nil)
-
-    t = [nil].rdl_type
-    assert_equal(t, tarr_nil)
-
-    t = [nil, 0].rdl_type
-    assert_equal(t, tarr_fixnum)
-  end
 end
