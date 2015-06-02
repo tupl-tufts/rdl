@@ -48,7 +48,6 @@ module RDL
                          RDL::Type::SymbolType,
                          RDL::Type::NominalType,
                          RDL::Type::VarType,
-                         RDL::Type::NamedType,
                          RDL::Type::UnionType,
                          RDL::Type::GenericType,
                          RDL::Type::MethodType,

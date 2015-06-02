@@ -12,14 +12,16 @@ end
  'method.rb',
  'method_check.rb',
  'nil.rb',
- 'named.rb',
  'named_arg.rb',
+ 'nominal.rb',
  'optional.rb',
  'structural.rb',
+ 'symbol.rb',
  'top.rb',
  'type.rb',
  'type_inferencer.rb',
  'union.rb',
+ 'var.rb',
  'vararg.rb'].each { |f| require_relative "types/#{f}" }
 
 class Object
