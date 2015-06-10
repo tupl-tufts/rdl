@@ -31,5 +31,9 @@ module RDL::Type
     def <=(other)
       Type.<=(self, other)
     end
+    
+    def rdoc_str
+        _to_actual_type.to_s
+    end
   end
 end
