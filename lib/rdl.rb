@@ -40,11 +40,11 @@ module RDL
     nt.get_method(m.to_sym)
   end
 
-  def keyword(mname, *args, &blk)
-    Lang.new(self).keyword(mname, *args, &blk)
-  end
+#  def keyword(mname, *args, &blk)
+#    Lang.new(self).keyword(mname, *args, &blk)
+#  end
 
-  alias :entry :keyword
+#  alias :entry :keyword
 
   def type_params(*t_params)
     return if t_params.empty?
@@ -69,13 +69,13 @@ module RDL
   def spec(mname, *args, &blk)
     mname = mname.to_sym
 
-    if self.instance_methods(false).include? mname
-      Lang.new(self).spec(mname, *args, &blk)
-    else
+#    if self.instance_methods(false).include? mname
+#      Lang.new(self).spec(mname, *args, &blk)
+#    else
       deferred_specs = self.instance_variable_get(:@__deferred_specs)
       deferred_specs[mname] = [] if not deferred_specs.keys.include? mname
       deferred_specs[mname].push([args, blk])
-    end
+#    end
   end
 
 # Typesig annotations for method types
