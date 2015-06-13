@@ -1,6 +1,6 @@
 module RDL
     
-  class ContractViolationException < StandardError; end
+  class ContractException < StandardError; end
     
   ##########################
   ### Contract Structure ###
@@ -19,9 +19,9 @@ module RDL
         else
           tmp = @pred.call(*v)
         end
-        raise ContractViolationException, "Value(s) #{v.inspect} does not match contract(s) #{self.rdoc_gen}\n    Blaming: #{prev}." unless tmp
+        raise ContractException, "Value(s) #{v.inspect} does not match contract(s) #{self.rdoc_gen}\n    Blaming: #{prev}." unless tmp
       else
-        raise ContractViolationException, "Error: Invalid number of arguments in Contract #{self.rdoc_gen}: Expecting arity #{@pred.arity}, got #{v}"
+        raise ContractException, "Error: Invalid number of arguments in Contract #{self.rdoc_gen}: Expecting arity #{@pred.arity}, got #{v}"
       end
     end
     def name(desc="Contract<#{self}>")
@@ -225,9 +225,9 @@ module RDL
     def init; end
     def check(*v, prev:"", blame:0, &blk)
       if blk then
-        raise ContractViolationException, "Higher Order Contract Failure #{rdoc_gen}\nat #{prev}" unless check_aux(v,0, prev:prev, blame:blame, &blk)
+        raise ContractException, "Higher Order Contract Failure #{rdoc_gen}\nat #{prev}" unless check_aux(v,0, prev:prev, blame:blame, &blk)
       else
-        raise ContractViolationException, "Higher Order Contract Failure #{rdoc_gen}\nat #{prev}" unless check_aux(v,0, prev:prev, blame:blame)
+        raise ContractException, "Higher Order Contract Failure #{rdoc_gen}\nat #{prev}" unless check_aux(v,0, prev:prev, blame:blame)
       end
     end
     def check_aux(v, nt, prev:"", blame:0)
@@ -235,7 +235,7 @@ module RDL
       ret
     end
     def add_ctc(ctc)
-      (ctc.is_a? Contract) ? (@ctcls<<ctc) : (raise ContractViolationException, "Attempting to add non-Contract to Contract bundle")
+      (ctc.is_a? Contract) ? (@ctcls<<ctc) : (raise ContractException, "Attempting to add non-Contract to Contract bundle")
     end
     def rdoc_gen
       rdc="{"
