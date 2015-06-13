@@ -22,7 +22,7 @@ end
  'type_inferencer.rb',
  'union.rb',
  'var.rb',
- 'vararg.rb'].each { |f| require_relative "types/#{f}" }
+ 'vararg.rb'].each { |f| require_relative "type/#{f}" }
 
 class Object
   def rdl_type
