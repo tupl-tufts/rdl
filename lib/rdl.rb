@@ -1,11 +1,12 @@
 require 'set'
 
 require_relative 'rdl/master_switch'
-require_relative 'rdl_ctc'
+#require_relative 'rdl_ctc'
 require_relative 'rdl_sig'
 require_relative 'rdl_dsl'
 require_relative 'rdl_rdc'
 require_relative 'rdl/types'
+require_relative 'rdl/contracts'
 require_relative 'rdl/turn_off'
 
 class Object
