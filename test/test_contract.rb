@@ -3,7 +3,7 @@ require_relative '../lib/rdl.rb'
 
 class ContractTest < Minitest::Test
   include RDL::Contract
-  
+
   def test_flat
     pos = FlatContract.new("Positive") { |x| x > 0 }
     assert_equal pos.to_s, "Positive"
@@ -38,5 +38,16 @@ class ContractTest < Minitest::Test
     assert (poszero.check 0)
     assert_raises(ContractException) { poszero.check (-1) }
     assert (poszeroneg.check (-1))
+  end
+
+  def test_proc
+    pos = FlatContract.new("Positive") { |x| x > 0 }
+    neg = FlatContract.new("Negative") { |x, ret| ret < 0 }
+    pc = ProcContract.new(pre_cond: pos, post_cond: neg)
+    proc1 = pc.wrap { |x| -x }
+    assert (proc1.call(42))
+    assert_raises(ContractException) { proc1.call(-42) }
+    proc2 = pc.wrap { |x| x }
+    assert_raises(ContractException) { proc2.call(42) }
   end
 end
