@@ -3,6 +3,8 @@ module RDL::Type
   # should never be instantiated directly.
   class Type
 
+    @@contract_cache = {}
+    
     # t1 <= t2
     # Note this method is probably not useful.
     def self.<=(t1, t2)
@@ -31,9 +33,14 @@ module RDL::Type
     def <=(other)
       Type.<=(self, other)
     end
-    
-    def rdoc_str
-        _to_actual_type.to_s
+
+    def to_contract
+      c = @@contract_cache[self]
+      if not c
+        c = RDL::Contract::FlatContract.new(to_s) { |x| member? x }
+        @@contract_cache[self] = c
+      end
+      return c
     end
   end
 end
