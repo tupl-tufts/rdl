@@ -1,4 +1,4 @@
-module RDL 
+module RDL::Contract
   class ContractException < StandardError
   end
 

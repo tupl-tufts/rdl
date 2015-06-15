@@ -1,4 +1,4 @@
-module RDL
+module RDL::Contract
   class FlatContract < Contract
     attr_accessor :desc
 

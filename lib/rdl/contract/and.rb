@@ -1,4 +1,4 @@
-module RDL
+module RDL::Contract
   class AndContract < Contract
     attr_reader :contracts
 
