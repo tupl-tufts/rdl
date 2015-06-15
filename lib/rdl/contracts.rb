@@ -1,3 +1,5 @@
 ['contract.rb',
  'and.rb',
- 'flat.rb'].each { |f| require_relative "contract/#{f}" }
+ 'flat.rb',
+ 'or.rb',
+].each { |f| require_relative "contract/#{f}" }

@@ -1,5 +1,5 @@
 module RDL::Contract
-  class AndContract < Contract
+  class OrContract < Contract
     attr_reader :contracts
     
     def initialize(*contracts)
@@ -8,7 +8,14 @@ module RDL::Contract
 
     def check(*v, &blk)
       # All contracts must be satisfied
-      @contracts.all? { |c| c.check(*v, &blk) }
+      @contracts.each { |c|
+        begin
+          c.check(*v, &blk)
+          return true
+        rescue ContractException
+        end
+      }
+      raise ContractException, "#{v.inspect} does not satisfy #{self}"
     end
     
     def to_s

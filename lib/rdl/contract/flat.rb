@@ -19,6 +19,7 @@ module RDL::Contract
         raise ContractException,
               "Invalid number of arguments: Expecting #{@pred.arity}, got #{v.size}"
       end
+      true
     end
 
     def to_s
