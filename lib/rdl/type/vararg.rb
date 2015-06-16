@@ -20,6 +20,8 @@ module RDL::Type
     end
 
     def initialize(type)
+      raise "Can't have vararg optional type" if type.class == OptionalType
+      raise "Can't have vararg vararg type" if type.class == VarargType
       @type = type
       super()
     end
@@ -36,6 +38,8 @@ module RDL::Type
       return (other.instance_of? VarargType) && (other.type == @type)
     end
 
+    # Note: no member?, because these can only appear in MethodType, where they're handled specially
+    
     def hash # :nodoc:
       return 59 + @type.hash
     end
