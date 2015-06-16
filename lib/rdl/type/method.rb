@@ -48,11 +48,10 @@ module RDL::Type
     def to_contract
       # @ret, @args are the formals
       # ret, args are the actuals
-      argcs = args.map { |arg| arg.to_contract }
       prec = RDL::Contract::FlatCtc.new(@args) { |*args|
         i = 0 # position in @args
         args.each { |arg|
-          raise TypeException, "Too many arguments" if i >= @args[size]
+          raise TypeException, "Type error: Too many arguments" if i >= @args[size]
           case @args[i].class
           when OptionalType
             unless @args[i].type.member? arg
@@ -77,10 +76,14 @@ module RDL::Type
         # Check if there aren't enough arguments; uses invariant established in initialize
         # that method types end with several optional types and then one (optional) vararg type
         if (i < @args.size) && (@args[i].class != OptionalType) && (@args[i] != VarargType)
-          raise TypeException, "Too few arguments"
+          raise TypeException, "Type error: Too few arguments"
         end
       }
-      postc = RDL::Contract::FlatCtc.new(@ret) { |ret, *args| @ret.member? ret }
+      postc = RDL::Contract::FlatCtc.new(@ret) { |ret, *args|
+        unless @ret.member? ret
+          raise TypeException, "Type error: excepting (return) #{@ret}, got #{ret.inspect}"
+        end
+      }
     end
     
     def to_s  # :nodoc:
