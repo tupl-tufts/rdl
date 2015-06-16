@@ -16,10 +16,28 @@ module RDL::Type
     # [+block+] The type of the block passed to this method, if it takes one.
     # [+ret+] The type that the procedure returns.
     def initialize(args, block, ret)
-      @args = args
+      # First check argument types have form (any number of required
+      # args, any number of optional args, at most one vararg)
+      state = :required
+      args.each { |arg|
+        case arg.class
+        when OptionalType
+          raise "optional arguments not allowed after varargs" if state == :vararg
+          state = :optional
+        when VarargType
+          raise "multiple varargs not allowed" if state == :vararg
+          state = :vararg
+        else
+          raise "required arguments not allowed after optional arguments or varargs" if state == :optional || state == :vararg
+        end
+      }
+      @args = *args
+
       raise "block must be MethodType" unless (not block) or (block.instance_of? MethodType)
       @block = block
+
       @ret = ret
+
       super()
     end
 
@@ -27,90 +45,42 @@ module RDL::Type
       raise Exception, "should not be called"
     end
 
-    #returns the minimum number of arguments required by this function
-    # i.e. a count of the required arguments.
-    def min_args
-      p_layout = parameter_layout
-      p_layout[:required][0] + p_layout[:required][1]
-    end
-    
-    #gets the maximum number of arguments this function can take. If there is a rest
-    # argument, this function returns -1 (unlimited)
-    def max_args
-      p_layout = parameter_layout
-      if p_layout[:rest]
-        -1
-      else
-        min_args + p_layout[:opt]
-      end
-    end
-
-    # gets a hash describing the layout of the arguments to a function
-    # the requied member is a two member array that indicates the number of
-    # required arugments at the beginning of the parameter list and the number
-    # at the end respectively. The opt member indicates the number of optional
-    # arguments. If rest is true, then there is a rest argument.
-    # For reference, parameter lists are described by the following grammar
-    # required*, optional*, rest?, required*
-    def parameter_layout
-      return @param_layout_cache if defined? @param_layout_cache
-      a_list = args + [nil]
-      to_return = {}
-      to_return[:required] = [0,0]
-      to_return[:rest] =  false
-      to_return[:opt] = 0
-
-      def param_type(arg_type)
-        case arg_type
-        when NilClass
-          :end
-        when OptionalType
-          :opt
-        when VarargType
-          :rest
-        else
-          :req
+    def to_contract
+      # @ret, @args are the formals
+      # ret, args are the actuals
+      argcs = args.map { |arg| arg.to_contract }
+      prec = RDL::Contract::FlatCtc.new(@args) { |*args|
+        i = 0 # position in @args
+        args.each { |arg|
+          raise TypeException, "Too many arguments" if i >= @args[size]
+          case @args[i].class
+          when OptionalType
+            unless @args[i].type.member? arg
+              raise TypeException,
+                    "Type error: Argument #{i}, expecting (optional) #{@args[i]}, got #{arg.inspect}"
+            end
+            i += 1
+          when VarargType
+            unless @args[i].type.member? arg
+              raise TypeException,
+                    "Type error: Argument #{i}, expecting (vararg) #{@args[i]}, got #{arg.inspect}"
+            end
+            # do not increment i, since vararg can take any number of arugment
+          else
+            unless @args[formal_i].member? arg
+              raise TypeException,
+                    "Type error: Argument #{i}, expecting #{@args[i]}, got #{arg.inspect}"
+            end
+            i += 1
+          end
+        }
+        # Check if there aren't enough arguments; uses invariant established in initialize
+        # that method types end with several optional types and then one (optional) vararg type
+        if (i < @args.size) && (@args[i].class != OptionalType) && (@args[i] != VarargType)
+          raise TypeException, "Too few arguments"
         end
-      end
-      
-      counter = 0
-      i = 0
-      p_type = param_type(a_list[i])
-      
-      while p_type == :req
-        counter+=1
-        i+=1
-        p_type = param_type(a_list[i])
-      end
-      
-      to_return[:required][0] = counter
-      counter = 0
-      
-      while p_type == :opt
-        counter+=1
-        i+=1
-        p_type = param_type(a_list[i])
-      end
-      
-      to_return[:opt] = counter
-      
-      if p_type == :rest
-        to_return[:rest] = true
-        i+=1
-        p_type = param_type(a_list[i])
-      end
-      
-      counter = 0
-      
-      while p_type == :req
-        counter+=1
-        i+=1
-        p_type = param_type(a_list[i])
-      end
-      
-      to_return[:required][1] = counter
-      raise "Invalid argument string detected" unless p_type == :end
-      @param_layout_cache = to_return
+      }
+      postc = RDL::Contract::FlatCtc.new(@ret) { |ret, *args| @ret.member? ret }
     end
     
     def to_s  # :nodoc:
