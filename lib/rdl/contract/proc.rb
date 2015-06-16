@@ -12,7 +12,7 @@ module RDL::Contract
         @pre_cond.check(*v, &other_blk)
         # TODO: wrap other_blk as well?
         tmp = blk.call(*v, &other_blk)
-        @post_cond.check(*v, tmp, &other_blk)
+        @post_cond.check(tmp, *v, &other_blk)
         tmp
       }
     end

@@ -42,7 +42,7 @@ class ContractTest < Minitest::Test
 
   def test_proc
     pos = FlatContract.new("Positive") { |x| x > 0 }
-    neg = FlatContract.new("Negative") { |x, ret| ret < 0 }
+    neg = FlatContract.new("Negative") { |ret, x| ret < 0 }
     pc = ProcContract.new(pre_cond: pos, post_cond: neg)
     proc1 = pc.wrap { |x| -x }
     assert (proc1.call(42))
