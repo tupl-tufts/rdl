@@ -12,11 +12,9 @@ module RDL::Type
 
     def self.new(type)
       t = @@cache[type]
-      if not t
-        t = VarargType.__new__ type
-        @@cache[type] = t
-      end
-      return t
+      return t if t
+      t = VarargType.__new__ type
+      return (@@cache[type] = t) # assignment evaluates to t
     end
 
     def initialize(type)

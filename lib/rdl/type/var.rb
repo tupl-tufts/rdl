@@ -13,12 +13,9 @@ module RDL::Type
     def self.new(name)
       name = name.to_s.to_sym
       t = @@cache[name]
-      if not t
-        t = self.__new__ name
-        @@cache[name] = t
-      end
-
-      return t
+      return t if t
+      t = self.__new__ name
+      return (@@cache[name] = t) # assignment evaluates to t
     end
 
     def initialize(name)

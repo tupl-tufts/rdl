@@ -15,11 +15,9 @@ module RDL::Type
 
     def self.new(base, *params)
       t = @@cache[[base, params]]
-      if not t
-        t = GenericType.__new__(base, params)
-        @@cache[[base, params]] = t
-      end
-      return t
+      return t if t
+      t = GenericType.__new__(base, params)
+      return (@@cache[[base, params]] = t) # assignment evaluates to t
     end
 
     def initialize(base, params)

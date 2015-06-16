@@ -90,7 +90,7 @@ module RDL::Type
         end
       }
       c = ProcContract.new(pre_cond: prec, post_cond: postc)
-      @@contract_cache[self] = c # evaluates to c
+      return (@@contract_cache[self] = c) # assignment evaluates to c
     end
     
     def to_s  # :nodoc:

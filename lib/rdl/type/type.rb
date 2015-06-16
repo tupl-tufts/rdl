@@ -47,7 +47,7 @@ module RDL::Type
         end
         true
       }
-      @@contract_cache[self] = c  # evaluates to c
+      return (@@contract_cache[self] = c)  # assignment evaluates to c
     end
   end
 end

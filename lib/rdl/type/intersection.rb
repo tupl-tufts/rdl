@@ -28,11 +28,9 @@ module RDL::Type
       return ts[0] if ts.size == 1
 
       t = @@cache[ts]
-      if not t
-        t = IntersectionType.__new__(ts)
-        @@cache[ts] = t
-      end
-      return t
+      return t if t
+      t = IntersectionType.__new__(ts)
+      return (@@cache[ts] = t) # assignment evaluates to t
     end
 
     def initialize(types)

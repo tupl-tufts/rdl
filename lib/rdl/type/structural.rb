@@ -12,11 +12,9 @@ module RDL::Type
 
     def self.new(methods)
       t = @@cache[methods]
-      if not t
-        t = StructuralType.__new__(methods)
-        @@cache[methods] = t
-      end
-      return t
+      return t if t
+      t = StructuralType.__new__(methods)
+      return (@@cache[methods] = t) # assignment evaluates to t
     end
 
     # Create a new StructuralType.
