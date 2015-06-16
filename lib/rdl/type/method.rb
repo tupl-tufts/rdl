@@ -22,7 +22,7 @@ module RDL::Type
       # args, any number of optional args, at most one vararg)
       state = :required
       args.each { |arg|
-        case arg.class
+        case arg
         when OptionalType
           raise "optional arguments not allowed after varargs" if state == :vararg
           state = :optional
@@ -56,8 +56,8 @@ module RDL::Type
       prec = RDL::Contract::FlatContract.new(@args) { |*args|
         i = 0 # position in @args
         args.each { |arg|
-          raise TypeException, "Type error: Too many arguments" if i >= @args[size]
-          case @args[i].class
+          raise TypeException, "Type error: Too many arguments" if i >= @args.size
+          case @args[i]
           when OptionalType
             unless @args[i].type.member? arg
               raise TypeException,
@@ -71,7 +71,7 @@ module RDL::Type
             end
             # do not increment i, since vararg can take any number of arugment
           else
-            unless @args[formal_i].member? arg
+            unless @args[i].member? arg
               raise TypeException,
                     "Type error: Argument #{i}, expecting #{@args[i]}, got #{arg.inspect}"
             end
@@ -80,14 +80,16 @@ module RDL::Type
         }
         # Check if there aren't enough arguments; uses invariant established in initialize
         # that method types end with several optional types and then one (optional) vararg type
-        if (i < @args.size) && (@args[i].class != OptionalType) && (@args[i] != VarargType)
+        if (i < @args.size) && (@args[i].class != OptionalType) && (@args[i].class != VarargType)
           raise TypeException, "Type error: Too few arguments"
         end
+        true
       }
       postc = RDL::Contract::FlatContract.new(@ret) { |ret, *args|
         unless @ret.member? ret
           raise TypeException, "Type error: excepting (return) #{@ret}, got #{ret.inspect}"
         end
+        true
       }
       c = RDL::Contract::ProcContract.new(pre_cond: prec, post_cond: postc)
       return (@@contract_cache[self] = c) # assignment evaluates to c
