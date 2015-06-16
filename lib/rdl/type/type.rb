@@ -1,6 +1,9 @@
 module RDL::Type
   # Abstract base class for all types. This class
   # should never be instantiated directly.
+
+  class TypeException < StandardError; end
+
   class Type
 
     @@contract_cache = {}
@@ -37,7 +40,12 @@ module RDL::Type
     def to_contract
       c = @@contract_cache[self]
       if not c
-        c = RDL::Contract::FlatContract.new(to_s) { |x| member? x }
+        c = RDL::Contract::FlatContract.new(to_s) { |x|
+          unless member? x
+            raise TypeException, "Type error: Expecting #{to_s}, got #{x.inspect}"
+          end
+          true
+        }
         @@contract_cache[self] = c
       end
       return c

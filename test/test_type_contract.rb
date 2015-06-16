@@ -9,11 +9,11 @@ class TypeContractTest < Minitest::Test
     tnil = NilType.new
     cnil = tnil.to_contract
     assert (cnil.check nil)
-    assert_raises(ContractException) { cnil.check true }
+    assert_raises(TypeException) { cnil.check true }
     tfixnum = NominalType.new :Fixnum
     cfixnum = tfixnum.to_contract
     assert (cfixnum.check 42)
     assert (cfixnum.check nil)
-    assert_raises(ContractException) { cfixnum.check "42" }
+    assert_raises(TypeException) { cfixnum.check "42" }
   end
 end
