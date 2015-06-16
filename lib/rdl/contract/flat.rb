@@ -13,7 +13,7 @@ module RDL::Contract
         # TODO: Labels and proc.parameters :lbl, :rest
         unless blk ? @pred.call(*v, &blk) : @pred.call(*v)
           raise ContractException,
-                "#{v.inspect} does not satisfy #{self}"
+                "#{v.inspect} does not satisfy #{self.to_s}"
         end
       else
         raise ContractException,
