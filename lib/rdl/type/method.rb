@@ -53,7 +53,7 @@ module RDL::Type
 
       # @ret, @args are the formals
       # ret, args are the actuals
-      prec = RDL::Contract::FlatCtc.new(@args) { |*args|
+      prec = RDL::Contract::FlatContract.new(@args) { |*args|
         i = 0 # position in @args
         args.each { |arg|
           raise TypeException, "Type error: Too many arguments" if i >= @args[size]
@@ -84,12 +84,12 @@ module RDL::Type
           raise TypeException, "Type error: Too few arguments"
         end
       }
-      postc = RDL::Contract::FlatCtc.new(@ret) { |ret, *args|
+      postc = RDL::Contract::FlatContract.new(@ret) { |ret, *args|
         unless @ret.member? ret
           raise TypeException, "Type error: excepting (return) #{@ret}, got #{ret.inspect}"
         end
       }
-      c = ProcContract.new(pre_cond: prec, post_cond: postc)
+      c = RDL::Contract::ProcContract.new(pre_cond: prec, post_cond: postc)
       return (@@contract_cache[self] = c) # assignment evaluates to c
     end
     
