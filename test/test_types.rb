@@ -112,9 +112,8 @@ class TypeTest < Minitest::Test
     assert_equal t1.args, [ta, tb, tc]
     assert_nil t1.block
     assert_equal t1.ret, tnil
-    t2 = MethodType.new tnil, t1, tnil
+    t2 = MethodType.new [tnil], t1, tnil
     assert_equal t2.block, t1
-    assert_raises(RuntimeError) { MethodType.new tnil, tnil, tnil }
   end
 
   def test_generic
