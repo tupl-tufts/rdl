@@ -10,6 +10,8 @@ module RDL::Type
     attr_reader :block
     attr_reader :ret
 
+    @@contract_cache = {}
+    
     # Create a new MethodType
     #
     # [+args+] List of types of the arguments of the procedure (use [] for no args).
@@ -46,6 +48,9 @@ module RDL::Type
     end
 
     def to_contract
+      c = @@contract_cache[self]
+      return c if c
+
       # @ret, @args are the formals
       # ret, args are the actuals
       prec = RDL::Contract::FlatCtc.new(@args) { |*args|
@@ -84,6 +89,8 @@ module RDL::Type
           raise TypeException, "Type error: excepting (return) #{@ret}, got #{ret.inspect}"
         end
       }
+      c = ProcContract.new(pre_cond: prec, post_cond: postc)
+      @@contract_cache[self] = c # evaluates to c
     end
     
     def to_s  # :nodoc:
