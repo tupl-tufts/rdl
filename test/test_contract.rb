@@ -50,4 +50,13 @@ class ContractTest < Minitest::Test
     proc2 = pc.wrap { |x| x }
     assert_raises(ContractException) { proc2.call(42) }
   end
+
+  def test_turn_off
+    foo = FlatContract.new("Foo") {
+      pos = FlatContract.new("Positive") { |x| x > 0 }
+      pos.check (-42)
+      true
+    }
+    assert_equal foo.check, true
+  end
 end

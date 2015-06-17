@@ -20,7 +20,9 @@ module RDL
       return tmp
     end
     def self.off()
+      return unless @@switch
       tmp = @@switch
+      @@switch = false
       begin
         yield
       ensure

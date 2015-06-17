@@ -7,10 +7,8 @@ module RDL::Contract
     end
 
     def check(*v, &blk)
-      RDL::Switch.off {
-        # All contracts must be satisfied
-        @contracts.all? { |c| c.check(*v, &blk) }
-      }
+      # All contracts must be satisfied
+      @contracts.all? { |c| c.check(*v, &blk) }
     end
     
     def to_s
