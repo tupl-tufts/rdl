@@ -7,15 +7,17 @@ module RDL::Contract
     end
 
     def check(*v, &blk)
-      # All contracts must be satisfied
-      @contracts.each { |c|
-        begin
-          c.check(*v, &blk)
-          return true
-        rescue ContractException
-        end
+      RDL::Switch.off {
+        # All contracts must be satisfied
+        @contracts.each { |c|
+          begin
+            c.check(*v, &blk)
+            return true
+          rescue ContractException
+          end
+        }
+        raise ContractException, "#{v.inspect} does not satisfy #{self}"
       }
-      raise ContractException, "#{v.inspect} does not satisfy #{self}"
     end
     
     def to_s
