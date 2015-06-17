@@ -1,2 +1,3 @@
-require_relative 'rdl/types'
-require_relative 'rdl/contracts'
+require 'require_all'
+require_rel 'rdl/types/*.rb'
+require_rel 'rdl/contracts/*.rb'
