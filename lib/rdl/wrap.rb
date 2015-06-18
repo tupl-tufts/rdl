@@ -44,7 +44,7 @@ RUBY
       alias_method meth_old, meth
       @@__rdl_contracts = {} unless self.class_variables.include? :contracts
       def #{meth}(*args, &blk)
-#        RDL::Debug.debug "Intercepted #{meth_old}(\#{args.join(", ")}) { \#{blk} }", :info
+#        puts "Intercepted #{meth_old}(\#{args.join(", ")}) { \#{blk} }"
         if @@__rdl_contracts[#{meth.inspect}] && @@__rdl_contracts[#{meth.inspect}][:pre] then
           RDL::Contract::AndContract.check_array(@@__rdl_contracts[#{meth.inspect}][:pre],
                                                  *args, &blk)
@@ -68,7 +68,7 @@ RUBY
       wrap(klass, meth)
       add_contract(klass, meth, :post, contract)
     end
-
+    
     private
 
     def self.wrapped_name(klass, meth)
