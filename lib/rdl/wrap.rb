@@ -44,11 +44,17 @@ RUBY
       alias_method meth_old, meth
       @@__rdl_contracts = {} unless self.class_variables.include? :contracts
       def #{meth}(*args, &blk)
-        RDL::Debug.debug "Intercepted #{meth_old}(\#{args.join(", ")}) { \#{blk} }", :info
+#        RDL::Debug.debug "Intercepted #{meth_old}(\#{args.join(", ")}) { \#{blk} }", :info
         if @@__rdl_contracts[#{meth.inspect}] && @@__rdl_contracts[#{meth.inspect}][:pre] then
-          RDL::Contract::AndContract.check_array(@@__rdl_contracts[#{meth.inspect}][:pre], *args, &blk)
+          RDL::Contract::AndContract.check_array(@@__rdl_contracts[#{meth.inspect}][:pre],
+                                                 *args, &blk)
         end
-        return send(#{meth_old.inspect}, *args, &blk)
+        ret = send(#{meth_old.inspect}, *args, &blk)
+        if @@__rdl_contracts[#{meth.inspect}] && @@__rdl_contracts[#{meth.inspect}][:post] then
+          RDL::Contract::AndContract.check_array(@@__rdl_contracts[#{meth.inspect}][:post],
+                                                 ret, *args, &blk)
+        end
+        return ret
       end
 RUBY
     end
@@ -56,6 +62,11 @@ RUBY
     def self.pre(klass, meth, contract)
       wrap(klass, meth)
       add_contract(klass, meth, :pre, contract)
+    end
+
+    def self.post(klass, meth, contract)
+      wrap(klass, meth)
+      add_contract(klass, meth, :post, contract)
     end
 
     private
