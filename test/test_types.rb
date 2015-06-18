@@ -22,7 +22,7 @@ class TypeTest < Minitest::Test
     assert_same ta, ta2
     assert_same ta, ta3
     assert (ta != tb)
-    assert_equal ta.name, :A
+    assert_equal :A, ta.name
   end
 
   def test_symbol
@@ -34,7 +34,7 @@ class TypeTest < Minitest::Test
     assert_same ta, ta2
     assert_same ta, ta3
     assert (ta != tb)
-    assert_equal ta.name, :A
+    assert_equal :A, ta.name
     assert (ta != tan)
   end
 
@@ -47,7 +47,7 @@ class TypeTest < Minitest::Test
     assert_same ta, ta2
     assert_same ta, ta3
     assert (ta != tb)
-    assert_equal ta.name, :A
+    assert_equal :A, ta.name
     assert (ta != tan)
   end
 
@@ -58,7 +58,7 @@ class TypeTest < Minitest::Test
     tb = NominalType.new :B
     tc = NominalType.new :C
     t1 = c.new ta, tb
-    assert_equal t1.types.length, 2
+    assert_equal 2, t1.types.length
     t2 = c.new tb, ta
     assert_same t1, t2
     t3 = c.new ttop, ttop
@@ -68,7 +68,7 @@ class TypeTest < Minitest::Test
     t5 = c.new tnil, tnil
     assert_same t5, tnil
     t6 = c.new ta, tb, tc
-    assert_equal t6.types.length, 3
+    assert_equal 3, t6.types.length
     t7 = c.new ta, (c.new tb, tc)
     assert_same t6, t7
     t8 = c.new (c.new tc, tb), (c.new ta)
@@ -85,7 +85,7 @@ class TypeTest < Minitest::Test
     tnil = NilType.new
     ta = NominalType.new :A
     t1 = OptionalType.new tnil
-    assert_equal t1.type, tnil
+    assert_equal tnil, t1.type
     t2 = OptionalType.new tnil
     assert_same t1, t2
     t3 = OptionalType.new ta
@@ -96,7 +96,7 @@ class TypeTest < Minitest::Test
     tnil = NilType.new
     ta = NominalType.new :A
     t1 = VarargType.new tnil
-    assert_equal t1.type, tnil
+    assert_equal tnil, t1.type
     t2 = VarargType.new tnil
     assert_same t1, t2
     t3 = VarargType.new ta
@@ -109,11 +109,11 @@ class TypeTest < Minitest::Test
     tb = NominalType.new :B
     tc = NominalType.new :C
     t1 = MethodType.new [ta, tb, tc], nil, tnil
-    assert_equal t1.args, [ta, tb, tc]
+    assert_equal [ta, tb, tc], t1.args
     assert_nil t1.block
-    assert_equal t1.ret, tnil
+    assert_equal tnil, t1.ret
     t2 = MethodType.new [tnil], t1, tnil
-    assert_equal t2.block, t1
+    assert_equal t1, t2.block
   end
 
   def test_generic
@@ -121,8 +121,8 @@ class TypeTest < Minitest::Test
     ta = NominalType.new :A
     tb = NominalType.new :B
     t1 = GenericType.new thash, ta, tb
-    assert_equal t1.base, thash
-    assert_equal t1.params, [ta, tb]
+    assert_equal thash, t1.base
+    assert_equal [ta, tb], t1.params
     t2 = GenericType.new thash, ta, tb
     assert_same t1, t2
     t3 = GenericType.new thash, tb, ta
@@ -137,8 +137,8 @@ class TypeTest < Minitest::Test
     tm1 = MethodType.new [ta, tb, tc], nil, tnil
     tm2 = MethodType.new [ta], tm1, tb
     t1 = StructuralType.new :m1 => tm1, :m2 => tm2
-    assert_equal t1.methods[:m1], tm1
-    assert_equal t1.methods[:m2], tm2
+    assert_equal tm1, t1.methods[:m1]
+    assert_equal tm2, t1.methods[:m2]
     t2 = StructuralType.new :m1 => tm1, :m2 => tm2
     assert_equal t1, t2
   end

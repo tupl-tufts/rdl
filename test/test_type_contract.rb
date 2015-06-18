@@ -31,8 +31,8 @@ class TypeContractTest < Minitest::Test
 
     t2 = @p.scan_str "(Fixnum, Fixnum) -> Fixnum"
     p2 = t2.to_contract.wrap { |x, y| x }
-    assert_equal p2.call(42, 43), 42
-    assert_equal p2.call(42, nil), 42
+    assert_equal 42, p2.call(42, 43)
+    assert_equal 42, p2.call(42, nil)
     assert_raises(TypeException) { p2.call(42, 43, 44) }
     assert_raises(TypeException) { p2.call(42, 43, 44, 45) }
     assert_raises(TypeException) { p2.call(42) }
@@ -45,17 +45,17 @@ class TypeContractTest < Minitest::Test
     
     t4 = @p.scan_str "(Fixnum, ?Fixnum) -> Fixnum"
     p4 = t4.to_contract.wrap { |x| x }
-    assert_equal p4.call(42), 42
-    assert_equal p4.call(42, 43), 42
+    assert_equal 42, p4.call(42)
+    assert_equal 42, p4.call(42, 43)
     assert_raises(TypeException) { p4.call(42, 43, 44) }
     assert_raises(TypeException) { p4.call }
 
     t5 = @p.scan_str "(Fixnum, *Fixnum) -> Fixnum"
     p5 = t5.to_contract.wrap { |x| x }
-    assert_equal p5.call(42), 42
-    assert_equal p5.call(42, 43), 42
-    assert_equal p5.call(42, 43, 44), 42
-    assert_equal p5.call(42, 43, 44, 45), 42
+    assert_equal 42, p5.call(42)
+    assert_equal 42, p5.call(42, 43)
+    assert_equal 42, p5.call(42, 43, 44)
+    assert_equal 42, p5.call(42, 43, 44, 45)
     assert_raises(TypeException) { p5.call }
     assert_raises(TypeException) { p5.call("42") }
     assert_raises(TypeException) { p5.call(42, "43") }
@@ -64,11 +64,11 @@ class TypeContractTest < Minitest::Test
 
     t6 = @p.scan_str "(Fixnum, ?Fixnum, ?Fixnum, *Fixnum) -> Fixnum"
     p6 = t6.to_contract.wrap { |x| x }
-    assert_equal p6.call(42), 42
-    assert_equal p6.call(42, 43), 42
-    assert_equal p6.call(42, 43, 44), 42
-    assert_equal p6.call(42, 43, 44, 45), 42
-    assert_equal p6.call(42, 43, 44, 45, 46), 42
+    assert_equal 42, p6.call(42)
+    assert_equal 42, p6.call(42, 43)
+    assert_equal 42, p6.call(42, 43, 44)
+    assert_equal 42, p6.call(42, 43, 44, 45)
+    assert_equal 42, p6.call(42, 43, 44, 45, 46)
     assert_raises(TypeException) { p6.call }
     assert_raises(TypeException) { p6.call("42") }
     assert_raises(TypeException) { p6.call(42, "43") }

@@ -6,7 +6,7 @@ class ContractTest < Minitest::Test
 
   def test_flat
     pos = FlatContract.new("Positive") { |x| x > 0 }
-    assert_equal pos.to_s, "Positive"
+    assert_equal "Positive", pos.to_s
     assert_raises(ContractException) { pos.check 0 }
     assert (pos.check 1)
     gt = FlatContract.new("Greater Than") { |x, y| x > y }
@@ -19,7 +19,7 @@ class ContractTest < Minitest::Test
     five = FlatContract.new("Five") { |x| x == 5 }
     gt = FlatContract.new("Greater Than 3") { |x| x > 3 }
     posfive = AndContract.new(pos, five)
-    assert_equal posfive.to_s, "Positive && Five"
+    assert_equal "Positive && Five", posfive.to_s
     posfivegt = AndContract.new(pos, five, gt)
     assert (posfive.check 5)
     assert_raises(ContractException) { posfive.check 4 }
@@ -32,7 +32,7 @@ class ContractTest < Minitest::Test
     zero = FlatContract.new("Zero") { |x| x == 0 }
     neg = FlatContract.new("Neg") { |x| x < 0 }
     poszero = OrContract.new(pos, zero)
-    assert_equal poszero.to_s, "Positive && Zero"
+    assert_equal "Positive && Zero", poszero.to_s
     poszeroneg = OrContract.new(pos, zero, neg)
     assert (poszero.check 1)
     assert (poszero.check 0)
@@ -57,6 +57,6 @@ class ContractTest < Minitest::Test
       pos.check (-42)
       true
     }
-    assert_equal foo.check, true
+    assert_equal true, foo.check
   end
 end
