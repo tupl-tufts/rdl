@@ -68,5 +68,24 @@ class RDLTest < Minitest::Test
     assert_equal 5, m9(5)
     assert_raises(RDL::Contract::ContractException) { m9 4 }
     assert_raises(RDL::Contract::ContractException) { m9 3 }
+
+    ppos = RDL::Contract::FlatContract.new("Positive") { |r, x| r > 0 }
+    pfive = RDL::Contract::FlatContract.new("Five") { |r, x| r == 5 }
+    pgt = RDL::Contract::FlatContract.new("Greater Than 3") { |r, x| r > 3 }
+    def m10(x) return x; end
+    RDL::Wrap.post(RDLTest, :m10, ppos)
+    RDL::Wrap.post(RDLTest, :m10, pgt)
+    assert_equal 5, m10(5)
+    assert_equal 4, m10(4)
+    assert_raises(RDL::Contract::ContractException) { m10 3 }
+    def m11(x) return x; end
+    RDL::Wrap.post(RDLTest, :m11, ppos)
+    RDL::Wrap.post(RDLTest, :m11, pgt)
+    RDL::Wrap.post(RDLTest, :m11, pfive)
+    assert_equal 5, m11(5)
+    assert_raises(RDL::Contract::ContractException) { m11 4 }
+    assert_raises(RDL::Contract::ContractException) { m11 3 }
   end
+
+
 end
