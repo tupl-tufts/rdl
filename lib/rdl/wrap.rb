@@ -6,7 +6,7 @@ module RDL
 
     def self.wrapped?(klass, meth)
       klass = Kernel.const_get klass unless klass.class == Class
-      klass.instance_methods.include? (wrapped_name(klass, meth))
+      klass.method_defined? (wrapped_name(klass, meth))
     end
   
     def self.add_contract(klass, meth, kind, val)
@@ -16,7 +16,7 @@ module RDL
         # Another way to do this would be to have a default new array
         # whenever the hash is accessed, but that might cause a lot of
         # allocation on checks of wrapped methods
-        @@__rdl_contracts = {} unless self.class_variables.include? :contracts
+        @@__rdl_contracts = {} unless defined? @@__rdl_contracts
         @@__rdl_contracts[meth] = {} unless @@__rdl_contracts[meth]
         @@__rdl_contracts[meth][kind] = [] unless @@__rdl_contracts[meth][kind]
         @@__rdl_contracts[meth][kind] << val
@@ -38,11 +38,11 @@ RUBY
     def self.wrap(klass, meth)
       klass = Kernel.const_get klass unless klass.class == Class
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
-      return if klass.instance_methods.include? meth_old  # Don't rewrap
+      return if klass.method_defined? meth_old  # Don't rewrap
       
       klass.class_eval <<-RUBY, __FILE__, __LINE__
       alias_method meth_old, meth
-      @@__rdl_contracts = {} unless self.class_variables.include? :contracts
+      @@__rdl_contracts = {} unless defined? @@__rdl_contracts
       def #{meth}(*args, &blk)
 #        puts "Intercepted #{meth_old}(\#{args.join(", ")}) { \#{blk} }"
         if @@__rdl_contracts[#{meth.inspect}] && @@__rdl_contracts[#{meth.inspect}][:pre] then
@@ -115,8 +115,8 @@ class Object
     klass, meth, contract = RDL::Wrap.process_pre_post_args(self.class, "Precondition", *args, &blk)
     if meth
       RDL::Wrap.wrap(klass, meth)
-      RDL::Wrap.add_contract(klass, meth, :pre, contract)
     end
+    RDL::Wrap.add_contract(klass, meth, :pre, contract)
   end
 
   # Add a postcondition to a method. Same possible invocations as pre.
@@ -124,8 +124,8 @@ class Object
     klass, meth, contract = RDL::Wrap.process_pre_post_args(self.class, "Postcondition", *args, &blk)
     if meth
       RDL::Wrap.wrap(klass, meth)
-      RDL::Wrap.add_contract(klass, meth, :post, contract)
     end
+    RDL::Wrap.add_contract(klass, meth, :post, contract)
   end
 
   # def type(klass, meth, type)
