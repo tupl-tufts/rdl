@@ -11,7 +11,7 @@ module RDL::Type
     end
 
     def self.new(name)
-      name = name.to_s.to_sym
+      name = name.to_s
       t = @@cache[name]
       return t if t
       t = self.__new__ name
@@ -27,11 +27,11 @@ module RDL::Type
     end
 
     def ==(other)
-      return (other.instance_of? self.class) && (other.name.to_s == @name.to_s)
+      return (other.instance_of? self.class) && (other.name == @name)
     end
 
     def hash # :nodoc:
-      return @name.to_s.hash
+      return @name.hash
     end
 
     def to_s
@@ -39,7 +39,7 @@ module RDL::Type
     end
 
     def klass
-      name.to_s.split("::").inject(Object) { |base, name| base.const_get(name) }
+      RDL.to_class(name)
     end
 
     def member?(obj)

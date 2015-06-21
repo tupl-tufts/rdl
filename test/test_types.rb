@@ -22,7 +22,7 @@ class TypeTest < Minitest::Test
     assert_same ta, ta2
     assert_same ta, ta3
     assert (ta != tb)
-    assert_equal :A, ta.name
+    assert_equal "A", ta.name
   end
 
   def test_symbol

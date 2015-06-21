@@ -1,16 +1,11 @@
 module RDL
   class Wrap
-    def self.wrappable?(klass)
-      return (not (klass.name =~ /^RDL::/))
-    end
-
     def self.wrapped?(klass, meth)
-      klass = Kernel.const_get klass unless klass.class == Class
-      klass.method_defined? (wrapped_name(klass, meth))
+      RDL.method_defined?(klass, wrapped_name(klass, meth))
     end
   
     def self.add_contract(klass, meth, kind, val)
-      klass = klass.to_s.to_sym
+      klass = klass.to_s
       meth = meth.to_sym
       # $__rdl_contracts is defined in RDL
       $__rdl_contracts[klass] = {} unless $__rdl_contracts[klass]
@@ -20,7 +15,7 @@ module RDL
     end
 
     def self.has_contracts(klass, meth, kind)
-      klass = klass.to_s.to_sym
+      klass = klass.to_s
       meth = meth.to_sym
       return ($__rdl_contracts.has_key? klass) &&
              ($__rdl_contracts[klass].has_key? meth) &&
@@ -28,7 +23,7 @@ module RDL
     end
 
     def self.get_contracts(klass, meth, kind)
-      klass = klass.to_s.to_sym
+      klass = klass.to_s
       meth = meth.to_sym
       return $__rdl_contracts[klass][meth][kind]
     end
@@ -40,7 +35,9 @@ module RDL
     # if already wrapped.
 
     def self.wrap(klass, meth)
-      klass = Kernel.const_get klass unless klass.class == Class
+      # Check RDL
+      klass = RDL.to_class klass
+      raise ArgumentError, "Attempt to wrap #{klass.to_s}\##{meth.to_s}" if klass.to_s =~ /^RDL::/
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
       return if klass.method_defined? meth_old  # Don't rewrap
       
@@ -68,26 +65,26 @@ RUBY
     def self.process_pre_post_args(default_class, name, *args, &blk)
       klass = meth = contract = nil
       if args.size == 3
-        klass = class_to_sym args[0]
+        klass = class_to_string args[0]
         meth = meth_to_sym args[1]
         contract = args[2]
       elsif args.size == 2 && blk
-        klass = class_to_sym args[0]
+        klass = class_to_string args[0]
         meth = meth_to_sym args[1]
         contract = RDL::Contract::FlatContract.new(name, &blk)
       elsif args.size == 2
-        klass = default_class.to_s.to_sym
+        klass = default_class.to_s
         meth = meth_to_sym args[0]
         contract = args[1]
       elsif args.size == 1 && blk
-        klass = default_class.to_s.to_sym
+        klass = default_class.to_s
         meth = meth_to_sym args[0]
         contract = RDL::Contract::FlatContract.new(name, &blk)
       elsif args.size == 1
-        klass = default_class.to_s.to_sym
+        klass = default_class.to_s
         contract = args[0]
       elsif blk
-        klass = default_class.to_s.to_sym
+        klass = default_class.to_s
         contract = RDL::Contract::FlatContract.new(name, &blk)        
       else
         raise ArgumentError, "No arguments received"
@@ -104,14 +101,14 @@ RUBY
       "__rdl_#{meth.to_s}_old".to_sym
     end
 
-    def self.class_to_sym(klass)
+    def self.class_to_string(klass)
       case klass
       when Class
-        return klass.to_s.to_sym
+        return klass.to_s
       when String
-        return klass.to_sym
-      when Symbol
         return klass
+      when Symbol
+        return klass.to_s
       else
         raise ArgumentError, "#{klass.class} received where klass (Class, Symbol, or String) expected"
       end
@@ -146,7 +143,7 @@ class Object
   def pre(*args, &blk)
     klass, meth, contract = RDL::Wrap.process_pre_post_args(self.class, "Precondition", *args, &blk)
     if meth
-      if Kernel.const_get(klass).method_defined? meth
+      if RDL.method_defined?(klass, meth)
         RDL::Wrap.wrap(klass, meth)
       else
         # $__rdl_to_wrap is initialized in rdl.rb
@@ -162,7 +159,7 @@ class Object
   def post(*args, &blk)
     klass, meth, contract = RDL::Wrap.process_pre_post_args(self.class, "Postcondition", *args, &blk)
     if meth
-      if Kernel.const_get(klass).method_defined? meth
+      if RDL.method_defined?(klass, meth)
         RDL::Wrap.wrap(klass, meth)
       else
         # $__rdl_to_wrap is initialized in rdl.rb
@@ -180,8 +177,9 @@ class Object
   # end
 
   def self.method_added(meth)
-    if $__rdl_to_wrap.member? [self.class, meth]
-      $__rdl_to_wrap.delete [self.class, meth]
+    klass = self.to_s
+    if $__rdl_to_wrap.member? [klass, meth]
+      $__rdl_to_wrap.delete [klass, meth]
       RDL::Wrap.wrap(klass, meth)
     end
   end
