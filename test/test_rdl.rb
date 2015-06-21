@@ -166,5 +166,7 @@ class RDLTest < Minitest::Test
     }
   end
 
+  def test_type_contract
+  end
 
 end

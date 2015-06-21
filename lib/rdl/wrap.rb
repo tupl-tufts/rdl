@@ -47,13 +47,21 @@ module RDL
         klass = self.class
 #        puts "Intercepted #{meth_old}(\#{args.join(", ")}) { \#{blk} }"
         if RDL::Wrap.has_contracts(klass, #{meth.inspect}, :pre)
-          RDL::Contract::AndContract.check_array(RDL::Wrap.get_contracts(klass, #{meth.inspect}, :pre),
-                                                 *args, &blk)
+          pres = RDL::Wrap.get_contracts(klass, #{meth.inspect}, :pre)
+          RDL::Contract::AndContract.check_array(pres, *args, &blk)
+        end
+        ret_types = nil
+        if RDL::Wrap.has_contracts(klass, #{meth.inspect}, :type)
+          types = RDL::Wrap.get_contracts(klass, #{meth.inspect}, :type)
+          ret_types = RDL::Type::MethodType.check_arg_types(types, *args, &blk)
         end
         ret = send(#{meth_old.inspect}, *args, &blk)
         if RDL::Wrap.has_contracts(klass, #{meth.inspect}, :post)
-          RDL::Contract::AndContract.check_array(RDL::Wrap.get_contracts(klass, #{meth.inspect}, :post),
-                                                 ret, *args, &blk)
+          posts = RDL::Wrap.get_contracts(klass, #{meth.inspect}, :post)
+          RDL::Contract::AndContract.check_array(posts, ret, *args, &blk)
+        end
+        if ret_types
+          RDL::Type::MethodType.check_ret_types(ret_types, ret)
         end
         return ret
       end
@@ -87,10 +95,31 @@ RUBY
         klass = default_class.to_s
         contract = RDL::Contract::FlatContract.new(name, &blk)        
       else
-        raise ArgumentError, "No arguments received"
+        raise ArgumentError, "Invalid arguments"
       end
       raise ArgumentError, "#{contract.class} received where Contract expected" unless contract.class < RDL::Contract::Contract
       return [klass, meth, contract]
+    end
+
+    # [+default_class+] should be a class
+    def self.process_type_args(default_class, *args, &blk)
+      klass = meth = type = nil
+      if args.size == 3
+        klass = class_to_string args[0]
+        meth = meth_to_sym args[1]
+        type = type_to_type args[2]
+      elsif args.size == 2
+        klass = default_class.to_s
+        meth = meth_to_sym args[0]
+        type = type_to_type args[1]
+      elsif args.size == 1
+        klass = default_class.to_s
+        type = type_to_type args[0]
+      else
+        raise ArgumentError, "Invalid arguments"
+      end
+      raise ArgumentError, "Excepting method type, got #{type.class} instead" if type.class != RDL::Type::MethodType
+      return [klass, meth, type]
     end
     
     private
@@ -124,6 +153,16 @@ RUBY
         raise ArgumentError, "#{meth.class} received where method (Symbol or String) expected"
       end
     end
+
+    def self.type_to_type(type)
+      case type
+      when Type
+        return type
+      when String
+        return $__rdl_parser.scan_str type
+      end
+    end
+    
   end
 end
 
@@ -165,14 +204,31 @@ class Object
         $__rdl_to_wrap << [klass, meth] # $__rdl_to_wrap is initialized in rdl.rb
       end
     else
-      $__rdl_deferred << [klass, :post, contract]# $__rdl_deferred is initialized in rdl.rb
+      $__rdl_deferred << [klass, :post, contract] # $__rdl_deferred is initialized in rdl.rb
     end
   end
 
-  # def type(klass, meth, type)
-  #   wrap(klass, meth)
-  #   add_contract(klass, meth, :type, contract)
-  # end
+  # [+klass+] may be Class, Symbol, or String
+  # [+method+] may be Symbol or String
+  # [+type+] may be Type or String
+  #
+  # Add a type to a method. Possible invocations:
+  # type(klass, meth, type)
+  # type(meth, type)
+  # type(type)
+  def type(*args, &blk)
+    klass, meth, type = RDL::Wrap.process_type_args(self.class, *args, &blk)
+    if meth
+      RDL::Wrap.add_contract(klass, meth, :type, type)
+      if RDL.method_defined?(klass, meth)
+        RDL::Wrap.wrap(klass, meth)
+      else
+        $__rdl_to_wrap << [klass, meth] # $__rdl_to_wrap is initialized in rdl.rb
+      end
+    else
+      $__rdl_deferred << [klass, :type, type] # $__rdl_deferred is initialized in rdl.rb
+    end
+  end
 
   def self.method_added(meth)
     klass = self.to_s

@@ -94,6 +94,45 @@ module RDL::Type
       c = RDL::Contract::ProcContract.new(pre_cond: prec, post_cond: postc)
       return (@@contract_cache[self] = c) # assignment evaluates to c
     end
+
+    # Types is an array of method types. Checks that args and blk match at least
+    # one arm of the intersection type; otherwise raises exception. Returns
+    # array of method types that matched args and blk
+    # TODO: Support for blk type checking
+    def self.check_arg_types(types, *args, &blk)
+      matches = [] # types that matched args
+      exns = [] # exceptions from types that did not match args
+      types.each { |t|
+        begin
+          t.to_contract.pre_cond.check(*args, &blk)  # note to_contract is cached
+        rescue TypeException => te
+          exns << te
+        else
+          matches << t
+        end
+      }
+      return matches if matches.size > 0
+      raise exns[0] if exns.size == 1 # if there's only one possible type, report error
+      # TODO: Error message for intersection types, no matches
+    end
+
+    def self.check_ret_types(ret_types, ret)
+      matches = [] # types that match ret
+      exns = [] # exceptions from types that did not match args
+      ret_types.each { |t|
+        begin
+          t.to_contract.post_cond.check(ret, *args) # note to_contract is cached
+        rescue TypeException => te
+          exns << te
+        else
+          matches << t
+        end
+      }
+      return true if matches.size > 0
+      raise exns[0] if exns.size == 1 # if there's only one possible type, report error
+      # TODO: Error message for intersection types, no matches
+      # TODO: Error message if original intersection types, ret didn't match
+    end
     
     def to_s  # :nodoc:
       if @block

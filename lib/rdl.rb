@@ -18,6 +18,8 @@ $__rdl_to_wrap = Set.new
 # List of contracts that should be applied to the next method definition
 $__rdl_deferred = []
 
+$__rdl_parser = RDL::Type::Parser.new
+
 module RDL
 
   def self.to_class(s)
