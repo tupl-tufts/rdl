@@ -87,5 +87,17 @@ class RDLTest < Minitest::Test
     assert_raises(RDL::Contract::ContractException) { m11 3 }
   end
 
+  def test_pre_argument_error
+    ppos = RDL::Contract::FlatContract.new("Positive") { |x| x > 0 }
+    assert_raises(ArgumentError) { pre }
+    assert_raises(ArgumentError) { pre 42 }
+    assert_raises(ArgumentError) { pre(42) { |x| x > 0} }
+    assert_raises(ArgumentError) { pre(ppos) { |x| x > 0 } }
+    assert_raises(ArgumentError) { pre(:m1) }
+    assert_raises(ArgumentError) { pre(RDLTest) }
+    assert_raises(ArgumentError) { pre(RDLTest) { |x| x > 0 } }
+    assert_raises(ArgumentError) { pre(RDLTest, ppos) }
+    assert_raises(ArgumentError) { pre(RDLTest, :m1, ppos, 42) }
+  end
 
 end

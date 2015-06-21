@@ -68,7 +68,12 @@ RUBY
       wrap(klass, meth)
       add_contract(klass, meth, :post, contract)
     end
-    
+
+    # def self.type(klass, meth, type)
+    #   wrap(klass, meth)
+    #   add_contract(klass, meth, :type, contract)
+    # end
+
     private
 
     def self.wrapped_name(klass, meth)
@@ -78,4 +83,47 @@ RUBY
     end
 
   end
+end
+
+class Object
+
+  # Add a precondition to a method. Possible invocations:
+  # pre(klass, meth, contract)
+  # pre(klass, meth) { block } = pre(klass, meth, FlatContract.new { block })
+  # pre(meth, contract) = pre(self, meth, contract)
+  # pre(meth) { block } = pre(self, meth, FlatContract.new { block })
+  # pre(contract) = pre(self, next method, contract)
+  # pre { block } = pre(self, next method, FlatContract.new { block })
+  def pre(*args, &blk)
+    klass = nil
+    i = 0
+    if args[i].class == Class then
+      klass = args[i]
+      i += 1
+    else
+      klass = self.class
+    end
+
+    meth = nil
+    if args[i].class == Symbol || args[i].class == String then
+      meth = args[i]
+      i += 1
+    end
+    raise ArgumentError, "Can't have class without method" if i == 1 && meth.nil?
+    
+    contract = nil
+    if args[i].class < RDL::Contract::Contract
+      raise ArgumentError, "Can't have both contract and block" if block_given?
+      contract = args[i]
+      i += 1
+    elsif block_given?
+      contract = RDL::Contract::FlatContract.new("Precondition", &blk)
+    end
+
+    raise ArgumentError, "Invalid arguments" if i < args.size
+    raise ArgumentError, "No contract or block given" unless contract
+    
+    puts "klass = #{klass}, meth = #{meth}, contract = #{contract}"
+  end
+
 end
