@@ -87,7 +87,7 @@ module RDL::Type
       }
       postc = RDL::Contract::FlatContract.new(@ret) { |ret, *args|
         unless @ret.member? ret
-          raise TypeError, "excepting (return) #{@ret}, got #{ret.inspect}"
+          raise TypeError, "expecting (return) #{@ret}, got #{ret.class}"
         end
         true
       }
@@ -102,45 +102,44 @@ module RDL::Type
     def self.check_arg_types(types, *args, &blk)
       matches = [] # types that matched args
       exns = [] # exceptions from types that did not match args
-      types.each { |t|
+      types.each_with_index { |t, i|
         begin
           t.to_contract.pre_cond.check(*args, &blk)  # note to_contract is cached
         rescue TypeError => te
-          exns << te
+          exns << [te, i]
         else
-          matches << t
+          matches << [t, i]
         end
       }
       return matches if matches.size > 0
-      raise exns[0] if exns.size == 1 # if there's only one possible type, report error
-      # TODO: Error message for intersection types, no matches
+      raise exns[0][0] if types.size == 1 # if there's only one possible method type, report error
+      raise TypeError, ("No argument matches:\n\t" + (exns.map { |e, i| "Doesn't match type #{types[i].to_s}: " + e.message }).join("\n\t"))
     end
 
-    def self.check_ret_types(ret_types, ret, *args, &blk)
+    def self.check_ret_types(types, ret_types, ret, *args, &blk)
       matches = [] # types that match ret
       exns = [] # exceptions from types that did not match args
-      ret_types.each { |t|
+      ret_types.each { |t,i|
         begin
           t.to_contract.post_cond.check(ret, *args, &blk) # note to_contract is cached
         rescue TypeError => te
-          exns << te
+          exns << [te, i]
         else
-          matches << t
+          matches << [t, i]
         end
       }
       return true if matches.size > 0
-      raise exns[0] if exns.size == 1 # if there's only one possible type, report error
-      # TODO: Error message for intersection types, no matches
-      # TODO: Error message if original intersection types, ret didn't match
+      raise exns[0][0] if types.size == 1 # if there's only one possible type, report error
+      raise TypeError, ("Return type doesn't match:\n\t" + (exns.map { |e, i| "Argument#{args.size>1 ? "s" : ""} matched #{types[i].to_s} but: " + e.message}).join("\n\t"))
     end
     
     def to_s  # :nodoc:
       if @block
-        "[ (#{@args.join(', ')}) {#{@block}} -> #{@ret} ]"
+        "(#{@args.join(', ')}) {#{@block}} -> #{@ret}"
       elsif @args
-        "[ (#{@args.join(', ')}) -> #{@ret} ]"
+        "(#{@args.join(', ')}) -> #{@ret}"
       else
-        "[ () -> #{@ret} ]"
+        "() -> #{@ret}"
       end
     end
 

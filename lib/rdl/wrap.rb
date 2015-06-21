@@ -50,6 +50,7 @@ module RDL
           pres = RDL::Wrap.get_contracts(klass, #{meth.inspect}, :pre)
           RDL::Contract::AndContract.check_array(pres, *args, &blk)
         end
+        types = nil
         type_matches = nil
         if RDL::Wrap.has_contracts(klass, #{meth.inspect}, :type)
           types = RDL::Wrap.get_contracts(klass, #{meth.inspect}, :type)
@@ -61,7 +62,7 @@ module RDL
           RDL::Contract::AndContract.check_array(posts, ret, *args, &blk)
         end
         if type_matches
-          RDL::Type::MethodType.check_ret_types(type_matches, ret, *args, &blk)
+          RDL::Type::MethodType.check_ret_types(types, type_matches, ret, *args, &blk)
         end
         return ret
       end
