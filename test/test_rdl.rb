@@ -131,6 +131,40 @@ class RDLTest < Minitest::Test
 
     pre "RDLTest::Deferred", :m13, pos
     eval "class Deferred; def m13(x) return x; end end"
+
+    pre(pos)
+    def m14(x) return x; end
+    assert_equal 3, m14(3)
+    assert_raises(RDL::Contract::ContractException) { m14(-1) }
+
+    pre { |x| x > 0 }
+    def m15(x) return x; end
+    assert_equal 3, m15(3)
+    assert_raises(RDL::Contract::ContractException) { m15(-1) }
+
+    pre { |x| x > 0 }
+    post { |r, x| x > 0 }
+    def m17(x) return x; end
+    assert_equal 3, m17(3)
+    assert_raises(RDL::Contract::ContractException) { m17(-1) }
+
+    pre { |x| x > 0 }
+    post { |r, x| x < 0 }
+    def m18(x) return x; end
+    assert_raises(RDL::Contract::ContractException) { m18(-1) }
+
+    pre { |x| x > 0 }
+    pre { |x| x < 5 }
+    def m19(x) return x; end
+    assert_equal 3, m19(3)
+    assert_raises(RDL::Contract::ContractException) { m19(6) }
+    assert_raises(RDL::Contract::ContractException) { m19(-1) }
+
+    pre { |x| x > 0 }
+    assert_raises(RuntimeError) {
+      eval "class Inner; def m20(x) return x; end end"
+    }
   end
-  
+
+
 end

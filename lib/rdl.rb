@@ -15,6 +15,9 @@ $__rdl_contracts = Hash.new
 # method is a symbol
 $__rdl_to_wrap = Set.new
 
+# List of contracts that should be applied to the next method definition
+$__rdl_deferred = []
+
 module RDL
 
   def self.to_class(s)

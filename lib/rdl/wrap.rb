@@ -46,12 +46,12 @@ module RDL
       def #{meth}(*args, &blk)
         klass = self.class
 #        puts "Intercepted #{meth_old}(\#{args.join(", ")}) { \#{blk} }"
-        if RDL::Wrap.has_contracts(klass, #{meth.inspect}, :pre) then
+        if RDL::Wrap.has_contracts(klass, #{meth.inspect}, :pre)
           RDL::Contract::AndContract.check_array(RDL::Wrap.get_contracts(klass, #{meth.inspect}, :pre),
                                                  *args, &blk)
         end
         ret = send(#{meth_old.inspect}, *args, &blk)
-        if RDL::Wrap.has_contracts(klass, #{meth.inspect}, :post) then
+        if RDL::Wrap.has_contracts(klass, #{meth.inspect}, :post)
           RDL::Contract::AndContract.check_array(RDL::Wrap.get_contracts(klass, #{meth.inspect}, :post),
                                                  ret, *args, &blk)
         end
@@ -143,32 +143,30 @@ class Object
   def pre(*args, &blk)
     klass, meth, contract = RDL::Wrap.process_pre_post_args(self.class, "Precondition", *args, &blk)
     if meth
+      RDL::Wrap.add_contract(klass, meth, :pre, contract)
       if RDL.method_defined?(klass, meth)
         RDL::Wrap.wrap(klass, meth)
       else
-        # $__rdl_to_wrap is initialized in rdl.rb
-        $__rdl_to_wrap << [klass, meth]
+        $__rdl_to_wrap << [klass, meth] # $__rdl_to_wrap is initialized in rdl.rb
       end
     else
-      # TODO: Associate with next method definition
+      $__rdl_deferred << [klass, :pre, contract] # $__rdl_deferred is initialized in rdl.rb
     end
-    RDL::Wrap.add_contract(klass, meth, :pre, contract)
   end
 
   # Add a postcondition to a method. Same possible invocations as pre.
   def post(*args, &blk)
     klass, meth, contract = RDL::Wrap.process_pre_post_args(self.class, "Postcondition", *args, &blk)
     if meth
+      RDL::Wrap.add_contract(klass, meth, :post, contract)
       if RDL.method_defined?(klass, meth)
         RDL::Wrap.wrap(klass, meth)
       else
-        # $__rdl_to_wrap is initialized in rdl.rb
-        $__rdl_to_wrap << [klass, meth]
+        $__rdl_to_wrap << [klass, meth] # $__rdl_to_wrap is initialized in rdl.rb
       end
     else
-      # TODO: Associate with next method definition
+      $__rdl_deferred << [klass, :post, contract]# $__rdl_deferred is initialized in rdl.rb
     end
-    RDL::Wrap.add_contract(klass, meth, :post, contract)
   end
 
   # def type(klass, meth, type)
@@ -178,6 +176,19 @@ class Object
 
   def self.method_added(meth)
     klass = self.to_s
+
+    # Apply any deferred contracts and reset list
+    if $__rdl_deferred.size > 0
+      a = $__rdl_deferred
+      $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
+      a.each { |prev_klass, kind, contract|
+        raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
+        RDL::Wrap.add_contract(klass, meth, kind, contract)
+        RDL::Wrap.wrap(klass, meth)
+      }
+    end
+
+    # Wrap method if there was a prior contract for it.
     if $__rdl_to_wrap.member? [klass, meth]
       $__rdl_to_wrap.delete [klass, meth]
       RDL::Wrap.wrap(klass, meth)
