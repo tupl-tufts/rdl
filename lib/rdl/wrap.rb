@@ -63,36 +63,36 @@ module RDL
 RUBY
     end
 
+    # [+default_class+] should be a class
+    # [+name+] is the name to give the block as a contract
     def self.process_pre_post_args(default_class, name, *args, &blk)
-      klass = nil
-      i = 0
-      if args[i].class == Class then
-        klass = args[i]
-        i += 1
-      else
-        klass = default_class
-      end
-      klass = Kernel.const_get klass unless klass.class == Class
-
-      meth = nil
-      if args[i].class == Symbol || args[i].class == String then
-        meth = args[i].to_sym
-        i += 1
-      end
-      raise ArgumentError, "Can't have class without method" if i == 1 && meth.nil?
-    
-      contract = nil
-      if args[i].class < RDL::Contract::Contract
-        raise ArgumentError, "Can't have both contract and block" if blk
-        contract = args[i]
-        i += 1
-      elsif blk
+      klass = meth = contract = nil
+      if args.size == 3
+        klass = class_to_sym args[0]
+        meth = meth_to_sym args[1]
+        contract = args[2]
+      elsif args.size == 2 && blk
+        klass = class_to_sym args[0]
+        meth = meth_to_sym args[1]
         contract = RDL::Contract::FlatContract.new(name, &blk)
+      elsif args.size == 2
+        klass = default_class.to_s.to_sym
+        meth = meth_to_sym args[0]
+        contract = args[1]
+      elsif args.size == 1 && blk
+        klass = default_class.to_s.to_sym
+        meth = meth_to_sym args[0]
+        contract = RDL::Contract::FlatContract.new(name, &blk)
+      elsif args.size == 1
+        klass = default_class.to_s.to_sym
+        contract = args[0]
+      elsif blk
+        klass = default_class.to_s.to_sym
+        contract = RDL::Contract::FlatContract.new(name, &blk)        
+      else
+        raise ArgumentError, "No arguments received"
       end
-
-      raise ArgumentError, "Invalid arguments" if i < args.size
-      raise ArgumentError, "No contract or block given" unless contract
-
+      raise ArgumentError, "#{contract.class} received where Contract expected" unless contract.class < RDL::Contract::Contract
       return [klass, meth, contract]
     end
     
@@ -104,11 +104,38 @@ RUBY
       "__rdl_#{meth.to_s}_old".to_sym
     end
 
+    def self.class_to_sym(klass)
+      case klass
+      when Class
+        return klass.to_s.to_sym
+      when String
+        return klass.to_sym
+      when Symbol
+        return klass
+      else
+        raise ArgumentError, "#{klass.class} received where klass (Class, Symbol, or String) expected"
+      end
+    end
+
+    def self.meth_to_sym(meth)
+      case meth
+      when String
+        return meth.to_sym
+      when Symbol
+        return meth
+      else
+        raise ArgumentError, "#{meth.class} received where method (Symbol or String) expected"
+      end
+    end
   end
 end
 
 class Object
 
+  # [+klass+] may be Class, Symbol, or String
+  # [+method+] may be Symbol or String
+  # [+contract+] must be a Contract
+  #
   # Add a precondition to a method. Possible invocations:
   # pre(klass, meth, contract)
   # pre(klass, meth) { block } = pre(klass, meth, FlatContract.new { block })
@@ -119,7 +146,7 @@ class Object
   def pre(*args, &blk)
     klass, meth, contract = RDL::Wrap.process_pre_post_args(self.class, "Precondition", *args, &blk)
     if meth
-      if klass.method_defined? meth
+      if Kernel.const_get(klass).method_defined? meth
         RDL::Wrap.wrap(klass, meth)
       else
         # $__rdl_to_wrap is initialized in rdl.rb
@@ -135,7 +162,14 @@ class Object
   def post(*args, &blk)
     klass, meth, contract = RDL::Wrap.process_pre_post_args(self.class, "Postcondition", *args, &blk)
     if meth
-      RDL::Wrap.wrap(klass, meth)
+      if Kernel.const_get(klass).method_defined? meth
+        RDL::Wrap.wrap(klass, meth)
+      else
+        # $__rdl_to_wrap is initialized in rdl.rb
+        $__rdl_to_wrap << [klass, meth]
+      end
+    else
+      # TODO: Associate with next method definition
     end
     RDL::Wrap.add_contract(klass, meth, :post, contract)
   end
