@@ -10,10 +10,7 @@ module RDL
     end
   
     def self.add_contract(klass, meth, kind, val)
-      unless klass.class == Class
-        eval "class #{klass}; END" unless Kernel.const_defined? klass
-        klass = Kernel.const_get klass
-      end
+      klass = klass.to_s.to_sym
       meth = meth.to_sym
       # $__rdl_contracts is defined in RDL
       $__rdl_contracts[klass] = {} unless $__rdl_contracts[klass]
@@ -23,12 +20,16 @@ module RDL
     end
 
     def self.has_contracts(klass, meth, kind)
+      klass = klass.to_s.to_sym
+      meth = meth.to_sym
       return ($__rdl_contracts.has_key? klass) &&
              ($__rdl_contracts[klass].has_key? meth) &&
              ($__rdl_contracts[klass][meth].has_key? kind)
     end
 
     def self.get_contracts(klass, meth, kind)
+      klass = klass.to_s.to_sym
+      meth = meth.to_sym
       return $__rdl_contracts[klass][meth][kind]
     end
     
