@@ -59,22 +59,7 @@ RUBY
 RUBY
     end
 
-    def self.pre(klass, meth, contract)
-      wrap(klass, meth)
-      add_contract(klass, meth, :pre, contract)
-    end
-
-    def self.post(klass, meth, contract)
-      wrap(klass, meth)
-      add_contract(klass, meth, :post, contract)
-    end
-
-    # def self.type(klass, meth, type)
-    #   wrap(klass, meth)
-    #   add_contract(klass, meth, :type, contract)
-    # end
-
-    def self.process_pre_post_args(default_class, *args, &blk)
+    def self.process_pre_post_args(default_class, name, *args, &blk)
       klass = nil
       i = 0
       if args[i].class == Class then
@@ -97,7 +82,7 @@ RUBY
         contract = args[i]
         i += 1
       elsif blk
-        contract = RDL::Contract::FlatContract.new("Precondition", &blk)
+        contract = RDL::Contract::FlatContract.new(name, &blk)
       end
 
       raise ArgumentError, "Invalid arguments" if i < args.size
@@ -127,8 +112,26 @@ class Object
   # pre(contract) = pre(self, next method, contract)
   # pre { block } = pre(self, next method, FlatContract.new { block })
   def pre(*args, &blk)
-    
-    puts "klass = #{klass}, meth = #{meth}, contract = #{contract}"
+    klass, meth, contract = RDL::Wrap.process_pre_post_args(self.class, "Precondition", *args, &blk)
+    if meth
+      RDL::Wrap.wrap(klass, meth)
+      RDL::Wrap.add_contract(klass, meth, :pre, contract)
+    end
   end
 
+  # Add a postcondition to a method. Same possible invocations as pre.
+  def post(*args, &blk)
+    klass, meth, contract = RDL::Wrap.process_pre_post_args(self.class, "Postcondition", *args, &blk)
+    if meth
+      RDL::Wrap.wrap(klass, meth)
+      RDL::Wrap.add_contract(klass, meth, :post, contract)
+    end
+  end
+
+  # def type(klass, meth, type)
+  #   wrap(klass, meth)
+  #   add_contract(klass, meth, :type, contract)
+  # end
+
+  
 end
