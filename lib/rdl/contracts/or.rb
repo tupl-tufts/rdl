@@ -12,10 +12,10 @@ module RDL::Contract
         begin
           c.check(*v, &blk)
           return true
-        rescue ContractException
+        rescue ContractError
         end
       }
-      raise ContractException, "#{v.inspect} does not satisfy #{self}"
+      raise ContractError, "#{v.inspect} does not satisfy #{self}"
     end
     
     def to_s

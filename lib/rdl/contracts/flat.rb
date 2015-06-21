@@ -13,11 +13,11 @@ module RDL::Contract
             ((@pred.arity < 0) ? (@pred.arity.abs - 1) <= v.size : @pred.arity == v.size)) then
           # TODO: Labels and proc.parameters :lbl, :rest
           unless blk ? @pred.call(*v, &blk) : @pred.call(*v)
-            raise ContractException,
+            raise ContractError,
                   "#{v.inspect} does not satisfy #{self.to_s}"
           end
         else
-          raise ContractException,
+          raise ContractError,
                 "Invalid number of arguments: Expecting #{@pred.arity}, got #{v.size}"
         end
         true

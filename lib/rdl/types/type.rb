@@ -2,7 +2,7 @@ module RDL::Type
   # Abstract base class for all types. This class
   # should never be instantiated directly.
 
-  class TypeException < StandardError; end
+  class TypeError < StandardError; end
 
   class Type
 
@@ -43,7 +43,7 @@ module RDL::Type
 
       c = RDL::Contract::FlatContract.new(to_s) { |x|
         unless member? x
-          raise TypeException, "Type error: Expecting #{to_s}, got #{x.inspect}"
+          raise TypeError, "Expecting #{to_s}, got #{x.inspect}"
         end
         true
       }

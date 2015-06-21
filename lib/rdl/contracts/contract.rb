@@ -1,5 +1,5 @@
 module RDL::Contract
-  class ContractException < StandardError
+  class ContractError < StandardError
   end
 
   class Contract

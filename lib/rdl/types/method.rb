@@ -44,7 +44,7 @@ module RDL::Type
     end
 
     def le(other, h={})
-      raise Exception, "should not be called"
+      raise RuntimeError, "should not be called"
     end
 
     def to_contract
@@ -56,24 +56,24 @@ module RDL::Type
       prec = RDL::Contract::FlatContract.new(@args) { |*args|
         i = 0 # position in @args
         args.each { |arg|
-          raise TypeException, "Type error: Too many arguments" if i >= @args.size
+          raise TypeError, "Too many arguments" if i >= @args.size
           case @args[i]
           when OptionalType
             unless @args[i].type.member? arg
-              raise TypeException,
-                    "Type error: Argument #{i}, expecting (optional) #{@args[i]}, got #{arg.class}"
+              raise TypeError,
+                    "Argument #{i}, expecting (optional) #{@args[i]}, got #{arg.class}"
             end
             i += 1
           when VarargType
             unless @args[i].type.member? arg
-              raise TypeException,
-                    "Type error: Argument #{i}, expecting (vararg) #{@args[i]}, got #{arg.class}"
+              raise TypeError,
+                    "Argument #{i}, expecting (vararg) #{@args[i]}, got #{arg.class}"
             end
             # do not increment i, since vararg can take any number of arugment
           else
             unless @args[i].member? arg
-              raise TypeException,
-                    "Type error: Argument #{i}, expecting #{@args[i]}, got #{arg.class}"
+              raise TypeError,
+                    "Argument #{i}, expecting #{@args[i]}, got #{arg.class}"
             end
             i += 1
           end
@@ -81,13 +81,13 @@ module RDL::Type
         # Check if there aren't enough arguments; uses invariant established in initialize
         # that method types end with several optional types and then one (optional) vararg type
         if (i < @args.size) && (@args[i].class != OptionalType) && (@args[i].class != VarargType)
-          raise TypeException, "Type error: Too few arguments"
+          raise TypeError, "Too few arguments"
         end
         true
       }
       postc = RDL::Contract::FlatContract.new(@ret) { |ret, *args|
         unless @ret.member? ret
-          raise TypeException, "Type error: excepting (return) #{@ret}, got #{ret.inspect}"
+          raise TypeError, "excepting (return) #{@ret}, got #{ret.inspect}"
         end
         true
       }
@@ -105,7 +105,7 @@ module RDL::Type
       types.each { |t|
         begin
           t.to_contract.pre_cond.check(*args, &blk)  # note to_contract is cached
-        rescue TypeException => te
+        rescue TypeError => te
           exns << te
         else
           matches << t
@@ -122,7 +122,7 @@ module RDL::Type
       ret_types.each { |t|
         begin
           t.to_contract.post_cond.check(ret, *args, &blk) # note to_contract is cached
-        rescue TypeException => te
+        rescue TypeError => te
           exns << te
         else
           matches << t

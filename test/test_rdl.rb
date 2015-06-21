@@ -61,14 +61,14 @@ class RDLTest < Minitest::Test
     def m5(x) return x; end
     pre RDLTest, :m5, pos
     assert_equal 3, m5(3)
-    assert_raises(RDL::Contract::ContractException) { m5(-1) }
+    assert_raises(RDL::Contract::ContractError) { m5(-1) }
   end
 
   def test_post_contract
     neg = RDL::Contract::FlatContract.new("Negative") { |x| x < 0 }
     def m6(x) return 3; end
     post RDLTest, :m6, neg
-    assert_raises(RDL::Contract::ContractException) { m6(42) }
+    assert_raises(RDL::Contract::ContractError) { m6(42) }
   end
 
   def test_pre_post_contract
@@ -89,14 +89,14 @@ class RDLTest < Minitest::Test
     pre RDLTest, :m8, gt
     assert_equal 5, m8(5)
     assert_equal 4, m8(4)
-    assert_raises(RDL::Contract::ContractException) { m8 3 }
+    assert_raises(RDL::Contract::ContractError) { m8 3 }
     def m9(x) return x; end
     pre RDLTest, :m9, pos
     pre RDLTest, :m9, gt
     pre RDLTest, :m9, five
     assert_equal 5, m9(5)
-    assert_raises(RDL::Contract::ContractException) { m9 4 }
-    assert_raises(RDL::Contract::ContractException) { m9 3 }
+    assert_raises(RDL::Contract::ContractError) { m9 4 }
+    assert_raises(RDL::Contract::ContractError) { m9 3 }
 
     ppos = RDL::Contract::FlatContract.new("Positive") { |r, x| r > 0 }
     pfive = RDL::Contract::FlatContract.new("Five") { |r, x| r == 5 }
@@ -106,14 +106,14 @@ class RDLTest < Minitest::Test
     post RDLTest, :m10, pgt
     assert_equal 5, m10(5)
     assert_equal 4, m10(4)
-    assert_raises(RDL::Contract::ContractException) { m10 3 }
+    assert_raises(RDL::Contract::ContractError) { m10 3 }
     def m11(x) return x; end
     post RDLTest, :m11, ppos
     post RDLTest, :m11, pgt
     post RDLTest, :m11, pfive
     assert_equal 5, m11(5)
-    assert_raises(RDL::Contract::ContractException) { m11 4 }
-    assert_raises(RDL::Contract::ContractException) { m11 3 }
+    assert_raises(RDL::Contract::ContractError) { m11 4 }
+    assert_raises(RDL::Contract::ContractError) { m11 3 }
   end
 
   def test_deferred_wrap
@@ -121,13 +121,13 @@ class RDLTest < Minitest::Test
     pre RDLTest, :m12, pos
     def m12(x) return x; end
     assert_equal 3, m12(3)
-    assert_raises(RDL::Contract::ContractException) { m12(-1) }
+    assert_raises(RDL::Contract::ContractError) { m12(-1) }
 
     ppos = RDL::Contract::FlatContract.new("Positive") { |r, x| r > 0 }
     post RDLTest, :m13, ppos
     def m13(x) return x; end
     assert_equal 3, m13(3)
-    assert_raises(RDL::Contract::ContractException) { m13(-1) }
+    assert_raises(RDL::Contract::ContractError) { m13(-1) }
 
     pre "RDLTest::Deferred", :m13, pos
     eval "class Deferred; def m13(x) return x; end end"
@@ -135,30 +135,30 @@ class RDLTest < Minitest::Test
     pre(pos)
     def m14(x) return x; end
     assert_equal 3, m14(3)
-    assert_raises(RDL::Contract::ContractException) { m14(-1) }
+    assert_raises(RDL::Contract::ContractError) { m14(-1) }
 
     pre { |x| x > 0 }
     def m15(x) return x; end
     assert_equal 3, m15(3)
-    assert_raises(RDL::Contract::ContractException) { m15(-1) }
+    assert_raises(RDL::Contract::ContractError) { m15(-1) }
 
     pre { |x| x > 0 }
     post { |r, x| x > 0 }
     def m17(x) return x; end
     assert_equal 3, m17(3)
-    assert_raises(RDL::Contract::ContractException) { m17(-1) }
+    assert_raises(RDL::Contract::ContractError) { m17(-1) }
 
     pre { |x| x > 0 }
     post { |r, x| x < 0 }
     def m18(x) return x; end
-    assert_raises(RDL::Contract::ContractException) { m18(-1) }
+    assert_raises(RDL::Contract::ContractError) { m18(-1) }
 
     pre { |x| x > 0 }
     pre { |x| x < 5 }
     def m19(x) return x; end
     assert_equal 3, m19(3)
-    assert_raises(RDL::Contract::ContractException) { m19(6) }
-    assert_raises(RDL::Contract::ContractException) { m19(-1) }
+    assert_raises(RDL::Contract::ContractError) { m19(6) }
+    assert_raises(RDL::Contract::ContractError) { m19(-1) }
 
     pre { |x| x > 0 }
     assert_raises(RuntimeError) {
