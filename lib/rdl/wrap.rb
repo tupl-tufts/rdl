@@ -74,6 +74,38 @@ RUBY
     #   add_contract(klass, meth, :type, contract)
     # end
 
+    def self.process_pre_post_args(default_class, *args, &blk)
+      klass = nil
+      i = 0
+      if args[i].class == Class then
+        klass = args[i]
+        i += 1
+      else
+        klass = default_class
+      end
+
+      meth = nil
+      if args[i].class == Symbol || args[i].class == String then
+        meth = args[i].to_sym
+        i += 1
+      end
+      raise ArgumentError, "Can't have class without method" if i == 1 && meth.nil?
+    
+      contract = nil
+      if args[i].class < RDL::Contract::Contract
+        raise ArgumentError, "Can't have both contract and block" if blk
+        contract = args[i]
+        i += 1
+      elsif blk
+        contract = RDL::Contract::FlatContract.new("Precondition", &blk)
+      end
+
+      raise ArgumentError, "Invalid arguments" if i < args.size
+      raise ArgumentError, "No contract or block given" unless contract
+
+      return [klass, meth, contract]
+    end
+    
     private
 
     def self.wrapped_name(klass, meth)
@@ -95,33 +127,6 @@ class Object
   # pre(contract) = pre(self, next method, contract)
   # pre { block } = pre(self, next method, FlatContract.new { block })
   def pre(*args, &blk)
-    klass = nil
-    i = 0
-    if args[i].class == Class then
-      klass = args[i]
-      i += 1
-    else
-      klass = self.class
-    end
-
-    meth = nil
-    if args[i].class == Symbol || args[i].class == String then
-      meth = args[i]
-      i += 1
-    end
-    raise ArgumentError, "Can't have class without method" if i == 1 && meth.nil?
-    
-    contract = nil
-    if args[i].class < RDL::Contract::Contract
-      raise ArgumentError, "Can't have both contract and block" if block_given?
-      contract = args[i]
-      i += 1
-    elsif block_given?
-      contract = RDL::Contract::FlatContract.new("Precondition", &blk)
-    end
-
-    raise ArgumentError, "Invalid arguments" if i < args.size
-    raise ArgumentError, "No contract or block given" unless contract
     
     puts "klass = #{klass}, meth = #{meth}, contract = #{contract}"
   end
