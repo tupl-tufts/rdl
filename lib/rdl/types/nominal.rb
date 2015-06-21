@@ -35,7 +35,7 @@ module RDL::Type
     end
 
     def to_s
-      "NominalType<#{@name}>"
+      name
     end
 
     def klass

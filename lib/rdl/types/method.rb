@@ -61,19 +61,19 @@ module RDL::Type
           when OptionalType
             unless @args[i].type.member? arg
               raise TypeException,
-                    "Type error: Argument #{i}, expecting (optional) #{@args[i]}, got #{arg.inspect}"
+                    "Type error: Argument #{i}, expecting (optional) #{@args[i]}, got #{arg.class}"
             end
             i += 1
           when VarargType
             unless @args[i].type.member? arg
               raise TypeException,
-                    "Type error: Argument #{i}, expecting (vararg) #{@args[i]}, got #{arg.inspect}"
+                    "Type error: Argument #{i}, expecting (vararg) #{@args[i]}, got #{arg.class}"
             end
             # do not increment i, since vararg can take any number of arugment
           else
             unless @args[i].member? arg
               raise TypeException,
-                    "Type error: Argument #{i}, expecting #{@args[i]}, got #{arg.inspect}"
+                    "Type error: Argument #{i}, expecting #{@args[i]}, got #{arg.class}"
             end
             i += 1
           end
@@ -116,12 +116,12 @@ module RDL::Type
       # TODO: Error message for intersection types, no matches
     end
 
-    def self.check_ret_types(ret_types, ret)
+    def self.check_ret_types(ret_types, ret, *args, &blk)
       matches = [] # types that match ret
       exns = [] # exceptions from types that did not match args
       ret_types.each { |t|
         begin
-          t.to_contract.post_cond.check(ret, *args) # note to_contract is cached
+          t.to_contract.post_cond.check(ret, *args, &blk) # note to_contract is cached
         rescue TypeException => te
           exns << te
         else

@@ -61,7 +61,7 @@ module RDL
           RDL::Contract::AndContract.check_array(posts, ret, *args, &blk)
         end
         if ret_types
-          RDL::Type::MethodType.check_ret_types(ret_types, ret)
+          RDL::Type::MethodType.check_ret_types(ret_types, ret, *args, &blk)
         end
         return ret
       end
