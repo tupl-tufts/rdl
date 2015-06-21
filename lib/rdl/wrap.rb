@@ -10,30 +10,33 @@ module RDL
     end
   
     def self.add_contract(klass, meth, kind, val)
-      klass = Kernel.const_get klass unless klass.class == Class
+      unless klass.class == Class
+        eval "class #{klass}; END" unless Kernel.const_defined? klass
+        klass = Kernel.const_get klass
+      end
       meth = meth.to_sym
-      klass.class_eval <<-RUBY, __FILE__, __LINE__
-        # Another way to do this would be to have a default new array
-        # whenever the hash is accessed, but that might cause a lot of
-        # allocation on checks of wrapped methods
-        @@__rdl_contracts = {} unless defined? @@__rdl_contracts
-        @@__rdl_contracts[meth] = {} unless @@__rdl_contracts[meth]
-        @@__rdl_contracts[meth][kind] = [] unless @@__rdl_contracts[meth][kind]
-        @@__rdl_contracts[meth][kind] << val
-RUBY
+      # $__rdl_contracts is defined in RDL
+      $__rdl_contracts[klass] = {} unless $__rdl_contracts[klass]
+      $__rdl_contracts[klass][meth] = {} unless $__rdl_contracts[klass][meth]
+      $__rdl_contracts[klass][meth][kind] = [] unless $__rdl_contracts[klass][meth][kind]
+      $__rdl_contracts[klass][meth][kind] << val
+    end
+
+    def self.has_contracts(klass, meth, kind)
+      return ($__rdl_contracts.has_key? klass) &&
+             ($__rdl_contracts[klass].has_key? meth) &&
+             ($__rdl_contracts[klass][meth].has_key? kind)
+    end
+
+    def self.get_contracts(klass, meth, kind)
+      return $__rdl_contracts[klass][meth][kind]
     end
     
     # [+klass+] may be a Class, String, or Symbol
-    # [+method+] may be a String or Symbol
+    # [+meth+] may be a String or Symbol
     #
     # Wraps klass#method to check contracts and types. Does not rewrap
-    # if already wrapped. Classes containing wrapped methods may
-    # include three fields for types and contracts: @@__rdl_meth_pre,
-    # @@__rdl_meth_post, and @@__rdl_meth_type. (These names are defined
-    # by contract_field_name.)  Each of these fields contains an array
-    # of precondition contracts, postcondition contracts, and method
-    # types. These are treated as AndContracts (for pre and post) and
-    # IntersectionTypes (for type).
+    # if already wrapped.
 
     def self.wrap(klass, meth)
       klass = Kernel.const_get klass unless klass.class == Class
@@ -42,16 +45,16 @@ RUBY
       
       klass.class_eval <<-RUBY, __FILE__, __LINE__
       alias_method meth_old, meth
-      @@__rdl_contracts = {} unless defined? @@__rdl_contracts
       def #{meth}(*args, &blk)
+        klass = self.class
 #        puts "Intercepted #{meth_old}(\#{args.join(", ")}) { \#{blk} }"
-        if @@__rdl_contracts[#{meth.inspect}] && @@__rdl_contracts[#{meth.inspect}][:pre] then
-          RDL::Contract::AndContract.check_array(@@__rdl_contracts[#{meth.inspect}][:pre],
+        if RDL::Wrap.has_contracts(klass, #{meth.inspect}, :pre) then
+          RDL::Contract::AndContract.check_array(RDL::Wrap.get_contracts(klass, #{meth.inspect}, :pre),
                                                  *args, &blk)
         end
         ret = send(#{meth_old.inspect}, *args, &blk)
-        if @@__rdl_contracts[#{meth.inspect}] && @@__rdl_contracts[#{meth.inspect}][:post] then
-          RDL::Contract::AndContract.check_array(@@__rdl_contracts[#{meth.inspect}][:post],
+        if RDL::Wrap.has_contracts(klass, #{meth.inspect}, :post) then
+          RDL::Contract::AndContract.check_array(RDL::Wrap.get_contracts(klass, #{meth.inspect}, :post),
                                                  ret, *args, &blk)
         end
         return ret
@@ -68,6 +71,7 @@ RUBY
       else
         klass = default_class
       end
+      klass = Kernel.const_get klass unless klass.class == Class
 
       meth = nil
       if args[i].class == Symbol || args[i].class == String then
@@ -114,7 +118,14 @@ class Object
   def pre(*args, &blk)
     klass, meth, contract = RDL::Wrap.process_pre_post_args(self.class, "Precondition", *args, &blk)
     if meth
-      RDL::Wrap.wrap(klass, meth)
+      if klass.method_defined? meth
+        RDL::Wrap.wrap(klass, meth)
+      else
+        # $__rdl_to_wrap is initialized in rdl.rb
+        $__rdl_to_wrap << [klass, meth]
+      end
+    else
+      # TODO: Associate with next method definition
     end
     RDL::Wrap.add_contract(klass, meth, :pre, contract)
   end
@@ -133,5 +144,11 @@ class Object
   #   add_contract(klass, meth, :type, contract)
   # end
 
+  def self.method_added(meth)
+    if $__rdl_to_wrap.member? [self.class, meth]
+      $__rdl_to_wrap.delete [self.class, meth]
+      RDL::Wrap.wrap(klass, meth)
+    end
+  end
   
 end
