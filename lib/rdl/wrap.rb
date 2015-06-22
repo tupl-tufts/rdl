@@ -31,7 +31,7 @@ class RDL::Wrap
            ($__rdl_contracts[klass][meth].has_key? kind)
   end
 
-  def self.has_any_contracts?(klass, meth, kind)
+  def self.has_any_contracts?(klass, meth)
     klass = klass.to_s
     meth = meth.to_sym
     return ($__rdl_contracts.has_key? klass) &&
@@ -60,7 +60,7 @@ class RDL::Wrap
       alias_method meth_old, meth
       def #{meth}(*args, &blk)
         klass = self.class
-#        puts "Intercepted #{meth_old}(\#{args.join(", ")}) { \#{blk} }"
+#        puts "Intercepted #{meth}(\#{args.join(", ")}) { \#{blk} }"
         meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
         if RDL::Wrap.has_contracts?(klass, meth, :pre)
           pres = RDL::Wrap.get_contracts(klass, meth, :pre)
@@ -272,15 +272,15 @@ class Object
   # be called for any aliases or they will not be wrapped with
   # contracts. Only creates aliases in the current class.
   def rdl_alias(new_name, old_name)
-    klass = self.class.to_s
-    $__rdl_aliases[klass] = {} unless $__rdl_contracts[klass]
+    klass = self.to_s
+    $__rdl_aliases[klass] = {} unless $__rdl_aliases[klass]
     if $__rdl_aliases[klass][new_name]
       raise RuntimeError,
             "Tried to alias #{new_name}, already aliased to #{$__rdl_aliases[klass][new_name]}"
     end
     $__rdl_aliases[klass][new_name] = old_name
     
-    if self.class.method_defined? new_name
+    if self.method_defined? new_name
       RDL::Wrap.wrap(klass, new_name)
     else
       $__rdl_to_wrap << [klass, old_name]
