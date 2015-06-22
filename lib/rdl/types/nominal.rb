@@ -39,7 +39,7 @@ module RDL::Type
     end
 
     def klass
-      @klass = RDL.to_class(name) unless @klass
+      @klass = RDL::Util.to_class(name) unless @klass
       return @klass
     end
 

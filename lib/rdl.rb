@@ -1,9 +1,14 @@
 require 'set'
 require 'require_all'
+
+module RDL
+end
+
 require_rel 'rdl/switch.rb'
 require_rel 'rdl/types/*.rb'
 require_rel 'rdl/contracts/*.rb'
 require_rel 'rdl/wrap.rb'
+require_rel 'rdl/util.rb'
 
 # Hash from class name to method name to :pre/:post/:type to array of contracts
 # class names are strings (because they need to be manipulated in case they include ::)
@@ -19,20 +24,3 @@ $__rdl_to_wrap = Set.new
 $__rdl_deferred = []
 
 $__rdl_parser = RDL::Type::Parser.new
-
-module RDL
-
-  def self.to_class(s)
-    return s if s.class == Class
-    return s.to_s.split("::").inject(Object) { |base, name| base.const_get(name) }
-  end
-
-  def self.method_defined?(klass, method)
-    begin
-      (self.to_class klass).method_defined? method.to_sym
-    rescue NameError
-      return false
-    end
-  end
-  
-end
