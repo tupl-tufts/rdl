@@ -126,9 +126,6 @@ rdocTypesigFor(Klass) # Deprecated FIXME
 
 # TODO list
 
-* Wrap, wrapped_name needs special handling of [], ?, !, etc
-  ([]_old is not a valid method name)
-
 * ProcContract, Wrap, MethodType, support higher-order contracts for blocks
 
 * FlatContract, labeled arguments?

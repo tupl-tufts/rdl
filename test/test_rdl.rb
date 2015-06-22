@@ -166,4 +166,19 @@ class RDLTest < Minitest::Test
     }
   end
 
+  def test_special_method_names
+    pre { |x| x > 0 }
+    def [](x) return x end
+    assert_equal 3, self[3]
+    assert_raises(RDL::Contract::ContractError) { self[-1] }
+    pre { |x| x > 0 }
+    def foo?(x) return x end
+    assert_equal 3, foo?(3)
+    assert_raises(RDL::Contract::ContractError) { foo?(-1) }
+    pre(:"bar!") { |x| x > 0 }
+    def bar!(x) return x end
+    assert_equal 3, bar!(3)
+    assert_raises(RDL::Contract::ContractError) { bar!(-1) }
+  end
+  
 end
