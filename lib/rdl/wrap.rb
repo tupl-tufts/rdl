@@ -2,23 +2,40 @@ class RDL::Wrap
   def self.wrapped?(klass, meth)
     RDL::Util.method_defined?(klass, wrapped_name(klass, meth))
   end
+
+  def self.resolve_alias(klass, meth)
+    klass = klass.to_s
+    meth = meth.to_sym
+
+    while $__rdl_aliases[klass] && $__rdl_aliases[klass][meth]
+      raise RuntimeError, "Alias #{klass}\##{meth} has contracts. Contracts are only allowed on methods, not aliases." if has_any_contracts?(klass, meth)
+      meth = $__rdl_aliases[klass][meth]
+    end
+    return meth
+  end
   
   def self.add_contract(klass, meth, kind, val)
     klass = klass.to_s
     meth = meth.to_sym
-    # $__rdl_contracts is defined in RDL
     $__rdl_contracts[klass] = {} unless $__rdl_contracts[klass]
     $__rdl_contracts[klass][meth] = {} unless $__rdl_contracts[klass][meth]
     $__rdl_contracts[klass][meth][kind] = [] unless $__rdl_contracts[klass][meth][kind]
     $__rdl_contracts[klass][meth][kind] << val
   end
 
-  def self.has_contracts(klass, meth, kind)
+  def self.has_contracts?(klass, meth, kind)
     klass = klass.to_s
     meth = meth.to_sym
     return ($__rdl_contracts.has_key? klass) &&
            ($__rdl_contracts[klass].has_key? meth) &&
            ($__rdl_contracts[klass][meth].has_key? kind)
+  end
+
+  def self.has_any_contracts?(klass, meth, kind)
+    klass = klass.to_s
+    meth = meth.to_sym
+    return ($__rdl_contracts.has_key? klass) &&
+           ($__rdl_contracts[klass].has_key? meth)
   end
 
   def self.get_contracts(klass, meth, kind)
@@ -44,19 +61,20 @@ class RDL::Wrap
       def #{meth}(*args, &blk)
         klass = self.class
 #        puts "Intercepted #{meth_old}(\#{args.join(", ")}) { \#{blk} }"
-        if RDL::Wrap.has_contracts(klass, #{meth.inspect}, :pre)
-          pres = RDL::Wrap.get_contracts(klass, #{meth.inspect}, :pre)
+        meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
+        if RDL::Wrap.has_contracts?(klass, meth, :pre)
+          pres = RDL::Wrap.get_contracts(klass, meth, :pre)
           RDL::Contract::AndContract.check_array(pres, *args, &blk)
         end
         types = nil
         type_matches = nil
-        if RDL::Wrap.has_contracts(klass, #{meth.inspect}, :type)
-          types = RDL::Wrap.get_contracts(klass, #{meth.inspect}, :type)
+        if RDL::Wrap.has_contracts?(klass, meth, :type)
+          types = RDL::Wrap.get_contracts(klass, meth, :type)
           type_matches = RDL::Type::MethodType.check_arg_types(types, *args, &blk)
         end
         ret = send(#{meth_old.inspect}, *args, &blk)
-        if RDL::Wrap.has_contracts(klass, #{meth.inspect}, :post)
-          posts = RDL::Wrap.get_contracts(klass, #{meth.inspect}, :post)
+        if RDL::Wrap.has_contracts?(klass, meth, :post)
+          posts = RDL::Wrap.get_contracts(klass, meth, :post)
           RDL::Contract::AndContract.check_array(posts, ret, *args, &blk)
         end
         if type_matches
@@ -185,10 +203,10 @@ class Object
       if RDL::Util.method_defined?(klass, meth)
         RDL::Wrap.wrap(klass, meth)
       else
-        $__rdl_to_wrap << [klass, meth] # $__rdl_to_wrap is initialized in rdl.rb
+        $__rdl_to_wrap << [klass, meth]
       end
     else
-      $__rdl_deferred << [klass, :pre, contract] # $__rdl_deferred is initialized in rdl.rb
+      $__rdl_deferred << [klass, :pre, contract]
     end
   end
 
@@ -200,10 +218,10 @@ class Object
       if RDL::Util.method_defined?(klass, meth)
         RDL::Wrap.wrap(klass, meth)
       else
-        $__rdl_to_wrap << [klass, meth] # $__rdl_to_wrap is initialized in rdl.rb
+        $__rdl_to_wrap << [klass, meth]
       end
     else
-      $__rdl_deferred << [klass, :post, contract] # $__rdl_deferred is initialized in rdl.rb
+      $__rdl_deferred << [klass, :post, contract]
     end
   end
 
@@ -222,10 +240,10 @@ class Object
       if RDL::Util.method_defined?(klass, meth)
         RDL::Wrap.wrap(klass, meth)
       else
-        $__rdl_to_wrap << [klass, meth] # $__rdl_to_wrap is initialized in rdl.rb
+        $__rdl_to_wrap << [klass, meth]
       end
     else
-      $__rdl_deferred << [klass, :type, type] # $__rdl_deferred is initialized in rdl.rb
+      $__rdl_deferred << [klass, :type, type]
     end
   end
 
@@ -250,7 +268,22 @@ class Object
     end
   end
 
-  # Alias contracts for meth_old and meth_new
-  def rdl_alias(meth_old, meth_new)
+  # Aliases contracts for meth_old and meth_new. Currently, this must
+  # be called for any aliases or they will not be wrapped with
+  # contracts. Only creates aliases in the current class.
+  def rdl_alias(new_name, old_name)
+    klass = self.class.to_s
+    $__rdl_aliases[klass] = {} unless $__rdl_contracts[klass]
+    if $__rdl_aliases[klass][new_name]
+      raise RuntimeError,
+            "Tried to alias #{new_name}, already aliased to #{$__rdl_aliases[klass][new_name]}"
+    end
+    $__rdl_aliases[klass][new_name] = old_name
+    
+    if self.class.method_defined? new_name
+      RDL::Wrap.wrap(klass, new_name)
+    else
+      $__rdl_to_wrap << [klass, old_name]
+    end
   end
 end

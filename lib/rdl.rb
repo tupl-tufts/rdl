@@ -9,6 +9,11 @@ end
 # method names are symbols
 $__rdl_contracts = Hash.new
 
+# Hash from class name to method name to its alias method name
+# class names are strings
+# method names are symbols
+$__rdl_aliases = Hash.new
+
 # Set of [class, method] pairs to wrap.
 # class is a string
 # method is a symbol
