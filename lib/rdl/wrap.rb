@@ -239,7 +239,16 @@ class Object
   # type(meth, type)
   # type(type)
   def type(*args, &blk)
-    klass, meth, type = RDL::Wrap.process_type_args(self.class, *args, &blk)
+    klass, meth, type = begin
+                          RDL::Wrap.process_type_args(self.class, *args, &blk)
+                        rescue Racc::ParseError => err
+                          # Remove enough backtrace to only include actual source line
+                          # Warning: Adjust the -5 below if the code (or this comment) changes
+                          bt = err.backtrace
+                          bt.shift until bt[0] =~ /^#{__FILE__}:#{__LINE__-5}/
+                          err.set_backtrace bt
+                          raise err
+                        end
     if meth
       RDL::Wrap.add_contract(klass, meth, :type, type)
       if RDL::Util.method_defined?(klass, meth)
