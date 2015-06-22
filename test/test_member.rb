@@ -36,6 +36,14 @@ class MemberTest < Minitest::Test
     @tb = NominalType.new B
     @tc = NominalType.new C
     @tkernel = NominalType.new Kernel
+    @tarray = NominalType.new Array
+    @tarraystring = GenericType.new(@tarray, @tstring)
+    @tarrayobject = GenericType.new(@tarray, @tobject)
+    @tarrayarraystring = GenericType.new(@tarray, @tarraystring)
+    @tarrayarrayobject = GenericType.new(@tarray, @tarrayobject)
+    @thash = NominalType.new Hash
+    @thashsymstring = GenericType.new(@thash, @tsym, @tstring)
+    @thashobjectobject = GenericType.new(@thash, @tobject, @tobject)
   end
 
   def test_nil
@@ -106,6 +114,31 @@ end
 
     assert (@tobject_and_basicobject.member? o)
     assert (@tobject_and_basicobject.member? nil)
+  end
+
+  def test_generic
+    skip "GenericType#member? not fully implemented"
+    assert (@tarray.member? [1, 2, 3])
+    assert (@tarray.member? [])
+    assert (@tarraystring.member? ["a", "b", "c"])
+    assert (@tarraystring.member? [])
+    assert (not (@tarraystring.member? [1, 2, 3]))
+    assert (@tarrayobject.member? [1, 2, 3])
+    assert (@tarrayobject.member? ["a", "b", "c"])
+    assert (@tarrayarraystring.member? [["a", "b"], ["c"]])
+    assert (@tarrayarraystring.member? [])
+    assert (@tarrayarraystring.member? [[]])
+    assert (@tarrayarraystring.member? [[], []])
+    assert (not (@tarrayarraystring.member? ["a", "b", "c"]))
+    assert (not (@tarrayarraystring.member? [["a", "b"], [1]]))
+    assert (@thash.member?(Hash.new))
+    assert (@thash.member?(a:1, b:2))
+    assert (@thashsymstring.member?(a:"one", b:"two"))
+    assert (not (@thashsymstring.member?(a:1, b:2)))
+    assert (not (@thashsymstring.member?({"a"=>"one", "b"=>"two"})))
+    assert (@thashobjectobject.member?(a:"one", b:"two"))
+    assert (not (@thashobjectobject.member?(a:1, b:2)))
+    assert (not (@thashobjectobject.member?({"a"=>"one", "b"=>"two"})))
   end
   
 end

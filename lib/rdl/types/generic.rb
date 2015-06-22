@@ -32,6 +32,11 @@ module RDL::Type
       "#{@base}<#{params.join(', ')}>"
     end
 
+    def member?(obj)
+      # Fix!
+      base.member?(obj)
+    end
+    
     def eql?(other)
       self == other
     end

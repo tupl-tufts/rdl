@@ -132,3 +132,9 @@ rdocTypesigFor(Klass) # Deprecated FIXME
 * ProcContract, Wrap, MethodType, support higher-order contracts for blocks
 
 * FlatContract, labeled arguments?
+
+* GenericType, fix member? to check type parameters
+
+* Tuple and hash types
+
+* Singleton methods
