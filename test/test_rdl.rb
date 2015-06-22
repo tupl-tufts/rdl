@@ -129,54 +129,73 @@ class TestRDL < Minitest::Test
     assert_equal 3, m13(3)
     assert_raises(RDL::Contract::ContractError) { m13(-1) }
 
-    pre "TestRDL::Deferred", :m13, pos
-    eval "class Deferred; def m13(x) return x; end end"
-
-    pre(pos)
-    def m14(x) return x; end
+    self.class.class_eval {
+      pre(pos)
+      def m14(x) return x; end
+    }
     assert_equal 3, m14(3)
     assert_raises(RDL::Contract::ContractError) { m14(-1) }
 
-    pre { |x| x > 0 }
-    def m15(x) return x; end
+    self.class.class_eval {
+      pre { |x| x > 0 }
+      def m15(x) return x; end
+    }
     assert_equal 3, m15(3)
     assert_raises(RDL::Contract::ContractError) { m15(-1) }
 
-    pre { |x| x > 0 }
-    post { |r, x| x > 0 }
-    def m17(x) return x; end
+    self.class.class_eval {
+      pre { |x| x > 0 }
+      post { |r, x| x > 0 }
+      def m17(x) return x; end
+    }
     assert_equal 3, m17(3)
     assert_raises(RDL::Contract::ContractError) { m17(-1) }
 
-    pre { |x| x > 0 }
-    post { |r, x| x < 0 }
-    def m18(x) return x; end
+    self.class.class_eval {
+      pre { |x| x > 0 }
+      post { |r, x| x < 0 }
+      def m18(x) return x; end
+    }
     assert_raises(RDL::Contract::ContractError) { m18(-1) }
 
-    pre { |x| x > 0 }
-    pre { |x| x < 5 }
-    def m19(x) return x; end
+    self.class.class_eval {
+      pre { |x| x > 0 }
+      pre { |x| x < 5 }
+      def m19(x) return x; end
+    }
     assert_equal 3, m19(3)
     assert_raises(RDL::Contract::ContractError) { m19(6) }
     assert_raises(RDL::Contract::ContractError) { m19(-1) }
 
-    pre { |x| x > 0 }
     assert_raises(RuntimeError) {
-      eval "class Inner; def m20(x) return x; end end"
+      self.class.class_eval <<-RUBY, __FILE__, __LINE__
+  pre { |x| x > 0 }
+  class Inner
+    def m20(x)
+      return x
+    end
+  end
+RUBY
     }
   end
 
   def test_special_method_names
-    pre { |x| x > 0 }
-    def [](x) return x end
+    self.class.class_eval {
+      pre { |x| x > 0 }
+      def [](x) return x end
+    }
     assert_equal 3, self[3]
     assert_raises(RDL::Contract::ContractError) { self[-1] }
-    pre { |x| x > 0 }
-    def foo?(x) return x end
+    self.class.class_eval {
+      pre { |x| x > 0 }
+      def foo?(x) return x end
+    }
     assert_equal 3, foo?(3)
     assert_raises(RDL::Contract::ContractError) { foo?(-1) }
-    pre(:"bar!") { |x| x > 0 }
-    def bar!(x) return x end
+    self.class.class_eval {
+      pre(:"bar!") { |x| x > 0 }
+      def bar!(x) return x end
+    }
     assert_equal 3, bar!(3)
     assert_raises(RDL::Contract::ContractError) { bar!(-1) }
   end

@@ -124,6 +124,7 @@ RUBY
       raise ArgumentError, "Invalid arguments"
     end
     raise ArgumentError, "#{contract.class} received where Contract expected" unless contract.class < RDL::Contract::Contract
+    meth = :initialize if meth && meth.to_sym == :new  # actually wrap constructor
     return [klass, meth, contract]
   end
 
@@ -145,6 +146,7 @@ RUBY
       raise ArgumentError, "Invalid arguments"
     end
     raise ArgumentError, "Excepting method type, got #{type.class} instead" if type.class != RDL::Type::MethodType
+    meth = :initialize if meth && meth.to_sym == :new  # actually wrap constructor
     return [klass, meth, type]
   end
     
@@ -202,10 +204,10 @@ class Object
   # pre(contract) = pre(self, next method, contract)
   # pre { block } = pre(self, next method, FlatContract.new { block })
   def pre(*args, &blk)
-    klass, meth, contract = RDL::Wrap.process_pre_post_args(self.class, "Precondition", *args, &blk)
+    klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Precondition", *args, &blk)
     if meth
       RDL::Wrap.add_contract(klass, meth, :pre, contract)
-      if RDL::Util.method_defined?(klass, meth)
+      if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
         RDL::Wrap.wrap(klass, meth)
       else
         $__rdl_to_wrap << [klass, meth]
@@ -217,10 +219,10 @@ class Object
 
   # Add a postcondition to a method. Same possible invocations as pre.
   def post(*args, &blk)
-    klass, meth, contract = RDL::Wrap.process_pre_post_args(self.class, "Postcondition", *args, &blk)
+    klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Postcondition", *args, &blk)
     if meth
       RDL::Wrap.add_contract(klass, meth, :post, contract)
-      if RDL::Util.method_defined?(klass, meth)
+      if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
         RDL::Wrap.wrap(klass, meth)
       else
         $__rdl_to_wrap << [klass, meth]
@@ -240,7 +242,7 @@ class Object
   # type(type)
   def type(*args, &blk)
     klass, meth, type = begin
-                          RDL::Wrap.process_type_args(self.class, *args, &blk)
+                          RDL::Wrap.process_type_args(self, *args, &blk)
                         rescue Racc::ParseError => err
                           # Remove enough backtrace to only include actual source line
                           # Warning: Adjust the -5 below if the code (or this comment) changes
@@ -251,7 +253,7 @@ class Object
                         end
     if meth
       RDL::Wrap.add_contract(klass, meth, :type, type)
-      if RDL::Util.method_defined?(klass, meth)
+      if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
         RDL::Wrap.wrap(klass, meth)
       else
         $__rdl_to_wrap << [klass, meth]
