@@ -98,7 +98,6 @@ module RDL::Type
     # Types is an array of method types. Checks that args and blk match at least
     # one arm of the intersection type; otherwise raises exception. Returns
     # array of method types that matched args and blk
-    # TODO: Support for blk type checking
     def self.check_arg_types(types, *args, &blk)
       matches = [] # types that matched args
       exns = [] # exceptions from types that did not match args

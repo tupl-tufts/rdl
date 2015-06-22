@@ -11,7 +11,6 @@ module RDL::Contract
       RDL::Switch.off {
         if (@pred &&
             ((@pred.arity < 0) ? (@pred.arity.abs - 1) <= v.size : @pred.arity == v.size)) then
-          # TODO: Labels and proc.parameters :lbl, :rest
           unless blk ? @pred.call(*v, &blk) : @pred.call(*v)
             raise ContractError,
                   "#{v.inspect} does not satisfy #{self.to_s}"

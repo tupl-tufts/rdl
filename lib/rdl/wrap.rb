@@ -126,8 +126,6 @@ RUBY
     private
 
     def self.wrapped_name(klass, meth)
-      # TODO: []_old is not a valid method name. Need to translate []
-      # and other special method names, and ? and !, specially
       "__rdl_#{meth.to_s}_old".to_sym
     end
 
