@@ -39,7 +39,8 @@ module RDL::Type
     end
 
     def klass
-      RDL.to_class(name)
+      @klass = RDL.to_class(name) unless @klass
+      return @klass
     end
 
     def member?(obj)
