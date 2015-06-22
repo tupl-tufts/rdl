@@ -1,140 +1,132 @@
-#require 'rdl'
-require_relative '../../../lib/rdl.rb'
-
-
 class Array
-  extend RDL
-  type_params [:t, :each]
-  
-  typesig(:[], "(Range) -> Array<t>")
-  typesig(:[], "(Fixnum) -> t")
-  typesig(:[], "(Fixnum, Fixnum) -> Array<t>")
-  typesig(:[], "(Float) -> t")
-  typesig(:&, "(Array<u>) -> Array<t>", :vars => [:u])
-  typesig(:*, "(Fixnum) -> Array<t>")
-  typesig(:*, "(String) -> String")
-  typesig(:+, "(Array<u>) -> Array<u or t>", :vars => [:u])
-  typesig(:-, "(Array<u>) -> Array<u or t>", :vars => [:u])
-  typesig(:slice, "(Range) -> Array<t>")
-  typesig(:slice, "(Fixnum) -> t")
-  typesig(:slice, "(Fixnum, Fixnum) -> Array<t>")
-  typesig(:[]=, "(Fixnum, t) -> t")
-  typesig(:[]=, "(Fixnum, Fixnum, t) -> t")
-  #typesig(:[]=, "(Fixnum, Fixnum, Array<t>) -> Array<t>")
-  #typesig(:[]=, "(Range, Array<t>) -> Array<t>")
-  typesig(:[]=, "(Range, t) -> t")
-  typesig(:assoc, "(t) -> Array<t>")
-  typesig(:at, "(Fixnum) -> t")
-  typesig(:clear, "() -> Array<t>")
-  typesig(:map, "() {(t) ->u} -> Array<u>", :vars => [:u])
-  typesig(:map, "() -> Enumerator", :vars => [:u])
-  typesig(:collect, "() { (t) -> u } -> Array<u>", :vars => [:u])
-  typesig(:collect, "() -> Enumerator")
-  typesig(:combination, "(Fixnum) { (Array<t>) -> %any } -> Array<t>")
-  typesig(:combination, "(Fixnum) -> Enumerator")
-  typesig(:push, "(t) -> Array<t>")  
-  typesig(:compact, "() -> Array<t>")
-  typesig(:compact!, "() -> Array<t>")
-  typesig(:concat, "(Array<t>) -> Array<t>")
-  typesig(:count, "() -> Fixnum")
-  typesig(:count, "(t) -> Fixnum")
-  typesig(:count, "() { (t) -> %bool } -> Fixnum")
-  typesig(:cycle, "(?Fixnum) { (t) -> %any } -> %any")
-  typesig(:cycle, "(?Fixnum) -> Enumerator")
-  typesig(:delete, "(u) -> t", :vars => [:u])
-  typesig(:delete, "(u) { () -> v } -> t or v", :vars => [:u, :v])
-  typesig(:delete_at, "(Fixnum) -> Array<t>")
-  typesig(:delete_if, "() { (t) -> %bool } -> Array<t>")
-  typesig(:delete_if, "() -> Enumerator")
-  typesig(:drop, "(Fixnum) -> Array<t>")
-  typesig(:drop_while, "() { (t) -> %bool } -> Array<t>")
-  typesig(:drop_while, "() -> Enumerator")
-  typesig(:each, "() -> Enumerator")
-  typesig(:each, "() { (t) -> %any } -> Array<t>")
-  typesig(:each_index, "() { (Fixnum) -> %any } -> Array<t>")
-  typesig(:each_index, "() -> Enumerator")
-  typesig(:empty?, "() -> %bool")
-  typesig(:fetch, "(Fixnum) -> t")
-  typesig(:fetch, "(Fixnum, u) -> u", :vars => [:u])
-  typesig(:fetch, "(Fixnum) { (Fixnum) -> u } -> t or u", :vars => [:u])
-  typesig(:fill, "(t) -> Array<t>")
-  typesig(:fill, "(t,Fixnum,?Fixnum) -> Array<t>")
-  typesig(:fill, "(t, Range) -> Array<t>")
-  typesig(:fill, "() { (Fixnum) -> t } -> Array<t>")
-  typesig(:fill, "(Fixnum,?Fixnum) { (Fixnum) -> t } -> Array<t>")
-  typesig(:fill, "(Range) { (Fixnum) -> t } -> Array<t>")
-  typesig(:index, "(u) -> Fixnum", :vars => [:u])
-  typesig(:index, "() { (t) -> %bool } -> Fixnum")
-  typesig(:index, "() -> Enumerator")
-  typesig(:first, "() -> t")
-  typesig(:first, "(Fixnum) -> Array<t>")
-  typesig(:include?, "(u) -> %bool", {:vars => [:u]})
-  typesig(:insert, "(Fixnum, *t) -> Array<t>")
-  typesig(:to_s, "() -> String")
-  typesig(:inspect, "() -> String")
-  typesig(:join, "(?String) -> String")
-  typesig(:keep_if, "() { (t) -> %bool } -> Array<t>")
-  typesig(:last, "() -> t")
-  typesig(:last, "(Fixnum) -> Array<t>")
-  typesig(:length, "() -> Fixnum")
-  typesig(:permutation, "(?Fixnum) -> Enumerator")
-  typesig(:permutation, "(?Fixnum) { (Array<t>) -> %any } -> Array<t>")
-  typesig(:pop, "(Fixnum) -> Array<t>")
-  typesig(:pop, "() -> t")
-  typesig(:product, "(*Array<u>) -> Array<Array<t or u>>", :vars => [:u])
-  typesig(:rassoc, "(u) -> t", :vars => [:u])
-  typesig(:reject, "() { (t) -> %bool } -> Array<t>")
-  typesig(:reject, "() -> Enumerator")
-  typesig(:reject!, "() { (t) -> %bool } -> Array<t>")
-  typesig(:reject!, "() -> Enumerator")
-  typesig(:repeated_combination, "(Fixnum) { (Array<t>) -> %any } -> Array<t>")
-  typesig(:repeated_combination, "(Fixnum) -> Enumerator")
-  typesig(:repeated_permutation, "(Fixnum) { (Array<t>) -> %any } -> Array<t>")
-  typesig(:repeated_permutation, "(Fixnum) -> Enumerator")
-  typesig(:reverse, "() -> Array<t>")
-  typesig(:reverse!, "() -> Array<t>")
-  typesig(:reverse_each, "() { (t) -> %any } -> Array<t>")
-  typesig(:reverse_each, "() -> Enumerator")
-  typesig(:rindex, "(u) -> t", :vars => [:u])
-  typesig(:rindex, "() { (t) -> %bool } -> Fixnum")
-  typesig(:rindex, "() -> Enumerator")
-  typesig(:rotate, "(?Fixnum) -> Array<t>")
-  typesig(:rotate!, "(?Fixnum) -> Array<t>")
-  typesig(:sample, "() -> t")
-  typesig(:sample, "(Fixnum) -> Array<t>")
-  typesig(:select, "() { (t) -> %bool } -> Array<t>")
-  typesig(:select, "() -> Enumerator")
-  typesig(:select!, "() { (t) -> %bool } -> Array<t>")
-  typesig(:select!, "() -> Enumerator")
-  typesig(:shift, "() -> t")
-  typesig(:shift, "(Fixnum) -> Array<t>")
-  typesig(:shuffle, "() -> Array<t>")
-  typesig(:shuffle!, "() -> Array<t>")
-  typesig(:size, "() -> Fixnum")
-  typesig(:slice, "(Range) -> Array<t>")
-  typesig(:slice, "(Fixnum, Fixnum) -> Array<t>")
-  typesig(:slice, "(Fixnum) -> t")
-  typesig(:slice, "(Float) -> t")
-  typesig(:slice!, "(Range) -> Array<t>")
-  typesig(:slice!, "(Fixnum, Fixnum) -> Array<t>")
-  typesig(:slice!, "(Fixnum) -> t")
-  typesig(:slice!, "(Float) -> t")
-  typesig(:sort, "() -> Array<t>")
-  typesig(:sort, "() { (t,t) -> Fixnum } -> Array<t>")
-  typesig(:sort!, "() -> Array<t>")
-  typesig(:sort!, "() { (t,t) -> Fixnum } -> Array<t>")
-  typesig(:sort_by!, "() { (t) -> u } -> Array<t>", {:vars => [:u]})
-  typesig(:sort_by!, "() -> Enumerator")
-  typesig(:take, "(Fixnum) -> Array<t>")
-  typesig(:take_while, "() { (t) ->%bool } -> Array<t>")
-  typesig(:take_while, "() -> Enumerator")
-  typesig(:to_a, "() -> Array<t>")
-  typesig(:to_ary, "() -> Array<t>")
-  typesig(:transpose, "() -> Array<t>")
-  typesig(:uniq, "() -> Array<t>")
-  typesig(:uniq!, "() -> Array<t>")
-  typesig(:unshift, "(*t) -> Array<t>")
-  typesig(:values_at, "(*Range or Fixnum) -> Array<t>")
-  typesig(:zip, "(*Array<u>) -> Array<Array<t or u>>", {:vars => [:u]})
-  typesig(:|, "(Array<u>) -> Array<t or u>", {:vars => [:u]})
+  type_params [:t]
+
+  type :[], '(Range) -> Array<t>'
+  type :[], '(Fixnum) -> t'
+  type :[], '(Fixnum, Fixnum) -> Array<t>'
+  type :[], '(Float) -> t'
+  type :&, '(Array<u>) -> Array<t>'
+  type :*, '(Fixnum) -> Array<t>'
+  type :*, '(String) -> String'
+  type :+, '(Array<u>) -> Array<u or t>'
+  type :-, '(Array<u>) -> Array<u or t>'
+  type :slice, '(Range) -> Array<t>'
+  type :slice, '(Fixnum) -> t'
+  type :slice, '(Fixnum, Fixnum) -> Array<t>'
+  type :[]=, '(Fixnum, t) -> t'
+  type :[]=, '(Fixnum, Fixnum, t) -> t'
+  #type :[]=, '(Fixnum, Fixnum, Array<t>) -> Array<t>'
+  #type :[]=, '(Range, Array<t>) -> Array<t>'
+  type :[]=, '(Range, t) -> t'
+  type :assoc, '(t) -> Array<t>'
+  type :at, '(Fixnum) -> t'
+  type :clear, '() -> Array<t>'
+  type :map, '() {(t) ->u} -> Array<u>'
+  type :map, '() -> Enumerator'
+  type :collect, '() { (t) -> u } -> Array<u>'
+  type :collect, '() -> Enumerator'
+  type :combination, '(Fixnum) { (Array<t>) -> %any } -> Array<t>'
+  type :combination, '(Fixnum) -> Enumerator'
+  type :push, '(t) -> Array<t>'
+  type :compact, '() -> Array<t>'
+  type :compact!, '() -> Array<t>'
+  type :concat, '(Array<t>) -> Array<t>'
+  type :count, '() -> Fixnum'
+  type :count, '(t) -> Fixnum'
+  type :count, '() { (t) -> %bool } -> Fixnum'
+  type :cycle, '(?Fixnum) { (t) -> %any } -> %any'
+  type :cycle, '(?Fixnum) -> Enumerator'
+  type :delete, '(u) -> t'
+  type :delete, '(u) { () -> v } -> t or v'
+  type :delete_at, '(Fixnum) -> Array<t>'
+  type :delete_if, '() { (t) -> %bool } -> Array<t>'
+  type :delete_if, '() -> Enumerator'
+  type :drop, '(Fixnum) -> Array<t>'
+  type :drop_while, '() { (t) -> %bool } -> Array<t>'
+  type :drop_while, '() -> Enumerator'
+  type :each, '() -> Enumerator'
+  type :each, '() { (t) -> %any } -> Array<t>'
+  type :each_index, '() { (Fixnum) -> %any } -> Array<t>'
+  type :each_index, '() -> Enumerator'
+  type :empty?, '() -> %bool'
+  type :fetch, '(Fixnum) -> t'
+  type :fetch, '(Fixnum, u) -> u'
+  type :fetch, '(Fixnum) { (Fixnum) -> u } -> t or u'
+  type :fill, '(t) -> Array<t>'
+  type :fill, '(t,Fixnum,?Fixnum) -> Array<t>'
+  type :fill, '(t, Range) -> Array<t>'
+  type :fill, '() { (Fixnum) -> t } -> Array<t>'
+  type :fill, '(Fixnum,?Fixnum) { (Fixnum) -> t } -> Array<t>'
+  type :fill, '(Range) { (Fixnum) -> t } -> Array<t>'
+  type :index, '(u) -> Fixnum'
+  type :index, '() { (t) -> %bool } -> Fixnum'
+  type :index, '() -> Enumerator'
+  type :first, '() -> t'
+  type :first, '(Fixnum) -> Array<t>'
+  type :include?, '(u) -> %bool', {:vars => [:u]}
+  type :insert, '(Fixnum, *t) -> Array<t>'
+  type :inspect, '() -> String'
+  type :join, '(?String) -> String'
+  type :keep_if, '() { (t) -> %bool } -> Array<t>'
+  type :last, '() -> t'
+  type :last, '(Fixnum) -> Array<t>'
+  type :length, '() -> Fixnum'
+  type :permutation, '(?Fixnum) -> Enumerator'
+  type :permutation, '(?Fixnum) { (Array<t>) -> %any } -> Array<t>'
+  type :pop, '(Fixnum) -> Array<t>'
+  type :pop, '() -> t'
+  type :product, '(*Array<u>) -> Array<Array<t or u>>'
+  type :rassoc, '(u) -> t'
+  type :reject, '() { (t) -> %bool } -> Array<t>'
+  type :reject, '() -> Enumerator'
+  type :reject!, '() { (t) -> %bool } -> Array<t>'
+  type :reject!, '() -> Enumerator'
+  type :repeated_combination, '(Fixnum) { (Array<t>) -> %any } -> Array<t>'
+  type :repeated_combination, '(Fixnum) -> Enumerator'
+  type :repeated_permutation, '(Fixnum) { (Array<t>) -> %any } -> Array<t>'
+  type :repeated_permutation, '(Fixnum) -> Enumerator'
+  type :reverse, '() -> Array<t>'
+  type :reverse!, '() -> Array<t>'
+  type :reverse_each, '() { (t) -> %any } -> Array<t>'
+  type :reverse_each, '() -> Enumerator'
+  type :rindex, '(u) -> t'
+  type :rindex, '() { (t) -> %bool } -> Fixnum'
+  type :rindex, '() -> Enumerator'
+  type :rotate, '(?Fixnum) -> Array<t>'
+  type :rotate!, '(?Fixnum) -> Array<t>'
+  type :sample, '() -> t'
+  type :sample, '(Fixnum) -> Array<t>'
+  type :select, '() { (t) -> %bool } -> Array<t>'
+  type :select, '() -> Enumerator'
+  type :select!, '() { (t) -> %bool } -> Array<t>'
+  type :select!, '() -> Enumerator'
+  type :shift, '() -> t'
+  type :shift, '(Fixnum) -> Array<t>'
+  type :shuffle, '() -> Array<t>'
+  type :shuffle!, '() -> Array<t>'
+  rdl_alias :size, :length
+  rdl_alias :slice, :[]
+  type :slice!, '(Range) -> Array<t>'
+  type :slice!, '(Fixnum, Fixnum) -> Array<t>'
+  type :slice!, '(Fixnum) -> t'
+  type :slice!, '(Float) -> t'
+  type :sort, '() -> Array<t>'
+  type :sort, '() { (t,t) -> Fixnum } -> Array<t>'
+  type :sort!, '() -> Array<t>'
+  type :sort!, '() { (t,t) -> Fixnum } -> Array<t>'
+  type :sort_by!, '() { (t) -> u } -> Array<t>'
+  type :sort_by!, '() -> Enumerator'
+  type :take, '(Fixnum) -> Array<t>'
+  type :take_while, '() { (t) ->%bool } -> Array<t>'
+  type :take_while, '() -> Enumerator'
+  type :to_a, '() -> Array<t>'
+  type :to_ary, '() -> Array<t>'
+  rdl_alias :to_s, :inspect
+  type :transpose, '() -> Array<t>'
+  type :uniq, '() -> Array<t>'
+  type :uniq!, '() -> Array<t>'
+  type :unshift, '(*t) -> Array<t>'
+  type :values_at, '(*Range or Fixnum) -> Array<t>'
+  type :zip, '(*Array<u>) -> Array<Array<t or u>>'
+  type :|, '(Array<u>) -> Array<t or u>'
 end

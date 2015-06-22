@@ -1,80 +1,71 @@
 class Object
-  # inherits from BasicObject.
+  type :ARGF, ARGF
+  type :ARGV, 'Array<String>'
+  type :DATA, 'File'
+  type :ENV, ENV
+  type :FALSE, '%false'
+  type :NIL, 'nil'
+  type :RUBY_COPYRIGHT, 'String'
+  type :RUBY_DESCRIPTION, 'String'
+  type :RUBY_ENGINE, 'String'
+  type :RUBY_PATCHLEVEL, Fixnum
+  type :RUBY_PLATFORM, 'String'
+  type :RUBY_RELEASE_DATE, 'String'
+  type :RUBY_REVISION, Fixnum
+  type :RUBY_VERSION, 'String'
+  type :STDERR, 'IO'
+  type :STDIN, 'IO'
+  type :STDOUT, 'IO'
+  type :TOPLEVEL_BINDING, 'Binding'
+  type :TRUE, '%true'
 
-  # includes Kernel - see there for methods.
-
-  # Following Ruby documentation, Kernel's instance methods are listed
-  # here, and Kernel's module methods are defined on Kernel.
-
-  extend RDL
-
-  typesig(:ARGF, ARGF)
-  typesig(:ARGV, 'Array<String>')
-  typesig(:DATA, 'File')
-  typesig(:ENV, ENV)
-  typesig(:FALSE, '%false')
-  typesig(:NIL, 'nil')
-  typesig(:RUBY_COPYRIGHT, 'String')
-  typesig(:RUBY_DESCRIPTION, 'String')
-  typesig(:RUBY_ENGINE, 'String')
-  typesig(:RUBY_PATCHLEVEL, Fixnum)
-  typesig(:RUBY_PLATFORM, 'String')
-  typesig(:RUBY_RELEASE_DATE, 'String')
-  typesig(:RUBY_REVISION, Fixnum)
-  typesig(:RUBY_VERSION, 'String')
-  typesig(:STDERR, 'IO');
-  typesig(:STDIN, 'IO');
-  typesig(:STDOUT, 'IO');
-  typesig(:TOPLEVEL_BINDING, 'Binding')
-  typesig(:TRUE, '%true')
-
-  typesig(:!~, '(other : %any) -> %bool')
-  typesig(:<=>, '(other : %any) -> Fixnum or nil'), post { ret.nil? || ret.abs < 2 }
-  typesig(:===, '(other : %any) -> %bool')
-  typesig(:=~, '(other : %any) -> nil')
-  typesig(:class, '() -> Class')
-  typesig(:clone, '() -> self')
-#  typesig(:define_singleton_method, '(XXXX : *XXXX)') # TODO
-  typesig(:display, '(port : IO)')
-  typesig(:dup, '() -> an_object : self')
-  typesig(:enum_for, '(method : ?Symbol, args : *%any) -> Enumerator<%any>')
-  typesig(:enum_for, '(method : ?Symbol, args : *%any) { (args : %any) -> %any } -> Enumerator<%any>')
-  typesig(:eql?, '(other : %any) -> %bool')
-#  typesig(:extend, '(XXXX : *XXXX)') # TODO
-  typesig(:freeze, '() -> self')
-  typesig(:frozen?, '() -> %bool')
-  typesig(:hash, '() -> Fixnum')
-  typesig(:inspect, '() -> STring')
-  typesig(:instance_of?, '(Class) -> %bool')
-  typesig(:instance_variable_defined?, '(Symbol or String) -> %bool')
-  typesig(:instance_variable_get, '(Symbol or String) -> %any')
-  typesig(:instance_variable_set, '(Symbol or String, %any) -> %any') # returns 2nd argument
-  typesig(:instance_variables, '() -> Array<Symbol>')
-  typesig(:is_a?, '(Class) -> %bool')
-  typesig(:kind_of?, '(Class) -> %bool')
-  typesig(:method, '(Symbol) -> Method')
-  typesig(:methods, '(regular : ?%bool) -> Array<Symbol>')
-  typesig(:nil?, '() -> %bool')
-  typesig(:private_methods, '(all : ?%bool) -> Array<Symbol>')
-  typesig(:protected_methods, '(all : ?%bool) -> Array<Symbol>')
-  typesig(:public_method, '(Symbol) -> Method')
-  typesig(:public_methods, '(all : ?%bool) -> Array<Symbol>')
-  typesig(:public_send, '(Symbol or String, args : *%any) -> %any')
-  typesig(:remove_instance_variable, '(Symbol) -> %any')
-  typesig(:respond_to?, '(Symbol or String, include_all : ?%bool) -> %bool')
-  typesig(:send, '(Symbol or String, args : *%any) -> %any')
-  typesig(:singleton_class, '() -> Class')
-  typesig(:singleton_method, '(Symbol) -> Method')
-  typesig(:singleton_methods, '(all : ?%bool) -> Array<Symbol>')
-  typesig(:taint, '() -> self')
-  typesig(:tainted?, '() -> %bool')
-#  typesig(:tap, '()') # TODO
-  typesig(:to_enum, '(method : ?Symbol, args : *%any) -> Enumerator<%any>')
-  typesig(:to_enum, '(method : ?Symbol, args : *%any) { (args : %any) -> %any } -> Enumerator<%any>')
+  type :!~, '(other : %any) -> %bool'
+  type :<=>, '(other : %any) -> Fixnum or nil'
+  type :===, '(other : %any) -> %bool'
+  type :=~, '(other : %any) -> nil'
+  type :class, '() -> Class'
+  type :clone, '() -> self'
+#  type :define_singleton_method, '(XXXX : *XXXX)') # TODO
+  type :display, '(port : IO)'
+  type :dup, '() -> an_object : self'
+  type :enum_for, '(method : ?Symbol, args : *%any) -> Enumerator<%any>'
+  type :enum_for, '(method : ?Symbol, args : *%any) { (args : %any) -> %any } -> Enumerator<%any>'
+  type :eql?, '(other : %any) -> %bool'
+#  type :extend, '(XXXX : *XXXX)') # TODO
+  type :freeze, '() -> self'
+  type :frozen?, '() -> %bool'
+  type :hash, '() -> Fixnum'
+  type :inspect, '() -> String'
+  type :instance_of?, '(Class) -> %bool'
+  type :instance_variable_defined?, '(Symbol or String) -> %bool'
+  type :instance_variable_get, '(Symbol or String) -> %any'
+  type :instance_variable_set, '(Symbol or String, %any) -> %any' # returns 2nd argument
+  type :instance_variables, '() -> Array<Symbol>'
+  type :is_a?, '(Class) -> %bool'
+  type :kind_of?, '(Class) -> %bool'
+  type :method, '(Symbol) -> Method'
+  type :methods, '(regular : ?%bool) -> Array<Symbol>'
+  type :nil?, '() -> %bool'
+  type :private_methods, '(all : ?%bool) -> Array<Symbol>'
+  type :protected_methods, '(all : ?%bool) -> Array<Symbol>'
+  type :public_method, '(Symbol) -> Method'
+  type :public_methods, '(all : ?%bool) -> Array<Symbol>'
+  type :public_send, '(Symbol or String, args : *%any) -> %any'
+  type :remove_instance_variable, '(Symbol) -> %any'
+  type :respond_to?, '(Symbol or String, include_all : ?%bool) -> %bool'
+  type :send, '(Symbol or String, args : *%any) -> %any'
+  type :singleton_class, '() -> Class'
+  type :singleton_method, '(Symbol) -> Method'
+  type :singleton_methods, '(all : ?%bool) -> Array<Symbol>'
+  type :taint, '() -> self'
+  type :tainted?, '() -> %bool'
+#  type :tap, '()') # TODO
+  type :to_enum, '(method : ?Symbol, args : *%any) -> Enumerator<%any>'
+  type :to_enum, '(method : ?Symbol, args : *%any) {(args : %any) -> %any} -> Enumerator<%any>'
 # TODO: above alias for enum_for?
-  typesig(:to_s, '() -> String')
-  typesig(:trust, '() -> self')
-  typesig(:untaint, '() -> self')
-  typesig(:untrust, '() -> self')
-  typesig(:untrusted?, '() -> %bool')
+  type :to_s, '() -> String'
+  type :trust, '() -> self'
+  type :untaint, '() -> self'
+  type :untrust, '() -> self'
+  type :untrusted?, '() -> %bool'
 end
