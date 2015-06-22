@@ -64,6 +64,10 @@ class RDL::Wrap
         end
         return ret
       end
+      if (public_method_defined? meth_old) then public meth
+      elsif (protected_method_defined? meth_old) then protected meth
+      elsif (private_method_defined? meth_old) then private meth
+      end
 RUBY
   end
 
@@ -245,5 +249,8 @@ class Object
       RDL::Wrap.wrap(klass, meth)
     end
   end
-  
+
+  # Alias contracts for meth_old and meth_new
+  def rdl_alias(meth_old, meth_new)
+  end
 end

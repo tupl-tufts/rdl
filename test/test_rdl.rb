@@ -180,5 +180,20 @@ class RDLTest < Minitest::Test
     assert_equal 3, bar!(3)
     assert_raises(RDL::Contract::ContractError) { bar!(-1) }
   end
-  
+
+  def test_wrap_access_control
+    def m20(x) return x; end
+    def m21(x) return x; end
+    def m22(x) return x; end
+    self.class.class_eval { public(:m20) }
+    self.class.class_eval { protected(:m21) }
+    self.class.class_eval { private(:m22) }
+    RDL::Wrap.wrap(RDLTest, :m20)
+    RDL::Wrap.wrap(RDLTest, :m21)
+    RDL::Wrap.wrap(RDLTest, :m22)
+    assert (self.class.class_eval { public_method_defined? :m20 })
+    assert (self.class.class_eval { protected_method_defined? :m21 })
+    assert (self.class.class_eval { private_method_defined? :m22 })
+  end
+
 end
