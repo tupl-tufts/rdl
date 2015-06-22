@@ -135,3 +135,8 @@ rdocTypesigFor(Klass) # Deprecated FIXME
 * Tuple and hash types
 
 * Singleton methods
+
+* Subtyping nominal types
+
+* How to check whether initialize? is user-defined? method_defined? always
+  returns true, meaning wrapping isn't fully working with initialize

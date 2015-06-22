@@ -220,5 +220,23 @@ RUBY
     assert_equal [:t, :u], RDL::Wrap.get_type_params(TestRDL::A)
     assert_raises(RuntimeError) { self.class.class_eval "class A; type_params [] end" }
   end
-  
+
+  def test_wrap_new
+    self.class.class_eval "class B; def initialize(x); @x = x end; def get(); return @x end end"
+    pre("TestRDL::B", :new) { |x| x > 0 }
+    assert_equal 3, TestRDL::B.new(3).get
+    assert_raises(RDL::Contract::ContractError) { TestRDL::B.new(-3) }
+
+    self.class.class_eval "class C; pre { |x| x > 0 }; def initialize(x); @x = x end; def get(); return @x end end"
+    assert_equal 3, TestRDL::C.new(3).get
+    assert_raises(RDL::Contract::ContractError) { TestRDL::C.new(-3) }
+
+    skip "Currently can't defer contracts on initialize"
+    self.class.class_eval "class D; def get(); return @x end end"
+    pre("TestRDL::D", :new) { |x| x > 0 }
+    self.class.class_eval "class D; def initialize(x); @x = x end end"
+    assert_equal 3, TestRDL::D.new(3).get
+    assert_raises(RDL::Contract::ContractError) { TestRDL::D.new(-3) }
+  end
+
 end

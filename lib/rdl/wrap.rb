@@ -59,8 +59,8 @@ class RDL::Wrap
     klass = RDL::Util.to_class klass
     raise ArgumentError, "Attempt to wrap #{klass.to_s}\##{meth.to_s}" if klass.to_s =~ /^RDL::/
     meth_old = wrapped_name(klass, meth) # meth_old is a symbol
-    return if klass.method_defined? meth_old  # Don't rewrap
-      
+    return if (klass.method_defined? meth_old)
+
     klass.class_eval <<-RUBY, __FILE__, __LINE__
       alias_method meth_old, meth
       def #{meth}(*args, &blk)
