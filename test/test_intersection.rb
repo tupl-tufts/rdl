@@ -1,7 +1,7 @@
 require 'minitest/autorun'
 require_relative '../lib/rdl.rb'
 
-class IntersectionTest < Minitest::Test
+class TestIntersection < Minitest::Test
   include RDL::Type
 
   def setup

@@ -1,7 +1,7 @@
 require 'minitest/autorun'
 require_relative '../lib/rdl.rb'
 
-class TypeTest < Minitest::Test
+class TestTypes < Minitest::Test
   include RDL::Type
 
   def test_nil_top

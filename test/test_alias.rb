@@ -1,7 +1,7 @@
 require 'minitest/autorun'
 require_relative '../lib/rdl.rb'
 
-class AliasTest < Minitest::Test
+class TestAlias < Minitest::Test
 
   def test_alias_lookup
     self.class.class_eval {
@@ -11,12 +11,12 @@ class AliasTest < Minitest::Test
       rdl_alias :foobar4, :foobar3
       rdl_alias :foobar5, :foobar2
     }
-    assert_equal :foobar, RDL::Wrap.resolve_alias(AliasTest, :foobar)
-    assert_equal :foobar, RDL::Wrap.resolve_alias(AliasTest, :foobar1)
-    assert_equal :foobar, RDL::Wrap.resolve_alias(AliasTest, :foobar2)
-    assert_equal :foobar, RDL::Wrap.resolve_alias(AliasTest, :foobar3)
-    assert_equal :foobar, RDL::Wrap.resolve_alias(AliasTest, :foobar4)
-    assert_equal :foobar, RDL::Wrap.resolve_alias(AliasTest, :foobar5)
+    assert_equal :foobar, RDL::Wrap.resolve_alias(TestAlias, :foobar)
+    assert_equal :foobar, RDL::Wrap.resolve_alias(TestAlias, :foobar1)
+    assert_equal :foobar, RDL::Wrap.resolve_alias(TestAlias, :foobar2)
+    assert_equal :foobar, RDL::Wrap.resolve_alias(TestAlias, :foobar3)
+    assert_equal :foobar, RDL::Wrap.resolve_alias(TestAlias, :foobar4)
+    assert_equal :foobar, RDL::Wrap.resolve_alias(TestAlias, :foobar5)
   end
 
   def test_basic_alias_contract

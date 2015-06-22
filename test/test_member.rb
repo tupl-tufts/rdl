@@ -1,7 +1,7 @@
 require 'minitest/autorun'
 require_relative '../lib/rdl.rb'
 
-class MemberTest < Minitest::Test
+class TestMember < Minitest::Test
   include RDL::Type
 
   class A

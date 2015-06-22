@@ -1,7 +1,7 @@
 require 'minitest/autorun'
 require_relative '../lib/rdl.rb'
 
-class ContractTest < Minitest::Test
+class TestContract < Minitest::Test
   include RDL::Contract
 
   def test_flat

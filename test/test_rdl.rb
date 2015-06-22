@@ -1,7 +1,7 @@
 require 'minitest/autorun'
 require_relative '../lib/rdl.rb'
 
-class RDLTest < Minitest::Test
+class TestRDL < Minitest::Test
 
   # Test wrapping with no types or contracts
   def test_wrap
@@ -9,18 +9,18 @@ class RDLTest < Minitest::Test
     def m2(x) return x; end
     def m3(x) return x; end
     def m4(x) return x; end
-    assert(not(RDL::Wrap.wrapped?(RDLTest, :m1)))
-    assert(not(RDL::Wrap.wrapped?(RDLTest, :m2)))
-    assert(not(RDL::Wrap.wrapped?(RDLTest, :m3)))
-    assert(not(RDL::Wrap.wrapped?(RDLTest, :m4)))
-    RDL::Wrap.wrap(RDLTest, :m1)
-    RDL::Wrap.wrap("RDLTest", :m2)
-    RDL::Wrap.wrap(:RDLTest, :m3)
-    RDL::Wrap.wrap(RDLTest, "m4")
-    assert(RDL::Wrap.wrapped?(RDLTest, :m1))
-    assert(RDL::Wrap.wrapped?(RDLTest, :m2))
-    assert(RDL::Wrap.wrapped?(RDLTest, :m3))
-    assert(RDL::Wrap.wrapped?(RDLTest, :m4))
+    assert(not(RDL::Wrap.wrapped?(TestRDL, :m1)))
+    assert(not(RDL::Wrap.wrapped?(TestRDL, :m2)))
+    assert(not(RDL::Wrap.wrapped?(TestRDL, :m3)))
+    assert(not(RDL::Wrap.wrapped?(TestRDL, :m4)))
+    RDL::Wrap.wrap(TestRDL, :m1)
+    RDL::Wrap.wrap("TestRDL", :m2)
+    RDL::Wrap.wrap(:TestRDL, :m3)
+    RDL::Wrap.wrap(TestRDL, "m4")
+    assert(RDL::Wrap.wrapped?(TestRDL, :m1))
+    assert(RDL::Wrap.wrapped?(TestRDL, :m2))
+    assert(RDL::Wrap.wrapped?(TestRDL, :m3))
+    assert(RDL::Wrap.wrapped?(TestRDL, :m4))
     assert_equal 3, m1(3)
     assert_equal 3, m2(3)
     assert_equal 3, m3(3)
@@ -29,20 +29,20 @@ class RDLTest < Minitest::Test
 
   def test_process_pre_post_args
     ppos = RDL::Contract::FlatContract.new("Positive") { |x| x > 0 }
-    assert_equal ["RDLTest", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", RDLTest, :m1, ppos)
-    assert_equal ["RDLTest", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", RDLTest, "m1", ppos)
-    assert_equal ["RDLTest", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", :m1, ppos)
-    assert_equal ["RDLTest", nil, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", ppos)
-    klass1, meth1, c1 = RDL::Wrap.process_pre_post_args(self.class, "C", RDLTest, :m1) { |x| x > 0 }
-    assert_equal ["RDLTest", :m1], [klass1, meth1]
+    assert_equal ["TestRDL", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, :m1, ppos)
+    assert_equal ["TestRDL", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, "m1", ppos)
+    assert_equal ["TestRDL", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", :m1, ppos)
+    assert_equal ["TestRDL", nil, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", ppos)
+    klass1, meth1, c1 = RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, :m1) { |x| x > 0 }
+    assert_equal ["TestRDL", :m1], [klass1, meth1]
     assert (c1.is_a? RDL::Contract::FlatContract)
 
     klass2, meth2, c2 = RDL::Wrap.process_pre_post_args(self.class, "C", :m1) { |x| x > 0 }
-    assert_equal ["RDLTest", :m1], [klass2, meth2]
+    assert_equal ["TestRDL", :m1], [klass2, meth2]
     assert (c2.is_a? RDL::Contract::FlatContract)
 
     klass3, meth3, c3 = RDL::Wrap.process_pre_post_args(self.class, "C") { |x| x > 0 }
-    assert_equal ["RDLTest", nil], [klass3, meth3]
+    assert_equal ["TestRDL", nil], [klass3, meth3]
     assert (c3.is_a? RDL::Contract::FlatContract)
     
     assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C") }
@@ -50,16 +50,16 @@ class RDLTest < Minitest::Test
     assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C", 42) { |x| x > 0} }
     assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C", ppos) { |x| x > 0 } }
     assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C", :m1) }
-    assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C", RDLTest) }
-    assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C", RDLTest) { |x| x > 0 } }
-    assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C", RDLTest, ppos) }
-    assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C", RDLTest, :m1, ppos, 42) }
+    assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL) }
+    assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL) { |x| x > 0 } }
+    assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, ppos) }
+    assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, :m1, ppos, 42) }
   end
 
   def test_pre_contract
     pos = RDL::Contract::FlatContract.new("Positive") { |x| x > 0 }
     def m5(x) return x; end
-    pre RDLTest, :m5, pos
+    pre TestRDL, :m5, pos
     assert_equal 3, m5(3)
     assert_raises(RDL::Contract::ContractError) { m5(-1) }
   end
@@ -67,7 +67,7 @@ class RDLTest < Minitest::Test
   def test_post_contract
     neg = RDL::Contract::FlatContract.new("Negative") { |x| x < 0 }
     def m6(x) return 3; end
-    post RDLTest, :m6, neg
+    post TestRDL, :m6, neg
     assert_raises(RDL::Contract::ContractError) { m6(42) }
   end
 
@@ -75,8 +75,8 @@ class RDLTest < Minitest::Test
     pos = RDL::Contract::FlatContract.new("Positive") { |x| x > 0 }
     ppos = RDL::Contract::FlatContract.new("Positive") { |r, x| r > 0 }
     def m7(x) return x; end
-    pre RDLTest, :m7, pos
-    post RDLTest, :m7, ppos
+    pre TestRDL, :m7, pos
+    post TestRDL, :m7, ppos
     assert_equal 3, m7(3)
   end
 
@@ -85,15 +85,15 @@ class RDLTest < Minitest::Test
     five = RDL::Contract::FlatContract.new("Five") { |x| x == 5 }
     gt = RDL::Contract::FlatContract.new("Greater Than 3") { |x| x > 3 }
     def m8(x) return x; end
-    pre RDLTest, :m8, pos
-    pre RDLTest, :m8, gt
+    pre TestRDL, :m8, pos
+    pre TestRDL, :m8, gt
     assert_equal 5, m8(5)
     assert_equal 4, m8(4)
     assert_raises(RDL::Contract::ContractError) { m8 3 }
     def m9(x) return x; end
-    pre RDLTest, :m9, pos
-    pre RDLTest, :m9, gt
-    pre RDLTest, :m9, five
+    pre TestRDL, :m9, pos
+    pre TestRDL, :m9, gt
+    pre TestRDL, :m9, five
     assert_equal 5, m9(5)
     assert_raises(RDL::Contract::ContractError) { m9 4 }
     assert_raises(RDL::Contract::ContractError) { m9 3 }
@@ -102,15 +102,15 @@ class RDLTest < Minitest::Test
     pfive = RDL::Contract::FlatContract.new("Five") { |r, x| r == 5 }
     pgt = RDL::Contract::FlatContract.new("Greater Than 3") { |r, x| r > 3 }
     def m10(x) return x; end
-    post RDLTest, :m10, ppos
-    post RDLTest, :m10, pgt
+    post TestRDL, :m10, ppos
+    post TestRDL, :m10, pgt
     assert_equal 5, m10(5)
     assert_equal 4, m10(4)
     assert_raises(RDL::Contract::ContractError) { m10 3 }
     def m11(x) return x; end
-    post RDLTest, :m11, ppos
-    post RDLTest, :m11, pgt
-    post RDLTest, :m11, pfive
+    post TestRDL, :m11, ppos
+    post TestRDL, :m11, pgt
+    post TestRDL, :m11, pfive
     assert_equal 5, m11(5)
     assert_raises(RDL::Contract::ContractError) { m11 4 }
     assert_raises(RDL::Contract::ContractError) { m11 3 }
@@ -118,18 +118,18 @@ class RDLTest < Minitest::Test
 
   def test_deferred_wrap
     pos = RDL::Contract::FlatContract.new("Positive") { |x| x > 0 }
-    pre RDLTest, :m12, pos
+    pre TestRDL, :m12, pos
     def m12(x) return x; end
     assert_equal 3, m12(3)
     assert_raises(RDL::Contract::ContractError) { m12(-1) }
 
     ppos = RDL::Contract::FlatContract.new("Positive") { |r, x| r > 0 }
-    post RDLTest, :m13, ppos
+    post TestRDL, :m13, ppos
     def m13(x) return x; end
     assert_equal 3, m13(3)
     assert_raises(RDL::Contract::ContractError) { m13(-1) }
 
-    pre "RDLTest::Deferred", :m13, pos
+    pre "TestRDL::Deferred", :m13, pos
     eval "class Deferred; def m13(x) return x; end end"
 
     pre(pos)
@@ -188,9 +188,9 @@ class RDLTest < Minitest::Test
     self.class.class_eval { public(:m20) }
     self.class.class_eval { protected(:m21) }
     self.class.class_eval { private(:m22) }
-    RDL::Wrap.wrap(RDLTest, :m20)
-    RDL::Wrap.wrap(RDLTest, :m21)
-    RDL::Wrap.wrap(RDLTest, :m22)
+    RDL::Wrap.wrap(TestRDL, :m20)
+    RDL::Wrap.wrap(TestRDL, :m21)
+    RDL::Wrap.wrap(TestRDL, :m22)
     assert (self.class.class_eval { public_method_defined? :m20 })
     assert (self.class.class_eval { protected_method_defined? :m21 })
     assert (self.class.class_eval { private_method_defined? :m22 })
@@ -198,7 +198,7 @@ class RDLTest < Minitest::Test
 
   def test_type_params
     self.class.class_eval "class A; type_params [:t, :u] end"
-    assert_equal [:t, :u], RDL::Wrap.get_type_params(RDLTest::A)
+    assert_equal [:t, :u], RDL::Wrap.get_type_params(TestRDL::A)
     assert_raises(RuntimeError) { self.class.class_eval "class A; type_params [] end" }
   end
   

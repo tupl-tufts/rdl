@@ -1,7 +1,7 @@
 require 'minitest/autorun'
 require_relative '../lib/rdl.rb'
 
-class LeTest < Minitest::Test
+class TestLe < Minitest::Test
   include RDL::Type
 
   def setup
