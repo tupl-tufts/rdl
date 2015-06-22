@@ -196,4 +196,10 @@ class RDLTest < Minitest::Test
     assert (self.class.class_eval { private_method_defined? :m22 })
   end
 
+  def test_type_params
+    self.class.class_eval "class A; type_params [:t, :u] end"
+    assert_equal [:t, :u], RDL::Wrap.get_type_params(RDLTest::A)
+    assert_raises(RuntimeError) { self.class.class_eval "class A; type_params [] end" }
+  end
+  
 end

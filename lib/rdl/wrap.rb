@@ -13,7 +13,7 @@ class RDL::Wrap
     end
     return meth
   end
-  
+
   def self.add_contract(klass, meth, kind, val)
     klass = klass.to_s
     meth = meth.to_sym
@@ -43,7 +43,12 @@ class RDL::Wrap
     meth = meth.to_sym
     return $__rdl_contracts[klass][meth][kind]
   end
-    
+
+  def self.get_type_params(klass)
+    klass = klass.to_s
+    $__rdl_type_params[klass]
+  end
+  
   # [+klass+] may be a Class, String, or Symbol
   # [+meth+] may be a String or Symbol
   #
@@ -285,5 +290,15 @@ class Object
     else
       $__rdl_to_wrap << [klass, old_name]
     end
+  end
+
+  # [+params+] is an array of symbols that are the parameters of this (generic) type
+  def type_params(params)
+    raise RuntimeError, "Empty type parameters not allowed" if params.empty?
+    klass = self.to_s
+    if $__rdl_type_params[klass]
+      raise RuntimeError, "#{klass} already has type parameters #{$__rdl_type_params[klass]}"
+    end
+    $__rdl_type_params[klass] = params
   end
 end

@@ -9,6 +9,9 @@ end
 # method names are symbols
 $__rdl_contracts = Hash.new
 
+# Hash from class name to array of symbols that are the class's type parameters
+$__rdl_type_params = Hash.new
+
 # Hash from class name to method name to its alias method name
 # class names are strings
 # method names are symbols
