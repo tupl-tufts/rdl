@@ -8,7 +8,7 @@ module RDL::Contract
     end
 
     def check(*v, &blk)
-      $__rdl_flat_switch.off {
+      $__rdl_contract_switch.off {
         if (@pred &&
             ((@pred.arity < 0) ? (@pred.arity.abs - 1) <= v.size : @pred.arity == v.size)) then
           unless blk ? @pred.call(*v, &blk) : @pred.call(*v)

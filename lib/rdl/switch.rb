@@ -2,6 +2,9 @@ class RDL::Switch
   def initialize
     @switch = true
   end
+  def off?()
+    return not(@switch)
+  end
   def off()
     return unless @switch
     tmp = @switch

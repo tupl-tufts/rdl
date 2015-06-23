@@ -25,7 +25,13 @@ $__rdl_to_wrap = Set.new
 # List of contracts that should be applied to the next method definition
 $__rdl_deferred = []
 
+# Create switches to control whether wrapping happens and whether
+# contracts are checked. These need to be created before rdl/wrap.rb
+# is loaded.
 require_rel 'rdl/switch.rb'
+$__rdl_wrap_switch = RDL::Switch.new
+$__rdl_contract_switch = RDL::Switch.new
+
 require_rel 'rdl/types/*.rb'
 require_rel 'rdl/contracts/*.rb'
 require_rel 'rdl/util.rb'
@@ -33,5 +39,3 @@ require_rel 'rdl/wrap.rb'
 
 $__rdl_parser = RDL::Type::Parser.new
 
-$__rdl_wrap_switch = RDL::Switch.new
-$__rdl_flat_switch = RDL::Switch.new
