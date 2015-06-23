@@ -1,32 +1,17 @@
 class RDL::Switch
-  @@switch = true
-  def self.on?()
-    @@switch
+  def initialize
+    @switch = true
   end
-  def self.on!()
-    tmp = @@switch
-    @@switch = true
-    return tmp
-  end
-  def self.off!()
-    tmp = @@switch
-    @@switch = false
-    return tmp
-  end
-  def self.set(state)
-    tmp = @@switch
-    @@switch = state
-    return tmp
-  end
-  def self.off()
-    return unless @@switch
-    tmp = @@switch
-    @@switch = false
+  def off()
+    return unless @switch
+    tmp = @switch
+    @switch = false
     begin
-      yield
+      ret = yield
     ensure
-      @@switch = tmp
+      @switch = tmp
     end
+    return ret
   end
 end
 

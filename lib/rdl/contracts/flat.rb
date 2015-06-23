@@ -8,7 +8,7 @@ module RDL::Contract
     end
 
     def check(*v, &blk)
-      RDL::Switch.off {
+      $__rdl_flat_switch.off {
         if (@pred &&
             ((@pred.arity < 0) ? (@pred.arity.abs - 1) <= v.size : @pred.arity == v.size)) then
           unless blk ? @pred.call(*v, &blk) : @pred.call(*v)
@@ -19,8 +19,8 @@ module RDL::Contract
           raise ContractError,
                 "Invalid number of arguments: Expecting #{@pred.arity}, got #{v.size}"
         end
-        true
       }
+      return true
     end
 
     def to_s

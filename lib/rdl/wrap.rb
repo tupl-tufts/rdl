@@ -64,27 +64,30 @@ class RDL::Wrap
     klass.class_eval <<-RUBY, __FILE__, __LINE__
       alias_method meth_old, meth
       def #{meth}(*args, &blk)
-        klass = self.class
-#        puts "Intercepted #{meth}(\#{args.join(", ")}) { \#{blk} }"
-        meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
-        if RDL::Wrap.has_contracts?(klass, meth, :pre)
-          pres = RDL::Wrap.get_contracts(klass, meth, :pre)
-          RDL::Contract::AndContract.check_array(pres, *args, &blk)
-        end
-        types = nil
-        type_matches = nil
-        if RDL::Wrap.has_contracts?(klass, meth, :type)
-          types = RDL::Wrap.get_contracts(klass, meth, :type)
-          type_matches = RDL::Type::MethodType.check_arg_types(types, *args, &blk)
-        end
+        klass = meth = types = type_matches = nil
+        $__rdl_wrap_switch.off {
+          klass = self.class
+#          puts "Intercepted #{meth}(\#{args.join(", ")}) { \#{blk} }"
+          meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
+          if RDL::Wrap.has_contracts?(klass, meth, :pre)
+            pres = RDL::Wrap.get_contracts(klass, meth, :pre)
+            RDL::Contract::AndContract.check_array(pres, *args, &blk)
+          end
+          if RDL::Wrap.has_contracts?(klass, meth, :type)
+            types = RDL::Wrap.get_contracts(klass, meth, :type)
+            type_matches = RDL::Type::MethodType.check_arg_types(types, *args, &blk)
+          end
+        }
         ret = send(#{meth_old.inspect}, *args, &blk)
-        if RDL::Wrap.has_contracts?(klass, meth, :post)
-          posts = RDL::Wrap.get_contracts(klass, meth, :post)
-          RDL::Contract::AndContract.check_array(posts, ret, *args, &blk)
-        end
-        if type_matches
-          RDL::Type::MethodType.check_ret_types(types, type_matches, ret, *args, &blk)
-        end
+        $__rdl_wrap_switch.off {
+          if RDL::Wrap.has_contracts?(klass, meth, :post)
+            posts = RDL::Wrap.get_contracts(klass, meth, :post)
+            RDL::Contract::AndContract.check_array(posts, ret, *args, &blk)
+          end
+          if type_matches
+            RDL::Type::MethodType.check_ret_types(types, type_matches, ret, *args, &blk)
+          end
+        }
         return ret
       end
       if (public_method_defined? meth_old) then public meth

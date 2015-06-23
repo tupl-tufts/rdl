@@ -32,3 +32,6 @@ require_rel 'rdl/util.rb'
 require_rel 'rdl/wrap.rb'
 
 $__rdl_parser = RDL::Type::Parser.new
+
+$__rdl_wrap_switch = RDL::Switch.new
+$__rdl_flat_switch = RDL::Switch.new
