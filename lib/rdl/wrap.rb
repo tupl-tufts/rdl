@@ -208,32 +208,36 @@ class Object
   # pre(contract) = pre(self, next method, contract)
   # pre { block } = pre(self, next method, FlatContract.new { block })
   def pre(*args, &blk)
-    klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Precondition", *args, &blk)
-    if meth
-      RDL::Wrap.add_contract(klass, meth, :pre, contract)
-      if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
-        RDL::Wrap.wrap(klass, meth)
+    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+      klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Precondition", *args, &blk)
+      if meth
+        RDL::Wrap.add_contract(klass, meth, :pre, contract)
+        if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
+          RDL::Wrap.wrap(klass, meth)
+        else
+          $__rdl_to_wrap << [klass, meth]
+        end
       else
-        $__rdl_to_wrap << [klass, meth]
+        $__rdl_deferred << [klass, :pre, contract]
       end
-    else
-      $__rdl_deferred << [klass, :pre, contract]
-    end
+    }
   end
 
   # Add a postcondition to a method. Same possible invocations as pre.
   def post(*args, &blk)
-    klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Postcondition", *args, &blk)
-    if meth
-      RDL::Wrap.add_contract(klass, meth, :post, contract)
-      if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
-        RDL::Wrap.wrap(klass, meth)
+    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+      klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Postcondition", *args, &blk)
+      if meth
+        RDL::Wrap.add_contract(klass, meth, :post, contract)
+        if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
+          RDL::Wrap.wrap(klass, meth)
+        else
+          $__rdl_to_wrap << [klass, meth]
+        end
       else
-        $__rdl_to_wrap << [klass, meth]
+        $__rdl_deferred << [klass, :post, contract]
       end
-    else
-      $__rdl_deferred << [klass, :post, contract]
-    end
+    }
   end
 
   # [+klass+] may be Class, Symbol, or String
@@ -245,26 +249,28 @@ class Object
   # type(meth, type)
   # type(type)
   def type(*args, &blk)
-    klass, meth, type = begin
-                          RDL::Wrap.process_type_args(self, *args, &blk)
-                        rescue Racc::ParseError => err
-                          # Remove enough backtrace to only include actual source line
-                          # Warning: Adjust the -5 below if the code (or this comment) changes
-                          bt = err.backtrace
-                          bt.shift until bt[0] =~ /^#{__FILE__}:#{__LINE__-5}/
-                          err.set_backtrace bt
-                          raise err
-                        end
-    if meth
-      RDL::Wrap.add_contract(klass, meth, :type, type)
-      if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
-        RDL::Wrap.wrap(klass, meth)
+    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+      klass, meth, type = begin
+                            RDL::Wrap.process_type_args(self, *args, &blk)
+                          rescue Racc::ParseError => err
+                            # Remove enough backtrace to only include actual source line
+                            # Warning: Adjust the -5 below if the code (or this comment) changes
+                            bt = err.backtrace
+                            bt.shift until bt[0] =~ /^#{__FILE__}:#{__LINE__-5}/
+                            err.set_backtrace bt
+                            raise err
+                          end
+      if meth
+        RDL::Wrap.add_contract(klass, meth, :type, type)
+        if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
+          RDL::Wrap.wrap(klass, meth)
+        else
+          $__rdl_to_wrap << [klass, meth]
+        end
       else
-        $__rdl_to_wrap << [klass, meth]
+        $__rdl_deferred << [klass, :type, type]
       end
-    else
-      $__rdl_deferred << [klass, :type, type]
-    end
+    }
   end
 
   def self.method_added(meth)
@@ -296,28 +302,32 @@ class Object
   # be called for any aliases or they will not be wrapped with
   # contracts. Only creates aliases in the current class.
   def rdl_alias(new_name, old_name)
-    klass = self.to_s
-    $__rdl_aliases[klass] = {} unless $__rdl_aliases[klass]
-    if $__rdl_aliases[klass][new_name]
-      raise RuntimeError,
-            "Tried to alias #{new_name}, already aliased to #{$__rdl_aliases[klass][new_name]}"
-    end
-    $__rdl_aliases[klass][new_name] = old_name
+    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+      klass = self.to_s
+      $__rdl_aliases[klass] = {} unless $__rdl_aliases[klass]
+      if $__rdl_aliases[klass][new_name]
+        raise RuntimeError,
+              "Tried to alias #{new_name}, already aliased to #{$__rdl_aliases[klass][new_name]}"
+      end
+      $__rdl_aliases[klass][new_name] = old_name
     
-    if self.method_defined? new_name
-      RDL::Wrap.wrap(klass, new_name)
-    else
-      $__rdl_to_wrap << [klass, old_name]
-    end
+      if self.method_defined? new_name
+        RDL::Wrap.wrap(klass, new_name)
+      else
+        $__rdl_to_wrap << [klass, old_name]
+      end
+    }
   end
 
   # [+params+] is an array of symbols that are the parameters of this (generic) type
   def type_params(params)
-    raise RuntimeError, "Empty type parameters not allowed" if params.empty?
-    klass = self.to_s
-    if $__rdl_type_params[klass]
-      raise RuntimeError, "#{klass} already has type parameters #{$__rdl_type_params[klass]}"
-    end
-    $__rdl_type_params[klass] = params
+    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+      raise RuntimeError, "Empty type parameters not allowed" if params.empty?
+      klass = self.to_s
+      if $__rdl_type_params[klass]
+        raise RuntimeError, "#{klass} already has type parameters #{$__rdl_type_params[klass]}"
+      end
+      $__rdl_type_params[klass] = params
+    }
   end
 end
