@@ -11,7 +11,9 @@ class String
   type :=~, '(Object) -> Fixnum or nil'
   type :[], '(Fixnum, ?Fixnum) -> String or nil'
   type :[], '(Range) -> String or nil'
-  type :[], '(Regexp, ?(Fixnum or String)) -> String or nil'
+  type :[], '(Regexp) -> String or nil'
+  type :[], '(Regexp, Fixnum) -> String or nil'
+  type :[], '(Regexp, String) -> String or nil'
   type :[], '(String) -> Stirng or nil'
   type :ascii_only?, '() -> %bool'
   type :b, '() -> String'
@@ -30,7 +32,8 @@ class String
   type :chop!, '() -> String or nil'
   type :chr, '() -> String'
   type :clear, '() -> String'
-  type :codepoints, '(?{(?%any) -> %any}) -> Array<Fixnum>' # TODO
+  type :codepoints, '() -> Array<Fixnum>' # TODO
+  type :codepoints, '() {(?%any) -> %any} -> Array<Fixnum>' # TODO
   type :concat, '(Fixnum or Object) -> String'
   type :count, '(*String) -> Fixnum'
   type :crypt, '(String) -> String'
@@ -39,9 +42,9 @@ class String
   type :downcase, '() -> String'
   type :downcase!, '() -> String or nil'
   type :dump, '() -> String'
-  type :each_byte, '({(Fixnum) -> %any}) -> String'
+  type :each_byte, '() {(Fixnum) -> %any} -> String'
   type :each_byte, '() -> Enumerator'
-  type :each_char, '({(String) -> %any}) -> String'
+  type :each_char, '() {(String) -> %any} -> String'
   type :each_char, '() -> Enumerator'
   type :each_codepoint, '() {(Fixnum) -> %any} -> String'
   type :each_codepoint, '() -> Enumerator'
@@ -90,7 +93,7 @@ class String
   type :rstrip, '() -> String'
   type :rstrip!, '() -> String'
   type :scan, '(Regexp or String) -> Array<String or Array<String>>'
-  type :scan, '(Regexp or String, {(* %any) -> %any})'
+  type :scan, '(Regexp or String) {(*%any) -> %any} -> Array<String or Array<String>>'
   type :scrub, '(?String) -> String'
   type :scrub, '(?String) {(%any) -> %any} -> String'
   type :scrub!, '(?String) -> String'
@@ -100,7 +103,9 @@ class String
   rdl_alias :slice, :[]
   type :slice!, '(Fixnum, ?Fixnum) -> String or nil'
   type :slice!, '(Range) -> String or nil'
-  type :slice!, '(Regexp, ?(Fixnum or String)) -> String or nil'
+  type :slice!, '(Regexp) -> String or nil'
+  type :slice!, '(Regexp, Fixnum) -> String or nil'
+  type :slice!, '(Regexp, String) -> String or nil'
   type :slice!, '(String) -> Stirng or nil'
   type :split, '(Regexp or String, ?Fixnum) -> Array<String>'
   type :squeeze, '(?String) -> String'
@@ -134,14 +139,3 @@ class String
   type :upto, '(String, ?bool) {(String) -> %any } -> String'
   type :valid_encoding?, '() -> %bool'
 end
-
-
-
-
-
-
-
-
-
-
-

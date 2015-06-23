@@ -60,7 +60,7 @@ class Hash
   type :select, '() {(k,v) -> %bool} -> Hash<k,v>'
   type :select!, '() {(k,v) -> %bool} -> Hash<k,v>'
   # type :shift, '() -> Tuple<k,v>'
-  type :shift, '() -> Array<k or v>')
+  type :shift, '() -> Array<k or v>'
   # type :to_a, '() -> Array<Tuple<k,v>>'
   type :to_a, '() -> Array<Array<k or v>>'
   type :to_hash, '() -> Hash<k,v>'
