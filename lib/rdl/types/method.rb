@@ -103,7 +103,7 @@ module RDL::Type
       exns = [] # exceptions from types that did not match args
       types.each_with_index { |t, i|
         begin
-          t.to_contract.pre_cond.check(*args, &blk)  # note to_contract is cached
+          t.to_contract.pre_cond.check(*args, &blk) # note to_contract is cached
         rescue TypeError => te
           exns << [te, i]
         else

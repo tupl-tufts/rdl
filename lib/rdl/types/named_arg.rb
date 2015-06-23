@@ -33,5 +33,9 @@ module RDL::Type
       other = other.type if other.instance_of?(RDL::Type::NamedArgType)
       @type.le(other, h)
     end
+
+    def member?(obj)
+      @type.member? obj
+    end
   end
 end
