@@ -257,6 +257,8 @@ class Object
                             # Warning: Adjust the -5 below if the code (or this comment) changes
                             bt = err.backtrace
                             bt.shift until bt[0] =~ /^#{__FILE__}:#{__LINE__-5}/
+                            bt.shift # remove $__rdl_contract_switch.off call
+                            bt.shift # remove type call itself
                             err.set_backtrace bt
                             raise err
                           end
