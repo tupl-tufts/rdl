@@ -8,7 +8,7 @@ class String
   type :<=>, '(other: String) -> ret: Fixnum or nil'
   type :==, '(Object) -> %bool'
   type :===, '(Object) -> %bool'
-  type :=~, '(Object) -> Fixnum or nil'
+#  type :=~, '(Object) -> Fixnum or nil' # TODO: Wrapping this messes up $1 etc
   type :[], '(Fixnum, ?Fixnum) -> String or nil'
   type :[], '(Range) -> String or nil'
   type :[], '(Regexp) -> String or nil'
