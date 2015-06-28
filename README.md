@@ -136,7 +136,7 @@ rdocTypesigFor(Klass) # Deprecated FIXME
 
 * Singleton methods
 
-* Subtyping nominal types
-
 * How to check whether initialize? is user-defined? method_defined? always
-  returns true, meaning wrapping isn't fully working with initialize
+returns true, meaning wrapping isn't fully working with initialize
+
+* Check in instantiate! that array contents matches instantiated type
