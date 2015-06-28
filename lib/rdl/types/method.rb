@@ -63,7 +63,7 @@ module RDL::Type
             raise TypeError,
                   "Argument #{i}, expecting (vararg) #{@args[i].to_s(inst: inst)}, got #{arg.class}"
           end
-        # do not increment i, since vararg can take any number of arugment
+        # do not increment i, since vararg can take any number of argument
         else
           unless @args[i].member?(arg, inst: inst)
             raise TypeError,
@@ -107,7 +107,7 @@ module RDL::Type
       exns = [] # exceptions from types that did not match args
       types.each_with_index { |t, i|
         begin
-          t.pre_cond_check(inst, *args, &blk)
+          $__rdl_contract_switch.off { t.pre_cond_check(inst, *args, &blk) }
         rescue TypeError => te
           exns << [te, i]
         else
@@ -124,7 +124,7 @@ module RDL::Type
       exns = [] # exceptions from types that did not match args
       ret_types.each { |t,i|
         begin
-          t.post_cond_check(inst, ret, *args, &blk)
+          $__rdl_contract_switch.off { t.post_cond_check(inst, ret, *args, &blk) }
         rescue TypeError => te
           exns << [te, i]
         else
