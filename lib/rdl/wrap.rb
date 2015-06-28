@@ -343,17 +343,21 @@ class Object
   # the type parameters. If a class, symbol, or string is given, it is
   # converted to a NominalType.
   def instantiate!(typs)
-    params = $__rdl_type_params[klass]
-    raise RuntimeError, "Class #{self.to_s} is not parameterized" unless params
-    raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless params.size == typs.size
-    raise RuntimeError, "Instance already has type instantiation" if @__rdl_instantiation
-    @__rdl_instantiation = Hash[params.zip(typs)]
+    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+      params = $__rdl_type_params[klass]
+      raise RuntimeError, "Class #{self.to_s} is not parameterized" unless params
+      raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless params.size == typs.size
+      raise RuntimeError, "Instance already has type instantiation" if @__rdl_instantiation
+      @__rdl_instantiation = Hash[params.zip(typs)]
+    }
   end
 
   def deinstantiate!
-    raise RuntimeError, "Class #{self.to_s} is not parameterized" unless $__rdl_type_params[klass]
-    raise RuntimeERror, "Instance is not instantiated" unless @__rdl_instantiation
-    @__rdl_instantiation = nil
+    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+      raise RuntimeError, "Class #{self.to_s} is not parameterized" unless $__rdl_type_params[klass]
+      raise RuntimeERror, "Instance is not instantiated" unless @__rdl_instantiation
+      @__rdl_instantiation = nil
+    }
   end
 
 end
