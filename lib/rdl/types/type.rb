@@ -43,7 +43,7 @@ module RDL::Type
 
       c = RDL::Contract::FlatContract.new(to_s) { |x|
         unless member? x
-          raise TypeError, "Expecting #{to_s}, got #{x.inspect}"
+          raise TypeError, "Expecting type #{to_s}, got #{x.inspect}"
         end
         true
       }
