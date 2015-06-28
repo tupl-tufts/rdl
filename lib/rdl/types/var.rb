@@ -1,9 +1,9 @@
 require_relative 'type'
 
 module RDL::Type
-  class NominalType < Type
-    attr_reader :name # string
-    
+  class VarType < Type
+    attr_reader :name
+
     @@cache = {}
 
     class << self
@@ -11,7 +11,7 @@ module RDL::Type
     end
 
     def self.new(name)
-      name = name.to_s
+      name = name.to_s.to_sym
       t = @@cache[name]
       return t if t
       t = self.__new__ name
@@ -22,29 +22,26 @@ module RDL::Type
       @name = name
     end
 
+    def to_s(inst: nil) # :nodoc:
+      return inst[@name].to_s(inst: inst) if inst && inst[@name]
+      return @name.to_s
+    end
+
     def eql?(other)
       self == other
     end
 
     def ==(other)
-      return (other.instance_of? self.class) && (other.name == @name)
+      return (other.instance_of? self.class) && (other.name.to_s == @name.to_s)
     end
 
     def hash # :nodoc:
-      return @name.hash
-    end
-
-    def to_s(inst: nil)
-      return @name
-    end
-
-    def klass
-      @klass = RDL::Util.to_class(name) unless @klass
-      return @klass
+      return @name.to_s.hash
     end
 
     def member?(obj, inst: nil)
-      obj.nil? || obj.class.ancestors.member?(klass)
+      return inst[@name].member?(obj, inst: inst) if inst && inst[@name]
+      raise TypeError, "No instantiation for type variable #{@name}"
     end
   end
 end

@@ -44,6 +44,7 @@ class TestMember < Minitest::Test
     @thash = NominalType.new Hash
     @thashsymstring = GenericType.new(@thash, @tsym, @tstring)
     @thashobjectobject = GenericType.new(@thash, @tobject, @tobject)
+    @tavar = VarType.new :a
   end
 
   def test_nil
@@ -116,6 +117,10 @@ end
     assert (@tobject_and_basicobject.member? nil)
   end
 
+  def test_var_inst
+    assert(@tavar.member?("foo", inst: {a: @tstring}))
+  end
+  
   def test_generic
     skip "GenericType#member? not fully implemented"
     assert (@tarray.member? [1, 2, 3])
