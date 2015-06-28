@@ -13,8 +13,8 @@ module RDL::Type
       super()
     end
 
-    def to_s
-      "(#{@name} : #{@type})"
+    def to_s(inst: nil)
+      "(#{@name} : #{@type.to_s(inst: inst)})"
     end
 
     def eql?(other)
@@ -34,8 +34,8 @@ module RDL::Type
       @type.le(other, h)
     end
 
-    def member?(obj)
-      @type.member? obj
+    def member?(obj, inst: nil)
+      @type.member?(obj, inst: inst)
     end
   end
 end

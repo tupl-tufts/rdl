@@ -28,13 +28,14 @@ module RDL::Type
       super()
     end
 
-    def to_s
+    def to_s(inst: nil)
+      # Fix!
       "#{@base}<#{params.join(', ')}>"
     end
 
-    def member?(obj)
+    def member?(obj, inst: nil)
       # Fix!
-      base.member?(obj)
+      base.member?(obj, inst: inst)
     end
     
     def eql?(other)

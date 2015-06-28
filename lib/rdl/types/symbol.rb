@@ -34,11 +34,11 @@ module RDL::Type
       return @name.to_s.hash
     end
 
-    def to_s
+    def to_s(inst: nil)
       ":#{@name}"
     end
 
-    def member?(obj)
+    def member?(obj, inst: nil)
       obj.nil? || obj == name
     end
   end

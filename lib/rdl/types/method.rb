@@ -53,21 +53,21 @@ module RDL::Type
         raise TypeError, "Too many arguments" if i >= @args.size
         case @args[i]
         when OptionalType
-          unless @args[i].type.member? arg
+          unless @args[i].type.member?(arg, inst: inst)
             raise TypeError,
-                  "Argument #{i}, expecting (optional) #{@args[i]}, got #{arg.class}"
+                  "Argument #{i}, expecting (optional) #{@args[i].to_s(inst: inst)}, got #{arg.class}"
           end
           i += 1
         when VarargType
-          unless @args[i].type.member? arg
+          unless @args[i].type.member?(arg, inst: inst)
             raise TypeError,
-                  "Argument #{i}, expecting (vararg) #{@args[i]}, got #{arg.class}"
+                  "Argument #{i}, expecting (vararg) #{@args[i].to_s(inst: inst)}, got #{arg.class}"
           end
         # do not increment i, since vararg can take any number of arugment
         else
-          unless @args[i].member? arg
+          unless @args[i].member?(arg, inst: inst)
             raise TypeError,
-                  "Argument #{i}, expecting #{@args[i]}, got #{arg.class}"
+                  "Argument #{i}, expecting #{@args[i].to_s(inst: inst)}, got #{arg.class}"
           end
           i += 1
         end
@@ -81,8 +81,8 @@ module RDL::Type
     end
 
     def post_cond_check(inst, ret, *args)
-      unless @ret.member? ret
-        raise TypeError, "expecting (return) #{@ret}, got #{ret.class}"
+      unless @ret.member?(ret, inst: inst)
+        raise TypeError, "expecting (return) #{@ret.to_s(inst: inst)}, got #{ret.class}"
       end
       true
     end

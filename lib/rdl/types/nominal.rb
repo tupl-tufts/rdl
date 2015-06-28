@@ -34,7 +34,7 @@ module RDL::Type
       return @name.hash
     end
 
-    def to_s
+    def to_s(inst: nil)
       name
     end
 
@@ -43,7 +43,7 @@ module RDL::Type
       return @klass
     end
 
-    def member?(obj)
+    def member?(obj, inst: nil)
       obj.nil? || obj.class.ancestors.member?(klass)
     end
   end

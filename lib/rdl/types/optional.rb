@@ -24,8 +24,8 @@ module RDL::Type
       super()
     end
 
-    def to_s
-      "?(#{@type})"
+    def to_s(inst: nil)
+      "?(#{@type.to_s(inst: inst)})"
     end
 
     def eql?(other)

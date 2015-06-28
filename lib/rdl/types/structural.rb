@@ -25,8 +25,8 @@ module RDL::Type
       super()
     end
 
-    def to_s  # :nodoc:
-      "[ " + @methods.to_a.map { |k,v| "#{k}: #{v}" }.sort.join(", ") + " ]"
+    def to_s(inst: nil)  # :nodoc:
+      "[ " + @methods.to_a.map { |k,v| "#{k.to_s}: #{v.to_s(inst: inst)}" }.sort.join(", ") + " ]"
     end
 
     def eql?(other)
