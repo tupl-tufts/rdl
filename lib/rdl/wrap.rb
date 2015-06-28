@@ -75,7 +75,7 @@ class RDL::Wrap
             end
             if RDL::Wrap.has_contracts?(klass, meth, :type)
               types = RDL::Wrap.get_contracts(klass, meth, :type)
-              type_matches = RDL::Type::MethodType.check_arg_types(types, *args, &blk)
+              type_matches = RDL::Type::MethodType.check_arg_types(types, @__rdl_inst, *args, &blk)
             end
           }
           ret = send(#{meth_old.inspect}, *args, &blk)
@@ -85,7 +85,7 @@ class RDL::Wrap
               RDL::Contract::AndContract.check_array(posts, ret, *args, &blk)
             end
             if type_matches
-              RDL::Type::MethodType.check_ret_types(types, type_matches, ret, *args, &blk)
+              RDL::Type::MethodType.check_ret_types(types, @__rdl_inst, type_matches, ret, *args, &blk)
             end
           }
           return ret
@@ -347,16 +347,16 @@ class Object
       params = $__rdl_type_params[klass]
       raise RuntimeError, "Class #{self.to_s} is not parameterized" unless params
       raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless params.size == typs.size
-      raise RuntimeError, "Instance already has type instantiation" if @__rdl_instantiation
-      @__rdl_instantiation = Hash[params.zip(typs)]
+      raise RuntimeError, "Instance already has type instantiation" if @__rdl_inst
+      @__rdl_inst = Hash[params.zip(typs)]
     }
   end
 
   def deinstantiate!
     $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
       raise RuntimeError, "Class #{self.to_s} is not parameterized" unless $__rdl_type_params[klass]
-      raise RuntimeERror, "Instance is not instantiated" unless @__rdl_instantiation
-      @__rdl_instantiation = nil
+      raise RuntimeERror, "Instance is not instantiated" unless @__rdl_inst
+      @__rdl_inst = nil
     }
   end
 

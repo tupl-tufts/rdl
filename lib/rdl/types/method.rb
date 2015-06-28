@@ -47,7 +47,7 @@ module RDL::Type
       raise RuntimeError, "should not be called"
     end
 
-    def pre_cond_check(*args)
+    def pre_cond_check(inst, *args)
       i = 0 # position in @args
       args.each { |arg|
         raise TypeError, "Too many arguments" if i >= @args.size
@@ -80,23 +80,21 @@ module RDL::Type
       true
     end
 
-    def post_cond_check(ret, *args)
+    def post_cond_check(inst, ret, *args)
       unless @ret.member? ret
         raise TypeError, "expecting (return) #{@ret}, got #{ret.class}"
       end
       true
     end
 
-        
-    
-    def to_contract
+    def to_contract(inst: nil)
       c = @@contract_cache[self]
       return c if c
 
       # @ret, @args are the formals
       # ret, args are the actuals
-      prec = RDL::Contract::FlatContract.new(@args) { |*args| pre_cond_check(*args) }
-      postc = RDL::Contract::FlatContract.new(@ret) { |ret, *args| post_cond_check(ret, *args) }
+      prec = RDL::Contract::FlatContract.new(@args) { |*args| pre_cond_check(inst, *args) }
+      postc = RDL::Contract::FlatContract.new(@ret) { |ret, *args| post_cond_check(inst, ret, *args) }
       c = RDL::Contract::ProcContract.new(pre_cond: prec, post_cond: postc)
       return (@@contract_cache[self] = c) # assignment evaluates to c
     end
@@ -104,12 +102,12 @@ module RDL::Type
     # Types is an array of method types. Checks that args and blk match at least
     # one arm of the intersection type; otherwise raises exception. Returns
     # array of method types that matched args and blk
-    def self.check_arg_types(types, *args, &blk)
+    def self.check_arg_types(types, inst, *args, &blk)
       matches = [] # types that matched args
       exns = [] # exceptions from types that did not match args
       types.each_with_index { |t, i|
         begin
-          t.pre_cond_check(*args, &blk)
+          t.pre_cond_check(inst, *args, &blk)
         rescue TypeError => te
           exns << [te, i]
         else
@@ -121,12 +119,12 @@ module RDL::Type
       raise TypeError, ("No argument matches:\n\t" + (exns.map { |e, i| "Doesn't match type #{types[i].to_s}: " + e.message }).join("\n\t"))
     end
 
-    def self.check_ret_types(types, ret_types, ret, *args, &blk)
+    def self.check_ret_types(types, inst, ret_types, ret, *args, &blk)
       matches = [] # types that match ret
       exns = [] # exceptions from types that did not match args
       ret_types.each { |t,i|
         begin
-          t.post_cond_check(ret, *args, &blk)
+          t.post_cond_check(inst, ret, *args, &blk)
         rescue TypeError => te
           exns << [te, i]
         else
