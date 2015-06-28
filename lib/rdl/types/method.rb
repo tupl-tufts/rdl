@@ -47,50 +47,56 @@ module RDL::Type
       raise RuntimeError, "should not be called"
     end
 
+    def pre_cond_check(*args)
+      i = 0 # position in @args
+      args.each { |arg|
+        raise TypeError, "Too many arguments" if i >= @args.size
+        case @args[i]
+        when OptionalType
+          unless @args[i].type.member? arg
+            raise TypeError,
+                  "Argument #{i}, expecting (optional) #{@args[i]}, got #{arg.class}"
+          end
+          i += 1
+        when VarargType
+          unless @args[i].type.member? arg
+            raise TypeError,
+                  "Argument #{i}, expecting (vararg) #{@args[i]}, got #{arg.class}"
+          end
+        # do not increment i, since vararg can take any number of arugment
+        else
+          unless @args[i].member? arg
+            raise TypeError,
+                  "Argument #{i}, expecting #{@args[i]}, got #{arg.class}"
+          end
+          i += 1
+        end
+      }
+      # Check if there aren't enough arguments; uses invariant established in initialize
+      # that method types end with several optional types and then one (optional) vararg type
+      if (i < @args.size) && (@args[i].class != OptionalType) && (@args[i].class != VarargType)
+        raise TypeError, "Too few arguments"
+      end
+      true
+    end
+
+    def post_cond_check(ret, *args)
+      unless @ret.member? ret
+        raise TypeError, "expecting (return) #{@ret}, got #{ret.class}"
+      end
+      true
+    end
+
+        
+    
     def to_contract
       c = @@contract_cache[self]
       return c if c
 
       # @ret, @args are the formals
       # ret, args are the actuals
-      prec = RDL::Contract::FlatContract.new(@args) { |*args|
-        i = 0 # position in @args
-        args.each { |arg|
-          raise TypeError, "Too many arguments" if i >= @args.size
-          case @args[i]
-          when OptionalType
-            unless @args[i].type.member? arg
-              raise TypeError,
-                    "Argument #{i}, expecting (optional) #{@args[i]}, got #{arg.class}"
-            end
-            i += 1
-          when VarargType
-            unless @args[i].type.member? arg
-              raise TypeError,
-                    "Argument #{i}, expecting (vararg) #{@args[i]}, got #{arg.class}"
-            end
-            # do not increment i, since vararg can take any number of arugment
-          else
-            unless @args[i].member? arg
-              raise TypeError,
-                    "Argument #{i}, expecting #{@args[i]}, got #{arg.class}"
-            end
-            i += 1
-          end
-        }
-        # Check if there aren't enough arguments; uses invariant established in initialize
-        # that method types end with several optional types and then one (optional) vararg type
-        if (i < @args.size) && (@args[i].class != OptionalType) && (@args[i].class != VarargType)
-          raise TypeError, "Too few arguments"
-        end
-        true
-      }
-      postc = RDL::Contract::FlatContract.new(@ret) { |ret, *args|
-        unless @ret.member? ret
-          raise TypeError, "expecting (return) #{@ret}, got #{ret.class}"
-        end
-        true
-      }
+      prec = RDL::Contract::FlatContract.new(@args) { |*args| pre_cond_check(*args) }
+      postc = RDL::Contract::FlatContract.new(@ret) { |ret, *args| post_cond_check(ret, *args) }
       c = RDL::Contract::ProcContract.new(pre_cond: prec, post_cond: postc)
       return (@@contract_cache[self] = c) # assignment evaluates to c
     end
