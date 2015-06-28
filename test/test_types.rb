@@ -127,6 +127,8 @@ class TestTypes < Minitest::Test
     assert_same t1, t2
     t3 = GenericType.new thash, tb, ta
     assert (t1 != t3)
+    assert_equal "Hash<A, B>", t1.to_s
+    assert_equal "Hash<Fixnum, String>", t1.to_s(inst: {A: Fixnum, B: String})
   end
 
   def test_structural

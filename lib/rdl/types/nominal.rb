@@ -2,7 +2,7 @@ require_relative 'type'
 
 module RDL::Type
   class NominalType < Type
-    attr_reader :name
+    attr_reader :name # string
     
     @@cache = {}
 
@@ -35,7 +35,9 @@ module RDL::Type
     end
 
     def to_s(inst: nil)
-      name
+      sym = @name.to_sym
+      return inst[sym] if inst && inst[sym]
+      return @name
     end
 
     def klass

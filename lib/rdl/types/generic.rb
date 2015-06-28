@@ -2,7 +2,7 @@ require_relative 'type'
 
 module RDL::Type
   # A type that is parameterized on one or more other types. The base type
-  # must be a NominalType, while the parameters can be any type.
+  # must be a NominalType, while the parameters should be strings or symbols
   class GenericType < Type
     attr_reader :base
     attr_reader :params
@@ -29,8 +29,7 @@ module RDL::Type
     end
 
     def to_s(inst: nil)
-      # Fix!
-      "#{@base}<#{params.join(', ')}>"
+      "#{@base}<#{@params.map { |t| t.to_s(inst: inst) }.join(', ')}>"
     end
 
     def member?(obj, inst: nil)
