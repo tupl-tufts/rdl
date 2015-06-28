@@ -321,7 +321,8 @@ class Object
     }
   end
 
-  # [+params+] is an array of symbols that are the parameters of this (generic) type
+  # [+params+] is an array of symbols or strings that are the
+  # parameters of this (generic) type
   def type_params(params)
     $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
       raise RuntimeError, "Empty type parameters not allowed" if params.empty?
@@ -329,7 +330,30 @@ class Object
       if $__rdl_type_params[klass]
         raise RuntimeError, "#{klass} already has type parameters #{$__rdl_type_params[klass]}"
       end
+      params = params.map { |v|
+        raise RuntimeError, "Type parameter #{v.inspect} is not symbol or string" unless v.class == String || v.class == Symbol
+        v.to_sym
+      }
+      raise RuntimeError, "Duplicate type parameters not allowed" unless params.uniq.size == params.size
       $__rdl_type_params[klass] = params
     }
   end
+
+  # [+typs+] is an array of types, classes, symbols, or strings to instantiate
+  # the type parameters. If a class, symbol, or string is given, it is
+  # converted to a NominalType.
+  def instantiate!(typs)
+    params = $__rdl_type_params[klass]
+    raise RuntimeError, "Class #{self.to_s} is not parameterized" unless params
+    raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless params.size == typs.size
+    raise RuntimeError, "Instance already has type instantiation" if @__rdl_instantiation
+    @__rdl_instantiation = Hash[params.zip(typs)]
+  end
+
+  def deinstantiate!
+    raise RuntimeError, "Class #{self.to_s} is not parameterized" unless $__rdl_type_params[klass]
+    raise RuntimeERror, "Instance is not instantiated" unless @__rdl_instantiation
+    @__rdl_instantiation = nil
+  end
+
 end
