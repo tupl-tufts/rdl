@@ -41,10 +41,8 @@ module RDL::Type
     end
 
     def member?(obj, inst: nil)
-      # if inst is a hash, it maps symbols to types
-      return inst[@name].member?(obj, inst: inst) if inst && inst.class == Hash && inst[@name]
-      # if inst is an array, it includes the type params that are in scope
-      return true if inst && inst.class == Array && inst.member?(@name)
+      return inst[@name].member?(obj, inst: inst) if inst && inst[@name]
+      return true if inst && inst.has_key?(@name)
       # otherwise this is an unbound variable
       raise TypeError, "Unbound type variable #{@name}"
     end

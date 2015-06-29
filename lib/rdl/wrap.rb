@@ -61,14 +61,17 @@ class RDL::Wrap
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
       return if (klass.method_defined? meth_old)
 
-      klass.class_eval <<-RUBY, __FILE__, __LINE__
+      klass.class_eval <<-RUBY, __FILE__, __LINE__+1
         alias_method meth_old, meth
         def #{meth}(*args, &blk)
-          klass = meth = types = type_matches = nil
+          klass = "#{klass_str}"
+          meth = types = type_matches = nil
           inst = nil
           $__rdl_wrap_switch.off {
-            klass = "#{klass_str}"
-            inst = @__rdl_inst || $__rdl_type_params[klass.to_s]
+            inst = @__rdl_inst
+            inst = Hash[$__rdl_type_params[klass].zip []] if (not(inst) && $__rdl_type_params[klass])
+            inst = {} if not inst
+            #{if not(RDL::Util.has_singleton_marker(klass_str)) then "inst[:self] = RDL::Type::NominalType.new(self.class)" end}
 #            puts "Intercepted \#{klass}##{meth}(\#{args.join(", ")}) { \#{blk} }, inst = \#{inst.inspect}"
             meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
             if RDL::Wrap.has_contracts?(klass, meth, :pre)
