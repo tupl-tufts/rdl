@@ -54,9 +54,9 @@ class RDL::Wrap
   #
   # Wraps klass#method to check contracts and types. Does not rewrap
   # if already wrapped.
-  def self.wrap(klass, meth)
+  def self.wrap(klass_str, meth)
     $__rdl_wrap_switch.off {
-      klass = RDL::Util.to_class klass
+      klass = RDL::Util.to_class klass_str
       raise ArgumentError, "Attempt to wrap #{klass.to_s}\##{meth.to_s}" if klass.to_s =~ /^RDL::/
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
       return if (klass.method_defined? meth_old)
@@ -67,7 +67,7 @@ class RDL::Wrap
           klass = meth = types = type_matches = nil
           inst = nil
           $__rdl_wrap_switch.off {
-            klass = self.class
+            klass = "#{klass_str}"
             inst = @__rdl_inst || $__rdl_type_params[klass.to_s]
 #            puts "Intercepted \#{klass}##{meth}(\#{args.join(", ")}) { \#{blk} }, inst = \#{inst.inspect}"
             meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
@@ -178,16 +178,11 @@ RUBY
   end
 
   def self.meth_to_sym(meth)
-    case meth
-    when String
-      meth =~ /(self\.)?(.*)/
-      return [$1, $2.to_sym]
-    when Symbol
-      meth.to_s =~ /(self\.)?(.*)/
-      return [$1, $2.to_sym]
-    else
-      raise ArgumentError, "#{meth.class} received where method (Symbol or String) expected"
-    end
+    raise ArgumentError, "#{meth.class} received where method (Symbol or String) expected" unless meth.class == String || meth.class == Symbol
+    meth = meth.to_s
+    meth =~ /^(.*\.)?(.*)$/
+    raise RuntimeError, "Only self.method allowed" if $1 && $1 != "self."
+    return [$1, $2.to_sym]
   end
 
   def self.type_to_type(type)
@@ -306,6 +301,30 @@ class Object
     }
   end
 
+  def self.singleton_method_added(meth)
+    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+      klass = self.to_s
+      sklass = RDL::Util.add_singleton_marker(klass)
+
+      # Apply any deferred contracts and reset list
+      if $__rdl_deferred.size > 0
+        a = $__rdl_deferred
+        $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
+        a.each { |prev_klass, kind, contract|
+          raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
+          RDL::Wrap.add_contract(sklass, meth, kind, contract)
+          RDL::Wrap.wrap(sklass, meth)
+        }
+      end
+
+      # Wrap method if there was a prior contract for it.
+      if $__rdl_to_wrap.member? [sklass, meth]
+        $__rdl_to_wrap.delete [sklass, meth]
+        RDL::Wrap.wrap(sklass, meth)
+      end
+    }
+  end
+  
   # Aliases contracts for meth_old and meth_new. Currently, this must
   # be called for any aliases or they will not be wrapped with
   # contracts. Only creates aliases in the current class.

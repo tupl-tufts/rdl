@@ -241,29 +241,25 @@ RUBY
   end
 
   def test_class_method
-    skip "Not working yet."
     pos = RDL::Contract::FlatContract.new("Positive") { |x| x > 0 }
     self.class.class_eval { def self.cm1(x) return x; end }
     pre TestRDL, "self.cm1", pos
     assert_equal 3, TestRDL.cm1(3)
     assert_raises(RDL::Contract::ContractError) { TestRDL.cm1(-1) }
 
-    self.class.class_eval { def TestRDL.cm2(x) return x; end }
-    pre TestRDL, "TestRDL.cm1", pos
+    assert_raises(RuntimeError) { pre TestRDL, "TestRDL.cm1", pos }
+
+    pre TestRDL, "self.cm2", pos
+    self.class.class_eval { def self.cm2(x) return x; end }
     assert_equal 3, TestRDL.cm2(3)
     assert_raises(RDL::Contract::ContractError) { TestRDL.cm2(-1) }
 
-    pre TestRDL, "self.cm3", pos
-    self.class.class_eval { def self.cm3(x) return x; end }
-    assert_equal 3, TestRDL.cm3(3)
-    assert_raises(RDL::Contract::ContractError) { TestRDL.cm3(-1) }
-
     self.class.class_eval {
       pre { |x| x > 0 }
-      def self.cm4(x) return x; end
+      def self.cm3(x) return x; end
     }
-    assert_equal 3, TestRDL.cm4(3)
-    assert_raises(RDL::Contract::ContractError) { TestRDL.cm4(-1) }
+    assert_equal 3, TestRDL.cm3(3)
+    assert_raises(RDL::Contract::ContractError) { TestRDL.cm3(-1) }
   end
   
 end
