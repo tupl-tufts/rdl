@@ -68,8 +68,8 @@ class RDL::Wrap
           inst = nil
           $__rdl_wrap_switch.off {
             klass = self.class
-            inst = @__rdl_inst || $__rdl_type_params[klass]
-#            puts "Intercepted #{meth}(\#{args.join(", ")}) { \#{blk} }"
+            inst = @__rdl_inst || $__rdl_type_params[klass.to_s]
+#            puts "Intercepted \#{klass}##{meth}(\#{args.join(", ")}) { \#{blk} }, inst = \#{inst.inspect}"
             meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
             if RDL::Wrap.has_contracts?(klass, meth, :pre)
               pres = RDL::Wrap.get_contracts(klass, meth, :pre)
