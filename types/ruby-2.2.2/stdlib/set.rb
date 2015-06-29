@@ -1,7 +1,7 @@
 class Set
   type_params [:t]
 
-  type 'self.[]', '(Array<u>) -> Set<u>'
+  type 'self.[]', '(*u) -> Set<u>'
   type 'self.new', '(enum: ?Enumerable<u>) -> Set<u>'
 
   rdl_alias :&, :intersection
