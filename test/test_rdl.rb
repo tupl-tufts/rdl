@@ -29,22 +29,21 @@ class TestRDL < Minitest::Test
 
   def test_process_pre_post_args
     ppos = RDL::Contract::FlatContract.new("Positive") { |x| x > 0 }
-    assert_equal ["TestRDL", nil, :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, :m1, ppos)
-    assert_equal ["TestRDL", nil, :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, "m1", ppos)
-    assert_equal ["TestRDL", :TestRDL, :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, "self.m1", ppos)
-    assert_equal ["TestRDL", :TestRDL, :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, "TestRDL.m1", ppos)
-    assert_equal ["TestRDL", nil, :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", :m1, ppos)
-    assert_equal ["TestRDL", nil, nil, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", ppos)
-    klass1, slf, meth1, c1 = RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, :m1) { |x| x > 0 }
-    assert_equal ["TestRDL", nil, :m1], [klass1, slf, meth1]
+    assert_equal ["TestRDL", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, :m1, ppos)
+    assert_equal ["TestRDL", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, "m1", ppos)
+    assert_equal ["[singleton]TestRDL", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, "self.m1", ppos)
+    assert_equal ["TestRDL", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", :m1, ppos)
+    assert_equal ["TestRDL", nil, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", ppos)
+    klass1, meth1, c1 = RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, :m1) { |x| x > 0 }
+    assert_equal ["TestRDL", :m1], [klass1, meth1]
     assert (c1.is_a? RDL::Contract::FlatContract)
 
-    klass2, slf2, meth2, c2 = RDL::Wrap.process_pre_post_args(self.class, "C", :m1) { |x| x > 0 }
-    assert_equal ["TestRDL", nil, :m1], [klass2, slf2, meth2]
+    klass2, meth2, c2 = RDL::Wrap.process_pre_post_args(self.class, "C", :m1) { |x| x > 0 }
+    assert_equal ["TestRDL", :m1], [klass2, meth2]
     assert (c2.is_a? RDL::Contract::FlatContract)
 
-    klass3, slf3, meth3, c3 = RDL::Wrap.process_pre_post_args(self.class, "C") { |x| x > 0 }
-    assert_equal ["TestRDL", nil, nil], [klass3, slf3, meth3]
+    klass3, meth3, c3 = RDL::Wrap.process_pre_post_args(self.class, "C") { |x| x > 0 }
+    assert_equal ["TestRDL", nil], [klass3, meth3]
     assert (c3.is_a? RDL::Contract::FlatContract)
     
     assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C") }

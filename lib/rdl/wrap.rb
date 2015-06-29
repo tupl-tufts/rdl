@@ -131,8 +131,8 @@ RUBY
     end
     raise ArgumentError, "#{contract.class} received where Contract expected" unless contract.class < RDL::Contract::Contract
     meth = :initialize if meth && meth.to_sym == :new  # actually wrap constructor
-    slf = klass.to_sym if slf == :self
-    return [klass, slf, meth, contract]
+    klass = RDL::Util.add_singleton_marker(klass) if slf
+    return [klass, meth, contract]
   end
 
   # [+default_class+] should be a class
@@ -154,7 +154,8 @@ RUBY
     end
     raise ArgumentError, "Excepting method type, got #{type.class} instead" if type.class != RDL::Type::MethodType
     meth = :initialize if meth && slf && meth.to_sym == :new  # actually wrap constructor
-    return [klass, slf, meth, type]
+    klass = RDL::Util.add_singleton_marker(klass) if slf
+    return [klass, meth, type]
   end
     
   private
@@ -179,19 +180,11 @@ RUBY
   def self.meth_to_sym(meth)
     case meth
     when String
-      meth =~ /(.*\.)?(.*)/
-      if $1
-        return [$1[0..-2].to_sym, $2.to_sym]
-      else
-        return [nil, $2.to_sym]
-      end
+      meth =~ /(self\.)?(.*)/
+      return [$1, $2.to_sym]
     when Symbol
-      meth.to_s =~ /(.*\.)?(.*)/
-      if $1
-        return [$1[0..-2].to_sym, $2.to_sym]
-      else
-        return [nil, $2.to_sym]
-      end
+      meth.to_s =~ /(self\.)?(.*)/
+      return [$1, $2.to_sym]
     else
       raise ArgumentError, "#{meth.class} received where method (Symbol or String) expected"
     end
@@ -222,7 +215,7 @@ class Object
   # pre { block } = pre(self, next method, FlatContract.new { block })
   def pre(*args, &blk)
     $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
-      klass, slf, meth, contract = RDL::Wrap.process_pre_post_args(self, "Precondition", *args, &blk)
+      klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Precondition", *args, &blk)
       if meth
         RDL::Wrap.add_contract(klass, meth, :pre, contract)
         if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
@@ -239,7 +232,7 @@ class Object
   # Add a postcondition to a method. Same possible invocations as pre.
   def post(*args, &blk)
     $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
-      klass, slf, meth, contract = RDL::Wrap.process_pre_post_args(self, "Postcondition", *args, &blk)
+      klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Postcondition", *args, &blk)
       if meth
         RDL::Wrap.add_contract(klass, meth, :post, contract)
         if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
@@ -263,7 +256,7 @@ class Object
   # type(type)
   def type(*args, &blk)
     $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
-      klass, slf, meth, type = begin
+      klass, meth, type = begin
                             RDL::Wrap.process_type_args(self, *args, &blk)
                           rescue Racc::ParseError => err
                             # Remove enough backtrace to only include actual source line
