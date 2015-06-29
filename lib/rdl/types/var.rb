@@ -23,7 +23,8 @@ module RDL::Type
     end
 
     def to_s(inst: nil) # :nodoc:
-      return inst[@name].to_s(inst: inst) if inst && inst[@name]
+      # don't signal unbound variables in to_s, since it makes error reporting hard
+      return inst[@name].to_s(inst: inst) if inst && inst.class == Hash && inst[@name]
       return @name.to_s
     end
 
@@ -40,8 +41,12 @@ module RDL::Type
     end
 
     def member?(obj, inst: nil)
-      return inst[@name].member?(obj, inst: inst) if inst && inst[@name]
-      raise TypeError, "No instantiation for type variable #{@name}"
+      # if inst is a hash, it maps symbols to types
+      return inst[@name].member?(obj, inst: inst) if inst && inst.class == Hash && inst[@name]
+      # if inst is an array, it includes the type params that are in scope
+      return true if inst && inst.class == Array && inst.member?(@name)
+      # otherwise this is an unbound variable
+      raise TypeError, "Unbound type variable #{@name}"
     end
   end
 end

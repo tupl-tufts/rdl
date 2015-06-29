@@ -65,8 +65,10 @@ class RDL::Wrap
         alias_method meth_old, meth
         def #{meth}(*args, &blk)
           klass = meth = types = type_matches = nil
+          inst = nil
           $__rdl_wrap_switch.off {
             klass = self.class
+            inst = @__rdl_inst || $__rdl_type_params[klass]
 #            puts "Intercepted #{meth}(\#{args.join(", ")}) { \#{blk} }"
             meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
             if RDL::Wrap.has_contracts?(klass, meth, :pre)
@@ -75,7 +77,7 @@ class RDL::Wrap
             end
             if RDL::Wrap.has_contracts?(klass, meth, :type)
               types = RDL::Wrap.get_contracts(klass, meth, :type)
-              type_matches = RDL::Type::MethodType.check_arg_types(types, @__rdl_inst, *args, &blk)
+              type_matches = RDL::Type::MethodType.check_arg_types(types, inst, *args, &blk)
             end
           }
           ret = send(#{meth_old.inspect}, *args, &blk)
@@ -85,7 +87,7 @@ class RDL::Wrap
               RDL::Contract::AndContract.check_array(posts, ret, *args, &blk)
             end
             if type_matches
-              RDL::Type::MethodType.check_ret_types(types, @__rdl_inst, type_matches, ret, *args, &blk)
+              RDL::Type::MethodType.check_ret_types(types, inst, type_matches, ret, *args, &blk)
             end
           }
           return ret
