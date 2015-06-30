@@ -1,6 +1,11 @@
 class Array
+  nowrap
   type_params [:t]
-
+  def __rdl_member?(inst)
+    t = inst[:t]
+    all? { |x| t.member? x }
+  end
+  
   type :[], '(Range) -> Array<t>'
   type :[], '(Fixnum) -> t'
   type :[], '(Fixnum, Fixnum) -> Array<t>'
@@ -63,7 +68,7 @@ class Array
   type :index, '() -> Enumerator'
   type :first, '() -> t'
   type :first, '(Fixnum) -> Array<t>'
-  type :include?, '(u) -> %bool', {:vars => [:u]}
+  type :include?, '(u) -> %bool'
   type :insert, '(Fixnum, *t) -> Array<t>'
   type :inspect, '() -> String'
   type :join, '(?String) -> String'

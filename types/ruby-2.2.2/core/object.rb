@@ -1,23 +1,24 @@
 class Object
-  type :ARGF, ARGF
-  type :ARGV, 'Array<String>'
-  type :DATA, 'File'
-  type :ENV, ENV
-  type :FALSE, '%false'
-  type :NIL, 'nil'
-  type :RUBY_COPYRIGHT, 'String'
-  type :RUBY_DESCRIPTION, 'String'
-  type :RUBY_ENGINE, 'String'
-  type :RUBY_PATCHLEVEL, Fixnum
-  type :RUBY_PLATFORM, 'String'
-  type :RUBY_RELEASE_DATE, 'String'
-  type :RUBY_REVISION, Fixnum
-  type :RUBY_VERSION, 'String'
-  type :STDERR, 'IO'
-  type :STDIN, 'IO'
-  type :STDOUT, 'IO'
-  type :TOPLEVEL_BINDING, 'Binding'
-  type :TRUE, '%true'
+  nowrap
+  # type :ARGF, ARGF
+  # type :ARGV, 'Array<String>'
+  # type :DATA, 'File'
+  # type :ENV, ENV
+  # type :FALSE, '%false'
+  # type :NIL, 'nil'
+  # type :RUBY_COPYRIGHT, 'String'
+  # type :RUBY_DESCRIPTION, 'String'
+  # type :RUBY_ENGINE, 'String'
+  # type :RUBY_PATCHLEVEL, Fixnum
+  # type :RUBY_PLATFORM, 'String'
+  # type :RUBY_RELEASE_DATE, 'String'
+  # type :RUBY_REVISION, Fixnum
+  # type :RUBY_VERSION, 'String'
+  # type :STDERR, 'IO'
+  # type :STDIN, 'IO'
+  # type :STDOUT, 'IO'
+  # type :TOPLEVEL_BINDING, 'Binding'
+  # type :TRUE, '%true'
 
   type :!~, '(other : %any) -> %bool'
   type :<=>, '(other : %any) -> Fixnum or nil'
@@ -26,7 +27,7 @@ class Object
   type :class, '() -> Class'
   type :clone, '() -> self'
 #  type :define_singleton_method, '(XXXX : *XXXX)') # TODO
-  type :display, '(port : IO)'
+  type :display, '(port : IO) -> nil'
   type :dup, '() -> an_object : self'
   type :enum_for, '(method : ?Symbol, args : *%any) -> Enumerator<%any>'
   type :enum_for, '(method : ?Symbol, args : *%any) { (args : %any) -> %any } -> Enumerator<%any>'

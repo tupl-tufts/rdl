@@ -1,4 +1,5 @@
 class String
+  nowrap
   type :new, '(str: ?String) -> new_str: String'
   type :try_convert, '(Object: obj) -> String: new_string or nil'
   type :%, '(Object) -> String'

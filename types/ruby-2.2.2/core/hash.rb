@@ -1,4 +1,5 @@
 class Hash
+  nowrap
   type_params [:k, :v]
 
   type :[], '(k) -> v'
