@@ -32,15 +32,6 @@ module RDL::Type
       "#{@base}<#{@params.map { |t| t.to_s(inst: inst) }.join(', ')}>"
     end
 
-    def member?(obj, inst: nil)
-      # Fix!
-      base.member?(obj, inst: inst)
-#      formals = $__rdl_type_params[base.name]
-#      raise "Generic type #{base.to_s} expects #{formals.size} arguments, got #{params.size} " unless formals.size == params.size
-#      inst_params = params.map { |t| t.instantiate(inst) }
-#      obj.__rdl_member(??)
-    end
-    
     def eql?(other)
       self == other
     end
@@ -49,6 +40,19 @@ module RDL::Type
       return (other.instance_of? GenericType) && (other.base == @base) && (other.params == @params)
     end
 
+    def member?(obj, inst: nil)
+      # Fix!
+      base.member?(obj, inst: inst)
+#      formals = $__rdl_type_params[base.name]
+#      raise "Generic type #{base.to_s} expects #{formals.size} arguments, got #{params.size} " unless formals.size == params.size
+#      inst_params = params.map { |t| t.instantiate(inst) }
+#      obj.__rdl_member(??)
+    end
+
+    def instantiate(inst)
+      GenericType.new(base, *params.map { |t| t.instantiate(inst) })
+    end
+    
     def hash
       h = (61 + @base.hash) * @params.hash
     end

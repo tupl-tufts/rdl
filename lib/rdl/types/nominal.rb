@@ -46,5 +46,9 @@ module RDL::Type
     def member?(obj, inst: nil)
       obj.nil? || obj.class.ancestors.member?(klass)
     end
+
+    def instantiate(inst)
+      return self
+    end
   end
 end

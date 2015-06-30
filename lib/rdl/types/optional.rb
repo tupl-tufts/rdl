@@ -38,6 +38,10 @@ module RDL::Type
 
     # Note: no member?, because these can only appear in MethodType, where they're handled specially
     
+    def instantiate(inst)
+      return OptionalType.new(@type.instantiate(inst))
+    end
+    
     def hash # :nodoc:
       return 57 + @type.hash
     end

@@ -40,5 +40,9 @@ module RDL::Type
     def member?(obj, inst: nil)
       obj.nil? || obj == @val
     end
+
+    def instantiate(inst)
+      return self
+    end
   end
 end

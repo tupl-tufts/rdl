@@ -37,5 +37,9 @@ module RDL::Type
     def member?(obj, inst: nil)
       @type.member?(obj, inst: inst)
     end
+
+    def instantiate(inst)
+      return NamedArgType.new(@name, @type.instantiate(inst))
+    end
   end
 end

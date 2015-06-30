@@ -32,6 +32,10 @@ module RDL::Type
     def member?(obj, inst: nil)
       obj == nil
     end
+
+    def instantiate(inst)
+      return self
+    end
     
     def hash
       13

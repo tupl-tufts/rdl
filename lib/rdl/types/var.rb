@@ -48,5 +48,10 @@ module RDL::Type
       # otherwise this is an unbound variable
       raise TypeError, "Unbound type variable #{@name}"
     end
+
+    def instantiate(inst)
+      return inst[@name] if inst[@name]
+      return self
+    end
   end
 end

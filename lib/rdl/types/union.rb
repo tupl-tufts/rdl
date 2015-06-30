@@ -57,6 +57,10 @@ module RDL::Type
     def member?(obj, inst: nil)
       @types.any? { |t| t.member?(obj, inst: inst) }
     end
+
+    def instantiate(inst)
+      return UnionType.new(*(@types.map { |t| t.instantiate(inst) }))
+    end
     
     def hash  # :nodoc:
       41 + @types.hash

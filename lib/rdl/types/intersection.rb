@@ -54,6 +54,10 @@ module RDL::Type
       @types.all? { |t| t.member?(obj, inst: inst) }
     end
 
+    def instantiate(inst)
+      return IntersectionType.new(*(@types.map { |t| t.instantiate(inst) }))
+    end
+    
     def hash  # :nodoc:
       47 + @types.hash
     end

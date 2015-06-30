@@ -33,6 +33,10 @@ module RDL::Type
       true
     end
 
+    def instantiate(inst)
+      return self
+    end
+    
     def hash
       17
     end

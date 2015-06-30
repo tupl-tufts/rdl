@@ -145,4 +145,41 @@ class TestTypes < Minitest::Test
     t2 = StructuralType.new :m1 => tm1, :m2 => tm2
     assert_equal t1, t2
   end
+
+  def test_instantiate
+    tnil = NilType.new
+    ttop = TopType.new
+    tA = NominalType.new :A
+    tB = NominalType.new :B
+    toptionalA = OptionalType.new tA
+    tvarargA = VarargType.new tA
+    tnamedA = NamedArgType.new("arg", tA)
+    tunionAB = UnionType.new(tA, tB)
+    tinterAB = IntersectionType.new(tA, tB)
+    tsyma = SingletonType.new(:a)
+    tstring = NominalType.new :String
+    tfixnum = NominalType.new :Fixnum
+    ta = VarType.new :a
+    tb = VarType.new :b
+    tc = VarType.new :c
+    thash = NominalType.new :Hash
+    thashAB = GenericType.new(thash, tA, tB)
+    thashab = GenericType.new(thash, ta, tb)
+    thashstringfixnum = GenericType.new(thash, tstring, tfixnum)
+    inst = {a: tstring, b: tfixnum}
+    assert_equal tnil, tnil.instantiate(inst)
+    assert_equal ttop, ttop.instantiate(inst)
+    assert_equal tA, tA.instantiate(inst)
+    assert_equal toptionalA, toptionalA.instantiate(inst)
+    assert_equal tvarargA, tvarargA.instantiate(inst)
+    assert_equal tnamedA, tnamedA.instantiate(inst)
+    assert_equal tunionAB, tunionAB.instantiate(inst)
+    assert_equal tinterAB, tinterAB.instantiate(inst)
+    assert_equal tsyma, tsyma.instantiate(inst)
+    assert_equal tstring, ta.instantiate(inst)
+    assert_equal tfixnum, tb.instantiate(inst)
+    assert_equal tc, tc.instantiate(inst)
+    assert_equal thashAB, thashAB.instantiate(inst)
+    assert_equal thashstringfixnum, thashab.instantiate(inst)
+  end
 end
