@@ -35,6 +35,10 @@ module RDL::Type
     def member?(obj, inst: nil)
       # Fix!
       base.member?(obj, inst: inst)
+#      formals = $__rdl_type_params[base.name]
+#      raise "Generic type #{base.to_s} expects #{formals.size} arguments, got #{params.size} " unless formals.size == params.size
+#      inst_params = params.map { |t| t.instantiate(inst) }
+#      obj.__rdl_member(??)
     end
     
     def eql?(other)
