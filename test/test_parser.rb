@@ -82,10 +82,10 @@ class TestParser < Minitest::Test
   def test_named_params
     t1 = @p.scan_str "(x : Fixnum, Fixnum) -> Fixnum"
     assert_equal (MethodType.new [@tfixnumx, @tfixnum], nil, @tfixnum), t1
-    t2 = @p.scan_str "(x : ?Fixnum, Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [@tfixnumoptx, @tfixnum], nil, @tfixnum), t2
-    t3 = @p.scan_str "(x : *Fixnum, Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [@tfixnumvarargx, @tfixnum], nil, @tfixnum), t3
+    t2 = @p.scan_str "(Fixnum, x : ?Fixnum) -> Fixnum"
+    assert_equal (MethodType.new [@tfixnum, @tfixnumoptx], nil, @tfixnum), t2
+    t3 = @p.scan_str "(Fixnum, x : *Fixnum) -> Fixnum"
+    assert_equal (MethodType.new [@tfixnum, @tfixnumvarargx], nil, @tfixnum), t3
     t4 = @p.scan_str "(Fixnum, y : Fixnum) -> Fixnum"
     assert_equal (MethodType.new [@tfixnum, @tfixnumy], nil, @tfixnum), t4
     t5 = @p.scan_str "(x : Fixnum, y : Fixnum) -> Fixnum"

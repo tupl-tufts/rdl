@@ -22,6 +22,7 @@ module RDL::Type
       # args, any number of optional args, at most one vararg)
       state = :required
       args.each { |arg|
+        arg = arg.type if arg.class == RDL::Type::NamedArgType
         case arg
         when OptionalType
           raise "optional arguments not allowed after varargs" if state == :vararg
