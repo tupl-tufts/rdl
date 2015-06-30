@@ -4,6 +4,11 @@ require 'require_all'
 module RDL
 end
 
+require 'rdl/config.rb'
+def RDL.config
+  yield(RDL::Config.instance)
+end
+
 # Hash from class name to method name to :pre/:post/:type to array of contracts
 # class names are strings (because they need to be manipulated in case they include ::)
 #  (class names may have Util.add_singleton_marker applied to them to indicate they're singleton classes.)

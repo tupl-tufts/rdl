@@ -57,6 +57,7 @@ class RDL::Wrap
   def self.wrap(klass_str, meth)
     $__rdl_wrap_switch.off {
       klass = RDL::Util.to_class klass_str
+      return if RDL::Config.instance.nowrap.member? klass
       raise ArgumentError, "Attempt to wrap #{klass.to_s}\##{meth.to_s}" if klass.to_s =~ /^RDL::/
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
       return if (klass.method_defined? meth_old)
@@ -367,6 +368,12 @@ class Object
     }
   end
 
+  def nowrap
+    $__rdl_contract_switch.off {
+      RDL.config { |config| config.add_nowrap(self, self.singleton_class) }
+    }
+  end
+  
   # [+typs+] is an array of types, classes, symbols, or strings to instantiate
   # the type parameters. If a class, symbol, or string is given, it is
   # converted to a NominalType.
