@@ -122,7 +122,7 @@ end
   end
 
   def test_generic
-#    skip "GenericType#member? not fully implemented"
+    skip "GenericType#member? not fully implemented"
     # Make two classes that wrap Array and Hash, so we don't mess with their
     # implementations in test case evaluation.
     self.class.class_eval <<-RUBY, __FILE__, __LINE__+1
