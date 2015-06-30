@@ -138,3 +138,7 @@ rdocTypesigFor(Klass) # Deprecated FIXME
 returns true, meaning wrapping isn't fully working with initialize
 
 * Check in instantiate! that array contents matches instantiated type
+
+* Use SingletonType(self) for self type check?
+
+* Should we instantiate rather than pass inst as a parameter?

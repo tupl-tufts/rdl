@@ -122,10 +122,9 @@ end
   end
 
   def test_generic
-    skip "GenericType#member? not fully implemented"
     # Make two classes that wrap Array and Hash, so we don't mess with their
     # implementations in test case evaluation.
-    self.class.class_eval <<-RUBY, __FILE__, __LINE__+1
+    self.class.class_eval <<-RUBY, __FILE__, __LINE__
       module Generic
         class A
           type_params [:t]
@@ -157,7 +156,7 @@ RUBY
     tao = GenericType.new(ta, @tobject)
     assert (tao.member?(Generic::A.new([1, 2, 3])))
     assert (tao.member?(Generic::A.new(["a", "b", "c"])))
-    taas = GeneircType.new(ta, tas)
+    taas = GenericType.new(ta, tas)
     assert (taas.member?(Generic::A.new([Generic::A.new(["a", "b"]), Generic::A.new(["c"])])))
     assert (taas.member?(Generic::A.new([])))
     assert (taas.member?(Generic::A.new([Generic::A.new([])])))
