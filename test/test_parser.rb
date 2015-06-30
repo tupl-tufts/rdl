@@ -24,7 +24,7 @@ class TestParser < Minitest::Test
     @tfixnumret = NamedArgType.new("ret", @tfixnum)
     @tfixnumoptx = NamedArgType.new("x", @tfixnumopt)
     @tfixnumvarargx = NamedArgType.new("x", @tfixnumvararg)
-    @tsymbol = SymbolType.new(:symbol)
+    @tsymbol = SingletonType.new(:symbol)
     @tsymbolx = NamedArgType.new("x", @tsymbol)
     @ttuple = NominalType.new("Tuple")
   end

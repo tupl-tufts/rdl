@@ -351,7 +351,7 @@ module_eval(<<'.,.,', 'parser.racc', 62)
 
 module_eval(<<'.,.,', 'parser.racc', 65)
   def _reduce_21(val, _values, result)
-     result = RDL::Type::SymbolType.new(val[0]) 
+     result = RDL::Type::SingletonType.new(val[0].to_sym) 
     result
   end
 .,.,

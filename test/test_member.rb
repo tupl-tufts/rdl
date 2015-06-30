@@ -19,7 +19,7 @@ class TestMember < Minitest::Test
     @tstring = NominalType.new "String"
     @tobject = NominalType.new "Object"
     @tbasicobject = NominalType.new "BasicObject"
-    @tsymfoo = SymbolType.new :foo
+    @tsymfoo = SingletonType.new :foo
     @tsym = NominalType.new Symbol
     @tarray = NominalType.new Array
     @tarraystring = GenericType.new(@tarray, @tstring)

@@ -15,13 +15,12 @@ module RDL::Type
         true
       elsif t2.instance_of?(TopType)
         true
-      elsif t1.instance_of?(SymbolType) && t2.instance_of?(SymbolType)
-        t1.name == t2.name
+      elsif t1.instance_of?(SingletonType) && t2.instance_of?(SingletonType)
+        t1.val == t2.val
       elsif t1.instance_of?(NominalType) && t2.instance_of?(NominalType)
-        t1.name == t2.name ||
-         t1.klass.ancestors.member?(t2.klass)
-      elsif t1.instance_of?(SymbolType) && t2.instance_of?(NominalType)
-        t2.name == "Symbol"
+        t1.name == t2.name || t1.klass.ancestors.member?(t2.klass)
+      elsif t1.instance_of?(SingletonType) && t2.instance_of?(NominalType)
+        t1.val.class.ancestors.member?(t2.klass)
       elsif t1.instance_of?(GenericType) && t2.instance_of?(GenericType)
         t1.base == t2.base && t1.params == t2.params
       elsif t1.instance_of?(UnionType)

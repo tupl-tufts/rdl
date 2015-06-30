@@ -26,15 +26,13 @@ class TestTypes < Minitest::Test
   end
 
   def test_symbol
-    ta = SymbolType.new :A
-    ta2 = SymbolType.new :A
-    ta3 = SymbolType.new "A"
-    tb = SymbolType.new :B
+    ta = SingletonType.new :A
+    ta2 = SingletonType.new :A
+    tb = SingletonType.new :B
     tan = NominalType.new :A
     assert_same ta, ta2
-    assert_same ta, ta3
     assert (ta != tb)
-    assert_equal :A, ta.name
+    assert_equal :A, ta.val
     assert (ta != tan)
   end
 

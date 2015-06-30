@@ -63,7 +63,7 @@ rule
   | single_type OR union_type { result = RDL::Type::UnionType.new val[0], val[2] }
 
   single_type:
-      SYMBOL { result = RDL::Type::SymbolType.new(val[0]) }
+      SYMBOL { result = RDL::Type::SingletonType.new(val[0].to_sym) }
     | ID {
       if val[0] == 'nil' then
         result = RDL::Type::NilType.new
