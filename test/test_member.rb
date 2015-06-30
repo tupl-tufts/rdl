@@ -120,30 +120,60 @@ end
   def test_var_inst
     assert(@tavar.member?("foo", inst: {a: @tstring}))
   end
-  
+
   def test_generic
-    skip "GenericType#member? not fully implemented"
-    assert (@tarray.member? [1, 2, 3])
-    assert (@tarray.member? [])
-    assert (@tarraystring.member? ["a", "b", "c"])
-    assert (@tarraystring.member? [])
-    assert (not (@tarraystring.member? [1, 2, 3]))
-    assert (@tarrayobject.member? [1, 2, 3])
-    assert (@tarrayobject.member? ["a", "b", "c"])
-    assert (@tarrayarraystring.member? [["a", "b"], ["c"]])
-    assert (@tarrayarraystring.member? [])
-    assert (@tarrayarraystring.member? [[]])
-    assert (@tarrayarraystring.member? [[], []])
-    assert (not (@tarrayarraystring.member? ["a", "b", "c"]))
-    assert (not (@tarrayarraystring.member? [["a", "b"], [1]]))
-    assert (@thash.member?(Hash.new))
-    assert (@thash.member?(a:1, b:2))
-    assert (@thashsymstring.member?(a:"one", b:"two"))
-    assert (not (@thashsymstring.member?(a:1, b:2)))
-    assert (not (@thashsymstring.member?({"a"=>"one", "b"=>"two"})))
-    assert (@thashobjectobject.member?(a:"one", b:"two"))
-    assert (not (@thashobjectobject.member?(a:1, b:2)))
-    assert (not (@thashobjectobject.member?({"a"=>"one", "b"=>"two"})))
+#    skip "GenericType#member? not fully implemented"
+    # Make two classes that wrap Array and Hash, so we don't mess with their
+    # implementations in test case evaluation.
+    self.class.class_eval <<-RUBY, __FILE__, __LINE__+1
+      module Generic
+        class A
+          type_params [:t]
+          def __rdl_member?(inst)
+            t = inst[:t]
+            return @a.all? { |x| t.member? x }
+          end
+          def initialize(a); @a = a end
+        end
+        class B
+          type_params [:k, :v]
+          def __rdl_member?(inst)
+            tk = inst[:k]
+            tv = inst[:v]
+            return @h.all? { |k, v| (tk.member? k) && (tv.member? v) }
+          end
+          def initialize(h); @h = h end
+        end
+      end
+RUBY
+    ta = NominalType.new "TestMember::Generic::A"
+    tb = NominalType.new "TestMember::Generic::B"
+    assert (ta.member?(Generic::A.new([1, 2, 3])))
+    assert (ta.member?(Generic::A.new([])))
+    tas = GenericType.new(ta, @tstring)
+    assert (tas.member?(Generic::A.new(["a", "b", "c"])))
+    assert (tas.member?(Generic::A.new([])))
+    assert (not (tas.member?(Generic::A.new([1, 2, 3]))))
+    tao = GenericType.new(ta, @tobject)
+    assert (tao.member?(Generic::A.new([1, 2, 3])))
+    assert (tao.member?(Generic::A.new(["a", "b", "c"])))
+    taas = GeneircType.new(ta, tas)
+    assert (taas.member?(Generic::A.new([Generic::A.new(["a", "b"]), Generic::A.new(["c"])])))
+    assert (taas.member?(Generic::A.new([])))
+    assert (taas.member?(Generic::A.new([Generic::A.new([])])))
+    assert (taas.member?(Generic::A.new([Generic::A.new([]), Generic::A.new([])])))
+    assert (not (taas.member?(Generic::A.new(["a", "b", "c"]))))
+    assert (not (taas.member?(Generic::A.new([Generic::A.new(["a", "b"]), Generic::A.new([1])]))))
+    assert (tb.member?(Generic::B.new(Hash.new)))
+    assert (tb.member?(Generic::B.new(a:1, b:2)))
+    tbsyms = GenericType.new(tb, @tsym, @tstring)
+    assert (tbsyms.member?(Generic::B.new(a:"one", b:"two")))
+    assert (not (tbsyms.member?(Generic::B.new(a:1, b:2))))
+    assert (not (tbsyms.member?(Generic::B.new({"a"=>"one", "b"=>"two"}))))
+    tboo = GenericType.new(tb, @tobject, @tobject)
+    assert (tboo.member?(Generic::B.new(a:"one", b:"two")))
+    assert (tboo.member?(Generic::B.new(a:1, b:2)))
+    assert (tboo.member?(Generic::B.new({"a"=>"one", "b"=>"two"})))
   end
   
 end

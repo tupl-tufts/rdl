@@ -217,9 +217,9 @@ RUBY
   end
 
   def test_type_params
-    self.class.class_eval "class A; type_params [:t, :u] end"
-    assert_equal [:t, :u], RDL::Wrap.get_type_params(TestRDL::A)
-    assert_raises(RuntimeError) { self.class.class_eval "class A; type_params [] end" }
+    self.class.class_eval "class TPA; type_params [:t, :u] { |t, u| true } end"
+    assert_equal [:t, :u], RDL::Wrap.get_type_params(TestRDL::TPA)
+    assert_raises(RuntimeError) { self.class.class_eval "class TPB; type_params [] end" }
   end
 
   def test_wrap_new
