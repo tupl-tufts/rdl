@@ -55,19 +55,19 @@ module RDL::Type
         when OptionalType
           unless @args[i].type.member?(arg, inst: inst)
             raise TypeError,
-                  "Argument #{i}, expecting (optional) #{@args[i].to_s(inst: inst)}, got #{arg.class}"
+                  "Argument #{i}, expecting (optional) #{@args[i].to_s(inst: inst)}, got #{arg.inspect}"
           end
           i += 1
         when VarargType
           unless @args[i].type.member?(arg, inst: inst)
             raise TypeError,
-                  "Argument #{i}, expecting (vararg) #{@args[i].to_s(inst: inst)}, got #{arg.class}"
+                  "Argument #{i}, expecting (vararg) #{@args[i].to_s(inst: inst)}, got #{arg.inspect}"
           end
         # do not increment i, since vararg can take any number of argument
         else
           unless @args[i].member?(arg, inst: inst)
             raise TypeError,
-                  "Argument #{i}, expecting #{@args[i].to_s(inst: inst)}, got #{arg.class}"
+                  "Argument #{i}, expecting #{@args[i].to_s(inst: inst)}, got #{arg.inspect}"
           end
           i += 1
         end
@@ -82,7 +82,7 @@ module RDL::Type
 
     def post_cond_check(inst, ret, *args)
       unless @ret.member?(ret, inst: inst)
-        raise TypeError, "expecting (return) #{@ret.to_s(inst: inst)}, got #{ret.class}"
+        raise TypeError, "expecting (return) #{@ret.to_s(inst: inst)}, got #{ret.inspect}"
       end
       true
     end

@@ -24,6 +24,7 @@ module RDL::Type
 
     def to_s(inst: nil) # :nodoc:
       # don't signal unbound variables in to_s, since it makes error reporting hard
+      return "self" if @name == :self && inst && inst[@name]
       return inst[@name].to_s(inst: inst) if inst && inst.class == Hash && inst[@name]
       return @name.to_s
     end
@@ -41,6 +42,7 @@ module RDL::Type
     end
 
     def member?(obj, inst: nil)
+      return inst[@name].equal? obj if @name == :self && inst && inst[@name]
       return inst[@name].member?(obj, inst: inst) if inst && inst[@name]
       return true if inst && inst.has_key?(@name)
       # otherwise this is an unbound variable

@@ -71,7 +71,7 @@ class RDL::Wrap
             inst = @__rdl_inst
             inst = Hash[$__rdl_type_params[klass].zip []] if (not(inst) && $__rdl_type_params[klass])
             inst = {} if not inst
-            #{if not(RDL::Util.has_singleton_marker(klass_str)) then "inst[:self] = RDL::Type::NominalType.new(self.class)" end}
+            #{if not(RDL::Util.has_singleton_marker(klass_str)) then "inst[:self] = self" end}
 #            puts "Intercepted \#{klass}##{meth}(\#{args.join(", ")}) { \#{blk} }, inst = \#{inst.inspect}"
             meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
             if RDL::Wrap.has_contracts?(klass, meth, :pre)
