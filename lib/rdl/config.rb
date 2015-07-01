@@ -1,3 +1,5 @@
+require 'singleton'
+
 class RDL::Config
   include Singleton
 

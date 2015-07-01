@@ -4,7 +4,7 @@ require 'require_all'
 module RDL
 end
 
-require 'rdl/config.rb'
+require_relative 'rdl/config.rb'
 def RDL.config
   yield(RDL::Config.instance)
 end
