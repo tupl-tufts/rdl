@@ -41,12 +41,14 @@ module RDL::Type
     end
 
     def member?(obj, inst: nil)
+      formals, variance = $__rdl_type_params[base.name]
+      raise "No type parameters defined for #{base.name}" unless formals # do this check here to avoid hiding errors
       return false unless base.member?(obj, inst: inst)
-      formals = $__rdl_type_params[base.name]
-      raise "No type parameters defined for #{base.name}" unless formals
+      return true unless obj.instantiated? # if obj is not instantiated, only its base class needs to match
+      params = params.map { |t| t.instantiate(inst) } # instantiate parameters according to currently bound type vars
       raise "Generic type #{base.to_s} expects #{formals.size} arguments, got #{params.size} " unless formals.size == @params.size
-      inst_params = params.map { |t| t.instantiate(inst) }
-      obj.__rdl_member?(Hash[formals.zip(inst_params)])
+      raise "Unimplemented!"
+      return (GenericType.new(@base, *params) <= self)
     end
 
     def instantiate(inst)

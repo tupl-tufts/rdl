@@ -9,7 +9,7 @@ module RDL::Type
     @@contract_cache = {}
     
     # t1 <= t2
-    # Note this method is probably not useful.
+    # Note this method is probably not useful, and it doesn't handle variance for generic types
     def self.<=(t1, t2)
       if t1.instance_of?(NilType)
         true

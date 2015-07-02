@@ -217,9 +217,16 @@ RUBY
   end
 
   def test_type_params
-    self.class.class_eval "class TPA; type_params [:t, :u] { |t, u| true } end"
-    assert_equal [:t, :u], RDL::Wrap.get_type_params(TestRDL::TPA)
-    assert_raises(RuntimeError) { self.class.class_eval "class TPB; type_params [] end" }
+    self.class.class_eval "class TP1; type_params [:t] { |t| true } end"
+    assert_equal [[:t], nil], RDL::Wrap.get_type_params(TestRDL::TP1)
+    assert_raises(RuntimeError) { self.class.class_eval "class TP1; type_params [:t] { |t| true } end" }
+    self.class.class_eval "class TP2; type_params [:t, :u] { |t, u| true } end"
+    assert_equal [[:t, :u], nil], RDL::Wrap.get_type_params(TestRDL::TP2)
+    self.class.class_eval "class TP3; type_params [:t, :u, :v], [:+, :-, :~] { |t, u, v| true } end"
+    assert_equal [[:t, :u, :v], [:+, :-, :~]], RDL::Wrap.get_type_params(TestRDL::TP3)
+    assert_raises(RuntimeError) { self.class.class_eval "class TP4; type_params [] end" }
+    assert_raises(RuntimeError) { self.class.class_eval "class TP5; type_params [:t, :u], [:+] end" }
+    assert_raises(RuntimeError) { self.class.class_eval "class TP6; type_params [:t, :u], [:a, :b] end" }
   end
 
   def test_wrap_new

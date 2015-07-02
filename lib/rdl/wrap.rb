@@ -70,7 +70,7 @@ class RDL::Wrap
           inst = nil
           $__rdl_wrap_switch.off {
             inst = @__rdl_inst
-            inst = Hash[$__rdl_type_params[klass].zip []] if (not(inst) && $__rdl_type_params[klass])
+            inst = Hash[$__rdl_type_params[klass][0].zip []] if (not(inst) && $__rdl_type_params[klass])
             inst = {} if not inst
             #{if not(RDL::Util.has_singleton_marker(klass_str)) then "inst[:self] = self" end}
 #            puts "Intercepted \#{klass}##{meth}(\#{args.join(", ")}) { \#{blk} }, inst = \#{inst.inspect}"
@@ -352,7 +352,7 @@ class Object
 
   # [+params+] is an array of symbols or strings that are the
   # parameters of this (generic) type
-  def type_params(params)
+  def type_params(params, variance = nil)
     $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
       raise RuntimeError, "Empty type parameters not allowed" if params.empty?
       klass = self.to_s
@@ -364,7 +364,9 @@ class Object
         v.to_sym
       }
       raise RuntimeError, "Duplicate type parameters not allowed" unless params.uniq.size == params.size
-      $__rdl_type_params[klass] = params
+      raise RuntimeError, "Expecting #{params.size} variance annotations, got #{variance.size}" if variance && params.size != variance.size
+      raise RuntimeError, "Only :+, +-, and :~ are allowed variance annotations" unless (not variance) || variance.all? { |v| [:+, :-, :~].member? v }
+      $__rdl_type_params[klass] = [params, variance]
     }
   end
 
@@ -379,7 +381,7 @@ class Object
   # converted to a NominalType.
   def instantiate!(typs)
     $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
-      params = $__rdl_type_params[klass]
+      params = $__rdl_type_params[klass][0]
       raise RuntimeError, "Class #{self.to_s} is not parameterized" unless params
       raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless params.size == typs.size
       raise RuntimeError, "Instance already has type instantiation" if @__rdl_inst
@@ -387,6 +389,10 @@ class Object
     }
   end
 
+  def instantiated?
+    $__rdl_contract_switch.off { return not(@__rdl_inst.nil?) }
+  end
+  
   def deinstantiate!
     $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
       raise RuntimeError, "Class #{self.to_s} is not parameterized" unless $__rdl_type_params[klass]
