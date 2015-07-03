@@ -24,7 +24,7 @@ module RDL::Type
       super()
     end
 
-    def to_s(inst: nil)
+    def to_s
       "*(#{@type})"
     end
 
