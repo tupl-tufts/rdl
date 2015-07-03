@@ -350,6 +350,9 @@ class Object
 
   # [+params+] is an array of symbols or strings that are the
   # parameters of this (generic) type
+  # [+variance+] is an array of the corresponding variances, :+ for
+  # covariant, :- for contravariant, and :~ for invariant. If omitted,
+  # all parameters are assumed to be invariant
   def type_params(params, variance = nil)
     $__rdl_contract_switch.off {
       raise RuntimeError, "Empty type parameters not allowed" if params.empty?
@@ -364,6 +367,7 @@ class Object
       raise RuntimeError, "Duplicate type parameters not allowed" unless params.uniq.size == params.size
       raise RuntimeError, "Expecting #{params.size} variance annotations, got #{variance.size}" if variance && params.size != variance.size
       raise RuntimeError, "Only :+, +-, and :~ are allowed variance annotations" unless (not variance) || variance.all? { |v| [:+, :-, :~].member? v }
+      variance = params.map { |p| :~ } unless variance # default to invariant
       $__rdl_type_params[klass] = [params, variance]
     }
   end
