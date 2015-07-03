@@ -8,6 +8,8 @@ class TestTypes < Minitest::Test
     tnil = NilType.new
     tnil2 = NilType.new
     assert(tnil.equal? tnil2)
+    tnil3 = NominalType.new :NilClass
+    assert(tnil.equal? tnil3)
     ttop = TopType.new
     ttop2 = TopType.new
     assert_same ttop, ttop2
@@ -144,6 +146,12 @@ class TestTypes < Minitest::Test
     assert_equal tm2, t1.methods[:m2]
     t2 = StructuralType.new :m1 => tm1, :m2 => tm2
     assert_equal t1, t2
+  end
+
+  def test_type_of
+    assert_equal NilType.new, (Type.type_of nil)
+    assert_equal (NominalType.new String), (Type.type_of "foo")
+    assert_equal (NominalType.new Object), (Type.type_of Object.new)
   end
 
   def test_instantiate
