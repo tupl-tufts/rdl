@@ -131,7 +131,6 @@ class TestTypes < Minitest::Test
     tbvar = VarType.new :b
     t4 = GenericType.new thash, tavar, tbvar
     assert_equal "Hash<a, b>", t4.to_s
-    assert_equal "Hash<B, A>", t4.to_s(inst: {a: tb, b: ta})
   end
 
   def test_structural
