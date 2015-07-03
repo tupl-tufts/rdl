@@ -4,6 +4,15 @@ require_relative '../lib/rdl.rb'
 class TestLe < Minitest::Test
   include RDL::Type
 
+  class A
+  end
+
+  class B < A
+  end
+
+  class C < B
+  end
+  
   def setup
     @tnil = NilType.new
     @ttop = TopType.new
@@ -12,16 +21,9 @@ class TestLe < Minitest::Test
     @tbasicobject = NominalType.new "BasicObject"
     @tsymfoo = SingletonType.new :foo
     @tsym = NominalType.new Symbol
-    @tarray = NominalType.new Array
-    @tarraystring = GenericType.new(@tarray, @tstring)
-    @tarrayobject = GenericType.new(@tarray, @tobject)
-    @tarrayarraystring = GenericType.new(@tarray, @tarraystring)
-    @tarrayarrayobject = GenericType.new(@tarray, @tarrayobject)
-    @thash = NominalType.new Hash
-    @thashstringstring = GenericType.new(@thash, @tstring, @tstring)
-    @thashobjectobject = GenericType.new(@thash, @tobject, @tobject)
-    @tstring_or_sym = UnionType.new(@tstring, @tsym)
-    @tobject_and_basicobject = IntersectionType.new(@tobject, @tbasicobject)
+    @ta = NominalType.new A
+    @tb = NominalType.new B
+    @tc = NominalType.new C
   end
   
   def test_nil
@@ -68,25 +70,28 @@ class TestLe < Minitest::Test
     assert (not (@tobject <= @tstring))
     assert (not (@tbasicobject <= @tstring))
     assert (not (@tbasicobject <= @tobject))
-  end
-
-  def test_generic
-    assert (@tarraystring <= @tarraystring)
-    assert (@tarrayobject <= @tarrayobject)
-    assert (@tarrayarraystring <= @tarrayarraystring)
-    assert (@thashstringstring <= @thashstringstring)
-    assert (@thashobjectobject <= @thashobjectobject)
-    assert (not (@tarraystring <= @tarrayobject))
-    assert (not (@tarrayobject <= @tarraystring))
-    assert (not (@thashstringstring <= @thashobjectobject))
-    assert (not (@thashobjectobject <= @thashstringstring))
+    assert (@ta <= @ta)
+    assert (@tb <= @ta)
+    assert (@tc <= @ta)
+    assert (not (@ta <= @tb))
+    assert (@tb <= @tb)
+    assert (@tc <= @tb)
+    assert (not (@ta <= @tc))
+    assert (not (@tb <= @tc))
+    assert (@tc <= @tc)
   end
 
   def test_union
-    assert (@tstring_or_sym <= @tobject)
+    tstring_or_sym = UnionType.new(@tstring, @tsym)
+    assert (tstring_or_sym <= @tobject)
     assert (not (@tobject <= @tstring_or_sym))
-    assert (not (@tobject_and_basicobject <= @tobject))
-    assert (@tobject <= @tobject_and_basicobject)
   end
+
+  # def test_intersection
+  #   skip "<= not defined on intersection"
+  #   tobject_and_basicobject = IntersectionType.new(@tobject, @tbasicobject)
+  #   assert (not (tobject_and_basicobject <= @tobject))
+  #   assert (@tobject <= tobject_and_basicobject)
+  # end
   
 end
