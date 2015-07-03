@@ -102,28 +102,61 @@ class TestGeneric < Minitest::Test
   end
 
   def test_member
+    # member? should only check the base types
     assert (@ta.member?(A.new([1, 2, 3])))
     assert (@ta.member?(A.new([])))
-    assert (@tas.member?(A.new(["a", "b", "c"])))
+    assert (@ta.member?(A.new(["a", "b", "c"])))
+    assert (@tas.member?(A.new([1, 2, 3])))
     assert (@tas.member?(A.new([])))
-    assert (not (@tas.member?(A.new([1, 2, 3]))))
-    assert (@tao.member?(A.new([1, 2, 3])))
-    assert (@tao.member?(A.new(["a", "b", "c"])))
-    assert (@taas.member?(A.new([A.new(["a", "b"]), A.new(["c"])])))
+    assert (@tas.member?(A.new(["a", "b", "c"])))
+    assert (@taas.member?(A.new([1, 2, 3])))
     assert (@taas.member?(A.new([])))
-    assert (@taas.member?(A.new([A.new([])])))
-    assert (@taas.member?(A.new([A.new([]), A.new([])])))
-    assert (not (@taas.member?(A.new(["a", "b", "c"]))))
-    assert (not (@taas.member?(A.new([A.new(["a", "b"]), A.new([1])]))))
-    assert (@th.member?(H.new(Hash.new)))
-    assert (@th.member?(H.new(a:1, b:2)))
-    assert (@thsf.member?(H.new({"one"=>1, "two"=>2})))
-    assert (not (@thsf.member?(H.new(one: 1, two: 2))))
-    assert (not (@thsf.member?(H.new({"one"=>:one, "two"=>:two}))))
-    assert (@thoo.member?(H.new({"one"=>1, "two"=>2})))
-    assert (@thoo.member?(H.new(one: 1, two: 2)))
-    assert (@thoo.member?(H.new({"one"=>:one, "two"=>:two})))
+    assert (@taas.member?(A.new(["a", "b", "c"])))
   end
 
+  def test_instantiate
+    # Array<String>
+    assert (A.new([]).instantiate!(@tstring))
+    assert (A.new(["a", "b", "c"]).instantiate!(@tstring))
+    assert_raises(RDL::Type::TypeError) { A.new([1, 2, 3]).instantiate!(@tstring) }
+
+    # Array<Object>
+    assert (A.new([])).instantiate!(@tobject)
+    assert (A.new(["a", "b", "c"]).instantiate!(@tobject))
+    assert (A.new([1, 2, 3]).instantiate!(@tobject))
+
+    # Hash<String, Fixnum>
+    assert (H.new({}).instantiate!(@tstring, @tfixnum))
+    assert (H.new({"one"=>1, "two"=>2}).instantiate!(@tstring, @tfixnum))
+    assert_raises(RDL::Type::TypeError) {
+      H.new(one: 1, two: 2).instantiate!(@tstring, @tfixnum)
+    }
+    assert_raises(RDL::Type::TypeError){
+      H.new({"one"=>:one, "two"=>:two}).instantiate!(@tstring, @tfixnum)
+    }
+
+    # Hash<Object, Object>
+    assert (H.new({}).instantiate!(@tobject, @tobject))
+    assert (H.new({"one"=>1, "two"=>2}).instantiate(@tobject, @tobject))
+    assert (H.new(one: 1, two: 2).instantiate!(@tobject, @tobject))
+    assert (H.new({"one"=>:one, "two"=>:two}).instantiate!(@tobject, @tobject))
+
+    # Array<Array<String>>
+    assert (A.new([A.new(["a", "b"].instantiate!(@tstring)),
+                   A.new(["c"].instantiate!(@tstring))]).instantiate!(@tas))
+    assert_raises(RDL::Type::TypeError) {
+      # Must instantiate all members
+      A.new([A.new(["a", "b"].instantiate!(@tstring), A.new([]))]).instantiate!(@tas)
+    }
+    assert_raises(RDL::Type::TypeError) {
+      # All members must be of same type
+      A.new([A.new(["a", "b"].instantiate!(@tstring)), "A"]).instantiate!(@tas)
+    }
+    assert_raises(RDL::Type::TypeError) {
+      # All members must be instantiated of same type
+      A.new([A.new(["a", "b"].instantiate!(@tstring)),
+             H.new({a: 1, b: 2}).instantiate!(@tobject, @tobject)]).instantiate!(@tas)
+    }
+  end
 
 end
