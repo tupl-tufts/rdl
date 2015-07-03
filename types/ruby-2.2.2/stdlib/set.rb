@@ -1,5 +1,4 @@
 class Set
-  nowrap
   type_params [:t]
   def __rdl_member?(inst)
     t = inst[:t]
