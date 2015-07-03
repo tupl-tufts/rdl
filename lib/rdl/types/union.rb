@@ -57,6 +57,10 @@ module RDL::Type
     def <=(other)
       @types.all? { |t| t <= other }
     end
+
+    def member?(obj)
+      @types.any? { |t| t.member?(obj) }
+    end
     
     def instantiate(inst)
       return UnionType.new(*(@types.map { |t| t.instantiate(inst) }))

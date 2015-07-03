@@ -38,11 +38,7 @@ module RDL::Type
       return @name.to_s.hash
     end
 
-    def member?(obj, inst: nil)
-      return inst[@name].equal? obj if @name == :self && inst && inst[@name]
-      return inst[@name].member?(obj, inst: inst) if inst && inst[@name]
-      return true if inst && inst.has_key?(@name)
-      # otherwise this is an unbound variable
+    def member?(obj)
       raise TypeError, "Unbound type variable #{@name}"
     end
 

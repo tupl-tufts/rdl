@@ -46,9 +46,15 @@ module RDL::Type
 
     def <=(other)
       other.instance_of?(TopType) ||
-        (other.instance_of?(NominalType) && other.name == @name) ||
+#        (other.instance_of?(NominalType) && other.name == @name) ||
         (other.instance_of?(NominalType) && klass.ancestors.member?(other.klass)) ||
         (other.instance_of?(GenericType) && self <= other.base)  # raw type comparison always succeeds
+    end
+
+    def member?(obj)
+      return true if obj.nil?
+      k = klass
+      return (obj.class == k || obj.class.ancestors.member?(klass)) # short-circuit most likely case
     end
     
     def instantiate(inst)

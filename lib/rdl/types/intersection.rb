@@ -50,6 +50,10 @@ module RDL::Type
       return (other.instance_of? IntersectionType) && (other.types == @types)
     end
 
+    def member?(obj)
+      @types.all? { |t| t.member?(obj) }
+    end
+    
     def instantiate(inst)
       return IntersectionType.new(*(@types.map { |t| t.instantiate(inst) }))
     end

@@ -32,6 +32,10 @@ module RDL::Type
     def <=(other)
       other.instance_of? TopType
     end
+
+    def member?(obj)
+      true
+    end
     
     def instantiate(inst)
       return self

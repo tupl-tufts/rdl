@@ -32,6 +32,10 @@ module RDL::Type
     def <=(other)
       true
     end
+
+    def member?(obj)
+      obj.nil?
+    end
     
     def instantiate(inst)
       return self

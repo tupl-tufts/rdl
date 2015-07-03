@@ -43,6 +43,10 @@ module RDL::Type
         (other.instance_of?(NominalType) && @val.class == other.klass) ||
         (other.instance_of?(NominalType) && @val.class.ancestors.member?(other.klass))
     end
+
+    def member?(obj)
+      obj.nil? || obj == @val
+    end
     
     def instantiate(inst)
       return self
