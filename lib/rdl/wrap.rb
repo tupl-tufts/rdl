@@ -230,11 +230,11 @@ class Object
 
   # Add a postcondition to a method. Same possible invocations as pre.
   def post(*args, &blk)
-    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+    $__rdl_contract_switch.off {
       klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Postcondition", *args, &blk)
       if meth
         RDL::Wrap.add_contract(klass, meth, :post, contract)
-        if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
+        if RDL::Util.method_defined?(klass, meth) || meth == :initialize
           RDL::Wrap.wrap(klass, meth)
         else
           $__rdl_to_wrap << [klass, meth]
@@ -249,12 +249,12 @@ class Object
   # [+method+] may be Symbol or String
   # [+type+] may be Type or String
   #
-  # Add a type to a method. Possible invocations:
+  # Set a method's type. Possible invocations:
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
   def type(*args, &blk)
-    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+    $__rdl_contract_switch.off {
       klass, meth, type = begin
                             RDL::Wrap.process_type_args(self, *args, &blk)
                           rescue Racc::ParseError => err
@@ -269,7 +269,7 @@ class Object
                           end
       if meth
         RDL::Wrap.add_contract(klass, meth, :type, type)
-        if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
+        if RDL::Util.method_defined?(klass, meth) || meth == :initialize
           RDL::Wrap.wrap(klass, meth)
         else
           $__rdl_to_wrap << [klass, meth]
@@ -281,9 +281,7 @@ class Object
   end
 
   def self.method_added(meth)
-#    puts "Added: #{self.to_s}##{meth}, wrap_switch = #{$__rdl_wrap_switch.inspect}"
-#    return if $__rdl_wrap_switch.off?
-    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+    $__rdl_contract_switch.off {
       klass = self.to_s
 
       # Apply any deferred contracts and reset list
@@ -306,7 +304,7 @@ class Object
   end
 
   def self.singleton_method_added(meth)
-    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+    $__rdl_contract_switch.off {
       klass = self.to_s
       sklass = RDL::Util.add_singleton_marker(klass)
 
@@ -333,7 +331,7 @@ class Object
   # be called for any aliases or they will not be wrapped with
   # contracts. Only creates aliases in the current class.
   def rdl_alias(new_name, old_name)
-    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+    $__rdl_contract_switch.off {
       klass = self.to_s
       $__rdl_aliases[klass] = {} unless $__rdl_aliases[klass]
       if $__rdl_aliases[klass][new_name]
@@ -353,7 +351,7 @@ class Object
   # [+params+] is an array of symbols or strings that are the
   # parameters of this (generic) type
   def type_params(params, variance = nil)
-    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+    $__rdl_contract_switch.off {
       raise RuntimeError, "Empty type parameters not allowed" if params.empty?
       klass = self.to_s
       if $__rdl_type_params[klass]
@@ -380,7 +378,7 @@ class Object
   # the type parameters. If a class, symbol, or string is given, it is
   # converted to a NominalType.
   def instantiate!(typs)
-    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+    $__rdl_contract_switch.off {
       params = $__rdl_type_params[klass][0]
       raise RuntimeError, "Class #{self.to_s} is not parameterized" unless params
       raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless params.size == typs.size
@@ -394,11 +392,10 @@ class Object
   end
   
   def deinstantiate!
-    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
+    $__rdl_contract_switch.off {
       raise RuntimeError, "Class #{self.to_s} is not parameterized" unless $__rdl_type_params[klass]
-      raise RuntimeERror, "Instance is not instantiated" unless @__rdl_inst
+      raise RuntimeError, "Instance is not instantiated" unless @__rdl_inst
       @__rdl_inst = nil
     }
   end
-
 end
