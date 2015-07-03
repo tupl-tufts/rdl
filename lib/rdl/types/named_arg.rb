@@ -13,8 +13,8 @@ module RDL::Type
       super()
     end
 
-    def to_s(inst: nil)
-      "(#{@name} : #{@type.to_s(inst: inst)})"
+    def to_s
+      "(#{@name} : #{@type.to_s})"
     end
 
     def eql?(other)
@@ -32,10 +32,6 @@ module RDL::Type
     def le(other, h={})
       other = other.type if other.instance_of?(RDL::Type::NamedArgType)
       @type.le(other, h)
-    end
-
-    def member?(obj, inst: nil)
-      @type.member?(obj, inst: inst)
     end
 
     def instantiate(inst)

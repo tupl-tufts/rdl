@@ -28,8 +28,8 @@ module RDL::Type
       super()
     end
 
-    def to_s(inst: nil)
-      "#{@base}<#{@params.map { |t| t.to_s(inst: inst) }.join(', ')}>"
+    def to_s
+      "#{@base}<#{@params.map { |t| t.to_s }.join(', ')}>"
     end
 
     def eql?(other)
@@ -42,13 +42,14 @@ module RDL::Type
 
     def member?(obj, inst: nil)
       formals, variance = $__rdl_type_params[base.name]
-      raise "No type parameters defined for #{base.name}" unless formals # do this check here to avoid hiding errors
+      raise "No type parameters defined for #{base.name}" unless formals # do check here to avoid hiding errors if generic type written with wrong number of parameters but never checked against instantiated instances
       return false unless base.member?(obj, inst: inst)
       return true unless obj.instantiated? # if obj is not instantiated, only its base class needs to match
+      # If obj is instantiated, check that its type is a subtype of self's type
       params = params.map { |t| t.instantiate(inst) } # instantiate parameters according to currently bound type vars
       raise "Generic type #{base.to_s} expects #{formals.size} arguments, got #{params.size} " unless formals.size == @params.size
-      raise "Unimplemented!"
-      return (GenericType.new(@base, *params) <= self)
+      obj_type = GenericType.new(@base, *(obj.instance_variable.get('@rdl__inst')))
+      return (obj_type <= GenericType.new(@base, *params))
     end
 
     def instantiate(inst)

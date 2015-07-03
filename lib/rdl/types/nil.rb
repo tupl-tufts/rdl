@@ -17,7 +17,7 @@ module RDL::Type
       super
     end
 
-    def to_s(inst: nil)
+    def to_s
       "nil"
     end
 
@@ -29,10 +29,10 @@ module RDL::Type
       other.instance_of? NilType
     end
 
-    def member?(obj, inst: nil)
-      obj == nil
+    def <=(other)
+      true
     end
-
+    
     def instantiate(inst)
       return self
     end

@@ -33,14 +33,17 @@ module RDL::Type
       return @val.hash
     end
 
-    def to_s(inst: nil)
+    def to_s
       val.to_s
     end
 
-    def member?(obj, inst: nil)
-      obj.nil? || obj == @val
+    def <=(other)
+      other.instance_of?(TopType) ||
+        (other.instance_of?(SingletonType) && other.val == @val) ||
+        (other.instance_of?(NominalType) && @val.class == other.klass) ||
+        (other.instance_of?(NominalType) && @val.class.ancestors.member?(other.klass))
     end
-
+    
     def instantiate(inst)
       return self
     end

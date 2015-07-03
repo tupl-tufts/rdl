@@ -42,8 +42,8 @@ module RDL::Type
       super()
     end
 
-    def to_s(inst: nil)  # :nodoc:
-      "(#{@types.map { |t| t.to_s(inst: inst) }.join(' or ')})"
+    def to_s  # :nodoc:
+      "(#{@types.map { |t| t.to_s }.join(' or ')})"
     end
 
     def eql?(other)
@@ -54,10 +54,10 @@ module RDL::Type
       return (other.instance_of? UnionType) && (other.types == @types)
     end
 
-    def member?(obj, inst: nil)
-      @types.any? { |t| t.member?(obj, inst: inst) }
+    def <=(other)
+      @types.all? { |t| t <= other }
     end
-
+    
     def instantiate(inst)
       return UnionType.new(*(@types.map { |t| t.instantiate(inst) }))
     end

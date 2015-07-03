@@ -22,10 +22,7 @@ module RDL::Type
       @name = name
     end
 
-    def to_s(inst: nil) # :nodoc:
-      # don't signal unbound variables in to_s, since it makes error reporting hard
-      return "self" if @name == :self && inst && inst[@name]
-      return inst[@name].to_s(inst: inst) if inst && inst.class == Hash && inst[@name]
+    def to_s # :nodoc:
       return @name.to_s
     end
 

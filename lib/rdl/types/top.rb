@@ -17,8 +17,8 @@ module RDL::Type
       super
     end
 
-    def to_s(inst: nil)
-      "%top"
+    def to_s
+      "%any"
     end
 
     def eql?(other)
@@ -29,10 +29,10 @@ module RDL::Type
       other.instance_of? TopType
     end
 
-    def member?(obj, inst: nil)
-      true
+    def <=(other)
+      other.instance_of? TopType
     end
-
+    
     def instantiate(inst)
       return self
     end

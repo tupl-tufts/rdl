@@ -38,8 +38,8 @@ module RDL::Type
       super()
     end
 
-    def to_s(inst: nil)  # :nodoc:
-      "(#{@types.map { |t| t.to_s(inst: inst) }.join(' and ')})"
+    def to_s  # :nodoc:
+      "(#{@types.map { |t| t.to_s }.join(' and ')})"
     end
     
     def eql?(other)
@@ -48,10 +48,6 @@ module RDL::Type
 
     def ==(other)  # :nodoc:
       return (other.instance_of? IntersectionType) && (other.types == @types)
-    end
-
-    def member?(obj, inst: nil)
-      @types.all? { |t| t.member?(obj, inst: inst) }
     end
 
     def instantiate(inst)

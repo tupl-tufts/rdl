@@ -52,23 +52,25 @@ module RDL::Type
       i = 0 # position in @args
       args.each { |arg|
         raise TypeError, "Too many arguments" if i >= @args.size
-        case @args[i]
-        when OptionalType
-          unless @args[i].type.member?(arg, inst: inst)
+        expected = @args[i].instantiate(inst)
+        case expected
+        when OptionalType, NamedArgType
+          unless RDL::Type::Type.type_of(arg) <= expected.type
             raise TypeError,
-                  "Argument #{i}, expecting (optional) #{@args[i].to_s(inst: inst)}, got #{arg.inspect}"
+                  "Argument #{i}, expecting #{expected.to_s}, got #{arg.inspect}"
           end
           i += 1
         when VarargType
-          unless @args[i].type.member?(arg, inst: inst)
+          unless RDL::Type::Type.type_of(arg) <= expected.type
             raise TypeError,
-                  "Argument #{i}, expecting (vararg) #{@args[i].to_s(inst: inst)}, got #{arg.inspect}"
+                  "Argument #{i}, expecting #{expected.to_s}, got #{arg.inspect}"
           end
         # do not increment i, since vararg can take any number of argument
         else
-          unless @args[i].member?(arg, inst: inst)
+          unless RDL::Type::Type.type_of(arg) <= expected
+            #          unless @args[i].member?(arg, inst: inst)
             raise TypeError,
-                  "Argument #{i}, expecting #{@args[i].to_s(inst: inst)}, got #{arg.inspect}"
+                  "Argument #{i}, expecting #{expected.to_s}, got #{arg.inspect}"
           end
           i += 1
         end
@@ -82,8 +84,9 @@ module RDL::Type
     end
 
     def post_cond_check(inst, ret, *args)
-      unless @ret.member?(ret, inst: inst)
-        raise TypeError, "expecting (return) #{@ret.to_s(inst: inst)}, got #{ret.inspect}"
+      expected = @ret.instantiate(inst)
+      unless RDL::Type::Type.type_of(ret) <= expected
+        raise TypeError, "expecting (return) #{expected.to_s}, got #{ret.inspect}"
       end
       true
     end

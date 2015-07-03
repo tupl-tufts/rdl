@@ -12,6 +12,7 @@ module RDL::Type
 
     def self.new(name)
       name = name.to_s
+      return NilType.new if name == "NilClass"
       t = @@cache[name]
       return t if t
       t = self.__new__ name
@@ -34,7 +35,7 @@ module RDL::Type
       return @name.hash
     end
 
-    def to_s(inst: nil)
+    def to_s
       return @name
     end
 
@@ -43,10 +44,13 @@ module RDL::Type
       return @klass
     end
 
-    def member?(obj, inst: nil)
-      obj.nil? || obj.class.ancestors.member?(klass)
+    def <=(other)
+      other.instance_of?(TopType) ||
+        (other.instance_of?(NominalType) && other.name == @name) ||
+        (other.instance_of?(NominalType) && klass.ancestors.member?(other.klass)) ||
+        (other.instance_of?(GenericType) && self <= other.base)  # raw type comparison always succeeds
     end
-
+    
     def instantiate(inst)
       return self
     end
