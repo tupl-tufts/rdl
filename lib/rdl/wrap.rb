@@ -377,14 +377,15 @@ class Object
   # [+typs+] is an array of types, classes, symbols, or strings to instantiate
   # the type parameters. If a class, symbol, or string is given, it is
   # converted to a NominalType.
-  def instantiate!(typs)
+  def instantiate!(*typs)
     $__rdl_contract_switch.off {
       klass = self.class.to_s
       params = $__rdl_type_params[klass][0]
       raise RuntimeError, "Class #{self.to_s} is not parameterized" unless params
       raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless params.size == typs.size
       raise RuntimeError, "Instance already has type instantiation" if @__rdl_type
-      @__rdl_type = GenericType.new(klass, typs)
+      @__rdl_type = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), typs)
+      self
     }
   end
 
