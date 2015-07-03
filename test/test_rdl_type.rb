@@ -51,17 +51,4 @@ class TestRDLType < Minitest::Test
     assert_raises(RDL::Type::TypeError) { m6(42) }
   end
 
-  def test_self_type
-    self.class.class_eval <<RUBY
-      class A
-        type "() -> self"
-        def m7() return self; end
-        type "() -> self"
-        def m8() return A.new; end
-      end
-RUBY
-    a = A.new
-    assert(a.m7)
-    assert_raises(RDL::Type::TypeError) { a.m8 }
-  end
 end
