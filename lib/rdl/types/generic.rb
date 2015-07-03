@@ -40,11 +40,34 @@ module RDL::Type
       return (other.instance_of? GenericType) && (other.base == @base) && (other.params == @params)
     end
 
-    def member?(obj)
-      formals = $__rdl_type_params[base.name][0]
+    def <=(other)
+      formals, variance = $__rdl_type_params[base.name]
       # do check here to avoid hiding errors if generic type written
       # with wrong number of parameters but never checked against
       # instantiated instances
+      raise TypeError, "No type parameters defined for #{base.name}" unless formals
+      return true if other.instance_of? TopType
+      return (@base <= other) if other.instance_of?(NominalType) # raw type
+      if other.instance_of? GenericType
+        return false unless @base == other.base
+        return variance.zip(params, other.params).all? { |v, self_t, other_t|
+          case v
+          when :+
+            self_t <= other_t
+          when :-
+            other_t <= self_t
+          when :~
+            self_t == other_t
+          else
+            raise RuntimeError, "Unexpected variance #{v}" # shouldn't happen
+          end
+        }
+      end
+      return false
+    end
+    
+    def member?(obj)
+      formals = $__rdl_type_params[base.name][0]
       raise "No type parameters defined for #{base.name}" unless formals
       return false unless base.member?(obj)
       raise RuntimeError, "member?(obj) called with instantiated obj. Use <= instead." if obj.instantiated?

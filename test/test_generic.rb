@@ -13,6 +13,7 @@ class TestGeneric < Minitest::Test
     end
     def initialize(a); @a = a end
   end
+
   class H
     type_params [:k, :v], [:~, :~]
     def __rdl_member?(inst)
@@ -23,6 +24,11 @@ class TestGeneric < Minitest::Test
     def initialize(h); @h = h end
   end
 
+  class B
+    # class for checking other variance annotations
+    type_params [:a, :b], [:+, :-]
+  end
+  
   def setup
     @ta = RDL::Type::NominalType.new "TestGeneric::A"
     @th = RDL::Type::NominalType.new "TestGeneric::H"
@@ -36,9 +42,11 @@ class TestGeneric < Minitest::Test
     @thss = RDL::Type::GenericType.new(@th, @tstring, @tstring)
     @thoo = RDL::Type::GenericType.new(@th, @tobject, @tobject)
     @thsf = RDL::Type::GenericType.new(@th, @tstring, @tfixnum)
+    @tb = RDL::Type::NominalType.new "TestGeneric::B"
   end
 
   def test_le
+    # Check invariance for A and H
     assert (@tas <= @tas)
     assert (@tao <= @tao)
     assert (@taas <= @taas)
@@ -48,6 +56,36 @@ class TestGeneric < Minitest::Test
     assert (not (@tao <= @tas))
     assert (not (@thss <= @thoo))
     assert (not (@thoo <= @thss))
+
+    # Check "raw" class subtyping works in both directions
+    assert (@ta <= @tas)
+    assert (@tas <= @ta)
+    assert (@ta <= @taas)
+    assert (@taas <= @ta)
+    assert (@th <= @thss)
+    assert (@thss <= @th)
+
+    # Check co- and contravariance using B
+    tbss = RDL::Type::GenericType.new(@tb, @tstring, @tstring)
+    tbso = RDL::Type::GenericType.new(@tb, @tstring, @tobject)
+    tbos = RDL::Type::GenericType.new(@tb, @tobject, @tstring)
+    tboo = RDL::Type::GenericType.new(@tb, @tobject, @tobject)
+    assert (tbss <= tbss)
+    assert (not (tbss <= tbso))
+    assert (tbss <= tbos)
+    assert (not (tbss <= tboo))
+    assert (tbso <= tbss)
+    assert (tbso <= tbso)
+    assert (tbso <= tbos)
+    assert (tbso <= tboo)
+    assert (not (tbos <= tbss))
+    assert (not (tbos <= tbso))
+    assert (tbos <= tbos)
+    assert (not (tbos <= tboo))
+    assert (not (tboo <= tbss))
+    assert (not (tboo <= tbso))
+    assert (tboo <= tbos)
+    assert (tboo <= tboo)
   end
 
   class C
