@@ -50,30 +50,20 @@ module RDL::Type
 
     def pre_cond_check(inst, *args)
       i = 0 # position in @args
-      args.each { |arg|
+      args.each_with_index { |arg, j|
         raise TypeError, "Too many arguments" if i >= @args.size
         expected = @args[i].instantiate(inst)
         case expected
         when OptionalType, NamedArgType
-          unless RDL::Type::Type.type_of(arg) <= expected.type
-            raise TypeError,
-                  "Argument #{i}, expecting #{expected.to_s}, got #{arg.inspect}"
-          end
+          expected = expected.type
           i += 1
         when VarargType
-          unless RDL::Type::Type.type_of(arg) <= expected.type
-            raise TypeError,
-                  "Argument #{i}, expecting #{expected.to_s}, got #{arg.inspect}"
-          end
-        # do not increment i, since vararg can take any number of argument
+          expected = expected.type
+          # do not increment i, since vararg can take any number of argument
         else
-          unless RDL::Type::Type.type_of(arg) <= expected
-            #          unless @args[i].member?(arg, inst: inst)
-            raise TypeError,
-                  "Argument #{i}, expecting #{expected.to_s}, got #{arg.inspect}"
-          end
           i += 1
         end
+        expected.check_member_or_leq(arg, "Argument #{j}: ")
       }
       # Check if there aren't enough arguments; uses invariant established in initialize
       # that method types end with several optional types and then one (optional) vararg type
@@ -84,10 +74,7 @@ module RDL::Type
     end
 
     def post_cond_check(inst, ret, *args)
-      expected = @ret.instantiate(inst)
-      unless RDL::Type::Type.type_of(ret) <= expected
-        raise TypeError, "expecting (return) #{expected.to_s}, got #{ret.inspect}"
-      end
+      @ret.instantiate(inst).check_member_or_leq(ret, "Returned value: ")
       true
     end
 

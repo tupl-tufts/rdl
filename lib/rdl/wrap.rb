@@ -379,23 +379,24 @@ class Object
   # converted to a NominalType.
   def instantiate!(typs)
     $__rdl_contract_switch.off {
+      klass = self.class.to_s
       params = $__rdl_type_params[klass][0]
       raise RuntimeError, "Class #{self.to_s} is not parameterized" unless params
       raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless params.size == typs.size
-      raise RuntimeError, "Instance already has type instantiation" if @__rdl_inst
-      @__rdl_inst = Hash[params.zip(typs)]
+      raise RuntimeError, "Instance already has type instantiation" if @__rdl_type
+      @__rdl_type = GenericType.new(klass, typs)
     }
   end
 
   def instantiated?
-    $__rdl_contract_switch.off { return not(@__rdl_inst.nil?) }
+    $__rdl_contract_switch.off { return @__rdl_type && @__rdl_type.instance_of?(RDL::Type::GenericType) }
   end
   
   def deinstantiate!
     $__rdl_contract_switch.off {
       raise RuntimeError, "Class #{self.to_s} is not parameterized" unless $__rdl_type_params[klass]
-      raise RuntimeError, "Instance is not instantiated" unless @__rdl_inst
-      @__rdl_inst = nil
+      raise RuntimeError, "Instance is not instantiated" unless @__rdl_type && @@__rdl_type.instance_of?(RDL::Type::GenericType)
+      @__rdl_type = nil
     }
   end
 end
