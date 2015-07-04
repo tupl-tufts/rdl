@@ -69,6 +69,8 @@ module RDL::Type
     def member?(obj)
       formals = $__rdl_type_params[base.name][0]
       raise "No type parameters defined for #{base.name}" unless formals
+      t = RDL::Util.rdl_type obj
+      return t <= self if t
       return false unless base.member?(obj)
       return true
     end

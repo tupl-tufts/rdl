@@ -45,6 +45,8 @@ module RDL::Type
     end
 
     def member?(obj)
+      t = RDL::Util.rdl_type obj
+      return t <= self if t
       obj.nil? || obj == @val
     end
     

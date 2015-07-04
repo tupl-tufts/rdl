@@ -52,6 +52,8 @@ module RDL::Type
     end
 
     def member?(obj)
+      t = RDL::Util.rdl_type obj
+      return t <= self if t
       return true if obj.nil?
       return obj.class.ancestors.member?(klass)
     end
