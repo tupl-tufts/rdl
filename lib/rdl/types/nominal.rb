@@ -47,7 +47,7 @@ module RDL::Type
     def <=(other)
       return true if other.instance_of? TopType
       return klass.ancestors.member?(other.klass) if other.instance_of? NominalType
-      return self <= other.base if other.instance_of? GenericType # raw type
+#      return self <= other.base if other.instance_of? GenericType # raw subtyping not allowed
       return false
     end
 

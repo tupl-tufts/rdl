@@ -33,4 +33,9 @@ class RDL::Util
       return false
     end
   end
+
+  # Returns the @__rdl_type field of [+obj+]
+  def self.rdl_type(obj)
+    return (obj.instance_variable_defined?('@__rdl_type') && obj.instance_variable_get('@__rdl_type'))
+  end
 end

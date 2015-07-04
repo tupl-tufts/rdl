@@ -47,7 +47,7 @@ module RDL::Type
       # instantiated instances
       raise TypeError, "No type parameters defined for #{base.name}" unless formals
       return true if other.instance_of? TopType
-      return (@base <= other) if other.instance_of?(NominalType) # raw type
+#      return (@base <= other) if other.instance_of?(NominalType) # raw subtyping not allowed
       if other.instance_of? GenericType
         return false unless @base == other.base
         return variance.zip(params, other.params).all? { |v, self_t, other_t|
@@ -70,10 +70,6 @@ module RDL::Type
       formals = $__rdl_type_params[base.name][0]
       raise "No type parameters defined for #{base.name}" unless formals
       return false unless base.member?(obj)
-      if obj.instance_variable_defined?('@__rdl_type') &&
-         obj.instance_variable_get('@__rdl_type').instance_of?(RDL::Type::GenericType)
-        raise RuntimeError, "member?(obj) called with instantiated obj. Use <= instead."
-      end
       return true
     end
 
