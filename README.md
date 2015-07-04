@@ -130,15 +130,9 @@ rdocTypesigFor(Klass) # Deprecated FIXME
 
 * FlatContract, labeled arguments?
 
-* GenericType, fix member? to check type parameters
-
 * Tuple and hash types
 
 * How to check whether initialize? is user-defined? method_defined? always
 returns true, meaning wrapping isn't fully working with initialize
 
-* Check in instantiate! that array contents matches instantiated type
-
-* Use SingletonType(self) for self type check?
-
-* Should we instantiate rather than pass inst as a parameter?
+* Use SingletonType(self) for self type check? - Yes, but is == check enough?
