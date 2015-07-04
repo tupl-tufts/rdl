@@ -1,4 +1,5 @@
 require 'set'
+require 'delegate'
 require 'require_all'
 
 module RDL

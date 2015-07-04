@@ -275,5 +275,11 @@ RUBY
     assert_equal 3, TestRDL.cm3(3)
     assert_raises(RDL::Contract::ContractError) { TestRDL.cm3(-1) }
   end
+
+  def test_cast
+    ntyp = RDL::Type::NilType.new
+    obj = 3.type_cast(ntyp)
+    assert (ntyp.member? obj)
+  end
   
 end
