@@ -353,10 +353,14 @@ class Object
   # [+variance+] is an array of the corresponding variances, :+ for
   # covariant, :- for contravariant, and :~ for invariant. If omitted,
   # all parameters are assumed to be invariant
-  # [+blk+] should be a block that takes an array of types for params
-  # and returns true if and only if self matches the current type when
-  # instantiated with that array
-  def type_params(params, variance = nil, &blk)
+  # [+all+] should be a symbol naming an all? method that behaves like Array#all?, and that accepts
+  # a block that takes arguments in the same order as the type parameters
+  # [+blk+] is for advanced use only. If present, [+all+] must be
+  # nil. Whenever an instance of this class is instantiated!, the
+  # block will be passed an array typs corresponding to the type
+  # parameters of the class, and the block should return true if and
+  # only if self is a member of self.class<typs>.
+  def type_params(params, all, variance: nil, &blk)
     $__rdl_contract_switch.off {
       raise RuntimeError, "Empty type parameters not allowed" if params.empty?
       klass = self.to_s
@@ -370,9 +374,12 @@ class Object
       raise RuntimeError, "Duplicate type parameters not allowed" unless params.uniq.size == params.size
       raise RuntimeError, "Expecting #{params.size} variance annotations, got #{variance.size}" if variance && params.size != variance.size
       raise RuntimeError, "Only :+, +-, and :~ are allowed variance annotations" unless (not variance) || variance.all? { |v| [:+, :-, :~].member? v }
-      raise RuntimeError, "Block argument required" unless blk
+      raise RuntimeError, "Can't pass both all and a block" if all && blk
+      raise RuntimeError, "all must be a symbol" unless (not all) || (all.instance_of? Symbol)
+      chk = all || blk
+      raise RuntimeError, "At least one of {all, blk} required" unless chk
       variance = params.map { |p| :~ } unless variance # default to invariant
-      $__rdl_type_params[klass] = [params, variance, blk]
+      $__rdl_type_params[klass] = [params, variance, chk]
     }
   end
 
@@ -388,12 +395,20 @@ class Object
   def instantiate!(*typs)
     $__rdl_contract_switch.off {
       klass = self.class.to_s
-      formals, variance, blk = $__rdl_type_params[klass]
+      formals, variance, all = $__rdl_type_params[klass]
       raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
       raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless formals.size == typs.size
       raise RuntimeError, "Instance already has type instantiation" if @__rdl_type
       t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), typs)
-      raise RDL::Type::TypeError, "Not an instance of #{t}" unless instance_exec(*typs, &blk)
+      if all.instance_of? Symbol
+#        self.send(all) { |*objs|
+#          typs.zip(objs).each { |t, obj|
+#            if 
+#          }
+#        }
+      else
+        raise RDL::Type::TypeError, "Not an instance of #{t}" unless instance_exec(*typs, &all)
+      end
       @__rdl_type = t
       self
     }

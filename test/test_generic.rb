@@ -6,18 +6,24 @@ class TestGeneric < Minitest::Test
   # Make two classes that wrap Array and Hash, so we don't mess with their
   # implementations in test case evaluation.
   class A
-    type_params [:t], [:~] { |t| @a.all? { |x| t.member? x } }
+    type_params [:t], :all?
     def initialize(a); @a = a end
+    def all?(&blk)
+      @a.all?(&blk)
+    end
   end
 
   class H
-    type_params [:k, :v], [:~, :~] { |tk, tv| @h.all? { |k, v| (tk.member? k) && (tv.member? v) } }
+    type_params [:k, :v], :all?
     def initialize(h); @h = h end
+    def all?(&blk)
+      @h.all?(&blk)
+    end
   end
 
   class B
     # class for checking other variance annotations
-    type_params [:a, :b], [:+, :-] { |a, b| true }
+    type_params [:a, :b], nil, variance: [:+, :-] { |a, b| true }
   end
   
   def setup
@@ -48,13 +54,13 @@ class TestGeneric < Minitest::Test
     assert (not (@thss <= @thoo))
     assert (not (@thoo <= @thss))
 
-    # Check "raw" class subtyping works in both directions
-    assert (@ta <= @tas)
-    assert (@tas <= @ta)
-    assert (@ta <= @taas)
-    assert (@taas <= @ta)
-    assert (@th <= @thss)
-    assert (@thss <= @th)
+    # Check "raw" class subtyping is forbidden
+    assert (not (@ta <= @tas))
+    assert (not (@tas <= @ta))
+    assert (not (@ta <= @taas))
+    assert (not (@taas <= @ta))
+    assert (not (@th <= @thss))
+    assert (not (@thss <= @th))
 
     # Check co- and contravariance using B
     tbss = RDL::Type::GenericType.new(@tb, @tstring, @tstring)

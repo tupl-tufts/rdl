@@ -217,23 +217,23 @@ RUBY
   end
 
   def test_type_params
-    self.class.class_eval "class TP1; type_params [:t] { |t| true } end"
-    tp1 = RDL::Wrap.get_type_params(TestRDL::TP1)
-    assert_equal [:t], tp1[0]
-    assert_equal [:~], tp1[1]
-    assert_raises(RuntimeError) { self.class.class_eval "class TP1; type_params [:t] { |t| true } end" }
-    self.class.class_eval "class TP2; type_params [:t, :u] { |t, u| true } end"
+    self.class.class_eval "class TP1; type_params [:t], :all? end"
+    assert_equal [[:t], [:~], :all?], RDL::Wrap.get_type_params(TestRDL::TP1)
+    self.class.class_eval "class TP2; type_params([:t], nil) { |t| true } end"
     tp2 = RDL::Wrap.get_type_params(TestRDL::TP2)
-    assert_equal [:t, :u], tp2[0]
-    assert_equal [:~, :~], tp2[1]
-    self.class.class_eval "class TP3; type_params [:t, :u, :v], [:+, :-, :~] { |t, u, v| true } end"
-    tp3 = RDL::Wrap.get_type_params(TestRDL::TP3)
-    assert_equal [:t, :u, :v], tp3[0]
-    assert_equal [:+, :-, :~], tp3[1]
-    assert_raises(RuntimeError) { self.class.class_eval "class TP4; type_params [:t, :u] end" }
-    assert_raises(RuntimeError) { self.class.class_eval "class TP5; type_params [], [] { true } end" }
-    assert_raises(RuntimeError) { self.class.class_eval "class TP6; type_params [:t, :u], [:+] { |t, u| true } end" }
-    assert_raises(RuntimeError) { self.class.class_eval "class TP7; type_params [:t, :u], [:a, :b] { |t, u| true } end" }
+    assert_equal [:t], tp2[0]
+    assert_equal [:~], tp2[1]
+    assert_raises(RuntimeError) { self.class.class_eval "class TP1; type_params [:t], :all? end" }
+    self.class.class_eval "class TP3; type_params [:t, :u], :all? end"
+    assert_equal [[:t, :u], [:~, :~], :all?], RDL::Wrap.get_type_params(TestRDL::TP3)
+
+    self.class.class_eval "class TP4; type_params [:t, :u, :v], :all?, variance: [:+, :-, :~] end"
+    assert_equal [[:t, :u, :v], [:+, :-, :~], :all?], RDL::Wrap.get_type_params(TestRDL::TP4)
+    assert_raises(RuntimeError) { self.class.class_eval "class TP5; type_params([], :all?) { true } end" }
+    assert_raises(RuntimeError) { self.class.class_eval "class TP6; type_params [:t, :u], :all?, variance: [:+] end" }
+    assert_raises(RuntimeError) { self.class.class_eval "class TP7; type_params [:t, :u], :all?, variance: [:a, :b] end" }
+    assert_raises(RuntimeError) { self.class.class_eval "class TP8; type_params([:t], :all?) { |t| true } end" }
+    assert_raises(RuntimeError) { self.class.class_eval "class TP8; type_params [:t], 42 end" }
   end
 
   def test_wrap_new
