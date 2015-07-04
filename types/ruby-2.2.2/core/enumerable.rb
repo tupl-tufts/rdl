@@ -1,10 +1,6 @@
 module Enumerable
   nowrap
-  type_params [:t], [:~]
-  def __rdl_member?(inst)
-    t = inst[:t]
-    all? { |x| t.member? x }
-  end
+  type_params [:t], :all?
   
   type :all?, "() -> %bool"
   type :all?, "() { (t) -> %bool } -> %bool"

@@ -1,9 +1,5 @@
 class Set
-  type_params [:t]
-  def __rdl_member?(inst)
-    t = inst[:t]
-    all? { |x| t.member? x }
-  end
+  type_params [:t], :all?
   
   type 'self.[]', '(*u) -> Set<u>'
   type 'self.new', '(enum: ?Enumerable<u>) -> Set<u>'
