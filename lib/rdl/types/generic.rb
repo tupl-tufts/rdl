@@ -70,7 +70,10 @@ module RDL::Type
       formals = $__rdl_type_params[base.name][0]
       raise "No type parameters defined for #{base.name}" unless formals
       return false unless base.member?(obj)
-      raise RuntimeError, "member?(obj) called with instantiated obj. Use <= instead." if obj.instantiated?
+      if obj.instance_variable_defined?('@__rdl_type') &&
+         obj.instance_variable_get('@__rdl_type').instance_of?(RDL::Type::GenericType)
+        raise RuntimeError, "member?(obj) called with instantiated obj. Use <= instead."
+      end
       return true
     end
 

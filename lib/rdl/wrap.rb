@@ -388,19 +388,17 @@ class Object
   def instantiate!(*typs)
     $__rdl_contract_switch.off {
       klass = self.class.to_s
-      params = $__rdl_type_params[klass][0]
-      raise RuntimeError, "Class #{self.to_s} is not parameterized" unless params
-      raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless params.size == typs.size
+      formals, variance, blk = $__rdl_type_params[klass]
+      raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
+      raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless formals.size == typs.size
       raise RuntimeError, "Instance already has type instantiation" if @__rdl_type
-      @__rdl_type = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), typs)
+      t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), typs)
+      raise RDL::Type::TypeError, "Not an instance of #{t}" unless instance_exec(*typs, &blk)
+      @__rdl_type = t
       self
     }
   end
 
-  def instantiated?
-    $__rdl_contract_switch.off { return @__rdl_type && @__rdl_type.instance_of?(RDL::Type::GenericType) }
-  end
-  
   def deinstantiate!
     $__rdl_contract_switch.off {
       raise RuntimeError, "Class #{self.to_s} is not parameterized" unless $__rdl_type_params[klass]
