@@ -353,7 +353,10 @@ class Object
   # [+variance+] is an array of the corresponding variances, :+ for
   # covariant, :- for contravariant, and :~ for invariant. If omitted,
   # all parameters are assumed to be invariant
-  def type_params(params, variance = nil)
+  # [+blk+] should be a block that takes an array of types for params
+  # and returns true if and only if self matches the current type when
+  # instantiated with that array
+  def type_params(params, variance = nil, &blk)
     $__rdl_contract_switch.off {
       raise RuntimeError, "Empty type parameters not allowed" if params.empty?
       klass = self.to_s
@@ -367,8 +370,9 @@ class Object
       raise RuntimeError, "Duplicate type parameters not allowed" unless params.uniq.size == params.size
       raise RuntimeError, "Expecting #{params.size} variance annotations, got #{variance.size}" if variance && params.size != variance.size
       raise RuntimeError, "Only :+, +-, and :~ are allowed variance annotations" unless (not variance) || variance.all? { |v| [:+, :-, :~].member? v }
+      raise RuntimeError, "Block argument required" unless blk
       variance = params.map { |p| :~ } unless variance # default to invariant
-      $__rdl_type_params[klass] = [params, variance]
+      $__rdl_type_params[klass] = [params, variance, blk]
     }
   end
 

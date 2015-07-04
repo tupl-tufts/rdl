@@ -41,7 +41,7 @@ module RDL::Type
     end
 
     def <=(other)
-      formals, variance = $__rdl_type_params[base.name]
+      formals, variance, check = $__rdl_type_params[base.name]
       # do check here to avoid hiding errors if generic type written
       # with wrong number of parameters but never checked against
       # instantiated instances

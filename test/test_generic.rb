@@ -6,27 +6,18 @@ class TestGeneric < Minitest::Test
   # Make two classes that wrap Array and Hash, so we don't mess with their
   # implementations in test case evaluation.
   class A
-    type_params [:t], [:~]
-    def __rdl_member?(inst)
-      t = inst[:t]
-      return @a.all? { |x| t.member? x }
-    end
+    type_params [:t], [:~] { |t| @a.all { |x| t.member? x } }
     def initialize(a); @a = a end
   end
 
   class H
-    type_params [:k, :v], [:~, :~]
-    def __rdl_member?(inst)
-      tk = inst[:k]
-      tv = inst[:v]
-      return @h.all? { |k, v| (tk.member? k) && (tv.member? v) }
-    end
+    type_params [:k, :v], [:~, :~] { |tk, tv| @h.all? { |k, v| (tk.member? k) && (tv.member? v) } }
     def initialize(h); @h = h end
   end
 
   class B
     # class for checking other variance annotations
-    type_params [:a, :b], [:+, :-]
+    type_params [:a, :b], [:+, :-] { |a, b| true }
   end
   
   def setup
