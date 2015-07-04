@@ -17,7 +17,7 @@ class TestGeneric < Minitest::Test
     type_params [:k, :v], :all?
     def initialize(h); @h = h end
     def all?(&blk)
-      @h.all?(&blk)
+      @h.all? { |x, y| blk.call(x, y) } # have to do extra wrap to avoid splat issues
     end
   end
 
@@ -149,11 +149,11 @@ class TestGeneric < Minitest::Test
     }
     assert_raises(RDL::Type::TypeError) {
       # All members must be of same type
-      A.new([A.new(["a", "b"].instantiate!(@tstring)), "A"]).instantiate!(@tas)
+      A.new([A.new(["a", "b"]).instantiate!(@tstring), "A"]).instantiate!(@tas)
     }
     assert_raises(RDL::Type::TypeError) {
-      # All members must be instantiated of same type
-      A.new([A.new(["a", "b"].instantiate!(@tstring)),
+      # All members must be instantiated and of same type
+      A.new([A.new(["a", "b"]).instantiate!(@tstring),
              H.new({a: 1, b: 2}).instantiate!(@tobject, @tobject)]).instantiate!(@tas)
     }
   end

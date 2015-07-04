@@ -399,13 +399,19 @@ class Object
       raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
       raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless formals.size == typs.size
       raise RuntimeError, "Instance already has type instantiation" if @__rdl_type
-      t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), typs)
+      t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *typs)
       if all.instance_of? Symbol
-#        self.send(all) { |*objs|
-#          typs.zip(objs).each { |t, obj|
-#            if 
-#          }
-#        }
+        self.send(all) { |*objs|
+          typs.zip(objs).each { |t, obj|
+            if t.instance_of? RDL::Type::GenericType # require obj to be instantiated
+              t_obj = RDL::Util.rdl_type(obj)
+              raise RDL::Type::TypeError, "Expecting element of type #{t.to_s}, but got uninstantiated object #{obj.inspect}" unless t_obj
+              raise RDL::Type::TypeError, "Expecting type #{t.to_s}, got type #{t_obj.to_s}" unless t_obj <= t
+            else
+              raise RDL::Type::TypeError, "Expecting type #{t.to_s}, got #{obj.inspect}" unless t.member? obj
+            end
+          }
+        }
       else
         raise RDL::Type::TypeError, "Not an instance of #{t}" unless instance_exec(*typs, &all)
       end
