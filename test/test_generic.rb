@@ -6,7 +6,7 @@ class TestGeneric < Minitest::Test
   # Make two classes that wrap Array and Hash, so we don't mess with their
   # implementations in test case evaluation.
   class A
-    type_params [:t], [:~] { |t| @a.all { |x| t.member? x } }
+    type_params [:t], [:~] { |t| @a.all? { |x| t.member? x } }
     def initialize(a); @a = a end
   end
 
@@ -106,6 +106,8 @@ class TestGeneric < Minitest::Test
   end
 
   def test_instantiate
+    assert_raises(RuntimeError) { Object.new.instantiate!(@tstring) }
+    
     # Array<String>
     assert (A.new([]).instantiate!(@tstring))
     assert (A.new(["a", "b", "c"]).instantiate!(@tstring))
@@ -128,16 +130,16 @@ class TestGeneric < Minitest::Test
 
     # Hash<Object, Object>
     assert (H.new({}).instantiate!(@tobject, @tobject))
-    assert (H.new({"one"=>1, "two"=>2}).instantiate(@tobject, @tobject))
+    assert (H.new({"one"=>1, "two"=>2}).instantiate!(@tobject, @tobject))
     assert (H.new(one: 1, two: 2).instantiate!(@tobject, @tobject))
     assert (H.new({"one"=>:one, "two"=>:two}).instantiate!(@tobject, @tobject))
 
     # Array<Array<String>>
-    assert (A.new([A.new(["a", "b"].instantiate!(@tstring)),
-                   A.new(["c"].instantiate!(@tstring))]).instantiate!(@tas))
+    assert (A.new([A.new(["a", "b"]).instantiate!(@tstring),
+                   A.new(["c"]).instantiate!(@tstring)]).instantiate!(@tas))
     assert_raises(RDL::Type::TypeError) {
       # Must instantiate all members
-      A.new([A.new(["a", "b"].instantiate!(@tstring), A.new([]))]).instantiate!(@tas)
+      A.new([A.new(["a", "b"]).instantiate!(@tstring), A.new([])]).instantiate!(@tas)
     }
     assert_raises(RDL::Type::TypeError) {
       # All members must be of same type
