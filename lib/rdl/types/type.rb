@@ -28,15 +28,5 @@ module RDL::Type
       return (@@contract_cache[self] = c)  # assignment evaluates to c
     end
 
-    def self.type_of(obj)
-      return RDL::Type::NilType.new if obj.nil? # also handled in NominalType.new
-      base = RDL::Type::NominalType.new(obj.class) # the constructor is cached
-      inst = (obj.respond_to? :get_instance_variable) && (obj.get_instance_variable('@__rdl_inst'))
-      if inst
-        return RDL::Type::GenericType.new(base, inst) # this constructor is also cached
-      else
-        return base
-      end
-    end
   end
 end
