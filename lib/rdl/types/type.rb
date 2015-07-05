@@ -9,11 +9,12 @@ module RDL::Type
     @@contract_cache = {}
 
     def check_member_or_leq(obj, msg = "")
+      # unwind obj's rdl_type here for slightly better error messages
       t = RDL::Util.rdl_type obj
       if t
         raise TypeError, "#{msg}Expecting #{to_s}, got object #{obj.inspect} of type #{t.to_s}" unless t <= self
       else
-        raise TypeError, "#{msg}Expecting #{to_s}, got object #{obj.inspect}" unless member? obj
+        raise TypeError, "#{msg}Expecting #{to_s}, got object #{obj.inspect}" unless member?(obj, vars_wild: true)
       end
     end
     
