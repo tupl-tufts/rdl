@@ -29,8 +29,8 @@ module RDL::Type
       return (57 + @name.hash) * @type.hash
     end
 
-    def member?(obj)
-      @type.member?(obj)
+    def member?(obj, *args)
+      @type.member?(obj, *args)
     end
 
     def instantiate(inst)

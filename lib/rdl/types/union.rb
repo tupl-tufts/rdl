@@ -58,8 +58,8 @@ module RDL::Type
       @types.all? { |t| t <= other }
     end
 
-    def member?(obj)
-      @types.any? { |t| t.member?(obj) }
+    def member?(obj, *args)
+      @types.any? { |t| t.member?(obj, *args) }
     end
     
     def instantiate(inst)

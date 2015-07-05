@@ -33,7 +33,7 @@ module RDL::Type
       other.instance_of? TopType
     end
 
-    def member?(obj)
+    def member?(obj, *args)
       t = RDL::Util.rdl_type obj
       return t <= self if t
       true

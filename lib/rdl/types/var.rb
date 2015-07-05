@@ -38,7 +38,8 @@ module RDL::Type
       return @name.to_s.hash
     end
 
-    def member?(obj)
+    def member?(obj, vars_wild: false)
+      return true if vars_wild
       raise TypeError, "Unbound type variable #{@name}"
     end
 

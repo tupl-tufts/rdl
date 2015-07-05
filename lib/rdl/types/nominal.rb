@@ -51,7 +51,7 @@ module RDL::Type
       return false
     end
 
-    def member?(obj)
+    def member?(obj, *args)
       t = RDL::Util.rdl_type obj
       return t <= self if t
       return true if obj.nil?

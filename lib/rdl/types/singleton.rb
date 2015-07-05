@@ -44,7 +44,7 @@ module RDL::Type
         (other.instance_of?(NominalType) && @val.class.ancestors.member?(other.klass))
     end
 
-    def member?(obj)
+    def member?(obj, *args)
       t = RDL::Util.rdl_type obj
       return t <= self if t
       obj.nil? || obj == @val
