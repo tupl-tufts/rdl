@@ -48,8 +48,9 @@ module RDL::Type
       raise RuntimeError, "should not be called"
     end
 
-    def pre_cond_check(inst, *args)
+    def pre_cond_check(method_name, inst, *args)
       i = 0 # position in @args
+      method_name = method_name ? method_name + ": " : ""
       args.each_with_index { |arg, j|
         raise TypeError, "Too many arguments" if i >= @args.size
         expected = @args[i].instantiate(inst)
@@ -63,18 +64,19 @@ module RDL::Type
         else
           i += 1
         end
-        expected.check_member_or_leq(arg, "Argument #{j}: ")
+        expected.check_member_or_leq(arg, "#{method_name}Argument #{j}: ")
       }
       # Check if there aren't enough arguments; uses invariant established in initialize
       # that method types end with several optional types and then one (optional) vararg type
       if (i < @args.size) && (@args[i].class != OptionalType) && (@args[i].class != VarargType)
-        raise TypeError, "Too few arguments"
+        raise TypeError, "#{method_name}: Too few arguments"
       end
       true
     end
 
-    def post_cond_check(inst, ret, *args)
-      @ret.instantiate(inst).check_member_or_leq(ret, "Returned value: ")
+    def post_cond_check(method_name, inst, ret, *args)
+      method_name = method_name ? method_name + ": " : ""
+      @ret.instantiate(inst).check_member_or_leq(ret, "#{method_name}Returned value: ")
       true
     end
 
@@ -84,8 +86,8 @@ module RDL::Type
 
       # @ret, @args are the formals
       # ret, args are the actuals
-      prec = RDL::Contract::FlatContract.new(@args) { |*args| pre_cond_check(inst, *args) }
-      postc = RDL::Contract::FlatContract.new(@ret) { |ret, *args| post_cond_check(inst, ret, *args) }
+      prec = RDL::Contract::FlatContract.new(@args) { |*args| pre_cond_check(nil, inst, *args) }
+      postc = RDL::Contract::FlatContract.new(@ret) { |ret, *args| post_cond_check(nil, inst, ret, *args) }
       c = RDL::Contract::ProcContract.new(pre_cond: prec, post_cond: postc)
       return (@@contract_cache[self] = c) # assignment evaluates to c
     end
@@ -93,12 +95,12 @@ module RDL::Type
     # Types is an array of method types. Checks that args and blk match at least
     # one arm of the intersection type; otherwise raises exception. Returns
     # array of method types that matched args and blk
-    def self.check_arg_types(types, inst, *args, &blk)
+    def self.check_arg_types(method_name, types, inst, *args, &blk)
       matches = [] # types that matched args
       exns = [] # exceptions from types that did not match args
       types.each_with_index { |t, i|
         begin
-          $__rdl_contract_switch.off { t.pre_cond_check(inst, *args, &blk) }
+          $__rdl_contract_switch.off { t.pre_cond_check(method_name, inst, *args, &blk) }
         rescue TypeError => te
           exns << [te, i]
         else
@@ -110,12 +112,12 @@ module RDL::Type
       raise TypeError, ("No argument matches:\n\t" + (exns.map { |e, i| "Doesn't match type #{types[i].to_s}: " + e.message }).join("\n\t"))
     end
 
-    def self.check_ret_types(types, inst, ret_types, ret, *args, &blk)
+    def self.check_ret_types(method_name, types, inst, ret_types, ret, *args, &blk)
       matches = [] # types that match ret
       exns = [] # exceptions from types that did not match args
       ret_types.each { |t,i|
         begin
-          $__rdl_contract_switch.off { t.post_cond_check(inst, ret, *args, &blk) }
+          $__rdl_contract_switch.off { t.post_cond_check(method_name, inst, ret, *args, &blk) }
         rescue TypeError => te
           exns << [te, i]
         else

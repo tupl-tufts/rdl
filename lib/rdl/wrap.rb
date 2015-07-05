@@ -56,12 +56,15 @@ class RDL::Wrap
   # if already wrapped.
   def self.wrap(klass_str, meth)
     $__rdl_wrap_switch.off {
+      klass_str = klass_str.to_s
       klass = RDL::Util.to_class klass_str
       return if RDL::Config.instance.nowrap.member? klass
       raise ArgumentError, "Attempt to wrap #{klass.to_s}\##{meth.to_s}" if klass.to_s =~ /^RDL::/
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
       return if (klass.method_defined? meth_old)
-
+      is_singleton_method = RDL::Util.has_singleton_marker(klass_str)
+      full_method_name = klass_str + (is_singleton_method ? '.' : '#') + meth.to_s
+      
       klass.class_eval <<-RUBY, __FILE__, __LINE__+1
         alias_method meth_old, meth
         def #{meth}(*args, &blk)
@@ -72,8 +75,9 @@ class RDL::Wrap
             inst = @__rdl_inst
             inst = Hash[$__rdl_type_params[klass][0].zip []] if (not(inst) && $__rdl_type_params[klass])
             inst = {} if not inst
-            #{if not(RDL::Util.has_singleton_marker(klass_str)) then "inst[:self] = RDL::Type::SingletonType.new(self)" end}
-#            puts "Intercepted \#{klass}##{meth}(\#{args.join(", ")}) { \#{blk} }, inst = \#{inst.inspect}"
+            #{if not(is_singleton_method) then "inst[:self] = RDL::Type::SingletonType.new(self)" end}
+#puts "In #{full_method_name} BOUND self to \#{inst[:self].val.inspect}, object_id = \#{inst[:self].val.object_id}"
+#            puts "Intercepted #{full_method_name}(\#{args.join(", ")}) { \#{blk} }, inst = \#{inst.inspect}"
             meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
             if RDL::Wrap.has_contracts?(klass, meth, :pre)
               pres = RDL::Wrap.get_contracts(klass, meth, :pre)
@@ -81,7 +85,7 @@ class RDL::Wrap
             end
             if RDL::Wrap.has_contracts?(klass, meth, :type)
               types = RDL::Wrap.get_contracts(klass, meth, :type)
-              type_matches = RDL::Type::MethodType.check_arg_types(types, inst, *args, &blk)
+              type_matches = RDL::Type::MethodType.check_arg_types("#{full_method_name}", types, inst, *args, &blk)
             end
           }
           ret = send(#{meth_old.inspect}, *args, &blk)
@@ -91,7 +95,7 @@ class RDL::Wrap
               RDL::Contract::AndContract.check_array(posts, ret, *args, &blk)
             end
             if type_matches
-              RDL::Type::MethodType.check_ret_types(types, inst, type_matches, ret, *args, &blk)
+              RDL::Type::MethodType.check_ret_types("#{full_method_name}", types, inst, type_matches, ret, *args, &blk)
             end
           }
           return ret
