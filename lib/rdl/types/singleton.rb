@@ -52,7 +52,6 @@ module RDL::Type
     def member?(obj, *args)
       t = RDL::Util.rdl_type obj
       return t <= self if t
-      puts "obj = #{obj.inspect}, id = #{obj.object_id}, val = #{@val.inspect}, id = #{val.object_id}"
       obj.nil? || obj.equal?(@val)
     end
     
