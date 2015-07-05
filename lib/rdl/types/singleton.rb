@@ -34,7 +34,11 @@ module RDL::Type
     end
 
     def to_s
-      val.to_s
+      if @val.instance_of? Symbol
+        @val.to_s
+      else
+        "Singleton(#{@val.to_s})"
+      end
     end
 
     def <=(other)
