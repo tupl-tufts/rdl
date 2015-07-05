@@ -1,12 +1,12 @@
 require 'minitest/autorun'
 require_relative '../lib/rdl.rb'
-#require_relative '../types/ruby-2.2.2/core/enumerable.rb'
-#require_relative '../types/ruby-2.2.2/stdlib/set.rb'
+require_relative '../types/ruby-2.2.2/core/enumerable.rb'
+require_relative '../types/ruby-2.2.2/core/enumerator.rb'
+require_relative '../types/ruby-2.2.2/stdlib/set.rb'
 
 class TestStdlibTypes < Minitest::Test
 
   def test_set
-    skip "Not working yet"
     # From the Ruby stdlib documentation
     s1 = Set.new [1, 2]                   # -> #<Set: {1, 2}>
     s2 = [1, 2].to_set                    # -> #<Set: {1, 2}>
