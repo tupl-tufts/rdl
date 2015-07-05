@@ -5,7 +5,8 @@ module RDL::Type
     attr_reader :val
 
     @@cache = {}
-
+    @@cache.compare_by_identity
+    
     class << self
       alias :__new__ :new
     end
@@ -26,7 +27,7 @@ module RDL::Type
     end
 
     def ==(other)
-      return (other.instance_of? self.class) && (other.val == @val)
+      return (other.instance_of? self.class) && (other.val.equal? @val)
     end
 
     def hash # :nodoc:
@@ -51,7 +52,8 @@ module RDL::Type
     def member?(obj, *args)
       t = RDL::Util.rdl_type obj
       return t <= self if t
-      obj.nil? || obj == @val
+      puts "obj = #{obj.inspect}, id = #{obj.object_id}, val = #{@val.inspect}, id = #{val.object_id}"
+      obj.nil? || obj.equal?(@val)
     end
     
     def instantiate(inst)

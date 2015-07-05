@@ -147,6 +147,16 @@ class TestTypes < Minitest::Test
     assert_equal t1, t2
   end
 
+  def test_singleton_caching
+    s = Set.new
+    r = Set.new
+    t1 = SingletonType.new(s)
+    t2 = SingletonType.new(r)
+    assert (t1 != t2) # shouldn't be the same since they're different
+                      # objects! e.g., mutating one won't change the
+                      # other
+  end
+
   def test_instantiate
     tnil = NilType.new
     ttop = TopType.new
