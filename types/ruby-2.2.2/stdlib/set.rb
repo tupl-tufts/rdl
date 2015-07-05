@@ -49,6 +49,6 @@ class Set
   type :superset?, '(set: Set<t>) -> %bool'
   type :to_a, '() -> Array<t>'
 #  type :to_set, '(klass: ?Class, args : *XXXX) { BLOCK }' # ??
-  type :union, '(enum: Enumerable<t>) -> Set<t>'
   rdl_alias :|, :+
+  rdl_alias :union, :+
 end
