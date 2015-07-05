@@ -65,7 +65,7 @@ class RDL::Wrap
       is_singleton_method = RDL::Util.has_singleton_marker(klass_str)
       full_method_name = klass_str + (is_singleton_method ? '.' : '#') + meth.to_s
       
-      klass.class_eval <<-RUBY, __FILE__, __LINE__+1
+      klass.class_eval <<-RUBY, __FILE__, __LINE__
         alias_method meth_old, meth
         def #{meth}(*args, &blk)
           klass = "#{klass_str}"
@@ -76,7 +76,6 @@ class RDL::Wrap
             inst = Hash[$__rdl_type_params[klass][0].zip []] if (not(inst) && $__rdl_type_params[klass])
             inst = {} if not inst
             #{if not(is_singleton_method) then "inst[:self] = RDL::Type::SingletonType.new(self)" end}
-#puts "In #{full_method_name} BOUND self to \#{inst[:self].val.inspect}, object_id = \#{inst[:self].val.object_id}"
 #            puts "Intercepted #{full_method_name}(\#{args.join(", ")}) { \#{blk} }, inst = \#{inst.inspect}"
             meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
             if RDL::Wrap.has_contracts?(klass, meth, :pre)
