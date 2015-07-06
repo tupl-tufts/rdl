@@ -1,11 +1,10 @@
 class Enumerator
-  nowrap
   type_params [:t], :all?
 
   type 'self.new', "(?Fixnum) { (Array<u>) -> %any } -> Enumerator<u>"
   type 'self.new', "(?Proc) { (Array<u>) -> %any } -> Enumerator<u>" # TODO Proc
   # TODO: deprecated form of new
-  type :each, '() { (t) -> %any } -> Enumerator<t>' # note may not return self
+  type :each, '() { (t) -> %any } -> Enumerator<t> or Array<t>' # note may return array!
   type :each, '() -> Enumerator<t>'
   # TODO: args
   type :each_with_index, '() { (t, Fixnum) -> %any } -> %any' # TODO args
