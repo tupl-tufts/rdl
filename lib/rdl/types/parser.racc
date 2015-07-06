@@ -52,6 +52,7 @@ rule
 
   type_expr:
     union_type { result = val[0] }
+  | LPAREN type_expr RPAREN { result = val[1] }
 
   type_expr_comma_list:
       type_expr { result = [val[0]] }
