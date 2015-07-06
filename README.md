@@ -130,12 +130,10 @@ rdocTypesigFor(Klass) # Deprecated FIXME
 
 * FlatContract, labeled arguments?
 
-* Tuple and hash types
+* Hash types
 
 * How to check whether initialize? is user-defined? method_defined? always
 returns true, meaning wrapping isn't fully working with initialize
-
-* Use SingletonType(self) for self type check? - Yes, but is == check enough?
 
 * Ruby allows varargs to appear in the middle; currently not allowed
 in RDL.
