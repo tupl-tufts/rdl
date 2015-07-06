@@ -37,8 +37,8 @@ module Enumerable
   type :first, "() -> t or nil"
   type :first, "(n: Fixnum) -> Array<t> or nil"
 #  rdl_alias :flat_map, :collect_concat
-  type :grep, "(Regexp or Range) -> Array<t>"
-  type :grep, "(Regexp or Range) { (t) -> u } -> Array<u>"
+  type :grep, "(%any) -> Array<t>"
+  type :grep, "(%any) { (t) -> u } -> Array<u>"
   type :group_by, "() { (t) -> u } -> Hash<u, Array<t>>"
   type :group_by, "() -> Enumerator<t>"
   type :include?, "(%any) -> %bool"
