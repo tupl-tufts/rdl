@@ -4,6 +4,11 @@ require_relative '../lib/rdl.rb'
 class TestDsl < Minitest::Test
 
   class Pair
+
+    # dsl {
+    #   type :left, '(Fixnum) -> Fixnum'
+    #   type :right, '(Fixnum) -> Fixnum'
+    # }
     def entry(&blk)
       instance_eval(&blk)
     end
@@ -22,6 +27,13 @@ class TestDsl < Minitest::Test
   end
 
   class Tree
+
+    # dsl :tree { # recursive DSL
+    #   type :left, '(Fixnum) -> Fixnum'
+    #   dsl :left, :tree
+    #   type :right, '(Fixnum) -> Fixnum'
+    #   dsl :right, :tree
+    # }
     def entry(val, &blk)
       @val = val
       instance_eval(&blk)
