@@ -41,6 +41,10 @@ class TestParser < Minitest::Test
     t5 = @p.scan_str "(%bool) -> Fixnum"
     assert_equal (MethodType.new [@tbool], nil, @tfixnum), t5
     assert_raises(RuntimeError) { @p.scan_str "(%foo) -> nil" }
+    t6 = @p.scan_str "(A) -> nil"
+    assert_equal (MethodType.new [@ta], nil, @tnil), t6
+    t7 = @p.scan_str "(TestParser::A) -> nil"
+    assert_equal (MethodType.new [NominalType.new("TestParser::A")], nil, @tnil), t7
   end
 
   def test_opt_vararg

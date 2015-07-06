@@ -67,9 +67,6 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/=>/))
          action { [:ASSOC, text] }
 
-      when (text = @ss.scan(/\::/))
-         action { [:DOUBLE_COLON, text] }
-
       when (text = @ss.scan(/->/))
          action { [:RARROW, text] }
 
@@ -109,7 +106,7 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/\#\#/))
          action { [:DOUBLE_HASH, text] }
 
-      when (text = @ss.scan(/\w+/))
+      when (text = @ss.scan(/(\w|\:\:)+/))
          action { [:ID, text] }
 
       when (text = @ss.scan(/:\w+/))

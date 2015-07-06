@@ -138,4 +138,8 @@ returns true, meaning wrapping isn't fully working with initialize
 * Use SingletonType(self) for self type check? - Yes, but is == check enough?
 
 * Ruby allows varargs to appear in the middle; currently not allowed
-  in RDL.
+in RDL.
+
+* Currently if a NominalType name is expressed differently, e.g., A
+  vs. EnclosingClass::A, the types will be different when compared
+  with ==.

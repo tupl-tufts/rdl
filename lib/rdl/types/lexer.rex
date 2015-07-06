@@ -2,7 +2,7 @@ module RDL::Type
 class Parser
 
 macro
-  ID \w+
+  ID (\w|\:\:)+
   SYMBOL :\w+
   SPECIAL_ID %\w+
 
@@ -10,7 +10,6 @@ rule
   \s            # skip
   or            { [:OR, text] }
   =>            { [:ASSOC, text] } 
-  \::           { [:DOUBLE_COLON, text] }
   ->            { [:RARROW, text] }
   \(            { [:LPAREN, text] }
   \)            { [:RPAREN, text] }
