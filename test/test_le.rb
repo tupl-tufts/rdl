@@ -87,6 +87,19 @@ class TestLe < Minitest::Test
     assert (not (@tobject <= @tstring_or_sym))
   end
 
+  def test_tuple
+    t1 = TupleType.new(@tsym, @tstring)
+    t2 = TupleType.new(@tobject, @tobject)
+    tarray = NominalType.new("Array")
+    assert (t1 <= t1)
+    assert (t2 <= t2)
+    assert (not (t1 <= t2)) # invariant subtyping since tuples are mutable
+    assert (not (t2 <= t1))
+    assert (not (t1 <= tarray)) # no convertability to arrays due to mutability
+    assert (not (tarray <= t1))
+  end
+
+  
   # def test_intersection
   #   skip "<= not defined on intersection"
   #   tobject_and_basicobject = IntersectionType.new(@tobject, @tbasicobject)
