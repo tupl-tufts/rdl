@@ -1,10 +1,10 @@
 class Dir
 
   rdl_alias :[], :glob
-  type 'self.chdir', '(?String) -> Fixnum' # TODO 0
+  type 'self.chdir', '(?String) -> 0'
   type 'self.chdir', '(?String) { (String) -> u } -> u'
-  type 'self.chroot', '(String) -> Fixnum' # TODO 0
-  type 'self.delete', '(String) -> Fixnum' # TODO 0
+  type 'self.chroot', '(String) -> 0'
+  type 'self.delete', '(String) -> 0'
   type 'self.entries', '(String, ?Encoding) -> Array<String>'
   type 'self.exist?', '(file: String) -> %bool'
   # exists? deprecated
@@ -14,13 +14,13 @@ class Dir
   type 'self.glob', '(pattern: String or Array<String>, flags: Fixum) -> Array<String>'
   type 'self.glob', '(pattern: String or Array<String>, flags: Fixum) { (String) -> %any} -> nil'
   type 'self.home', '(?String) -> String'
-  type 'self.mkdir', '(String, ?Fixnum) -> Fixnum' # TODO 0
+  type 'self.mkdir', '(String, ?Fixnum) -> 0'
   type 'self.new', '(String, ?Encoding) -> Dir'
   type 'self.open', '(String, ?Encoding) -> Dir'
   type 'self.open', '(String, ?Encoding) { (Dir) -> u } -> u'
   type 'self.pwd', '() -> String'
-  type 'self.rmdir', '(String) -> Fixnum' # TODO 0
-  type 'self.unlink', '(String) -> Fixnum' # TODO 0
+  type 'self.rmdir', '(String) -> 0'
+  type 'self.unlink', '(String) -> 0'
   type :close, '() -> nil'
   type :each, '() { (String) -> %any } -> self'
   type :each, '() -> Enumerator<String>'

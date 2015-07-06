@@ -27,7 +27,7 @@ class File
   type 'self.join', '(*String) -> String'
   type 'self.lchmod', '(mode: Fixnum, files: *String) -> Fixnum'
   type 'self.lchown', '(owner: Fixnum, group: Fixnum, files: *String) -> Fixnum'
-  type 'self.link', '(old: String, new: String) -> %any' # TODO: Returns 0
+  type 'self.link', '(old: String, new: String) -> 0'
   type 'self.lstat', '(file: String) -> File::Stat'
   type 'self.mtime', '(file: String or IO) -> Time'
   type 'self.new', '(file: String, mode: ?String, perm: ?String, opt: ?Fixnum) -> File'
@@ -41,7 +41,7 @@ class File
   type 'self.readlink', '(link: String) -> file: String'
   type 'self.readldirpath', '(pathname: String, dir: ?String) -> real_pathname: String'
   type 'self.realpath', '(pathname: String, dir: ?String) -> real_pathname: String'
-  type 'self.rename', '(old: String, new: String) -> Fixnum' # TODO: returns 0
+  type 'self.rename', '(old: String, new: String) -> 0'
   type 'self.setgid?', '(file: String) -> %bool'
   type 'self.setuid?', '(file: String) -> %bool'
   type 'self.size', '(file: String or IO) -> Fixnum'
@@ -50,9 +50,9 @@ class File
   type 'self.split', '(file: String) -> Array<String>'
   type 'self.stat', '(file: String) -> File::Stat'
   type 'self.sticky?', '(file: String) -> %bool'
-  type 'self.symlink', '(old: String, new: String) -> Fixnum' #TODO: returns 0
+  type 'self.symlink', '(old: String, new: String) -> 0'
   type 'self.symlink?', '(file: String) -> %bool'
-  type 'self.truncate', '(file: String, Fixnum) -> Fixnum' # TODO returns 0
+  type 'self.truncate', '(file: String, Fixnum) -> 0'
   type 'self.umask', '(?Fixnum) -> Fixnum'
   rdl_alias :unlink, :delete
   type 'self.utime', '(atime: Time, mtime: Time, files: *String) -> Fixnum'
@@ -64,14 +64,14 @@ class File
 
   type :atime, '() -> Time'
   type :birthtime, '() -> Time'
-  type :chmod, '(mode: Fixnum) -> Fixnum' # TODO returns 0
-  type :chown, '(owner: Fixnum, group: Fixnum) -> Fixnum' # TODO returns 0
+  type :chmod, '(mode: Fixnum) -> 0'
+  type :chown, '(owner: Fixnum, group: Fixnum) -> 0'
   type :ctime, '() -> Time'
-  type :flock, '(Fixnum) -> Fixnum or %bool' # todo Fixnum is 0
+  type :flock, '(Fixnum) -> 0 or %bool'
   type :lstat, '() -> File::Stat'
   type :mtime, '() -> Time'
   type :path, '() -> file: String'
   type :size, '() -> Fixnum'
   rdl_alias :to_path, :path
-  type :truncate, '(Fixnum) -> Fixnum' # todo Fixnum is 0
+  type :truncate, '(Fixnum) -> 0'
 end
