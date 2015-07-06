@@ -1,5 +1,4 @@
 module Kernel
-  nowrap
 #  type 'self.Array', '([to_ary: () -> Array<t>]) -> Array<t>'
 #  type 'self.Array', '([to_a: () -> Array<t>]) -> Array<t>'
   type 'self.Complex', '(x : Numeric, y : Numeric) -> Complex'
