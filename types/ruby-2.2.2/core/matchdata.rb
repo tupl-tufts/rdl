@@ -1,0 +1,26 @@
+class MatchData
+
+  type :==, '(%any) -> %bool'
+  type :[], '(i: Fixnum) -> String or nil'
+  type :[], '(start: Fixnum, length: Fixnum) -> Array<String>'
+  type :[], '(range: Range<Fixnum>) -> Array<String>'
+  type :[], '(name: String or Symbol) -> String or nil'
+  type :begin, '(n: Fixnum) -> Fixnum'
+  type :captures, '() -> Array<String>'
+  type :end, '(n: Fixnum) -> Fixnum'
+  type :eql?, '(other: %any) -> %bool'
+  type :hash, '() -> Fixnum'
+  type :inspect, '() -> String'
+  type :length, '() -> Fixnum'
+  type :names, '() -> Array<String>'
+  type :offset, '(n: Fixnum) -> Array<Fixnum>'
+  type :post_match, '() -> String'
+  type :pre_match, '() -> String'
+  type :regexp, '() -> Regexp'
+  type :size, '() -> Fixnum'
+  type :string, '() -> String'
+  type :to_a, '() -> Array<String>'
+  type :to_s, '() -> String'
+  type :values_at, '(indexes: *Fixnum) -> Array<String>'
+
+end
