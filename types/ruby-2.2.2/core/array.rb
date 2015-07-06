@@ -1,5 +1,4 @@
 class Array
-  nowrap
   type_params [:t], :all?
   
   type :[], '(Range) -> Array<t>'
