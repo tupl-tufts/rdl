@@ -1,7 +1,6 @@
 require 'minitest/autorun'
 require_relative '../lib/rdl.rb'
-require_relative '../types/ruby-2.2.2/core.rb'
-require_relative '../types/ruby-2.2.2/stdlib/set.rb'
+require_relative '../lib/rdl_types.rb'
 
 class TestStdlibTypes < Minitest::Test
 

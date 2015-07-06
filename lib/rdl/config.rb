@@ -3,16 +3,10 @@ require 'singleton'
 class RDL::Config
   include Singleton
 
-  attr_reader :nowrap
+  attr_accessor :nowrap
 
   def initialize
-#    @nowrap = Set.new
-
-    @nowrap = Set.new [Array, BasicObject, Dir, Encoding, Enumerable,
-                       Enumerator, File, File::Stat, Hash, Kernel,
-                       MatchData, Object, Range, Regexp, String,
-                       Symbol, Time]
-
+    @nowrap = Set.new
   end
 
   def add_nowrap(*klasses)
