@@ -63,7 +63,12 @@ class RDL::Wrap
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
       return if (klass.method_defined? meth_old)
       is_singleton_method = RDL::Util.has_singleton_marker(klass_str)
-      full_method_name = klass_str + (is_singleton_method ? '.' : '#') + meth.to_s
+      full_method_name =
+        if is_singleton_method
+          RDL::Util.remove_singleton_marker(klass_str) + "." + meth.to_s
+        else
+          klass_str + "#" + meth.to_s
+        end
       
       klass.class_eval <<-RUBY, __FILE__, __LINE__
         alias_method meth_old, meth
