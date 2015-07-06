@@ -1,5 +1,4 @@
 module Enumerable
-  nowrap
   type_params [:t], :all?
   
   type :all?, "() -> %bool"
@@ -24,8 +23,8 @@ module Enumerable
   type :each_cons, "(n: Fixnum) -> Enumerator<t>"
 #  type :each_entry, "(XXXX : *XXXX)" # TODO
   rdl_alias :each_slice, :each_cons
-  type :each_with_index, "() { (t, Fixnum) -> %any } -> self" # args!
-  type :each_with_index, "() -> self" # args!
+  type :each_with_index, "() { (t, Fixnum) -> %any } -> Enumerable<t>" # args! note may not return self
+  type :each_with_index, "() -> Enumerable<t>" # args! note may not return self
 #  type :each_with_object, "(XXXX : XXXX)" #TODO
   type :entries, "() -> Array<t>" # TODO args?
   rdl_alias :find, :detect

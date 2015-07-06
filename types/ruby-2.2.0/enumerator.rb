@@ -5,7 +5,7 @@ class Enumerator
   type 'self.new', "(?Fixnum) { (Array<u>) -> %any } -> Enumerator<u>"
   type 'self.new', "(?Proc) { (Array<u>) -> %any } -> Enumerator<u>" # TODO Proc
   # TODO: deprecated form of new
-  type :each, '() { (t) -> %any } -> self'
+  type :each, '() { (t) -> %any } -> Enumerator<t>' # note may not return self
   type :each, '() -> Enumerator<t>'
   # TODO: args
   type :each_with_index, '() { (t, Fixnum) -> %any } -> %any' # TODO args
