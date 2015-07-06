@@ -1,6 +1,4 @@
 class Range
-
-  nowrap
   type_params([:t], nil) { |t| t.member?(self.begin) && t.member?(self.end) } # TODO: And instantiated if t instantiated
 
   # TODO: Parse error
