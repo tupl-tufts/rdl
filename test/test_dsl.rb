@@ -4,7 +4,7 @@ require_relative '../lib/rdl.rb'
 class TestDsl < Minitest::Test
 
   class Pair
-    def initialize(&blk)
+    def entry(&blk)
       instance_eval(&blk)
     end
 
@@ -22,14 +22,14 @@ class TestDsl < Minitest::Test
   end
 
   class Tree
-    def initialize(val, &blk)
+    def entry(val, &blk)
       @val = val
       instance_eval(&blk)
     end
 
     def left(x, &blk)
       if blk
-        @left = Tree.new(x, &blk)
+        @left = Tree.new.entry(x, &blk)
       else
         @left = x
       end
@@ -37,7 +37,7 @@ class TestDsl < Minitest::Test
 
     def right(x, &blk)
       if blk
-        @right = Tree.new(x, &blk)
+        @right = Tree.new.entry(x, &blk)
       else
         @right = x
       end
@@ -51,14 +51,14 @@ class TestDsl < Minitest::Test
   end
   
   def test_pair 
-    p = Pair.new {
+    p = Pair.new.entry {
       left 3
       right 4
     }
   end
 
   def test_tree
-    t = Tree.new(2) {
+    t = Tree.new.entry(2) {
       left(3)
       right(4) {
         left(5) {
