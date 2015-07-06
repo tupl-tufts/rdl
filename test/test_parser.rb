@@ -26,7 +26,6 @@ class TestParser < Minitest::Test
     @tfixnumvarargx = NamedArgType.new("x", @tfixnumvararg)
     @tsymbol = SingletonType.new(:symbol)
     @tsymbolx = NamedArgType.new("x", @tsymbol)
-    @ttuple = NominalType.new("Tuple")
   end
 
   def test_basic
@@ -125,9 +124,9 @@ class TestParser < Minitest::Test
 
   def test_tuple
     t1 = @p.scan_str "## [Fixnum, String]"
-    assert_equal (GenericType.new(@ttuple, @tfixnum, @tstring)), t1
+    assert_equal (TupleType.new(@tfixnum, @tstring)), t1
     t2 = @p.scan_str "## [String]"
-    assert_equal (GenericType.new(@ttuple, @tstring)), t2
+    assert_equal (TupleType.new(@tstring)), t2
   end 
 
   def test_fixnum

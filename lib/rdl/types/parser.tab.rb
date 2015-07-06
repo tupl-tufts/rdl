@@ -19,7 +19,6 @@ def initialize()
   @ttrue = RDL::Type::NominalType.new(TrueClass)
   @tfalse = RDL::Type::NominalType.new(FalseClass)
   @tbool = RDL::Type::UnionType.new(@ttrue, @tfalse)
-  @ttuple = RDL::Type::NominalType.new(:Tuple)
   @yydebug = true
 end
 
@@ -410,7 +409,7 @@ module_eval(<<'.,.,', 'parser.racc', 86)
 
 module_eval(<<'.,.,', 'parser.racc', 90)
   def _reduce_26(val, _values, result)
-          result = RDL::Type::GenericType.new(@ttuple, *val[1])
+          result = RDL::Type::TupleType.new(*val[1])
     
     result
   end

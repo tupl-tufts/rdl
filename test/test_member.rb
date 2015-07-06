@@ -118,6 +118,16 @@ end
   end
 
   def test_var
-    assert_raises(RDL::Type::TypeError) { @tavar.member? "foo" }
-  end  
+    assert_raises(TypeError) { @tavar.member? "foo" }
+  end
+
+  def test_tuple
+    t1 = TupleType.new(@tsym, @tstring)
+    assert (t1.member? [:foo, "foo"])
+    assert (not (t1.member? ["foo", :foo]))
+    assert (not (t1.member? [:foo, "foo", "bar"]))
+    t2 = TupleType.new
+    assert (t2.member? [])
+    assert (not (t2.member? [:foo]))
+  end
 end
