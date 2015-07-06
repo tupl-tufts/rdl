@@ -106,7 +106,7 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/\#\#/))
          action { [:DOUBLE_HASH, text] }
 
-      when (text = @ss.scan(/(\d)+/))
+      when (text = @ss.scan(/-?(\d)+/))
          action { [:FIXNUM, text] }
 
       when (text = @ss.scan(/(\w|\:\:)+/))

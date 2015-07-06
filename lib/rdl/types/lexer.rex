@@ -5,7 +5,7 @@ macro
   ID (\w|\:\:)+
   SYMBOL :\w+
   SPECIAL_ID %\w+
-  FIXNUM (\d)+
+  FIXNUM -?(\d)+
 
 rule
   \s            # skip

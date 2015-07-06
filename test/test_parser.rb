@@ -133,6 +133,8 @@ class TestParser < Minitest::Test
   def test_fixnum
     t1 = @p.scan_str "## 42"
     assert_equal (SingletonType.new(42)), t1
+    t2 = @p.scan_str "## -42"
+    assert_equal (SingletonType.new(-42)), t2
   end
   
 end
