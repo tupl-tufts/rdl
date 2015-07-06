@@ -4,8 +4,8 @@ class Enumerator
   type 'self.new', "(?Fixnum) { (Array<u>) -> %any } -> Enumerator<u>"
   type 'self.new', "(?Proc) { (Array<u>) -> %any } -> Enumerator<u>" # TODO Proc
   # TODO: deprecated form of new
-  type :each, '() { (t) -> %any } -> Enumerator<t> or Array<t>' # note may return array!
-  type :each, '() -> Enumerator<t>'
+  type :each, '() { (t) -> %any } -> %any' # is there a better type?
+  type :each, '() -> self'
   # TODO: args
   type :each_with_index, '() { (t, Fixnum) -> %any } -> %any' # TODO args
   type :each_with_index, '() -> Enumerator<[t, Fixnum]>' # TODO args
