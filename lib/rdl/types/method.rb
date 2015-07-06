@@ -53,9 +53,11 @@ module RDL::Type
       method_name = method_name ? method_name + ": " : ""
       args.each_with_index { |arg, j|
         raise TypeError, "Too many arguments" if i >= @args.size
-        expected = @args[i].instantiate(inst)
+        expected = @args[i]
+        expected = expected.type if expected.instance_of? NamedArgType
+        expected = expected.instantiate(inst)
         case expected
-        when OptionalType, NamedArgType
+        when OptionalType
           expected = expected.type
           i += 1
         when VarargType
@@ -68,8 +70,10 @@ module RDL::Type
       }
       # Check if there aren't enough arguments; uses invariant established in initialize
       # that method types end with several optional types and then one (optional) vararg type
-      if (i < @args.size) && (@args[i].class != OptionalType) && (@args[i].class != VarargType)
-        raise TypeError, "#{method_name}: Too few arguments"
+      if (i < @args.size)
+        remaining = @args[i]
+        remaining = remaining.type if remaining.instance_of? NamedArgType
+        raise TypeError, "#{method_name}: Too few arguments" unless (remaining.instance_of? OptionalType) || (remaining.instance_of? VarargType)
       end
       true
     end
