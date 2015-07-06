@@ -1,5 +1,4 @@
 class Object
-  nowrap
   # type :ARGF, ARGF
   # type :ARGV, 'Array<String>'
   # type :DATA, 'File'
@@ -28,7 +27,7 @@ class Object
   type :clone, '() -> self'
 #  type :define_singleton_method, '(XXXX : *XXXX)') # TODO
   type :display, '(port : IO) -> nil'
-  type :dup, '() -> an_object : self'
+  type :dup, '() -> an_object : %any'
   type :enum_for, '(method : ?Symbol, args : *%any) -> Enumerator<%any>'
   type :enum_for, '(method : ?Symbol, args : *%any) { (args : %any) -> %any } -> Enumerator<%any>'
   type :eql?, '(other : %any) -> %bool'
@@ -54,7 +53,7 @@ class Object
   type :public_send, '(Symbol or String, args : *%any) -> %any'
   type :remove_instance_variable, '(Symbol) -> %any'
   type :respond_to?, '(Symbol or String, include_all : ?%bool) -> %bool'
-  type :send, '(Symbol or String, args : *%any) -> %any'
+#  type :send, '(Symbol or String, args : *%any) -> %any' # Can't wrap this, used outside wrap switch
   type :singleton_class, '() -> Class'
   type :singleton_method, '(Symbol) -> Method'
   type :singleton_methods, '(all : ?%bool) -> Array<Symbol>'
