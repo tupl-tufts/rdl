@@ -5,6 +5,7 @@ macro
   ID (\w|\:\:)+
   SYMBOL :\w+
   SPECIAL_ID %\w+
+  FIXNUM (\d)+
 
 rule
   \s            # skip
@@ -23,6 +24,7 @@ rule
   \?            { [:QUERY, text] }
   \*            { [:STAR, text] }
   \#\#      	{ [:DOUBLE_HASH, text] }
+  {FIXNUM}      { [:FIXNUM, text] }
   {ID}          { [:ID, text] }
   {SYMBOL}      { [:SYMBOL, text[1..-1]] }
   \:            { [:COLON, text] } # Must come after SYMBOL

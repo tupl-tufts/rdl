@@ -51,4 +51,13 @@ class TestRDLType < Minitest::Test
     assert_raises(RDL::Type::TypeError) { m6(42) }
   end
 
+  def test_fixnum_type_contract
+    self.class.class_eval {
+      type "(0) -> Fixnum"
+      def m7(x) return x; end
+    }
+    assert_equal 0, m7(0)
+    assert_raises(RDL::Type::TypeError) { m7(1) }
+  end
+  
 end

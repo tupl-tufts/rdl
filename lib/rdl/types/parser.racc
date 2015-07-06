@@ -8,7 +8,7 @@ class Parser
   start entry
 
 token DOUBLE_HASH
-token OR ASSOC DOUBLE_COLON COLON RARROW ID SYMBOL SPECIAL_ID STRING
+token OR ASSOC FIXNUM COLON RARROW ID SYMBOL SPECIAL_ID STRING
 token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
 token COMMA QUERY STAR LESS GREATER
 token EOF
@@ -90,6 +90,7 @@ rule
     | LBRACKET type_expr_comma_list RBRACKET {
       result = RDL::Type::GenericType.new(@ttuple, *val[1])
     }
+    | FIXNUM { result = RDL::Type::SingletonType.new(val[0].to_i) }
     
 
 ---- header ----
