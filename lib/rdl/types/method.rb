@@ -113,7 +113,8 @@ module RDL::Type
       }
       return matches if matches.size > 0
       raise exns[0][0] if types.size == 1 # if there's only one possible method type, report error
-      raise TypeError, ("No argument matches:\n\t" + (exns.map { |e, i| "Doesn't match type #{types[i].to_s}: " + e.message }).join("\n\t"))
+      method_name = method_name ? method_name + ": " : ""
+      raise TypeError, ("#{method_name}No argument matches:\n\t" + (exns.map { |e, i| "Doesn't match type #{types[i].to_s}: " + e.message }).join("\n\t"))
     end
 
     def self.check_ret_types(method_name, types, inst, ret_types, ret, *args, &blk)
@@ -130,7 +131,8 @@ module RDL::Type
       }
       return true if matches.size > 0
       raise exns[0][0] if types.size == 1 # if there's only one possible type, report error
-      raise TypeError, ("Return type doesn't match:\n\t" + (exns.map { |e, i| "Argument#{args.size>1 ? "s" : ""} matched #{types[i].to_s} but: " + e.message}).join("\n\t"))
+      method_name = method_name ? method_name + ": " : ""
+      raise TypeError, ("#{method_name}Return type doesn't match:\n\t" + (exns.map { |e, i| "Argument#{args.size>1 ? "s" : ""} matched #{types[i].to_s} but: " + e.message}).join("\n\t"))
     end
     
     def to_s  # :nodoc:
