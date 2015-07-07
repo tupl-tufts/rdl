@@ -32,8 +32,7 @@ class Fixnum
   type :fdiv, '(Numeric) -> Float'
   rdl_alias :inspect, :to_s
   type :magnitude, '() -> Integer'
-  type :modulo, '(Numeric) -> Numeric'
-  post(:modulo) { |r, _| r.real? } # Return value real
+  rdl_alias :modulo, :%
   type :next, '() -> Integer'
   type :odd?, '() -> %bool'
   type :size, '() -> Fixnum'
