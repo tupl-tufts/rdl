@@ -153,6 +153,6 @@ in RDL.
   vs. EnclosingClass::A, the types will be different when compared
   with ==.
 
-* %string type that's [to_s : () -> String]; question: do we wrap to check?
+* %string type that's [to_str : () -> String]; question: do we wrap to check?
 
 * Inheritance of contracts
