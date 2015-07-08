@@ -14,7 +14,7 @@ module RDL::Type
       if t
         raise TypeError, "#{msg}Expecting #{to_s}, got object #{obj.inspect} of type #{t.to_s}" unless t <= self
       else
-        raise TypeError, "#{msg}Expecting #{to_s}, got object #{obj.inspect}" unless member?(obj, vars_wild: true)
+        raise TypeError, "#{msg}Expecting #{to_s}, got object #{obj.inspect} of class #{obj.class}" unless member?(obj, vars_wild: true)
       end
     end
     
