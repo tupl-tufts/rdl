@@ -64,9 +64,6 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/or/))
          action { [:OR, text] }
 
-      when (text = @ss.scan(/=>/))
-         action { [:ASSOC, text] }
-
       when (text = @ss.scan(/->/))
          action { [:RARROW, text] }
 
@@ -129,6 +126,9 @@ class Parser < Racc::Parser
 
       when (text = @ss.scan(/'[^']*'/))
          action { [:STRING, text.gsub("'", "")] }
+
+      when (text = @ss.scan(/"[^"]*"/))
+         action { [:STRING, text.gsub('"', "")] }
 
       else
         text = @ss.string[@ss.pos .. -1]

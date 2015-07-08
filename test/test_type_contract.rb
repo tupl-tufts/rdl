@@ -94,7 +94,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p8.call(42, "43") }
     assert_raises(TypeError) { p8.call(42, 43, "44") }
 
-    t9 = @p.scan_str "(arg1: Fixnum, arg2: ?Fixnum) -> Fixnum"
+    t9 = @p.scan_str "(Fixnum 'arg1', ?Fixnum 'arg2') -> Fixnum"
     p9 = t9.to_contract.wrap { |x| x }
     assert_equal 42, p9.call(42)
     assert_equal 42, p9.call(42, 43)

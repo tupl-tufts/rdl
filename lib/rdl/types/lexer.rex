@@ -11,7 +11,6 @@ macro
 rule
   \s            # skip
   or            { [:OR, text] }
-  =>            { [:ASSOC, text] } 
   ->            { [:RARROW, text] }
   \(            { [:LPAREN, text] }
   \)            { [:RPAREN, text] }
@@ -33,7 +32,7 @@ rule
   \:            { [:COLON, text] } # Must come after SYMBOL
   {SPECIAL_ID}  { [:SPECIAL_ID, text] }
   '[^']*'       { [:STRING, text.gsub("'", "")] }
-  "[^"]*"       { [:STRING, text.gsub("\"", "")] }
+  "[^"]*"       { [:STRING, text.gsub('"', "")] }
 
 end
 end

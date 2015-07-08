@@ -83,26 +83,28 @@ class TestParser < Minitest::Test
   end
 
   def test_named_params
-    t1 = @p.scan_str "(x : Fixnum, Fixnum) -> Fixnum"
+    t1 = @p.scan_str "(Fixnum 'x', Fixnum) -> Fixnum"
     assert_equal (MethodType.new [@tfixnumx, @tfixnum], nil, @tfixnum), t1
-    t2 = @p.scan_str "(Fixnum, x : ?Fixnum) -> Fixnum"
+    t2 = @p.scan_str "(Fixnum, ?Fixnum 'x') -> Fixnum"
     assert_equal (MethodType.new [@tfixnum, @tfixnumoptx], nil, @tfixnum), t2
-    t3 = @p.scan_str "(Fixnum, x : *Fixnum) -> Fixnum"
+    t3 = @p.scan_str "(Fixnum, *Fixnum 'x') -> Fixnum"
     assert_equal (MethodType.new [@tfixnum, @tfixnumvarargx], nil, @tfixnum), t3
-    t4 = @p.scan_str "(Fixnum, y : Fixnum) -> Fixnum"
+    t4 = @p.scan_str "(Fixnum, Fixnum 'y') -> Fixnum"
     assert_equal (MethodType.new [@tfixnum, @tfixnumy], nil, @tfixnum), t4
-    t5 = @p.scan_str "(x : Fixnum, y : Fixnum) -> Fixnum"
+    t5 = @p.scan_str "(Fixnum 'x', Fixnum 'y') -> Fixnum"
     assert_equal (MethodType.new [@tfixnumx, @tfixnumy], nil, @tfixnum), t5
-    t6 = @p.scan_str "(Fixnum, Fixnum) -> ret : Fixnum"
+    t6 = @p.scan_str "(Fixnum, Fixnum) -> Fixnum 'ret'"
     assert_equal (MethodType.new [@tfixnum, @tfixnum], nil, @tfixnumret), t6
-    t7 = @p.scan_str "(x : Fixnum, Fixnum) -> ret : Fixnum"
+    t7 = @p.scan_str "(Fixnum 'x', Fixnum) -> Fixnum 'ret'"
     assert_equal (MethodType.new [@tfixnumx, @tfixnum], nil, @tfixnumret), t7
-    t8 = @p.scan_str "(Fixnum, y : Fixnum) -> ret : Fixnum"
+    t8 = @p.scan_str "(Fixnum, Fixnum 'y') -> Fixnum 'ret'"
     assert_equal (MethodType.new [@tfixnum, @tfixnumy], nil, @tfixnumret), t8
-    t9 = @p.scan_str "(x : Fixnum, y : Fixnum) -> ret : Fixnum"
+    t9 = @p.scan_str "(Fixnum 'x', Fixnum 'y') -> Fixnum 'ret'"
     assert_equal (MethodType.new [@tfixnumx, @tfixnumy], nil, @tfixnumret), t9
-    t10 = @p.scan_str "(x : :symbol) -> Fixnum"
+    t10 = @p.scan_str "(:symbol 'x') -> Fixnum"
     assert_equal (MethodType.new [@tsymbolx], nil, @tfixnum), t10
+    t11 = @p.scan_str '(Fixnum "x", Fixnum) -> Fixnum'
+    assert_equal (MethodType.new [@tfixnumx, @tfixnum], nil, @tfixnum), t11
   end
 
   def test_generic
