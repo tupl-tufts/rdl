@@ -10,7 +10,7 @@ module RDL::Type
       alias :__new__ :new
     end
 
-    def self.new(methods)
+    def self.new(*methods)
       t = @@cache[methods]
       return t if t
       t = StructuralType.__new__(methods)
