@@ -6,6 +6,7 @@ macro
   SYMBOL :\w+
   SPECIAL_ID %\w+
   FIXNUM -?(\d)+
+  FLOAT -?\d\.\d+
 
 rule
   \s            # skip
@@ -24,6 +25,8 @@ rule
   \?            { [:QUERY, text] }
   \*            { [:STAR, text] }
   \#\#      	{ [:DOUBLE_HASH, text] }
+  \$\{          { [:CONST_BEGIN, text] }
+  {FLOAT}       { [:FLOAT, text] } # Must go before FIXNUM
   {FIXNUM}      { [:FIXNUM, text] }
   {ID}          { [:ID, text] }
   {SYMBOL}      { [:SYMBOL, text[1..-1]] }

@@ -7,8 +7,8 @@ class Parser
 
   start entry
 
-token DOUBLE_HASH
-token OR ASSOC FIXNUM COLON RARROW ID SYMBOL SPECIAL_ID STRING
+token DOUBLE_HASH CONST_BEGIN
+token OR ASSOC FIXNUM FLOAT COLON RARROW ID SYMBOL SPECIAL_ID STRING
 token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
 token COMMA QUERY STAR LESS GREATER
 token EOF
@@ -91,7 +91,9 @@ rule
       result = RDL::Type::TupleType.new(*val[1])
     }
     | FIXNUM { result = RDL::Type::SingletonType.new(val[0].to_i) }
-    
+    | FLOAT { result = RDL::Type::SingletonType.new(val[0].to_f) }
+    | CONST_BEGIN ID RBRACE { result = RDL::Type::SingletonType.new(Kernel.const_get val[1]) }
+
 
 ---- header ----
 
