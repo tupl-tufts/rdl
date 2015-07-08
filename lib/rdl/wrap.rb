@@ -63,12 +63,7 @@ class RDL::Wrap
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
       return if (klass.method_defined? meth_old)
       is_singleton_method = RDL::Util.has_singleton_marker(klass_str)
-      full_method_name =
-        if is_singleton_method
-          RDL::Util.remove_singleton_marker(klass_str) + "." + meth.to_s
-        else
-          klass_str + "#" + meth.to_s
-        end
+      full_method_name = RDL::Util.pp_klass_method(klass_str, meth)
       
       klass.class_eval <<-RUBY, __FILE__, __LINE__
         alias_method meth_old, meth
@@ -276,6 +271,10 @@ class Object
                             raise err
                           end
       if meth
+# It turns out Ruby core/stdlib don't always follow this convention...
+#        if (meth.to_s[-1] == "?") && (type.ret != $__rdl_type_bool)
+#          warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
+#        end
         RDL::Wrap.add_contract(klass, meth, :type, type)
         if RDL::Util.method_defined?(klass, meth) || meth == :initialize
           RDL::Wrap.wrap(klass, meth)
@@ -300,6 +299,10 @@ class Object
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
           RDL::Wrap.add_contract(klass, meth, kind, contract)
           RDL::Wrap.wrap(klass, meth)
+# It turns out Ruby core/stdlib don't always follow this convention...
+#          if (kind == :type) && (meth.to_s[-1] == "?") && (contract.ret != $__rdl_type_bool)
+#            warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
+#          end
         }
       end
 
