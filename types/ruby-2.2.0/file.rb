@@ -16,7 +16,7 @@ class File
   type 'self.executable_real?', '(file: String) -> %bool'
   type 'self.exist?', '(file: String or IO) -> %bool'
   # exists? deprecated
-  type 'self.expand_path', '(file: String, dir: ?String) -> abs_file: String'
+  type 'self.expand_path', '(file: String or Pathname, dir: ?String) -> abs_file: String'
   type 'self.extname', '(path: String) -> String'
   type 'self.file?', '(file: String or IO) -> %bool'
   type 'self.fnmatch', '(pattern: String, path: String, flags: ?Fixnum) -> %bool'
@@ -47,7 +47,7 @@ class File
   type 'self.size', '(file: String or IO) -> Fixnum'
   type 'self.size?', '(file: String or IO) -> Fixnum or nil'
   type 'self.socket?', '(file: String or IO) -> %bool'
-  type 'self.split', '(file: String) -> Array<String>'
+  type 'self.split', '(file: String) -> [String, String]'
   type 'self.stat', '(file: String) -> File::Stat'
   type 'self.sticky?', '(file: String) -> %bool'
   type 'self.symlink', '(old: String, new: String) -> 0'
