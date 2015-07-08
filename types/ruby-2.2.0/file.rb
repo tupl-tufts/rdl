@@ -24,7 +24,7 @@ class File
   type 'self.ftype', '(file: String) -> String' # TODO: return in set of strings
   type 'self.grpowned?', '(file: String or IO) -> %bool'
   type 'self.identical?', '(file_1: String or IO, file_2: String or IO) -> %bool'
-  type 'self.join', '(*String) -> String'
+  type 'self.join', '(*(String or Pathname)) -> String'
   type 'self.lchmod', '(mode: Fixnum, files: *String) -> Fixnum'
   type 'self.lchown', '(owner: Fixnum, group: Fixnum, files: *String) -> Fixnum'
   type 'self.link', '(old: String, new: String) -> 0'

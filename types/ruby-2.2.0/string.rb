@@ -115,10 +115,11 @@ class String
   type :start_with?, '(* String) -> %bool'
   type :strip, '() -> String'
   type :strip!, '() -> String'
-  type :sub, '(Regexp or String, String or Hash) -> String'
-  type :sub, '(Regexp or String) {(String) -> %any} -> String'
-  type :sub!, '(Regexp or String, String) -> String' # TODO: Does this really not allow Hash?
-  type :sub!, '(Regexp or String) {(String) -> %any} -> String'
+# Can't wrap these, since they mess with $1 etc
+  # type :sub, '(Regexp or String, String or Hash) -> String'
+  # type :sub, '(Regexp or String) {(String) -> %any} -> String'
+  # type :sub!, '(Regexp or String, String) -> String' # TODO: Does this really not allow Hash?
+  # type :sub!, '(Regexp or String) {(String) -> %any} -> String'
   type :succ, '() -> String'
   type :sum, '(?Fixnum) -> Fixnum'
   type :swapcase, '() -> String'

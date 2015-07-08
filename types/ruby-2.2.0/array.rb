@@ -7,7 +7,7 @@ class Array
   type :&, '(Array<u>) -> Array<t>'
   type :*, '(Fixnum) -> Array<t>'
   type :*, '(String) -> String'
-  type :+, '(Array<u>) -> Array<u or t>'
+  type :+, '(Enumerable<u>) -> Array<u or t>'
   type :-, '(Array<u>) -> Array<u or t>'
   type :slice, '(Range) -> Array<t>'
   type :slice, '(Fixnum) -> t'

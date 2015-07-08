@@ -1,8 +1,8 @@
 class Dir
 
   rdl_alias :[], :glob
-  type 'self.chdir', '(?String) -> 0'
-  type 'self.chdir', '(?String) { (String) -> u } -> u'
+  type 'self.chdir', '(?(String or Pathname)) -> 0'
+  type 'self.chdir', '(?(String or Pathname)) { (String) -> u } -> u'
   type 'self.chroot', '(String) -> 0'
   type 'self.delete', '(String) -> 0'
   type 'self.entries', '(String, ?Encoding) -> Array<String>'

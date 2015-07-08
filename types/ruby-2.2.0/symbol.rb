@@ -5,6 +5,7 @@ class Symbol
   type :=~, '(obj: %any) -> Fixnum or nil'
   type :[], '(idx: Fixnum) -> String'
   type :[], '(b: Fixnum, n: Fixnum) -> String'
+  type :[], '(Range<Fixnum>) -> String'
   type :capitalize, '() -> Symbol'
   type :casecmp, '(other: Symbol) -> Fixnum or nil'
   type :downcase, '() -> Symbol'
