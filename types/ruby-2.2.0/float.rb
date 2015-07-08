@@ -18,8 +18,8 @@ class Float
   type :>=, '(Numeric) -> %bool'
   pre(:>=) { |x| x.real? }
   type :abs, '() -> Float'
-  type :angle, '() -> 0 or Float' # Float is pi
-  type :arg, '() -> 0 or Float' # Float is pi
+  type :angle, '() -> 0 or ${Math::PI}'
+  type :arg, '() -> 0 or ${Math::PI}'
   type :ceil, '() -> Integer'
   type :coerce, '(Numeric) -> [Float, Float]'
   type :denominator, '() -> Integer'
@@ -37,7 +37,7 @@ class Float
   type :nan?, '() -> %bool'
   type :next_float, '() -> Float'
   type :numerator, '() -> Integer'
-  type :phase, '() -> 0 or Float' # Float is pi
+  type :phase, '() -> 0 or ${Math::PI}'
   type :prev_float, '() -> Float'
   rdl_alias :quo, :/
   type :rationalize, '(eps: Float) -> Rational'
