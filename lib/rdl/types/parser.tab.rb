@@ -13,7 +13,7 @@ module RDL::Type
 
 class Parser < Racc::Parser
 
-module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 105)
+module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 103)
 
 def initialize()
   @yydebug = true
@@ -405,10 +405,8 @@ module_eval(<<'.,.,', 'parser.racc', 68)
 
 module_eval(<<'.,.,', 'parser.racc', 77)
   def _reduce_24(val, _values, result)
-          if val[0] == '%any' then
-        result = RDL::Type::TopType.new
-      elsif val[0] == '%bool' then
-        result = $__rdl_type_bool
+          if $__rdl_special_types.has_key? val[0] then
+        result = $__rdl_special_types[val[0]]
       else
         fail "Unexpected special type identifier #{val[0]}"
       end
@@ -417,7 +415,7 @@ module_eval(<<'.,.,', 'parser.racc', 77)
   end
 .,.,
 
-module_eval(<<'.,.,', 'parser.racc', 86)
+module_eval(<<'.,.,', 'parser.racc', 84)
   def _reduce_25(val, _values, result)
           n = RDL::Type::NominalType.new(val[0])
       result = RDL::Type::GenericType.new(n, *val[2])
@@ -426,7 +424,7 @@ module_eval(<<'.,.,', 'parser.racc', 86)
   end
 .,.,
 
-module_eval(<<'.,.,', 'parser.racc', 90)
+module_eval(<<'.,.,', 'parser.racc', 88)
   def _reduce_26(val, _values, result)
           result = RDL::Type::TupleType.new(*val[1])
     
@@ -434,21 +432,21 @@ module_eval(<<'.,.,', 'parser.racc', 90)
   end
 .,.,
 
-module_eval(<<'.,.,', 'parser.racc', 92)
+module_eval(<<'.,.,', 'parser.racc', 90)
   def _reduce_27(val, _values, result)
      result = RDL::Type::SingletonType.new(val[0].to_i) 
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'parser.racc', 93)
+module_eval(<<'.,.,', 'parser.racc', 91)
   def _reduce_28(val, _values, result)
      result = RDL::Type::SingletonType.new(val[0].to_f) 
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'parser.racc', 94)
+module_eval(<<'.,.,', 'parser.racc', 92)
   def _reduce_29(val, _values, result)
      result = RDL::Type::SingletonType.new(Kernel.const_get val[1]) 
     result

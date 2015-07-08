@@ -442,8 +442,29 @@ class Object
 
   # Returns a new object that wraps self in a type cast. This cast is *unchecked*, so use with caution
   def type_cast(typ)
-    obj = SimpleDelegator.new(self)
-    obj.instance_variable_set('@__rdl_type', typ)
-    return obj
+    $__rdl_contract_switch.off {
+      obj = SimpleDelegator.new(self)
+      obj.instance_variable_set('@__rdl_type', typ)
+      return obj
+    }
+  end
+
+  # Add a new type alias.
+  # [+name+] must be a string beginning with %.
+  # [+typ+] can be either a string, in which case it will be parsed
+  # into a type, or a Type.
+  def type_alias(name, typ)
+    $__rdl_contract_switch.off {
+      raise RuntimeError, "Attempt to redefine type #{name}" if $__rdl_special_types[name]
+      case typ
+      when String
+        t = $__rdl_parser.scan_str "## #{typ}"
+        $__rdl_special_types[name] = t
+      when RDL::Type::Type
+        $__rdl_special_types[name] = typ
+      else
+        raise RuntimeError, "Unexpected typ argument #{typ.inspect}"
+      end
+    }
   end
 end

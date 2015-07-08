@@ -124,6 +124,17 @@ rdocTypesigFor(Klass) # Deprecated FIXME
 
 * TODO
 
+## RDL and Rails
+
+Add these lines in application.rb after Bundler.require (so that the
+Rails version string is available and the Rails environment is loaded):
+
+```
+require '/Users/jfoster/proj/rdl/lib/rdl.rb'
+require '/Users/jfoster/proj/rdl/lib/rdl_types.rb'
+require '/Users/jfoster/proj/rdl/lib/rails_types.rb'
+```
+
 # TODO list
 
 * ProcContract, Wrap, MethodType, support higher-order contracts for blocks
@@ -141,3 +152,7 @@ in RDL.
 * Currently if a NominalType name is expressed differently, e.g., A
   vs. EnclosingClass::A, the types will be different when compared
   with ==.
+
+* %string type that's [to_s : () -> String]; question: do we wrap to check?
+
+* Inheritance of contracts

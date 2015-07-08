@@ -146,4 +146,12 @@ class TestParser < Minitest::Test
     assert_equal (SingletonType.new(Math::PI)), t1
   end
   
+  def test_type_alias
+    type_alias '%foobarbaz', @tnil
+    assert_equal @tnil, (@p.scan_str "## %foobarbaz")
+    type_alias '%quxquxqux', 'nil'
+    assert_equal @tnil, (@p.scan_str "## %quxquxqux")
+    assert_raises(RuntimeError) { type_alias '%quxquxqux', 'nil' }
+    assert_raises(RuntimeError) { @p.scan_str "## %qux" }
+  end
 end

@@ -48,6 +48,9 @@ require_rel 'rdl/util.rb'
 require_rel 'rdl/wrap.rb'
 #require_rel 'rdl/stats.rb'
 
-$__rdl_type_bool = RDL::Type::UnionType.new(RDL::Type::NominalType.new(TrueClass),
-                                            RDL::Type::NominalType.new(FalseClass))
 $__rdl_parser = RDL::Type::Parser.new
+
+# Hash from special type names to their values
+$__rdl_special_types = {'%any' => RDL::Type::TopType.new,
+                        '%bool' => RDL::Type::UnionType.new(RDL::Type::NominalType.new(TrueClass),
+                                                            RDL::Type::NominalType.new(FalseClass)) }

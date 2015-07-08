@@ -281,5 +281,4 @@ RUBY
     obj = 3.type_cast(ntyp)
     assert (ntyp.member? obj)
   end
-  
 end

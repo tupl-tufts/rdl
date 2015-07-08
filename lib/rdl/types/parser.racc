@@ -75,10 +75,8 @@ rule
       end
     }
     | SPECIAL_ID {
-      if val[0] == '%any' then
-        result = RDL::Type::TopType.new
-      elsif val[0] == '%bool' then
-        result = $__rdl_type_bool
+      if $__rdl_special_types.has_key? val[0] then
+        result = $__rdl_special_types[val[0]]
       else
         fail "Unexpected special type identifier #{val[0]}"
       end
