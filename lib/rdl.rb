@@ -16,6 +16,9 @@ end
 # method names are symbols
 $__rdl_contracts = Hash.new
 
+# Map from full_method_name to number of times called when wrapped
+$__rdl_wrapped_calls = Hash.new 0
+
 # Hash from class name to array of symbols that are the class's type parameters
 $__rdl_type_params = Hash.new
 
@@ -43,6 +46,7 @@ require_rel 'rdl/types/*.rb'
 require_rel 'rdl/contracts/*.rb'
 require_rel 'rdl/util.rb'
 require_rel 'rdl/wrap.rb'
+require_rel 'rdl/stats.rb'
 
 $__rdl_type_bool = RDL::Type::UnionType.new(RDL::Type::NominalType.new(TrueClass),
                                             RDL::Type::NominalType.new(FalseClass))

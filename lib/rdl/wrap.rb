@@ -72,6 +72,7 @@ class RDL::Wrap
           meth = types = type_matches = nil
           inst = nil
           $__rdl_wrap_switch.off {
+            $__rdl_wrapped_calls["#{full_method_name}"] += 1 if RDL::Config.instance.gather_stats
             inst = @__rdl_inst
             inst = Hash[$__rdl_type_params[klass][0].zip []] if (not(inst) && $__rdl_type_params[klass])
             inst = {} if not inst

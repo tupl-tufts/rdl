@@ -4,9 +4,11 @@ class RDL::Config
   include Singleton
 
   attr_accessor :nowrap
-
+  attr_accessor :gather_stats
+  
   def initialize
     @nowrap = Set.new
+    @gather_stats = true
   end
 
   def add_nowrap(*klasses)
