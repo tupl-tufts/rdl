@@ -46,7 +46,7 @@ require_rel 'rdl/types/*.rb'
 require_rel 'rdl/contracts/*.rb'
 require_rel 'rdl/util.rb'
 require_rel 'rdl/wrap.rb'
-require_rel 'rdl/stats.rb'
+#require_rel 'rdl/stats.rb'
 
 $__rdl_type_bool = RDL::Type::UnionType.new(RDL::Type::NominalType.new(TrueClass),
                                             RDL::Type::NominalType.new(FalseClass))
