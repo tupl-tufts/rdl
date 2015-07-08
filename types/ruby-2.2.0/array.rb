@@ -26,7 +26,7 @@ class Array
   type :collect, '() -> Enumerator<t>'
   type :combination, '(Fixnum) { (Array<t>) -> %any } -> Array<t>'
   type :combination, '(Fixnum) -> Enumerator<t>'
-  type :push, '(t) -> Array<t>'
+  type :push, '(?t) -> Array<t>'
   type :compact, '() -> Array<t>'
   type :compact!, '() -> Array<t>'
   type :concat, '(Array<t>) -> Array<t>'

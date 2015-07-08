@@ -3,7 +3,7 @@ class Pathname
   type 'self.glob', '(p1: String, p2: ?String) -> Array<Pathname>'
   type 'self.new', '(p1: String) -> Pathname' # p1 can be String-like
   rdl_alias 'self.pwd', 'self.getwd'
-  type :+, '(other: String) -> Pathname'
+  type :+, '(other: String or Pathname) -> Pathname'
   rdl_alias :/, :+
   type :<=>, '(p1: %any) -> -1 or 0 or 1 or nil'
   type :==, '(p1: %any) -> %bool'
@@ -11,7 +11,7 @@ class Pathname
   type :absolute?, '() -> %bool'
   type :ascend, '() { (Pathname) -> %any } -> %any'
   type :atime, '() -> Time'
-  type :basename, '(p1: ?String) -> String' # guessing about arg type
+  type :basename, '(p1: ?String) -> Pathname' # guessing about arg type
   type :binread, '(length: ?Fixnum, offset: ?Fixnum) -> String'
   type :binwrite, '(String, offset: ?Fixnum) -> Fixnum' # TODO open_args
   type :birthtime, '() -> Time'
@@ -25,7 +25,7 @@ class Pathname
   type :delete, '() -> %any'
   type :descend, '() { (Pathname) -> %any } -> %any'
   type :directory?, '() -> %bool'
-  type :dirname, '() -> String'
+  type :dirname, '() -> Pathname'
   type :each_child, '(with_directory: %bool) { (Pathname) -> %any } -> %any'
   type :each_entry, '() { (Pathname) -> %any } -> %any'
   type :each_filename, '() { (String) -> %any } -> %any'
@@ -37,7 +37,7 @@ class Pathname
   type :executable?, '() -> %bool'
   type :executable_real?, '() -> %bool'
   type :exist?, '() -> %bool'
-  type :expand_path, '(p1: ?String) -> String' # guess as to p1's type
+  type :expand_path, '(p1: ?(String or Pathname)) -> Pathname'
   type :extname, '() -> String'
   type :file?, '() -> %bool'
   type :find, '(ignore_error: %bool) { (Pathname) -> %any } -> %any'
