@@ -135,5 +135,15 @@ class TestParser < Minitest::Test
     t2 = @p.scan_str "## -42"
     assert_equal (SingletonType.new(-42)), t2
   end
+
+  def test_float
+    t1 = @p.scan_str "## 3.14"
+    assert_equal (SingletonType.new(3.14)), t1
+  end
+
+  def test_const
+    t1 = @p.scan_str "## ${Math::PI}"
+    assert_equal (SingletonType.new(Math::PI)), t1
+  end
   
 end
