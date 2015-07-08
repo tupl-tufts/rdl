@@ -78,7 +78,7 @@ rule
       if val[0] == '%any' then
         result = RDL::Type::TopType.new
       elsif val[0] == '%bool' then
-        result = @tbool
+        result = $__rdl_type_bool
       else
         fail "Unexpected special type identifier #{val[0]}"
       end
@@ -102,9 +102,6 @@ module RDL::Type
 ---- inner ----
 
 def initialize()
-  @ttrue = RDL::Type::NominalType.new(TrueClass)
-  @tfalse = RDL::Type::NominalType.new(FalseClass)
-  @tbool = RDL::Type::UnionType.new(@ttrue, @tfalse)
   @yydebug = true
 end
 

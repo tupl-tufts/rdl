@@ -16,9 +16,6 @@ class Parser < Racc::Parser
 module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 103)
 
 def initialize()
-  @ttrue = RDL::Type::NominalType.new(TrueClass)
-  @tfalse = RDL::Type::NominalType.new(FalseClass)
-  @tbool = RDL::Type::UnionType.new(@ttrue, @tfalse)
   @yydebug = true
 end
 
@@ -389,7 +386,7 @@ module_eval(<<'.,.,', 'parser.racc', 77)
           if val[0] == '%any' then
         result = RDL::Type::TopType.new
       elsif val[0] == '%bool' then
-        result = @tbool
+        result = $__rdl_type_bool
       else
         fail "Unexpected special type identifier #{val[0]}"
       end
