@@ -13,7 +13,7 @@ module RDL::Type
 
 class Parser < Racc::Parser
 
-module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 103)
+module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 104)
 
 def initialize()
   @yydebug = true

@@ -33,6 +33,7 @@ rule
   \:            { [:COLON, text] } # Must come after SYMBOL
   {SPECIAL_ID}  { [:SPECIAL_ID, text] }
   '[^']*'       { [:STRING, text.gsub("'", "")] }
+  "[^"]*"       { [:STRING, text.gsub("\"", "")] }
 
 end
 end
