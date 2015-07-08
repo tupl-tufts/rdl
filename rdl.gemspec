@@ -4,15 +4,14 @@
 
 Gem::Specification.new do |s|
   s.name        = 'rdl'
-  s.version     = '0.0.0'
-  s.date        = '2013-07-25'
-  s.summary     = "Ruby DSL Library"
-  s.description = "Ruby DSL Library"
-  s.authors     = ['Stevie Strickland', 'Brianna Ren']
-  s.email       = ['sstrickl@cs.umd.edu', 'bren@cs.umd.edu']
-  s.files       = ["lib/rdl.rb", "lib/rdl/inspect.rb", "lib/rdl/infer.rb",
-                   "lib/rdl/structure.rb"]
-  s.files      += Dir['lib/type/*']
+  s.version     = '1.0.0.beta.1'
+  s.date        = '2015-07-08'
+  s.summary     = "Ruby type and contract system"
+  s.description = "Add longer description..."
+  s.authors     = ['University of Maryland, College Park'Jeff Foster', 'Stevie Strickland', 'Brianna Ren']
+  s.email       = ['rdl-devel@googlegroups.com']
+  s.files       = Dir["lib/**/*"]
   s.homepage    =
     'https://github.com/plum-umd/rdl'
+  s.license     = "BSD-3-Clause"
 end
