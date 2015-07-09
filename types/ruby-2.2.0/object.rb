@@ -24,7 +24,7 @@ class Object
   type :===, '(%any "other") -> %bool'
   type :=~, '(%any "other") -> nil'
   type :class, '() -> Class'
-  type :clone, '() -> self'
+  type :clone, '() -> %any'
 #  type :define_singleton_method, '(XXXX : *XXXX)') # TODO
   type :display, '(IO "port") -> nil'
   type :dup, '() -> %any "an_object"'

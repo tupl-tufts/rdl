@@ -289,7 +289,7 @@ module_eval(<<'.,.,', 'parser.racc', 28)
 
 module_eval(<<'.,.,', 'parser.racc', 31)
   def _reduce_5(val, _values, result)
-            result = RDL::Type::MethodType.new val[1], val[3], RDL::Type::NamedArgType.new(val[6], val[5])
+            result = RDL::Type::MethodType.new val[1], val[3], RDL::Type::AnnotatedArgType.new(val[6], val[5])
       
     result
   end
@@ -325,7 +325,7 @@ module_eval(<<'.,.,', 'parser.racc', 40)
 
 module_eval(<<'.,.,', 'parser.racc', 41)
   def _reduce_10(val, _values, result)
-     result = RDL::Type::NamedArgType.new(val[1], val[0]) 
+     result = RDL::Type::AnnotatedArgType.new(val[1], val[0]) 
     result
   end
 .,.,

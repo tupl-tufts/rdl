@@ -1,7 +1,7 @@
 require_relative 'type'
 
 module RDL::Type
-  class NamedArgType < Type
+  class AnnotatedArgType < Type
     attr_reader :name
     attr_reader :type
 
@@ -22,7 +22,7 @@ module RDL::Type
     end
 
     def ==(other) # :nodoc:
-      return (other.instance_of? NamedArgType) && (other.name == @name) && (other.type == @type)
+      return (other.instance_of? AnnotatedArgType) && (other.name == @name) && (other.type == @type)
     end
 
     def hash # :nodoc:
@@ -34,7 +34,7 @@ module RDL::Type
     end
 
     def instantiate(inst)
-      return NamedArgType.new(@name, @type.instantiate(inst))
+      return AnnotatedArgType.new(@name, @type.instantiate(inst))
     end
   end
 end

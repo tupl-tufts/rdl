@@ -23,7 +23,7 @@ module RDL::Type
     def initialize(map)
       map.each { |k, t|
         raise RuntimeError, "Got #{t.inspect} where Type expected" unless t.is_a? Type
-        raise RuntimeError, "Type may not be named or vararg" if (t.instance_of? NamedArgType) || (t.instance_of? VarargType)
+        raise RuntimeError, "Type may not be annotated or vararg" if (t.instance_of? AnnotatedArgType) || (t.instance_of? VarargType)
       }
       @map = map
       super()

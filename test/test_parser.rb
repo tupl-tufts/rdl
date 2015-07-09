@@ -19,13 +19,13 @@ class TestParser < Minitest::Test
     @ta = NominalType.new :A
     @tb = NominalType.new :B
     @tc = NominalType.new :C
-    @tfixnumx = NamedArgType.new("x", @tfixnum)
-    @tfixnumy = NamedArgType.new("y", @tfixnum)
-    @tfixnumret = NamedArgType.new("ret", @tfixnum)
-    @tfixnumoptx = NamedArgType.new("x", @tfixnumopt)
-    @tfixnumvarargx = NamedArgType.new("x", @tfixnumvararg)
+    @tfixnumx = AnnotatedArgType.new("x", @tfixnum)
+    @tfixnumy = AnnotatedArgType.new("y", @tfixnum)
+    @tfixnumret = AnnotatedArgType.new("ret", @tfixnum)
+    @tfixnumoptx = AnnotatedArgType.new("x", @tfixnumopt)
+    @tfixnumvarargx = AnnotatedArgType.new("x", @tfixnumvararg)
     @tsymbol = SingletonType.new(:symbol)
-    @tsymbolx = NamedArgType.new("x", @tsymbol)
+    @tsymbolx = AnnotatedArgType.new("x", @tsymbol)
   end
 
   def test_basic
@@ -82,7 +82,7 @@ class TestParser < Minitest::Test
     assert_equal @tsymbol, t1
   end
 
-  def test_named_params
+  def test_annotated_params
     t1 = @p.scan_str "(Fixnum 'x', Fixnum) -> Fixnum"
     assert_equal (MethodType.new [@tfixnumx, @tfixnum], nil, @tfixnum), t1
     t2 = @p.scan_str "(Fixnum, ?Fixnum 'x') -> Fixnum"

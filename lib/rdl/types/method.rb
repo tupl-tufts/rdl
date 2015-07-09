@@ -22,7 +22,7 @@ module RDL::Type
       # args, any number of optional args, at most one vararg)
       state = :required
       args.each { |arg|
-        arg = arg.type if arg.instance_of? RDL::Type::NamedArgType
+        arg = arg.type if arg.instance_of? RDL::Type::AnnotatedArgType
         case arg
         when OptionalType
           raise "optional arguments not allowed after varargs" if state == :vararg
@@ -54,7 +54,7 @@ module RDL::Type
       args.each_with_index { |arg, j|
         raise TypeError, "Too many arguments" if i >= @args.size
         expected = @args[i]
-        expected = expected.type if expected.instance_of? NamedArgType
+        expected = expected.type if expected.instance_of? AnnotatedArgType
         expected = expected.instantiate(inst)
         case expected
         when OptionalType
@@ -72,7 +72,7 @@ module RDL::Type
       # that method types end with several optional types and then one (optional) vararg type
       if (i < @args.size)
         remaining = @args[i]
-        remaining = remaining.type if remaining.instance_of? NamedArgType
+        remaining = remaining.type if remaining.instance_of? AnnotatedArgType
         raise TypeError, "#{method_name}: Too few arguments" unless (remaining.instance_of? OptionalType) || (remaining.instance_of? VarargType)
       end
       true

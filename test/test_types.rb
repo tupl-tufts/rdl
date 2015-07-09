@@ -164,7 +164,7 @@ class TestTypes < Minitest::Test
     tB = NominalType.new :B
     toptionalA = OptionalType.new tA
     tvarargA = VarargType.new tA
-    tnamedA = NamedArgType.new("arg", tA)
+    tannotatedA = AnnotatedArgType.new("arg", tA)
     tunionAB = UnionType.new(tA, tB)
     tinterAB = IntersectionType.new(tA, tB)
     tsyma = SingletonType.new(:a)
@@ -183,7 +183,7 @@ class TestTypes < Minitest::Test
     assert_equal tA, tA.instantiate(inst)
     assert_equal toptionalA, toptionalA.instantiate(inst)
     assert_equal tvarargA, tvarargA.instantiate(inst)
-    assert_equal tnamedA, tnamedA.instantiate(inst)
+    assert_equal tannotatedA, tannotatedA.instantiate(inst)
     assert_equal tunionAB, tunionAB.instantiate(inst)
     assert_equal tinterAB, tinterAB.instantiate(inst)
     assert_equal tsyma, tsyma.instantiate(inst)
