@@ -12,6 +12,7 @@ class TestParser < Minitest::Test
     @tfixnumopt = OptionalType.new @tfixnum
     @tfixnumvararg = VarargType.new @tfixnum
     @tstring = NominalType.new String
+    @tstringopt = OptionalType.new @tstring
     @tenum = NominalType.new :Enumerator
     @ttrue = NominalType.new TrueClass
     @tfalse = NominalType.new FalseClass
@@ -171,4 +172,20 @@ class TestParser < Minitest::Test
     t2 = @p.scan_str "## {'a'=>Fixnum, 2=>String}"
     assert_equal (FiniteHashType.new({"a"=>@tfixnum, 2=>@tstring})), t2
   end
+
+  def test_named_params
+    t1 = @p.scan_str "(Fixnum, x: Fixnum) -> Fixnum"
+    assert_equal (MethodType.new [@tfixnum, FiniteHashType.new(x: @tfixnum)], nil, @tfixnum), t1
+    t2 = @p.scan_str "(Fixnum, x: Fixnum, y: String) -> Fixnum"
+    assert_equal (MethodType.new [@tfixnum, FiniteHashType.new(x: @tfixnum, y: @tstring)], nil, @tfixnum), t2
+    t3 = @p.scan_str "(Fixnum, y: String, x: Fixnum) -> Fixnum"
+    assert_equal (MethodType.new [@tfixnum, FiniteHashType.new(x: @tfixnum, y: @tstring)], nil, @tfixnum), t3
+    t4 = @p.scan_str "(Fixnum, y: String, x: ?Fixnum) -> Fixnum"
+    assert_equal (MethodType.new [@tfixnum, FiniteHashType.new(x: @tfixnumopt, y: @tstring)], nil, @tfixnum), t4
+    t4 = @p.scan_str "(Fixnum, y: ?String, x: Fixnum) -> Fixnum"
+    assert_equal (MethodType.new [@tfixnum, FiniteHashType.new(x: @tfixnum, y: @tstringopt)], nil, @tfixnum), t4
+    t5 = @p.scan_str "(Fixnum 'x', x: Fixnum) -> Fixnum"
+    assert_equal (MethodType.new [@tfixnumx, FiniteHashType.new(x: @tfixnum)], nil, @tfixnum), t5
+  end
+
 end
