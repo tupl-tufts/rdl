@@ -19,24 +19,30 @@ module RDL::Type
     # [+ret+] The type that the procedure returns.
     def initialize(args, block, ret)
       # First check argument types have form (any number of required
-      # args, any number of optional args, at most one vararg)
+      # or optional args, at most one vararg, any number of named arguments)
       state = :required
       args.each { |arg|
         arg = arg.type if arg.instance_of? RDL::Type::AnnotatedArgType
         case arg
         when OptionalType
-          raise "optional arguments not allowed after varargs" if state == :vararg
+          raise "Optional arguments not allowed after varargs" if state == :vararg
+          raise "Optional arguments not allowed after named arguments" if state == :hash
           state = :optional
         when VarargType
-          raise "multiple varargs not allowed" if state == :vararg
+          raise "Multiple varargs not allowed" if state == :vararg
+          raise "Varargs not allowed after named arguments" if state == :hash
           state = :vararg
+        when FiniteHashType
+          raise "Only one set of named arguments allowed" if state == :hash
+          state = :hash
         else
-          raise "required arguments not allowed after optional arguments or varargs" if state == :optional || state == :vararg
+          raise "Required arguments not allowed after varargs" if state == :vararg
+          raise "Required arguments not allowed after named arguments" if state == :hash
         end
       }
       @args = *args
 
-      raise "block must be MethodType" unless (not block) or (block.instance_of? MethodType)
+      raise "Block must be MethodType" unless (not block) or (block.instance_of? MethodType)
       @block = block
 
       @ret = ret
