@@ -1,7 +1,7 @@
 class Complex
-  type 'self.polar', '(abs: Numeric, arg: ?Numeric) -> Complex'
-  type 'self.rect', '(real: Numeric, imag: ?Numeric) -> Complex'
-  pre('self.rect') { |r, i| r.real? && ((not i) || (i.real?)) }
+  type 'self.polar', '(%real "abs", ?%real "arg") -> Complex'
+  type 'self.rect', '(%real "real", ?%real "imag") -> Complex'
+  pre('self.rect') { |r, i| (not i) || (i.real?) }
   rdl_alias 'self.rectangular', 'self.rect'
   type :*, '(Numeric) -> Complex'
   type :**, '(Numeric) -> Complex'
@@ -9,32 +9,28 @@ class Complex
   type :-, '(Numeric) -> Complex'
   type :-, '() -> Complex'
   type :/, '(Numeric) -> Complex'
-  type :==, '(object: %any) -> %bool'
-  type :abs, '() -> Numeric'
-  post(:abs) { |r, _| r.real? }
-  type :abs2, '() -> Numeric'
-  post(:abs) { |r, _| r.real? && r > 0 }
+  type :==, '(%any "object") -> %bool'
+  type :abs, '() -> %real'
+  type :abs2, '() -> %real'
+  post(:abs) { |r, _| r > 0 }
   type :angle, '() -> Float'
   type :arg, '() -> Float'
   type :conj, '() -> Complex'
   rdl_alias :conjugate, :conj
   type :denominator, '() -> Integer'
   type :fdiv, '(Numeric) -> Complex'
-  type :imag, '() -> Numeric'
-  post(:imag) { |r, _| r.real? }
+  type :imag, '() -> %real'
   rdl_alias :imaginary, :imag
   type :inspect, '() -> String'
-  type :magnitude, '() -> Numeric'
-  post(:magnitude) { |r, _| r.real? }
+  type :magnitude, '() -> %real'
   type :numerator, '() -> Numeric'
   type :phase, '() -> Float'
-  type :polar, '() -> [Integer or Float, Integer or Float]'
+  type :polar, '() -> [%real, %real]'
   rdl_alias :quo, :/
-  type :rationalize, '(eps: ?Numeric) -> Rational'
-  type :real, '() -> Numeric'
-  post(:real) { |r, _| r.real? }
+  type :rationalize, '(?Numeric "eps") -> Rational'
+  type :real, '() -> %real'
   type :real?, '() -> FalseClass'
-  type :rect, '() -> [Integer or Float, Integer or Float]'
+  type :rect, '() -> [%real, %real]'
   type :to_c, '() -> self'
   type :to_f, '() -> Float'
   type :to_i, '() -> Integer'

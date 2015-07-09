@@ -1,6 +1,6 @@
 class Encoding
   type 'self.aliases', '() -> Hash<String, String>'
-  type 'self.compatible?', '(obj1: %any, obj2: %any) -> Encoding or nil'
+  type 'self.compatible?', '(%any "obj1", %any "obj2") -> Encoding or nil'
   type 'self.default_external', '() -> Encoding'
   type 'self.default_external=', '(String) -> String'
   type 'self.default_external=', '(Encoding) -> Encoding'
@@ -16,6 +16,6 @@ class Encoding
   type :inspect, '() -> String'
   type :name, '() -> String'
   type :names, '() -> Array<String>'
-  type :replicate, '(name: String) -> Encoding'
+  type :replicate, '(String "name") -> Encoding'
   rdl_alias :to_s, :name
 end

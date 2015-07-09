@@ -1,5 +1,5 @@
 class Fixnum
-  type :%, '(other: Numeric) -> Numeric'
+  type :%, '(Numeric "other") -> Numeric'
   post(:%) { |r, _| r.real? }
   type :&, '(Integer) -> Integer'
   type :*, '(Numeric) -> Numeric'
@@ -10,7 +10,7 @@ class Fixnum
   type :/, '(Numeric) -> Numeric'
   type :<, '(Numeric) -> %bool'
   pre(:<) { |x| x.real? }
-  type :<<, '(count: Fixnum) -> Integer'
+  type :<<, '(Fixnum "count") -> Integer'
   type :<=, '(Numeric) -> %bool'
   pre(:<=) { |x| x.real? }
   type :<=>, '(Numeric) -> -1 or 0 or 1 or nil'
@@ -19,7 +19,7 @@ class Fixnum
   pre(:>) { |x| x.real? }
   type :>=, '(Numeric) -> %bool'
   pre(:>=) { |x| x.real? }
-  type :>>, '(count: Fixnum) -> Integer'
+  type :>>, '(Fixnum "count") -> Integer'
   type :[], '(Fixnum) -> 0 or 1'
   type :^, '(Integer) -> Integer'
   type :|, '(Integer) -> Integer'
@@ -38,6 +38,6 @@ class Fixnum
   type :size, '() -> Fixnum'
   rdl_alias :succ, :next
   type :to_f, '() -> Float'
-  type :to_s, '(base: ?Fixnum) -> String'
+  type :to_s, '(?Fixnum "base") -> String'
   type :zero?, '() -> %bool'
 end
