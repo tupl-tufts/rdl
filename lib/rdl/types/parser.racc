@@ -36,6 +36,9 @@ rule
   arg_list:
       { result = [] }
     | nonempty_arg_list { result = val[0] }
+    | named_arg_list {
+      result = [RDL::Type::FiniteHashType.new(Hash[*val[0]])]
+      }
   nonempty_arg_list:
       arg { result = [val[0]] }
     | arg COMMA nonempty_arg_list { result = val[2].unshift val[0] }

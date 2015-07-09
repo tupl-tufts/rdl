@@ -45,6 +45,8 @@ class TestParser < Minitest::Test
     assert_equal (MethodType.new [@ta], nil, @tnil), t6
     t7 = @p.scan_str "(TestParser::A) -> nil"
     assert_equal (MethodType.new [NominalType.new("TestParser::A")], nil, @tnil), t7
+    t8 = @p.scan_str "(Fixnum) { (%any, String) -> nil } -> :symbol"
+    assert_equal (MethodType.new [@tfixnum], MethodType.new([@ttop, @tstring], nil, @tnil), @tsymbol), t8
   end
 
   def test_opt_vararg
@@ -186,6 +188,12 @@ class TestParser < Minitest::Test
     assert_equal (MethodType.new [@tfixnum, FiniteHashType.new(x: @tfixnum, y: @tstringopt)], nil, @tfixnum), t4
     t5 = @p.scan_str "(Fixnum 'x', x: Fixnum) -> Fixnum"
     assert_equal (MethodType.new [@tfixnumx, FiniteHashType.new(x: @tfixnum)], nil, @tfixnum), t5
+    t5 = @p.scan_str "(Fixnum 'x', x: Fixnum) -> Fixnum"
+    assert_equal (MethodType.new [@tfixnumx, FiniteHashType.new(x: @tfixnum)], nil, @tfixnum), t5
+    t6 = @p.scan_str "(x: Fixnum) -> Fixnum"
+    assert_equal (MethodType.new [FiniteHashType.new(x: @tfixnum)], nil, @tfixnum), t6
+    t7 = @p.scan_str "(x: Fixnum) { (%any, String) -> nil } -> :symbol"
+    assert_equal (MethodType.new [FiniteHashType.new(x: @tfixnum)], MethodType.new([@ttop, @tstring], nil, @tnil), @tsymbol), t7
   end
 
 end
