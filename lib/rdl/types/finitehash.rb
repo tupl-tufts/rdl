@@ -53,6 +53,8 @@ module RDL::Type
       return t <= self if t
       rest = @map.clone # shallow copy
 
+      return false unless obj.instance_of? Hash
+      
       # Check that every mapping in obj exists in @map and matches the type
       obj.each_pair { |k, v|
         return false unless @map.has_key?(k)
