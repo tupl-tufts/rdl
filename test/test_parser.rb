@@ -164,4 +164,11 @@ class TestParser < Minitest::Test
     ts1 = StructuralType.new(to_str: tm1)
     assert_equal ts1, t1
   end
+
+  def test_finite_hash
+    t1 = @p.scan_str "## {a: Fixnum, b: String}"
+    assert_equal (FiniteHashType.new({a: @tfixnum, b: @tstring})), t1
+    t2 = @p.scan_str "## {'a'=>Fixnum, 2=>String}"
+    assert_equal (FiniteHashType.new({"a"=>@tfixnum, 2=>@tstring})), t2
+  end
 end

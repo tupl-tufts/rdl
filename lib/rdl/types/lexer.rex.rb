@@ -67,6 +67,9 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/->/))
          action { [:RARROW, text] }
 
+      when (text = @ss.scan(/=>/))
+         action { [:RASSOC, text] }
+
       when (text = @ss.scan(/\(/))
          action { [:LPAREN, text] }
 

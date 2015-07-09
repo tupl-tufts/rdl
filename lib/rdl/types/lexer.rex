@@ -12,6 +12,7 @@ rule
   \s            # skip
   or            { [:OR, text] }
   ->            { [:RARROW, text] }
+  =>            { [:RASSOC, text] }
   \(            { [:LPAREN, text] }
   \)            { [:RPAREN, text] }
   \{            { [:LBRACE, text] }

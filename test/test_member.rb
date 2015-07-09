@@ -130,4 +130,19 @@ end
     assert (t2.member? [])
     assert (not (t2.member? [:foo]))
   end
+
+  def test_finite_hash
+    t1 = FiniteHashType.new(a: @tsym, b: @tstring)
+    assert (t1.member?(a: :foo, b: "foo"))
+    assert (not (t1.member?(a: 1, b: "foo")))
+    assert (not (t1.member?(a: :foo)))
+    assert (not (t1.member?(b: "foo")))
+    assert (not (t1.member?(a: :foo, b: "foo", c: :baz)))
+    t2 = FiniteHashType.new({"a"=>@tsym, 2=>@tstring})
+    assert (t2.member?({"a"=>:foo, 2=>"foo"}))
+    assert (not (t2.member?({"a"=>2, 2=>"foo"})))
+    assert (not (t2.member?({"a"=>:foo})))
+    assert (not (t2.member?({2=>"foo"})))
+    assert (not (t2.member?({"a"=>:foo, 2=>"foo", 3=>"bar"})))
+  end
 end
