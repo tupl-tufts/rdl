@@ -69,7 +69,7 @@ module RDL::Type
     end
 
     def instantiate(inst)
-      FiniteHashType.new(*@map.map { |k, t| [k, t.instantiate(inst)] })
+      FiniteHashType.new(Hash[@map.map { |k, t| [k, t.instantiate(inst)] }])
     end
     
     def hash

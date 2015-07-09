@@ -178,6 +178,12 @@ class TestTypes < Minitest::Test
     thashab = GenericType.new(thash, ta, tb)
     thashstringfixnum = GenericType.new(thash, tstring, tfixnum)
     inst = {a: tstring, b: tfixnum}
+    ttupleAB = TupleType.new(tA, tB)
+    ttupleab = TupleType.new(ta, tb)
+    ttuplestringfixnum = TupleType.new(tstring, tfixnum)
+    tfinitehashaAbB = FiniteHashType.new(a: tA, b: tB)
+    tfinitehashaabb = FiniteHashType.new(a: ta, b: tb)
+    tfinitehashastringbfixnum = FiniteHashType.new(a: tstring, b: tfixnum)
     assert_equal tnil, tnil.instantiate(inst)
     assert_equal ttop, ttop.instantiate(inst)
     assert_equal tA, tA.instantiate(inst)
@@ -192,5 +198,9 @@ class TestTypes < Minitest::Test
     assert_equal tc, tc.instantiate(inst)
     assert_equal thashAB, thashAB.instantiate(inst)
     assert_equal thashstringfixnum, thashab.instantiate(inst)
+    assert_equal ttupleAB, ttupleAB.instantiate(inst)
+    assert_equal ttuplestringfixnum, ttupleab.instantiate(inst)
+    assert_equal tfinitehashaAbB, tfinitehashaAbB.instantiate(inst)
+    assert_equal tfinitehashastringbfixnum, tfinitehashaabb.instantiate(inst)
   end
 end
