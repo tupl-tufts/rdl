@@ -52,7 +52,7 @@ class Object
   type :public_methods, '(?%bool "all") -> Array<Symbol>'
   type :public_send, '(Symbol or String, *%any "args") -> %any'
   type :remove_instance_variable, '(Symbol) -> %any'
-  type :respond_to?, '(Symbol or String, ?%bool "include_all") -> %bool'
+#  type :respond_to?, '(Symbol or String, ?%bool "include_all") -> %bool'
 #  type :send, '(Symbol or String, *%any "args") -> %any' # Can't wrap this, used outside wrap switch
   type :singleton_class, '() -> Class'
   type :singleton_method, '(Symbol) -> Method'

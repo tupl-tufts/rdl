@@ -2,7 +2,7 @@ class Float
   type :%, '(Float "other") -> Float'
   type :*, '(Float "other") -> Float'
   type :**, '(Float "other") -> Float'
-  type :+, '(Float "other") -> Float'
+  type :+, '(Fixnum or Float "other") -> Float'
   type :-, '(Float "other") -> Float'
   type :-, '() -> Float'
   type :/, '(Numeric "other") -> Float'
@@ -41,7 +41,7 @@ class Float
   type :prev_float, '() -> Float'
   rdl_alias :quo, :/
   type :rationalize, '(Float "eps") -> Rational'
-  type :round, '(?Fixnum "ndigits") -> Integer or FLoat'
+  type :round, '(?Fixnum "ndigits") -> Integer or Float'
   type :to_f, '() -> self'
   type :to_i, '() -> Integer'
   rdl_alias :to_int, :to_i

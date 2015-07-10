@@ -156,3 +156,6 @@ in RDL.
 * %string type that's [to_str : () -> String]; question: do we wrap to check?
 
 * Inheritance of contracts
+
+* Macros (special types) that have macros instead of them
++ %bool should really be %any
