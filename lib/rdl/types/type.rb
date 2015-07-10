@@ -8,22 +8,12 @@ module RDL::Type
 
     @@contract_cache = {}
 
-    def check_member_or_leq(obj, msg = "")
-      # unwind obj's rdl_type here for slightly better error messages
-      t = RDL::Util.rdl_type obj
-      if t
-        raise TypeError, "#{msg}Expecting #{to_s}, got object #{obj.inspect} of type #{t.to_s}" unless t <= self
-      else
-        raise TypeError, "#{msg}Expecting #{to_s}, got object #{obj.inspect} of class #{obj.class}" unless member?(obj, vars_wild: true)
-      end
-    end
-    
     def to_contract
       c = @@contract_cache[self]
       return c if c
 
       c = RDL::Contract::FlatContract.new(to_s) { |obj|
-        check_member_or_leq(obj)
+        raise TypeError, "Expecting #{to_s}, got object of class #{RDL::Util.rdl_type_or_class(obj)}" unless member?(obj)
         true
       }
       return (@@contract_cache[self] = c)  # assignment evaluates to c

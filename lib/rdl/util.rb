@@ -39,6 +39,10 @@ class RDL::Util
     return (obj.instance_variable_defined?('@__rdl_type') && obj.instance_variable_get('@__rdl_type'))
   end
 
+  def self.rdl_type_or_class(obj)
+    return self.rdl_type(obj) || obj.class
+  end
+
   def self.pp_klass_method(klass, meth)
     klass = klass.to_s
     if has_singleton_marker klass

@@ -140,7 +140,7 @@ module RDL::Type
 Method type:
 #{types.map { |t| "        " + t.to_s }.join('\n') }
 Actual type:
-\t(#{args.map { |arg| arg.class.to_s }.join(', ')})#{if blk then blk.to_s end}
+\t(#{args.map { |arg| RDL::Util.rdl_type_or_class(arg) }.join(', ')})#{if blk then blk.to_s end}
 RUBY
       }
     end
@@ -154,7 +154,7 @@ RUBY
 Method type:
 #{types.each_with_index.map { |t,i| "       " + (matches.member?(i) ? "*" : " ") + t.to_s }.join('\n') }
 Return type:
-        #{ret.class.to_s}
+        #{ RDL::Util.rdl_type_or_class(ret)}
 RUBY
       }
     end
