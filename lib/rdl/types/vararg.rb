@@ -25,7 +25,11 @@ module RDL::Type
     end
 
     def to_s
-      "*(#{@type})"
+      if @type.instance_of? UnionType
+        "*(#{@type.to_s})"
+      else
+        "*#{@type.to_s}"
+      end
     end
 
     def eql?(other)

@@ -43,7 +43,7 @@ module RDL::Type
     end
 
     def to_s  # :nodoc:
-      "(#{@types.map { |t| t.to_s }.join(' or ')})"
+      "#{@types.map { |t| t.to_s }.join(' or ')}"
     end
 
     def eql?(other)
