@@ -54,7 +54,8 @@ module RDL::Type
       raise RuntimeError, "should not be called"
     end
 
-    def pre_cond_check(method_name, inst, *args)
+    # TODO: Check blk
+    def pre_cond?(inst, *args, &blk)
       states = [[0, 0]] # [position in @arg, position in args]
       until states.empty?
         formal, actual = states.pop
@@ -98,43 +99,12 @@ module RDL::Type
           end
         end
       end
-      raise TypeError, "#{method_name}No match of #{args} with #{self}"
-    end
-    
-    def old_pre_cond_check(method_name, inst, *args)
-      i = 0 # position in @args
-      method_name = method_name ? method_name + ": " : ""
-      args.each_with_index { |arg, j|
-        raise TypeError, "Too many arguments" if i >= @args.size
-        expected = @args[i]
-        expected = expected.type if expected.instance_of? AnnotatedArgType
-        case expected
-        when OptionalType
-          expected = expected.type
-          i += 1
-        when VarargType
-          expected = expected.type
-          # do not increment i, since vararg can take any number of argument
-        else
-          i += 1
-        end
-        expected = expected.instantiate(inst)
-        expected.check_member_or_leq(arg, "#{method_name}Argument #{j}: ")
-      }
-      # Check if there aren't enough arguments; uses invariant established in initialize
-      # that method types end with several optional types and then one (optional) vararg type
-      if (i < @args.size)
-        remaining = @args[i]
-        remaining = remaining.type if remaining.instance_of? AnnotatedArgType
-        raise TypeError, "#{method_name}: Too few arguments" unless (remaining.instance_of? OptionalType) || (remaining.instance_of? VarargType)
-      end
-      true
+      return false
     end
 
-    def post_cond_check(method_name, inst, ret, *args)
+    def post_cond?(inst, ret, *args)
       method_name = method_name ? method_name + ": " : ""
-      @ret.instantiate(inst).check_member_or_leq(ret, "#{method_name}Returned value: ")
-      true
+      return @ret.instantiate(inst).member?(ret, vars_wild: true)
     end
 
     def to_contract(inst: nil)
@@ -143,58 +113,59 @@ module RDL::Type
 
       # @ret, @args are the formals
       # ret, args are the actuals
-      prec = RDL::Contract::FlatContract.new(@args) { |*args| pre_cond_check(nil, inst, *args) }
-      postc = RDL::Contract::FlatContract.new(@ret) { |ret, *args| post_cond_check(nil, inst, ret, *args) }
+      prec = RDL::Contract::FlatContract.new(@args) { |*args, &blk|
+        raise TypeError, "Arguments #{args} do not match argument types #{self}" unless pre_cond?(inst, *args, &blk)
+        true
+      }
+      postc = RDL::Contract::FlatContract.new(@ret) { |ret, *args|
+        raise TypeError, "Return #{ret} does not match return type #{self}" unless post_cond?(inst, ret, *args)
+        true
+      }
       c = RDL::Contract::ProcContract.new(pre_cond: prec, post_cond: postc)
       return (@@contract_cache[self] = c) # assignment evaluates to c
     end
 
-    # Types is an array of method types. Checks that args and blk match at least
-    # one arm of the intersection type; otherwise raises exception. Returns
-    # array of method types that matched args and blk
+    # [+types+] is an array of method types. Checks that [+args+] and
+    # [+blk+] match at least one arm of the intersection type;
+    # otherwise raises exception. Returns array of method types that
+    # matched [+args+] and [+blk+]
     def self.check_arg_types(method_name, types, inst, *args, &blk)
-      matches = [] # types that matched args
-      exns = [] # exceptions from types that did not match args
-      types.each_with_index { |t, i|
-        begin
-          $__rdl_contract_switch.off { t.pre_cond_check(method_name, inst, *args, &blk) }
-        rescue TypeError => te
-          exns << [te, i]
-        else
-          matches << [t, i]
-        end
+      $__rdl_contract_switch.off {
+        matches = [] # types that matched args
+        types.each_with_index { |t, i| matches << i if t.pre_cond?(inst, *args, &blk) }
+        return matches if matches.size > 0
+        method_name = method_name ? method_name + ": " : ""
+        raise TypeError, <<RUBY
+#{method_name}Argument type error.
+Method type:
+#{types.map { |t| "        " + t.to_s }.join('\n') }
+Actual type:
+\t(#{args.map { |arg| arg.class.to_s }.join(', ')})#{if blk then blk.to_s end}
+RUBY
       }
-      return matches if matches.size > 0
-      raise exns[0][0] if types.size == 1 # if there's only one possible method type, report error
-      method_name = method_name ? method_name + ": " : ""
-      raise TypeError, ("#{method_name}No argument matches:\n\t" + (exns.map { |e, i| "Doesn't match type #{types[i].to_s}: " + e.message }).join("\n\t"))
     end
 
-    def self.check_ret_types(method_name, types, inst, ret_types, ret, *args, &blk)
-      matches = [] # types that match ret
-      exns = [] # exceptions from types that did not match args
-      ret_types.each { |t,i|
-        begin
-          $__rdl_contract_switch.off { t.post_cond_check(method_name, inst, ret, *args, &blk) }
-        rescue TypeError => te
-          exns << [te, i]
-        else
-          matches << [t, i]
-        end
+    def self.check_ret_types(method_name, types, inst, matches, ret, *args, &blk)
+      $__rdl_contract_switch.off {
+        matches.each { |i| return true if types[i].post_cond?(inst, ret, *args) }
+        method_name = method_name ? method_name + ": " : ""
+        raise TypeError, <<RUBY
+#{method_name}Return type error. *'s indicate argument lists that matched.
+Method type:
+#{types.each_with_index.map { |t,i| "       " + (matches.member?(i) ? "*" : " ") + t.to_s }.join('\n') }
+Return type:
+        #{ret.class.to_s}
+RUBY
       }
-      return true if matches.size > 0
-      raise exns[0][0] if types.size == 1 # if there's only one possible type, report error
-      method_name = method_name ? method_name + ": " : ""
-      raise TypeError, ("#{method_name}Return type doesn't match:\n\t" + (exns.map { |e, i| "Argument#{args.size>1 ? "s" : ""} matched #{types[i].to_s} but: " + e.message}).join("\n\t"))
     end
-    
+
     def to_s  # :nodoc:
       if @block
-        "(#{@args.join(', ')}) {#{@block}} -> #{@ret}"
+        return "(#{@args.map { |arg| arg.to_s }.join(', ')}) {#{@block.to_s}} -> #{@ret.to_s}"
       elsif @args
-        "(#{@args.join(', ')}) -> #{@ret}"
+        return "(#{@args.map { |arg| arg.to_s }.join(', ')}) -> #{@ret.to_s}"
       else
-        "() -> #{@ret}"
+        return "() -> #{@ret.to_s}"
       end
     end
 
@@ -215,6 +186,6 @@ module RDL::Type
       h = h * 31 + @block.hash if @block
       return h
     end
-  end
+end
 end
 
