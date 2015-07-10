@@ -139,7 +139,7 @@ module RDL::Type
 #{method_name}Argument type error.
 Method type:
 #{types.map { |t| "        " + t.to_s }.join("\n") }
-Actual type:
+Actual argument type(s):
 \t(#{args.map { |arg| RDL::Util.rdl_type_or_class(arg) }.join(', ')}) #{if blk then blk.to_s end}
 RUBY
       }
@@ -153,7 +153,7 @@ RUBY
 #{method_name}Return type error. *'s indicate argument lists that matched.
 Method type:
 #{types.each_with_index.map { |t,i| "       " + (matches.member?(i) ? "*" : " ") + t.to_s }.join("\n") }
-Return type:
+Actual return type:
         #{ RDL::Util.rdl_type_or_class(ret)}
 RUBY
       }
