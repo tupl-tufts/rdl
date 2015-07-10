@@ -46,7 +46,7 @@ module RDL::Type
       other.instance_of?(TopType) ||
         (other.instance_of?(SingletonType) && other.val == @val) ||
         (other.instance_of?(NominalType) && @val.class == other.klass) ||
-        (other.instance_of?(NominalType) && @val.class.ancestors.member?(other.klass))
+        (other.instance_of?(NominalType) && @val.is_a?(other.klass))
     end
 
     def member?(obj, *args)
