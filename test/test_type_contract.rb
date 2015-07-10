@@ -100,6 +100,13 @@ class TestTypeContract < Minitest::Test
     assert_equal 42, p9.call(42, 43)
     assert_raises(TypeError) { p9.call(42, 43, 44) }
     assert_raises(TypeError) { p9.call }
+
+    t10 = @p.scan_str "(?Fixnum, String) -> Fixnum"
+    p10 = t10.to_contract.wrap { |*args| 42 }
+    assert_equal 42, p10.call("44")
+    assert_equal 42, p10.call(43, "44")
+    assert_raises(TypeError) { p10.call() }
+    assert_raises(TypeError) { p10.call(43, "44", 45) }
   end
 
   def test_proc_names
@@ -154,7 +161,6 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p6.call(x: "43", y: "44") }
     assert_raises(TypeError) { p6.call(42, x: 43, y: "44") }
     assert_raises(TypeError) { p6.call(x: 43, y: "44", z: 45) }
-    skip "Remaining tests fail"
     t7 = @p.scan_str "(x: ?Fixnum, y: ?String) -> Fixnum"
     p7 = t7.to_contract.wrap { |**args| 42 }
     assert_equal 42, p7.call()

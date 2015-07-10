@@ -55,13 +55,59 @@ module RDL::Type
     end
 
     def pre_cond_check(method_name, inst, *args)
+      states = [[0, 0]] # [position in @arg, position in args]
+      until states.empty?
+        formal, actual = states.pop
+        return true if formal == @args.size && actual == args.size # Matched all actuals, no formals left over
+        next if formal >= @args.size # Too many actuals to match
+        t = @args[formal]
+        t = t.type if t.instance_of? AnnotatedArgType
+        case t
+        when OptionalType
+          t = t.type.instantiate(inst)
+          if actual == args.size
+            states << [formal+1, actual] # skip to allow extra formal optionals at end
+          elsif t.member?(args[actual], vars_wild: true)
+            states << [formal+1, actual+1] # match
+            states << [formal+1, actual] # skip
+          else
+            states << [formal+1, actual]  # type doesn't match; must skip this formal
+          end
+        when VarargType
+          t = t.type.instantiate(inst)
+          if actual == args.size
+            states << [formal+1, actual] # skip to allow empty vararg at end
+          elsif t.member?(args[actual], vars_wild: true)
+            states << [formal, actual+1] # match, more varargs coming
+            states << [formal+1, actual+1] # match, no more varargs
+#            states << [formal+1, actual] # skip - can't happen, varargs have to be at end
+          else
+            states << [formal+1, actual] # skip
+          end
+        else
+          t = t.instantiate(inst)
+          the_actual = nil
+          if actual == args.size
+            next unless t.instance_of? FiniteHashType
+            if t.member?({}, vars_wild: true) # try matching against the empty hash
+              states << [formal+1, actual]
+            end
+          elsif t.member?(args[actual], vars_wild: true)
+            states << [formal+1, actual+1] # match
+            # no else case; if there is no match, this is a dead end
+          end
+        end
+      end
+      raise TypeError, "#{method_name}No match of #{args} with #{self}"
+    end
+    
+    def old_pre_cond_check(method_name, inst, *args)
       i = 0 # position in @args
       method_name = method_name ? method_name + ": " : ""
       args.each_with_index { |arg, j|
         raise TypeError, "Too many arguments" if i >= @args.size
         expected = @args[i]
         expected = expected.type if expected.instance_of? AnnotatedArgType
-        expected = expected.instantiate(inst)
         case expected
         when OptionalType
           expected = expected.type
@@ -72,6 +118,7 @@ module RDL::Type
         else
           i += 1
         end
+        expected = expected.instantiate(inst)
         expected.check_member_or_leq(arg, "#{method_name}Argument #{j}: ")
       }
       # Check if there aren't enough arguments; uses invariant established in initialize
@@ -158,9 +205,9 @@ module RDL::Type
     # Return +true+ if +other+ is the same type
     def ==(other)
       return (other.instance_of? MethodType) &&
-        (other.args == args) &&
-        (other.block == block) &&
-        (other.ret == ret)
+        (other.args == @args) &&
+        (other.block == @block) &&
+        (other.ret == @ret)
     end
 
     def hash  # :nodoc:
