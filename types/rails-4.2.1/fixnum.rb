@@ -1,3 +1,3 @@
 class Fixnum
-  type :*, '(ActiveSupport::Duration) -> AcitveSupport::Duration'
+  type :*, '(ActiveSupport::Duration) -> ActiveSupport::Duration'
 end

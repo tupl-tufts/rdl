@@ -41,7 +41,7 @@ class Object
   type :instance_variable_get, '(Symbol or String) -> %any'
   type :instance_variable_set, '(Symbol or String, %any) -> %any' # returns 2nd argument
   type :instance_variables, '() -> Array<Symbol>'
-  type :is_a?, '(Class) -> %bool'
+  type :is_a?, '(Class or Module) -> %bool'
   type :kind_of?, '(Class) -> %bool'
   type :method, '(Symbol) -> Method'
   type :methods, '(?%bool "regular") -> Array<Symbol>'
