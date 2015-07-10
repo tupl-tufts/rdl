@@ -56,7 +56,7 @@ class String
   type :encoding, '() -> Encoding'
   type :end_with?, '(*String) -> %bool'
   type :eql?, '(String) -> %bool'
-  type :force_encoding, '(Encoding) -> String'
+  type :force_encoding, '(String or Encoding) -> String'
   type :getbyte, '(Fixnum) -> Fixnum or nil'
 # Can't wrap these, since they mess with $1 etc
 #  type :gsub, '(Regexp or String, String) -> String'
