@@ -190,6 +190,10 @@ class TestTypes < Minitest::Test
     tmethbAABn = MethodType.new([], tmethAAB, tnil)
     tmethbaabn = MethodType.new([], tmethaab, tnil)
     tmethbssfn = MethodType.new([], tmethstringstringfixnum, tnil)
+    tstructorig = StructuralType.new(m1: tmethAAB, m2: tmethaab,
+                                     m3: tmethbAABn, m4: tmethbaabn)
+    tstructinst = StructuralType.new(m1: tmethAAB, m2: tmethstringstringfixnum,
+                                     m3: tmethbAABn, m4: tmethbssfn)
     assert_equal tnil, tnil.instantiate(inst)
     assert_equal ttop, ttop.instantiate(inst)
     assert_equal tA, tA.instantiate(inst)
@@ -212,5 +216,6 @@ class TestTypes < Minitest::Test
     assert_equal tmethstringstringfixnum, tmethaab.instantiate(inst)
     assert_equal tmethbAABn, tmethbAABn.instantiate(inst)
     assert_equal tmethbssfn, tmethbaabn.instantiate(inst)
+    assert_equal tstructinst, tstructorig.instantiate(inst)
   end
 end

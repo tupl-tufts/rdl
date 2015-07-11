@@ -21,6 +21,7 @@ module RDL::Type
     #
     # [+map+] Map from method names as symbols to their types.
     def initialize(map)
+      raise "map can't be empty" if map.empty?
       map.each { |m, t|
         raise RuntimeError, "Method names in StructuralType must be symbols" unless m.instance_of? Symbol
         raise RuntimeError, "Got #{t.class} where MethodType expected" unless t.instance_of? MethodType
@@ -33,6 +34,10 @@ module RDL::Type
       "[ " + @map.each_pair.map { |m, t| "#{m.to_s}: #{t.to_s}" }.sort.join(", ") + " ]"
     end
 
+    def instantiate(inst)
+      StructuralType.new(Hash[*@map.each_pair.map{ |m, t| [m, t.instantiate(inst)] }.flatten])
+    end
+    
     def eql?(other)
       self == other
     end
