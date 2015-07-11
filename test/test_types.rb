@@ -141,8 +141,8 @@ class TestTypes < Minitest::Test
     tm1 = MethodType.new [ta, tb, tc], nil, tnil
     tm2 = MethodType.new [ta], tm1, tb
     t1 = StructuralType.new(m1: tm1, m2: tm2)
-    assert_equal tm1, t1.map[:m1]
-    assert_equal tm2, t1.map[:m2]
+    assert_equal tm1, t1.methods[:m1]
+    assert_equal tm2, t1.methods[:m2]
     t2 = StructuralType.new(m1: tm1, m2: tm2)
     assert_equal t1, t2
   end

@@ -2,7 +2,7 @@ require_relative 'type'
 
 module RDL::Type
   class StructuralType < Type
-    attr_reader :map
+    attr_reader :methods
 
     @@cache = {}
 
@@ -10,32 +10,40 @@ module RDL::Type
       alias :__new__ :new
     end
 
-    def self.new(map)
-      t = @@cache[map]
+    def self.new(methods)
+      t = @@cache[methods]
       return t if t
-      t = StructuralType.__new__(map)
-      return (@@cache[map] = t) # assignment evaluates to t
+      t = StructuralType.__new__(methods)
+      return (@@cache[methods] = t) # assignment evaluates to t
     end
 
     # Create a new StructuralType.
     #
-    # [+map+] Map from method names as symbols to their types.
-    def initialize(map)
-      raise "map can't be empty" if map.empty?
-      map.each { |m, t|
+    # [+methods+] Map from method names as symbols to their types.
+    def initialize(methods)
+      raise "methods can't be empty" if methods.empty?
+      methods.each { |m, t|
         raise RuntimeError, "Method names in StructuralType must be symbols" unless m.instance_of? Symbol
         raise RuntimeError, "Got #{t.class} where MethodType expected" unless t.instance_of? MethodType
       }
-      @map = map
+      @methods = methods
       super()
     end
 
     def to_s  # :nodoc:
-      "[ " + @map.each_pair.map { |m, t| "#{m.to_s}: #{t.to_s}" }.sort.join(", ") + " ]"
+      "[ " + @methods.each_pair.map { |m, t| "#{m.to_s}: #{t.to_s}" }.sort.join(", ") + " ]"
     end
 
+    def <=(other)
+      # allow width subtyping
+      other.methods.each_pair.map { |m, t|
+        return false unless @methods.has_key?(m) && @methods[m] <= t
+      }
+      return true
+    end
+    
     def instantiate(inst)
-      StructuralType.new(Hash[*@map.each_pair.map{ |m, t| [m, t.instantiate(inst)] }.flatten])
+      StructuralType.new(Hash[*@methods.each_pair.map { |m, t| [m, t.instantiate(inst)] }.flatten])
     end
     
     def eql?(other)
@@ -43,11 +51,11 @@ module RDL::Type
     end
 
     def ==(other)  # :nodoc:
-      return (other.instance_of? StructuralType) && (other.map == @map)
+      return (other.instance_of? StructuralType) && (other.methods == @methods)
     end
 
     def hash  # :nodoc:
-      @map.hash
+      @methods.hash
     end
   end
 end

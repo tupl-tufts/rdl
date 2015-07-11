@@ -127,6 +127,20 @@ class TestLe < Minitest::Test
     assert (tbso <= tbso)
     assert (tbso <= tbos)
   end
+
+  def test_structural
+    tso = MethodType.new([@tstring], nil, @tobject)
+    tos = MethodType.new([@tobject], nil, @tstring)
+    ts1 = StructuralType.new(m1: tso)
+    ts2 = StructuralType.new(m1: tos)
+    assert (ts1 <= ts1)
+    assert (ts2 <= ts2)
+    assert (ts2 <= ts1)
+    assert (not (ts1 <= ts2))
+    ts3 = StructuralType.new(m1: tso, m2: tso) # width subtyping
+    assert (ts3 <= ts1)
+    assert (not (ts1 <= ts3))
+  end
   
   # def test_intersection
   #   skip "<= not defined on intersection"
