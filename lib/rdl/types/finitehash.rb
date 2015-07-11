@@ -5,7 +5,7 @@ module RDL::Type
   # types, for "named" arguments in Ruby. Values are compared with ==
   # to see if they match.
   class FiniteHashType < Type
-    attr_reader :map
+    attr_reader :elts
 
     @@cache = {}
 
@@ -13,24 +13,24 @@ module RDL::Type
       alias :__new__ :new
     end
 
-    def self.new(map)
-      t = @@cache[map]
+    def self.new(elts)
+      t = @@cache[elts]
       return t if t
-      t = FiniteHashType.__new__(map)
-      return (@@cache[map] = t) # assignment evaluates to t
+      t = FiniteHashType.__new__(elts)
+      return (@@cache[elts] = t) # assignment evaluates to t
     end
 
-    def initialize(map)
-      map.each { |k, t|
+    def initialize(elts)
+      elts.each { |k, t|
         raise RuntimeError, "Got #{t.inspect} where Type expected" unless t.is_a? Type
         raise RuntimeError, "Type may not be annotated or vararg" if (t.instance_of? AnnotatedArgType) || (t.instance_of? VarargType)
       }
-      @map = map
+      @elts = elts
       super()
     end
 
     def to_s
-      "{" + @map.map { |k, t| k.to_s + ": " + t.to_s }.join(', ') + "}"
+      "{" + @elts.map { |k, t| k.to_s + ": " + t.to_s }.join(', ') + "}"
     end
 
     def eql?(other)
@@ -38,7 +38,7 @@ module RDL::Type
     end
 
     def ==(other) # :nodoc:
-      return (other.instance_of? FiniteHashType) && (other.map == @map)
+      return (other.instance_of? FiniteHashType) && (other.elts == @elts)
     end
 
     def <=(other)
@@ -51,14 +51,14 @@ module RDL::Type
     def member?(obj, *args)
       t = RDL::Util.rdl_type obj
       return t <= self if t
-      rest = @map.clone # shallow copy
+      rest = @elts.clone # shallow copy
 
       return false unless obj.instance_of? Hash
       
       # Check that every mapping in obj exists in @map and matches the type
       obj.each_pair { |k, v|
-        return false unless @map.has_key?(k)
-        t = @map[k]
+        return false unless @elts.has_key?(k)
+        t = @elts[k]
         t = t.type if t.instance_of? OptionalType
         return false unless t.member?(v)
         rest.delete(k)
@@ -71,11 +71,11 @@ module RDL::Type
     end
 
     def instantiate(inst)
-      FiniteHashType.new(Hash[@map.map { |k, t| [k, t.instantiate(inst)] }])
+      FiniteHashType.new(Hash[@elts.map { |k, t| [k, t.instantiate(inst)] }])
     end
     
     def hash
-      h = 229 * @map.hash
+      h = 229 * @elts.hash
     end
   end
 end
