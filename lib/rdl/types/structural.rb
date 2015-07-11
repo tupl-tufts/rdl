@@ -25,6 +25,7 @@ module RDL::Type
       methods.each { |m, t|
         raise RuntimeError, "Method names in StructuralType must be symbols" unless m.instance_of? Symbol
         raise RuntimeError, "Got #{t.class} where MethodType expected" unless t.instance_of? MethodType
+        # Note intersection types not allowed as subtyping would be tricky
       }
       @methods = methods
       super()
@@ -35,8 +36,12 @@ module RDL::Type
     end
 
     def <=(other)
+      return true if other.instance_of? TopType
+      # in theory a StructuralType could contain all the methods of a NominalType or GenericType,
+      # but it seems unlikely in practice, so disallow this case.
+      return RuntimeError, "Structural subtype can't be subtype of #{other.class}" unless other.instance_of? StructuralType
       # allow width subtyping
-      other.methods.each_pair.map { |m, t|
+      other.methods.each_pair { |m, t|
         return false unless @methods.has_key?(m) && @methods[m] <= t
       }
       return true
