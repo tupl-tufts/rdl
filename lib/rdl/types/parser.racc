@@ -32,6 +32,9 @@ rule
         result = RDL::Type::MethodType.new val[1], val[3], RDL::Type::AnnotatedArgType.new(val[6], val[5])
       }
 
+  method_sig_list:
+     ID COLON method_type { result = [val[0].to_sym, val[2]] }
+   | ID COLON method_type COMMA method_sig_list { result = [val[0].to_sym, val[2]] + val[4] }
 
   arg_list:
       { result = [] }
@@ -112,6 +115,9 @@ rule
     }
     | LBRACKET type_expr_comma_list RBRACKET {
       result = RDL::Type::TupleType.new(*val[1])
+    }
+    | LBRACKET method_sig_list RBRACKET {
+      result = RDL::Type::StructuralType.new(Hash[*val[1]])
     }
     | LBRACE hash_expr_comma_list RBRACE {
       result = RDL::Type::FiniteHashType.new(Hash[*val[1]])

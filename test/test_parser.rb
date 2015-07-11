@@ -161,7 +161,6 @@ class TestParser < Minitest::Test
   end
 
   def test_structural
-    skip "Unimplemented"
     t1 = @p.scan_str "## [to_str: () -> String]"
     tm1 = MethodType.new [], nil, @tstring
     ts1 = StructuralType.new(to_str: tm1)
