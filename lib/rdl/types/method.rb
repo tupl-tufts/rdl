@@ -139,7 +139,7 @@ module RDL::Type
 #{method_name}Argument type error.
 Method type:
 #{types.map { |t| "        " + t.to_s }.join("\n") }
-Actual argument type(s):
+Actual argument type#{args.size > 1 ? "s" : ""}:
 \t(#{args.map { |arg| RDL::Util.rdl_type_or_class(arg) }.join(', ')}) #{if blk then blk.to_s end}
 RUBY
       }
