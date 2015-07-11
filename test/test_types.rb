@@ -140,10 +140,10 @@ class TestTypes < Minitest::Test
     tc = NominalType.new :C
     tm1 = MethodType.new [ta, tb, tc], nil, tnil
     tm2 = MethodType.new [ta], tm1, tb
-    t1 = StructuralType.new :m1 => tm1, :m2 => tm2
-    assert_equal tm1, t1.methods[:m1]
-    assert_equal tm2, t1.methods[:m2]
-    t2 = StructuralType.new :m1 => tm1, :m2 => tm2
+    t1 = StructuralType.new(m1: tm1, m2: tm2)
+    assert_equal tm1, t1.map[:m1]
+    assert_equal tm2, t1.map[:m2]
+    t2 = StructuralType.new(m1: tm1, m2: tm2)
     assert_equal t1, t2
   end
 
@@ -184,6 +184,12 @@ class TestTypes < Minitest::Test
     tfinitehashaAbB = FiniteHashType.new(a: tA, b: tB)
     tfinitehashaabb = FiniteHashType.new(a: ta, b: tb)
     tfinitehashastringbfixnum = FiniteHashType.new(a: tstring, b: tfixnum)
+    tmethAAB = MethodType.new([tA, tA], nil, tB)
+    tmethaab = MethodType.new([ta, ta], nil, tb)
+    tmethstringstringfixnum = MethodType.new([tstring, tstring], nil, tfixnum)
+    tmethbAABn = MethodType.new([], tmethAAB, tnil)
+    tmethbaabn = MethodType.new([], tmethaab, tnil)
+    tmethbssfn = MethodType.new([], tmethstringstringfixnum, tnil)
     assert_equal tnil, tnil.instantiate(inst)
     assert_equal ttop, ttop.instantiate(inst)
     assert_equal tA, tA.instantiate(inst)
@@ -202,5 +208,9 @@ class TestTypes < Minitest::Test
     assert_equal ttuplestringfixnum, ttupleab.instantiate(inst)
     assert_equal tfinitehashaAbB, tfinitehashaAbB.instantiate(inst)
     assert_equal tfinitehashastringbfixnum, tfinitehashaabb.instantiate(inst)
+    assert_equal tmethAAB, tmethAAB.instantiate(inst)
+    assert_equal tmethstringstringfixnum, tmethaab.instantiate(inst)
+    assert_equal tmethbAABn, tmethbAABn.instantiate(inst)
+    assert_equal tmethbssfn, tmethbaabn.instantiate(inst)
   end
 end

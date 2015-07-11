@@ -169,6 +169,12 @@ RUBY
       end
     end
 
+    def instantiate(inst)
+      return MethodType.new(@args.map { |arg| arg.instantiate(inst) },
+                            @block ? @block.instantiate(inst) : nil,
+                            @ret.instantiate(inst))
+    end
+    
     def eql?(other)
       self == other
     end
