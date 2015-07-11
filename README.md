@@ -159,3 +159,13 @@ in RDL.
 
 * Macros (special types) that have macros instead of them
 + %bool should really be %any
+
+* struct types
+
+* parametric method types
+
+* blocks, higher order type checking
+
+* Rails types
+
+* Proc types
