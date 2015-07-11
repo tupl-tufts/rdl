@@ -45,9 +45,20 @@ module RDL::Type
     end
 
     def <=(other)
+      k = klass
       return true if other.instance_of? TopType
-      return klass.ancestors.member?(other.klass) if other.instance_of? NominalType
+      return k.ancestors.member?(other.klass) if other.instance_of? NominalType
 #      return self <= other.base if other.instance_of? GenericType # raw subtyping not allowed
+      if other.instance_of? StructuralType
+        other.methods.each_pair { |m, t|
+          return false unless k.method_defined? m
+          if RDL::Wrap.has_contracts?(k, m, :type)
+            types = RDL::Wrap.get_contracts(k, m, :type)
+            return false unless types.all? { |t_self| t_self <= t }
+          end
+        }
+        return true
+      end
       return false
     end
 

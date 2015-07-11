@@ -133,6 +133,7 @@ class TestLe < Minitest::Test
     tos = MethodType.new([@tobject], nil, @tstring)
     ts1 = StructuralType.new(m1: tso)
     ts2 = StructuralType.new(m1: tos)
+    assert (ts1 <= @ttop)
     assert (ts1 <= ts1)
     assert (ts2 <= ts2)
     assert (ts2 <= ts1)
@@ -140,6 +141,45 @@ class TestLe < Minitest::Test
     ts3 = StructuralType.new(m1: tso, m2: tso) # width subtyping
     assert (ts3 <= ts1)
     assert (not (ts1 <= ts3))
+  end
+
+  class Nom
+    def m1()
+      nil
+    end
+    def m2()
+      nil
+    end
+  end
+
+  class NomT
+    type "() -> nil"
+    def m1()
+      nil
+    end
+    type "() -> nil"
+    def m2()
+      nil
+    end
+  end
+
+  def test_nominal_structural
+    tnom = NominalType.new(Nom)
+    tnomt = NominalType.new(NomT)
+    tma = MethodType.new([], nil, @tnil)
+    tmb = MethodType.new([@tfixnum], nil, @tnil)
+    ts1 = StructuralType.new(m1: tma)
+    assert (tnom <= ts1)
+    assert (tnomt <= ts1)
+    ts2 = StructuralType.new(m1: tma, m2: tma)
+    assert (tnom <= ts2)
+    assert (tnomt <= ts2)
+    ts3 = StructuralType.new(m1: tma, m2: tma, m3: tma)
+    assert (not (tnom <= ts3))
+    assert (not (tnomt <= ts3))
+    ts4 = StructuralType.new(m1: tmb)
+    assert (tnom <= ts4) # types don't matter, only methods
+    assert (not (tnomt <= ts4))
   end
   
   # def test_intersection
