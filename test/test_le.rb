@@ -99,6 +99,34 @@ class TestLe < Minitest::Test
     assert (not (tarray <= t1))
   end
 
+  def test_method
+    tss = MethodType.new([@tstring], nil, @tstring)
+    tso = MethodType.new([@tstring], nil, @tobject)
+    tos = MethodType.new([@tobject], nil, @tstring)
+    too = MethodType.new([@tobject], nil, @tobject)
+    assert (tss <= tss)
+    assert (tss <= tso)
+    assert (not (tss <= tos))
+    assert (not (tss <= too))
+    assert (not (tso <= tss))
+    assert (tso <= tso)
+    assert (not (tso <= tos))
+    assert (not (tso <= too))
+    assert (tos <= tss)
+    assert (tos <= tso)
+    assert (tos <= tos)
+    assert (tos <= too)
+    assert (not (too <= tss))
+    assert (too <= tso)
+    assert (not (too <= tos))
+    assert (too <= too)
+    tbos = MethodType.new([], tos, @tobject)
+    tbso = MethodType.new([], tso, @tobject)
+    assert (tbos <= tbos)
+    assert (not (tbos <= tbso))
+    assert (tbso <= tbso)
+    assert (tbso <= tbos)
+  end
   
   # def test_intersection
   #   skip "<= not defined on intersection"
