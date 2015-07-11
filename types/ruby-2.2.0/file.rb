@@ -23,7 +23,7 @@ class File
   type 'self.ftype', '(String "file") -> String' # TODO: return in set of strings
   type 'self.grpowned?', '(String or IO "file") -> %bool'
   type 'self.identical?', '(String or IO "file_1", String or IO "file_2") -> %bool'
-  type 'self.join', '(*(String or Pathname)) -> String'
+  type 'self.join', '(*(%string or Pathname)) -> String'
   type 'self.lchmod', '(Fixnum "mode", *String "files") -> Fixnum'
   type 'self.lchown', '(Fixnum "owner", Fixnum "group", *String "files") -> Fixnum'
   type 'self.link', '(String "old", String "new") -> 0'

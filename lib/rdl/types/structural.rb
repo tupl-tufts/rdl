@@ -46,6 +46,12 @@ module RDL::Type
       }
       return true
     end
+
+    def member?(obj, *args)
+      t = RDL::Util.rdl_type obj
+      return t <= self if t
+      return NominalType.new(obj.class) <= self
+    end
     
     def instantiate(inst)
       StructuralType.new(Hash[*@methods.each_pair.map { |m, t| [m, t.instantiate(inst)] }.flatten])
