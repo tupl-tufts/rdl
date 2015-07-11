@@ -24,6 +24,13 @@ class TestGeneric < Minitest::Test
   class B
     # class for checking other variance annotations
     type_params [:a, :b], nil, variance: [:+, :-] { |a, b| true }
+    type "(a) -> nil"
+    def m1(x)
+      nil
+    end
+    def m2(x) # no type annotation
+      nil
+    end
   end
   
   def setup
@@ -85,6 +92,23 @@ class TestGeneric < Minitest::Test
     assert (tboo <= tboo)
   end
 
+  def test_le_structural
+    tbss = RDL::Type::GenericType.new(@tb, @tstring, @tstring)
+    tma = RDL::Type::MethodType.new([], nil, @nil)
+    tmb = RDL::Type::MethodType.new([@tstring], nil, @nil)
+    tmc = RDL::Type::MethodType.new([@tfixnum], nil, @nil)
+    ts1 = RDL::Type::StructuralType.new(m2: tma)
+    assert (tbss <= ts1)
+    ts2 = RDL::Type::StructuralType.new(m1: tmb)
+    assert (tbss <= ts2)
+    ts3 = RDL::Type::StructuralType.new(m1: tmb, m2: tma)
+    assert (tbss <= ts3)
+    ts4 = RDL::Type::StructuralType.new(m1: tmc, m2: tma)
+    assert (not (tbss <= ts4))
+    ts5 = RDL::Type::StructuralType.new(m1: tmb, m2: tmc)
+    assert (tbss <= ts5)
+  end
+  
   class C
     type "() -> self"
     def m1() return self; end

@@ -63,6 +63,19 @@ module RDL::Type
           end
         }
       end
+      if other.instance_of? StructuralType
+        # similar logic in NominalType
+        inst = Hash[*formals.zip(params).flatten]
+        k = base.klass
+        other.methods.each_pair { |m, t|
+          return false unless k.method_defined? m
+          if RDL::Wrap.has_contracts?(k, m, :type)
+            types = RDL::Wrap.get_contracts(k, m, :type)
+            return false unless types.all? { |t_self| t_self.instantiate(inst) <= t }
+          end
+        }
+        return true
+      end
       return false
     end
     

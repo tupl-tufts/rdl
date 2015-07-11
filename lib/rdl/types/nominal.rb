@@ -50,6 +50,7 @@ module RDL::Type
       return k.ancestors.member?(other.klass) if other.instance_of? NominalType
 #      return self <= other.base if other.instance_of? GenericType # raw subtyping not allowed
       if other.instance_of? StructuralType
+        # similar logic in GenericType
         other.methods.each_pair { |m, t|
           return false unless k.method_defined? m
           if RDL::Wrap.has_contracts?(k, m, :type)
