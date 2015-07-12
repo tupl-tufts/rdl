@@ -142,7 +142,7 @@ Method type:
 Actual argument type#{args.size > 1 ? "s" : ""}:
         (#{args.map { |arg| RDL::Util.rdl_type_or_class(arg) }.join(', ')}) #{if blk then blk.to_s end}
 Actual argument values (one per line):
-#{ args.map { |arg| arg.inspect }.join("\n") }
+#{ args.map { |arg| "        " + arg.inspect }.join("\n") }
 RUBY
       }
     end
