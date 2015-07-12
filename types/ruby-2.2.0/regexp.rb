@@ -1,7 +1,7 @@
 class Regexp
   type 'self.escape', '(String) -> String'
-  type 'self.last_match', '() -> MatchData'
-  type 'self.last_match', '(Fixnum) -> String'
+#  type 'self.last_match', '() -> MatchData' # Can't wrap or screws up MatchData
+#  type 'self.last_match', '(Fixnum) -> String'
   type 'self.new', '(String, ?%any "options", ?String "kcode") -> Regexp'
   type 'self.new', '(Regexp) -> Regexp'
    rdl_alias 'self.compile', 'self.new'

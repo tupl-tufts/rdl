@@ -1,9 +1,9 @@
 class Float
   type :%, '(Float "other") -> Float'
-  type :*, '(Float "other") -> Float'
+  type :*, '(Numeric "other") -> Float'
   type :**, '(Float "other") -> Float'
-  type :+, '(Fixnum or Float "other") -> Float'
-  type :-, '(Float "other") -> Float'
+  type :+, '(Numeric "other") -> Float'
+  type :-, '(Numeric "other") -> Float'
   type :-, '() -> Float'
   type :/, '(Numeric "other") -> Float'
   type :<, '(Numeric) -> %bool'

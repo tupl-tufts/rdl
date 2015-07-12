@@ -1,7 +1,7 @@
 class Pathname
   type 'self.getwd', '() -> Pathname'
   type 'self.glob', '(String "p1", ?String "p2") -> Array<Pathname>'
-  type 'self.new', '(String "p1") -> Pathname' # p1 can be String-like
+  type 'self.new', '(%string "p1") -> Pathname' # p1 can be String-like
   rdl_alias 'self.pwd', 'self.getwd'
   type :+, '(String or Pathname "other") -> Pathname'
   rdl_alias :/, :+
@@ -20,7 +20,7 @@ class Pathname
   type :children, '(%bool "with_directory") -> Array<Pathname>'
   type :chmod, '(Fixnum "mode") -> Fixnum'
   type :chown, '(Fixnum "owner", Fixnum "group") -> Fixnum'
-  type :cleanpath, '(%bool "consider_symlink") -> %any'
+  type :cleanpath, '(?%bool "consider_symlink") -> %any'
   type :ctime, '() -> Time'
   type :delete, '() -> %any'
   type :descend, '() { (Pathname) -> %any } -> %any'
@@ -46,7 +46,7 @@ class Pathname
   type :freeze, '() -> self' # TODO return type?
   type :ftype, '() -> String'
   type :grpowned?, '() -> %bool'
-  type :join, '(*String "args") -> Pathname'
+  type :join, '(*(String or Pathname) "args") -> Pathname'
   type :lchmod, '(Fixnum "mode") -> Fixnum'
   type :lchown, '(Fixnum "owner", Fixnum "group") -> Fixnum'
   type :lstat, '() -> File::Stat'
@@ -71,7 +71,7 @@ class Pathname
   type :realdirpath, '(?String "p1") -> String'
   type :realpath, '(?String "p1") -> String'
   type :relative?, '() -> %bool'
-  type :relative_path_from, '(String "base_directory") -> String'
+  type :relative_path_from, '(String or Pathname "base_directory") -> Pathname'
   type :rename, '(String "p1") -> 0'
   type :rmdir, '() -> 0'
   type :rmtree, '() -> 0'
@@ -81,7 +81,7 @@ class Pathname
   type :size, '() -> Fixnum'
   type :size?, '() -> %bool'
   type :socket?, '() -> %bool'
-  type :split, '() -> [String, String]'
+  type :split, '() -> [Pathname, Pathname]'
   type :stat, '() -> File::Stat'
   type :sticky?, '() -> %bool'
   type :sub, '(*String "args") -> Pathname'

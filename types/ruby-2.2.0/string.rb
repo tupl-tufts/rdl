@@ -14,7 +14,7 @@ class String
   type :[], '(Regexp) -> String or nil'
   type :[], '(Regexp, Fixnum) -> String or nil'
   type :[], '(Regexp, String) -> String or nil'
-  type :[], '(String) -> Stirng or nil'
+  type :[], '(String) -> String or nil'
   type :ascii_only?, '() -> %bool'
   type :b, '() -> String'
   type :bytes, '() -> Array' # TODO: bindings to parameterized (vars)
@@ -93,8 +93,8 @@ class String
   type :rpartition, '(String or Regexp) -> Array<String>'
   type :rstrip, '() -> String'
   type :rstrip!, '() -> String'
-  type :scan, '(Regexp or String) -> Array<String or Array<String>>'
-  type :scan, '(Regexp or String) {(*%any) -> %any} -> Array<String or Array<String>>'
+#  type :scan, '(Regexp or String) -> Array<String or Array<String>>' # Can't wrap or screws up last_match
+#  type :scan, '(Regexp or String) {(*%any) -> %any} -> Array<String or Array<String>>'
   type :scrub, '(?String) -> String'
   type :scrub, '(?String) {(%any) -> %any} -> String'
   type :scrub!, '(?String) -> String'
@@ -107,7 +107,7 @@ class String
   type :slice!, '(Regexp) -> String or nil'
   type :slice!, '(Regexp, Fixnum) -> String or nil'
   type :slice!, '(Regexp, String) -> String or nil'
-  type :slice!, '(String) -> Stirng or nil'
+  type :slice!, '(String) -> String or nil'
   type :split, '(?(Regexp or String), ?Fixnum) -> Array<String>'
   type :split, '(?Fixnum) -> Array<String>'
   type :squeeze, '(?String) -> String'
