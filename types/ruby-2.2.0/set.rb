@@ -27,9 +27,11 @@ class Set
   type :each, '() { (t) -> %any } -> self'
   type :each, '() -> Enumerator<t>'
   type :empty?, '() -> %bool'
-#  type :flatten!, '()' # How do we write a contract for this?
-#  type :flatten, '()' # How do we write a contract for this?
-#  type :flatten_merge, '(set : XXXX, seen : ?XXXX)' #??
+  type :flatten!, '() -> self or nil'
+  post(:flatten!) { |r| (not r) || (r.none? { |x| x.is_a?(Set) }) }
+  type :flatten, '() -> Set'
+  post(:flatten) { |r| r.none? { |x| x.is_a?(Set) } }
+  #  type :flatten_merge, '(set : XXXX, seen : ?XXXX)' #??
   rdl_alias :include?, :member?
   type :intersect?, '(Set<t> "set") -> %bool'
   type :intersection, '(Enumerable<t> "enum") -> Set<t>'

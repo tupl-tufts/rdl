@@ -20,7 +20,7 @@ class Time
   type :eql?, '(%any) -> %bool'
   type :friday?, '() -> %bool'
   type :getgm, '() -> Time'
-  type :getlocal, '(?String "utc_offset") -> Time'
+  type :getlocal, '(?Fixnum "utc_offset") -> Time'
   type :getutc, '() -> Time'
   type :gmt?, '() -> %bool'
   type :gmt_offset, '() -> Fixnum'

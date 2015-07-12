@@ -11,8 +11,9 @@ class Complex
   type :/, '(Numeric) -> Complex'
   type :==, '(%any "object") -> %bool'
   type :abs, '() -> %real'
+  post(:abs) { |r| r >= 0 }
   type :abs2, '() -> %real'
-  post(:abs) { |r, _| r > 0 }
+  post(:abs2) { |r| r >= 0 }
   type :angle, '() -> Float'
   type :arg, '() -> Float'
   type :conj, '() -> Complex'

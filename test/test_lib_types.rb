@@ -1,3 +1,4 @@
+require 'set'
 require 'minitest/autorun'
 require_relative '../lib/rdl.rb'
 require_relative '../lib/rdl_types.rb'
