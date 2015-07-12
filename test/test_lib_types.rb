@@ -5,6 +5,7 @@ require_relative '../lib/rdl_types.rb'
 class TestStdlibTypes < Minitest::Test
 
   def test_set
+    assert_raises(RDL::Type::TypeError) { s6 = Set.new(1,2) }
     # From the Ruby stdlib documentation
     s1 = Set.new [1, 2]                   # -> #<Set: {1, 2}>
     s2 = [1, 2].to_set                    # -> #<Set: {1, 2}>

@@ -238,7 +238,7 @@ RUBY
 
   def test_wrap_new
     self.class.class_eval "class B; def initialize(x); @x = x end; def get(); return @x end end"
-    pre("TestRDL::B", :new) { |x| x > 0 }
+    pre("TestRDL::B", "self.new") { |x| x > 0 }
     assert_equal 3, TestRDL::B.new(3).get
     assert_raises(RDL::Contract::ContractError) { TestRDL::B.new(-3) }
 
@@ -246,13 +246,18 @@ RUBY
     assert_equal 3, TestRDL::C.new(3).get
     assert_raises(RDL::Contract::ContractError) { TestRDL::C.new(-3) }
 
-    skip "Currently can't defer contracts on initialize"
     self.class.class_eval "class D; def get(); return @x end end"
-    pre("TestRDL::D", :new) { |x| x > 0 }
+    pre("TestRDL::D", "self.new") { |x| x > 0 }
     self.class.class_eval "class D; def initialize(x); @x = x end end"
     assert_equal 3, TestRDL::D.new(3).get
     assert_raises(RDL::Contract::ContractError) { TestRDL::D.new(-3) }
-  end
+
+    skip "Can't defer contracts on new yet"
+    pre("TestRDL::E", "self.new") { |x| x > 0 }
+    self.class.class_eval "class E; def initialize(x); @x = x end end"
+    assert (TestRDL::E.new(3))
+    assert_raises(RDL::Contract::ContractError) { TestRDL::E.new(-3) }
+end
 
   def test_class_method
     pos = RDL::Contract::FlatContract.new("Positive") { |x| x > 0 }

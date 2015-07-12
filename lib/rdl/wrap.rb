@@ -6,7 +6,6 @@ class RDL::Wrap
   def self.resolve_alias(klass, meth)
     klass = klass.to_s
     meth = meth.to_sym
-
     while $__rdl_aliases[klass] && $__rdl_aliases[klass][meth]
       raise RuntimeError, "Alias #{klass}\##{meth} has contracts. Contracts are only allowed on methods, not aliases." if has_any_contracts?(klass, meth)
       meth = $__rdl_aliases[klass][meth]
@@ -138,8 +137,8 @@ RUBY
       raise ArgumentError, "Invalid arguments"
     end
     raise ArgumentError, "#{contract.class} received where Contract expected" unless contract.class < RDL::Contract::Contract
-    meth = :initialize if meth && meth.to_sym == :new  # actually wrap constructor
-    klass = RDL::Util.add_singleton_marker(klass) if slf
+#    meth = :initialize if meth && meth.to_sym == :new  # actually wrap constructor
+    klass = RDL::Util.add_singleton_marker(klass) if slf # && (meth != :initialize)
     return [klass, meth, contract]
   end
 
@@ -161,7 +160,7 @@ RUBY
       raise ArgumentError, "Invalid arguments"
     end
     raise ArgumentError, "Excepting method type, got #{type.class} instead" if type.class != RDL::Type::MethodType
-    meth = :initialize if meth && slf && meth.to_sym == :new  # actually wrap constructor
+#    meth = :initialize if meth && slf && meth.to_sym == :new  # actually wrap constructor
     klass = RDL::Util.add_singleton_marker(klass) if slf
     return [klass, meth, type]
   end
