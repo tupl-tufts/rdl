@@ -138,9 +138,11 @@ module RDL::Type
         raise TypeError, <<RUBY
 #{method_name}Argument type error.
 Method type:
-#{types.map { |t| "        " + t.to_s }.join("\n") }
+#{ types.map { |t| "        " + t.to_s }.join("\n") }
 Actual argument type#{args.size > 1 ? "s" : ""}:
-\t(#{args.map { |arg| RDL::Util.rdl_type_or_class(arg) }.join(', ')}) #{if blk then blk.to_s end}
+        (#{args.map { |arg| RDL::Util.rdl_type_or_class(arg) }.join(', ')}) #{if blk then blk.to_s end}
+Actual argument values (one per line):
+#{ args.map { |arg| arg.inspect }.join("\n") }
 RUBY
       }
     end
@@ -155,6 +157,8 @@ Method type:
 #{types.each_with_index.map { |t,i| "       " + (matches.member?(i) ? "*" : " ") + t.to_s }.join("\n") }
 Actual return type:
         #{ RDL::Util.rdl_type_or_class(ret)}
+Actual return value:
+        #{ ret.inspect }
 RUBY
       }
     end
