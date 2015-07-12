@@ -139,21 +139,14 @@ require '/Users/jfoster/proj/rdl/lib/rails_types.rb'
 
 * ProcContract, Wrap, MethodType, support higher-order contracts for blocks
 
-* FlatContract, labeled arguments?
-
 * Hash types
 
 * How to check whether initialize? is user-defined? method_defined? always
-returns true, meaning wrapping isn't fully working with initialize
-
-* Ruby allows varargs to appear in the middle; currently not allowed
-in RDL.
+returns true, meaning wrapping isn't fully working with initialize.
 
 * Currently if a NominalType name is expressed differently, e.g., A
   vs. EnclosingClass::A, the types will be different when compared
   with ==.
-
-* %string type that's [to_str : () -> String]; question: do we wrap to check?
 
 * Inheritance of contracts
 
@@ -169,3 +162,5 @@ in RDL.
 * Rails types
 
 * Proc types
+
+* Deferred contracts on new (watch for class addition)
