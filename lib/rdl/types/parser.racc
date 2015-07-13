@@ -55,11 +55,14 @@ rule
       named_arg { result = val[0] }
     | named_arg COMMA named_arg_list { result = val[0] + val[2] }
   named_arg:
-      ID COLON base_arg { result = [val[0].to_sym, val[2]] }
+      ID COLON base_arg_query_only { result = [val[0].to_sym, val[2]] }
 
   base_arg:
       QUERY type_expr { result = RDL::Type::OptionalType.new val[1] }
     | STAR type_expr { result = RDL::Type::VarargType.new val[1] }
+    | type_expr { result = val[0] }
+  base_arg_query_only:
+      QUERY type_expr { result = RDL::Type::OptionalType.new val[1] }
     | type_expr { result = val[0] }
 
   block:
@@ -75,7 +78,7 @@ rule
     | type_expr COMMA type_expr_comma_list { result = [val[0]] + val[2] }
 
   hash_expr:
-  | ID COLON union_type { result = [val[0].to_sym, val[2]] }
+  | named_arg { result = val[0] }
   | FIXNUM RASSOC union_type { result = [val[0].to_i, val[2]] }
   | FLOAT RASSOC union_type { result = [val[0].to_f, val[2]] }
   | CONST_BEGIN ID RBRACE RASSOC union_type {
