@@ -1,7 +1,7 @@
 class Pathname
   type 'self.getwd', '() -> Pathname'
   type 'self.glob', '(String p1, ?String p2) -> Array<Pathname>'
-  type 'self.new', '(%string p1) -> Pathname' # p1 can be String-like
+  type 'self.new', '(%string or Pathname p1) -> Pathname' # p1 can be String-like
   rdl_alias 'self.pwd', 'self.getwd'
   type :+, '(String or Pathname other) -> Pathname'
   rdl_alias :/, :+

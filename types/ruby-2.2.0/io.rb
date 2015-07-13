@@ -5,7 +5,7 @@ class IO
   rdl_alias 'self.for_fd', 'self.new'
   type 'self.foreach', '(String name, ?String sep, ?Fixnum limit, %open_args) { (String) -> %any } -> nil'
   type 'self.foreach', '(String name, ?String sep, ?Fixnum limit, %open_args) -> Enumerator<String>'
-  type 'self.new', '(Fixnum fd, ?String mode, %open_args) -> IO'
+  type 'self.new', '(Fixnum fd, ?Fixnum mode, ?Fixnum opt) -> IO'
   type 'self.open', '(Fixnum fd, ?String mode, %open_args) -> IO'
   type 'self.open', '(Fixnum fd, ?String mode, %open_args) { (IO) -> t } -> t'
   type 'self.pipe', '(?String ext_or_ext_int_enc, %open_args) -> [IO, IO]'
