@@ -1,13 +1,13 @@
 class Symbol
   type 'self.all_symbols', '() -> Array<Symbol>'
-  type :<=>, '(Symbol "other") -> Fixnum or nil'
-  type :==, '(%any "obj") -> %bool'
-  type :=~, '(%any "obj") -> Fixnum or nil'
-  type :[], '(Fixnum "idx") -> String'
-  type :[], '(Fixnum "b", Fixnum "n") -> String'
+  type :<=>, '(Symbol other) -> Fixnum or nil'
+  type :==, '(%any obj) -> %bool'
+  type :=~, '(%any obj) -> Fixnum or nil'
+  type :[], '(Fixnum idx) -> String'
+  type :[], '(Fixnum b, Fixnum n) -> String'
   type :[], '(Range<Fixnum>) -> String'
   type :capitalize, '() -> Symbol'
-  type :casecmp, '(Symbol "other") -> Fixnum or nil'
+  type :casecmp, '(Symbol other) -> Fixnum or nil'
   type :downcase, '() -> Symbol'
   type :empty?, '() -> %bool'
   type :encoding, '() -> Encoding'
@@ -15,7 +15,7 @@ class Symbol
   type :inspect, '() -> String'
   type :intern, '() -> self'
   type :length, '() -> Fixnum'
-  type :match, '(%any "obj") -> Fixnum or nil'
+  type :match, '(%any obj) -> Fixnum or nil'
   type :succ, '() -> Symbol'
   rdl_alias :size, :length
   rdl_alias :slice, :[]

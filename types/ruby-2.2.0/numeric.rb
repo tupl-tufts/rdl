@@ -34,7 +34,7 @@ class Numeric
   type :rect, '() -> [Numeric, 0]'
   rdl_alias :rectangular, :rect
   type :remainder, '(Numeric) -> %real'
-  type :round, '(?Fixnum "ndigits") -> Integer or Float'
+  type :round, '(?Fixnum ndigits) -> Integer or Float'
   # singleton_method_added can't be invoked
   #  type :step, # TODO: hash args
   type :to_c, '() -> Complex'

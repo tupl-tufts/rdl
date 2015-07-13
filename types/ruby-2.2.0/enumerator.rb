@@ -1,8 +1,8 @@
 class Enumerator
   type_params [:t], :all?
 
-  type 'self.new', "(?Fixnum) { (Array<u>) -> %any } -> Enumerator<u>"
-  type 'self.new', "(?Proc) { (Array<u>) -> %any } -> Enumerator<u>" # TODO Proc
+  type 'self.new', '(?Fixnum) { (Array<u>) -> %any } -> Enumerator<u>'
+  type 'self.new', '(?Proc) { (Array<u>) -> %any } -> Enumerator<u>' # TODO Proc
   # TODO: deprecated form of new
   type :each, '() { (t) -> %any } -> %any' # is there a better type?
   type :each, '() -> self'

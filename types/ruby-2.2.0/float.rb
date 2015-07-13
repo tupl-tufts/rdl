@@ -1,11 +1,11 @@
 class Float
-  type :%, '(Numeric "other") -> Numeric'
-  type :*, '(Numeric "other") -> Numeric'
-  type :**, '(Numeric "other") -> Numeric'
-  type :+, '(Numeric "other") -> Numeric'
-  type :-, '(Numeric "other") -> Numeric'
+  type :%, '(Numeric other) -> Numeric'
+  type :*, '(Numeric other) -> Numeric'
+  type :**, '(Numeric other) -> Numeric'
+  type :+, '(Numeric other) -> Numeric'
+  type :-, '(Numeric other) -> Numeric'
   type :-, '() -> Float'
-  type :/, '(Numeric "other") -> Float'
+  type :/, '(Numeric other) -> Float'
   type :<, '(Numeric) -> %bool'
   pre(:<) { |x| x.real? }
   type :<=, '(Numeric) -> %bool'
@@ -40,8 +40,8 @@ class Float
   type :phase, '() -> 0 or ${Math::PI}'
   type :prev_float, '() -> Float'
   rdl_alias :quo, :/
-  type :rationalize, '(Float "eps") -> Rational'
-  type :round, '(?Fixnum "ndigits") -> Integer or Float'
+  type :rationalize, '(Float eps) -> Rational'
+  type :round, '(?Fixnum ndigits) -> Integer or Float'
   type :to_f, '() -> self'
   type :to_i, '() -> Integer'
   rdl_alias :to_int, :to_i

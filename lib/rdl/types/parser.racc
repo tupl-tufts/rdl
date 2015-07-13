@@ -28,7 +28,7 @@ rule
       LPAREN arg_list RPAREN block RARROW type_expr {
         result = RDL::Type::MethodType.new val[1], val[3], val[5]
       }
-   | LPAREN arg_list RPAREN block RARROW type_expr STRING {
+   | LPAREN arg_list RPAREN block RARROW type_expr ID {
         result = RDL::Type::MethodType.new val[1], val[3], RDL::Type::AnnotatedArgType.new(val[6], val[5])
       }
 
@@ -50,7 +50,7 @@ rule
       }
   arg:
       base_arg { result = val[0] }
-    | base_arg STRING { result = RDL::Type::AnnotatedArgType.new(val[1], val[0]) }
+    | base_arg ID { result = RDL::Type::AnnotatedArgType.new(val[1], val[0]) }
   named_arg_list:
       named_arg { result = val[0] }
     | named_arg COMMA named_arg_list { result = val[0] + val[2] }

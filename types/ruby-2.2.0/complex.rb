@@ -1,6 +1,6 @@
 class Complex
-  type 'self.polar', '(%real "abs", ?%real "arg") -> Complex'
-  type 'self.rect', '(%real "real", ?%real "imag") -> Complex'
+  type 'self.polar', '(%real abs, ?%real arg) -> Complex'
+  type 'self.rect', '(%real real, ?%real imag) -> Complex'
   pre('self.rect') { |r, i| (not i) || (i.real?) }
   rdl_alias 'self.rectangular', 'self.rect'
   type :*, '(Numeric) -> Complex'
@@ -9,7 +9,7 @@ class Complex
   type :-, '(Numeric) -> Complex'
   type :-, '() -> Complex'
   type :/, '(Numeric) -> Complex'
-  type :==, '(%any "object") -> %bool'
+  type :==, '(%any object) -> %bool'
   type :abs, '() -> %real'
   post(:abs) { |r| r >= 0 }
   type :abs2, '() -> %real'
@@ -28,7 +28,7 @@ class Complex
   type :phase, '() -> Float'
   type :polar, '() -> [%real, %real]'
   rdl_alias :quo, :/
-  type :rationalize, '(?Numeric "eps") -> Rational'
+  type :rationalize, '(?Numeric eps) -> Rational'
   type :real, '() -> %real'
   type :real?, '() -> FalseClass'
   type :rect, '() -> [%real, %real]'

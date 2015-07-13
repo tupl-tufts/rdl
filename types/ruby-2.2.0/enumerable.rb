@@ -12,15 +12,15 @@ module Enumerable
   type :count, '() -> Fixnum'
   type :count, '(%any) -> Fixnum'
   type :count, '() { (t) -> %bool } -> Fixnum'
-  type :cycle, '(?Fixnum "n") { (t) -> %any } -> nil'
-  type :cycle, '(?Fixnum "n") -> Enumerator<t>'
-  type :detect, '(?Proc "ifnone") { (t) -> %bool } -> t or nil' # TODO ifnone
-  type :detect, '(?Proc "ifnone") -> Enumerator<t>'
-  type :drop, '(Fixnum "n") -> Array<t>'
+  type :cycle, '(?Fixnum n) { (t) -> %any } -> nil'
+  type :cycle, '(?Fixnum n) -> Enumerator<t>'
+  type :detect, '(?Proc ifnone) { (t) -> %bool } -> t or nil' # TODO ifnone
+  type :detect, '(?Proc ifnone) -> Enumerator<t>'
+  type :drop, '(Fixnum n) -> Array<t>'
   type :drop_while, '() { (t) -> %bool } -> Array<t>'
   type :drop_while, '() -> Enumerator<t>'
-  type :each_cons, '(Fixnum "n") { (Array<t>) -> %any } -> nil'
-  type :each_cons, '(Fixnum "n") -> Enumerator<t>'
+  type :each_cons, '(Fixnum n) { (Array<t>) -> %any } -> nil'
+  type :each_cons, '(Fixnum n) -> Enumerator<t>'
 #  type :each_entry, '(XXXX : *XXXX)' # TODO
   rdl_alias :each_slice, :each_cons
   type :each_with_index, '() { (t, Fixnum) -> %any } -> Enumerable<t>' # args! note may not return self
@@ -30,20 +30,20 @@ module Enumerable
   rdl_alias :find, :detect
   type :find_all, '() { (t) -> %bool } -> Array<t>'
   type :find_all, '() -> Enumerator<t>'
-  type :find_index, '(%any "value") -> Fixnum or nil'
+  type :find_index, '(%any value) -> Fixnum or nil'
   type :find_index, '() { (t) -> %bool } -> Fixnum or nil'
   type :find_index, '() -> Enumerator<t>'
   type :first, '() -> t or nil'
-  type :first, '(Fixnum "n") -> Array<t> or nil'
+  type :first, '(Fixnum n) -> Array<t> or nil'
 #  rdl_alias :flat_map, :collect_concat
   type :grep, '(%any) -> Array<t>'
   type :grep, '(%any) { (t) -> u } -> Array<u>'
   type :group_by, '() { (t) -> u } -> Hash<u, Array<t>>'
   type :group_by, '() -> Enumerator<t>'
   type :include?, '(%any) -> %bool'
-  type :inject, '(any "initial", Symbol) -> %any' # can't tell initial, return type; not enough info in Symbol
+  type :inject, '(any initial, Symbol) -> %any' # can't tell initial, return type; not enough info in Symbol
   type :inject, '(Symbol) -> %any'
-  type :inject, '(u "initial") { (u, t) -> u } -> u'
+  type :inject, '(u initial) { (u, t) -> u } -> u'
   type :inject, '() { (t, t) -> t } -> t' # if initial not given, first element is initial
 #  type :lazy # TODO
   rdl_alias :map, :collect
@@ -87,7 +87,7 @@ module Enumerable
   type :sort, '() { (t, t) -> Fixnum } -> Array<t>'
   type :sort_by, '() { (t) -> %any } -> Array<t>'
   type :sort_by, '() -> Enumerator<t>'
-  type :take, '(Fixnum "n") -> Array<t> or nil'
+  type :take, '(Fixnum n) -> Array<t> or nil'
   type :take_while, '() { (t) -> %bool } -> Array<t>'
   type :take_while, '() -> Enumerator<t>'
   rdl_alias :to_a, :entries

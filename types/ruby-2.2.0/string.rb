@@ -1,11 +1,11 @@
 class String
-  type :new, '(?String "str") -> String "new_str"'
-  type :try_convert, '(Object "obj") -> String or nil "new_string"'
+  type :new, '(?String str) -> String new_str'
+  type :try_convert, '(Object obj) -> String or nil new_string'
   type :%, '(Object) -> String'
   type :*, '(Fixnum) -> String'
   type :+, '(String) -> String'
   type :<<, '(Object) -> String'
-  type :<=>, '(String "other") -> Fixnum or nil "ret"'
+  type :<=>, '(String other) -> Fixnum or nil ret'
   type :==, '(Object) -> %bool'
   type :===, '(Object) -> %bool'
 #  type :=~, '(Object) -> Fixnum or nil' # TODO: Wrapping this messes up $1 etc

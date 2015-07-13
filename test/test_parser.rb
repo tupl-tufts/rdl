@@ -86,28 +86,26 @@ class TestParser < Minitest::Test
   end
 
   def test_annotated_params
-    t1 = @p.scan_str "(Fixnum 'x', Fixnum) -> Fixnum"
+    t1 = @p.scan_str "(Fixnum x, Fixnum) -> Fixnum"
     assert_equal (MethodType.new [@tfixnumx, @tfixnum], nil, @tfixnum), t1
-    t2 = @p.scan_str "(Fixnum, ?Fixnum 'x') -> Fixnum"
+    t2 = @p.scan_str "(Fixnum, ?Fixnum x) -> Fixnum"
     assert_equal (MethodType.new [@tfixnum, @tfixnumoptx], nil, @tfixnum), t2
-    t3 = @p.scan_str "(Fixnum, *Fixnum 'x') -> Fixnum"
+    t3 = @p.scan_str "(Fixnum, *Fixnum x) -> Fixnum"
     assert_equal (MethodType.new [@tfixnum, @tfixnumvarargx], nil, @tfixnum), t3
-    t4 = @p.scan_str "(Fixnum, Fixnum 'y') -> Fixnum"
+    t4 = @p.scan_str "(Fixnum, Fixnum y) -> Fixnum"
     assert_equal (MethodType.new [@tfixnum, @tfixnumy], nil, @tfixnum), t4
-    t5 = @p.scan_str "(Fixnum 'x', Fixnum 'y') -> Fixnum"
+    t5 = @p.scan_str "(Fixnum x, Fixnum y) -> Fixnum"
     assert_equal (MethodType.new [@tfixnumx, @tfixnumy], nil, @tfixnum), t5
-    t6 = @p.scan_str "(Fixnum, Fixnum) -> Fixnum 'ret'"
+    t6 = @p.scan_str "(Fixnum, Fixnum) -> Fixnum ret"
     assert_equal (MethodType.new [@tfixnum, @tfixnum], nil, @tfixnumret), t6
-    t7 = @p.scan_str "(Fixnum 'x', Fixnum) -> Fixnum 'ret'"
+    t7 = @p.scan_str "(Fixnum x, Fixnum) -> Fixnum ret"
     assert_equal (MethodType.new [@tfixnumx, @tfixnum], nil, @tfixnumret), t7
-    t8 = @p.scan_str "(Fixnum, Fixnum 'y') -> Fixnum 'ret'"
+    t8 = @p.scan_str "(Fixnum, Fixnum y) -> Fixnum ret"
     assert_equal (MethodType.new [@tfixnum, @tfixnumy], nil, @tfixnumret), t8
-    t9 = @p.scan_str "(Fixnum 'x', Fixnum 'y') -> Fixnum 'ret'"
+    t9 = @p.scan_str "(Fixnum x, Fixnum y) -> Fixnum ret"
     assert_equal (MethodType.new [@tfixnumx, @tfixnumy], nil, @tfixnumret), t9
-    t10 = @p.scan_str "(:symbol 'x') -> Fixnum"
+    t10 = @p.scan_str "(:symbol x) -> Fixnum"
     assert_equal (MethodType.new [@tsymbolx], nil, @tfixnum), t10
-    t11 = @p.scan_str '(Fixnum "x", Fixnum) -> Fixnum'
-    assert_equal (MethodType.new [@tfixnumx, @tfixnum], nil, @tfixnum), t11
   end
 
   def test_generic
@@ -185,9 +183,9 @@ class TestParser < Minitest::Test
     assert_equal (MethodType.new [@tfixnum, FiniteHashType.new(x: @tfixnumopt, y: @tstring)], nil, @tfixnum), t4
     t4 = @p.scan_str "(Fixnum, y: ?String, x: Fixnum) -> Fixnum"
     assert_equal (MethodType.new [@tfixnum, FiniteHashType.new(x: @tfixnum, y: @tstringopt)], nil, @tfixnum), t4
-    t5 = @p.scan_str "(Fixnum 'x', x: Fixnum) -> Fixnum"
+    t5 = @p.scan_str "(Fixnum x, x: Fixnum) -> Fixnum"
     assert_equal (MethodType.new [@tfixnumx, FiniteHashType.new(x: @tfixnum)], nil, @tfixnum), t5
-    t5 = @p.scan_str "(Fixnum 'x', x: Fixnum) -> Fixnum"
+    t5 = @p.scan_str "(Fixnum x, x: Fixnum) -> Fixnum"
     assert_equal (MethodType.new [@tfixnumx, FiniteHashType.new(x: @tfixnum)], nil, @tfixnum), t5
     t6 = @p.scan_str "(x: Fixnum) -> Fixnum"
     assert_equal (MethodType.new [FiniteHashType.new(x: @tfixnum)], nil, @tfixnum), t6
