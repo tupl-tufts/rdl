@@ -59,5 +59,12 @@ class TestRDLType < Minitest::Test
     assert_equal 0, m7(0)
     assert_raises(RDL::Type::TypeError) { m7(1) }
   end
-  
+
+  def test_wrap_new_inherited
+    self.class.class_eval "class NI_A; def initialize(x); @x = x; end; end; class NI_B < NI_A; end"
+    type "TestRDLType::NI_A", "self.new", "(Fixnum) -> TestRDLType::NI_A"
+    assert (TestRDLType::NI_B.new(3))
+    assert_raises(RDL::Type::TypeError) { TestRDLType::NI_B.new("3") }
+  end
+
 end

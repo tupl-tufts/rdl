@@ -257,7 +257,7 @@ RUBY
     self.class.class_eval "class E; def initialize(x); @x = x end end"
     assert (TestRDL::E.new(3))
     assert_raises(RDL::Contract::ContractError) { TestRDL::E.new(-3) }
-end
+  end
 
   def test_class_method
     pos = RDL::Contract::FlatContract.new("Positive") { |x| x > 0 }
