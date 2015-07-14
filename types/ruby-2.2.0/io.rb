@@ -1,11 +1,12 @@
 class IO
+  nowrap # Do not wrap this class. Leads to mysterious errors.
   type 'self.binread', '(String name, ?Fixnum length, ?Fixnum offset) -> String'
   type 'self.binwrite', '(String name, String, ?Fixnum offset, %open_args) -> Fixnum'
   type 'self.copy_stream', '(String or IO src, String or IO dst, ?Fixnum copy_length, ?Fixnum src_offset) -> Fixnum'
   rdl_alias 'self.for_fd', 'self.new'
   type 'self.foreach', '(String name, ?String sep, ?Fixnum limit, %open_args) { (String) -> %any } -> nil'
   type 'self.foreach', '(String name, ?String sep, ?Fixnum limit, %open_args) -> Enumerator<String>'
-#  type 'self.new', '(Fixnum fd, ?Fixnum mode, ?Fixnum opt) -> IO' # Do not wrap. Leads to mysterious errors.
+  type 'self.new', '(Fixnum fd, ?Fixnum mode, ?Fixnum opt) -> IO'
   type 'self.open', '(Fixnum fd, ?String mode, %open_args) -> IO'
   type 'self.open', '(Fixnum fd, ?String mode, %open_args) { (IO) -> t } -> t'
   type 'self.pipe', '(?String ext_or_ext_int_enc, %open_args) -> [IO, IO]'
