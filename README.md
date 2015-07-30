@@ -164,3 +164,5 @@ returns true, meaning wrapping isn't fully working with initialize.
 * Proc types
 
 * Deferred contracts on new (watch for class addition)
+
+* Block passed to contracts don't work yet

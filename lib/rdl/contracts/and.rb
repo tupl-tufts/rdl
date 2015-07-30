@@ -6,14 +6,16 @@ module RDL::Contract
       @contracts = contracts
     end
 
-    def check(*v, &blk)
-      AndContract.check_array(@contracts, *v, &blk)
+    # [:slf:] is bound to self when the contracts are checked
+    def check(slf, *v, &blk)
+      AndContract.check_array(@contracts, slf, *v, &blk)
     end
 
     # Check an array of contracts a
-    def self.check_array(a, *v, &blk)
+    # [:slf:] is bound to self when the contracts are checked
+    def self.check_array(a, slf, *v, &blk)
       # All contracts must be satisfied
-      a.all? { |c| c.check(*v, &blk) }
+      a.all? { |c| c.check(slf, *v, &blk) }
     end
     
     def to_s

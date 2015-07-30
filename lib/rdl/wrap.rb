@@ -80,7 +80,7 @@ class RDL::Wrap
             meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
             if RDL::Wrap.has_contracts?(klass, meth, :pre)
               pres = RDL::Wrap.get_contracts(klass, meth, :pre)
-              RDL::Contract::AndContract.check_array(pres, *args, &blk)
+              RDL::Contract::AndContract.check_array(pres, self, *args, &blk)
             end
             if RDL::Wrap.has_contracts?(klass, meth, :type)
               types = RDL::Wrap.get_contracts(klass, meth, :type)
@@ -91,7 +91,7 @@ class RDL::Wrap
           $__rdl_wrap_switch.off {
             if RDL::Wrap.has_contracts?(klass, meth, :post)
               posts = RDL::Wrap.get_contracts(klass, meth, :post)
-              RDL::Contract::AndContract.check_array(posts, ret, *args, &blk)
+              RDL::Contract::AndContract.check_array(posts, self, ret, *args, &blk)
             end
             if matches
               RDL::Type::MethodType.check_ret_types("#{full_method_name}", types, inst, matches, ret, *args, &blk)

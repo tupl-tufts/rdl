@@ -7,11 +7,12 @@ module RDL::Contract
       @desc = desc
     end
 
-    def check(*v, &blk)
+    def check(slf, *v, &blk)
       $__rdl_contract_switch.off {
         if (@pred &&
             ((@pred.arity < 0) ? (@pred.arity.abs - 1) <= v.size : @pred.arity == v.size)) then
-          unless blk ? @pred.call(*v, &blk) : @pred.call(*v)
+          unless blk ? slf.instance_exec(*v, blk, &@pred) : slf.instance_exec(*v, &@pred) # TODO: Fix blk
+#          unless blk ? pred.call(*v, &blk) : pred.call(*v) 
             raise ContractError,
                   "#{v.inspect} does not satisfy #{self.to_s}"
           end

@@ -6,11 +6,11 @@ module RDL::Contract
       @contracts = contracts
     end
 
-    def check(*v, &blk)
+    def check(slf, *v, &blk)
       # All contracts must be satisfied
       @contracts.each { |c|
         begin
-          c.check(*v, &blk)
+          c.check(slf, *v, &blk)
           return true
         rescue ContractError
         end

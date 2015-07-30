@@ -286,4 +286,14 @@ RUBY
     obj = 3.type_cast(ntyp)
     assert (ntyp.member? obj)
   end
+
+  def test_pre_post_self
+    self.class.class_eval {
+      pre { |x| self.instance_of? TestRDL }
+      post { |r, x| self.instance_of? TestRDL }
+      def m23(x) return x; end
+    }
+    assert_equal 3, m23(3)
+  end
+  
 end

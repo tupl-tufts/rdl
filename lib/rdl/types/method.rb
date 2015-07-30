@@ -111,14 +111,16 @@ module RDL::Type
       c = @@contract_cache[self]
       return c if c
 
-      # @ret, @args are the formals
+      # slf.ret, slf.args are the formals
       # ret, args are the actuals
-      prec = RDL::Contract::FlatContract.new(@args) { |*args, &blk|
-        raise TypeError, "Arguments #{args} do not match argument types #{self}" unless pre_cond?(inst, *args, &blk)
+      slf = self # Bind self so it's captured in a closure, since contracts are executed
+                 # with self bound to the receiver method's self
+      prec = RDL::Contract::FlatContract.new { |*args, &blk|
+        raise TypeError, "Arguments #{args} do not match argument types #{slf}" unless slf.pre_cond?(inst, *args, &blk)
         true
       }
-      postc = RDL::Contract::FlatContract.new(@ret) { |ret, *args|
-        raise TypeError, "Return #{ret} does not match return type #{self}" unless post_cond?(inst, ret, *args)
+      postc = RDL::Contract::FlatContract.new { |ret, *args|
+        raise TypeError, "Return #{ret} does not match return type #{slf}" unless slf.post_cond?(inst, ret, *args)
         true
       }
       c = RDL::Contract::ProcContract.new(pre_cond: prec, post_cond: postc)
