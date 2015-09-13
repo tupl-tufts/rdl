@@ -138,8 +138,8 @@ require '/Users/jfoster/proj/rdl/lib/rails_types.rb'
 # TODO list
 
 * ProcContract, Wrap, MethodType, support higher-order contracts for blocks
-
-* Hash types
++ And higher-order type checking
++ Block passed to contracts don't work yet
 
 * How to check whether initialize? is user-defined? method_defined? always
 returns true, meaning wrapping isn't fully working with initialize.
@@ -148,16 +148,10 @@ returns true, meaning wrapping isn't fully working with initialize.
   vs. EnclosingClass::A, the types will be different when compared
   with ==.
 
-* Inheritance of contracts
+* Macros, %bool should really be %any
 
-* Macros (special types) that have macros instead of them
-+ %bool should really be %any
-
-* struct types
-
-* parametric method types
-
-* blocks, higher order type checking
+* Method types that are parametric themselves (not just ones that use
+  enclosing class parameters)
 
 * Rails types
 
@@ -165,4 +159,6 @@ returns true, meaning wrapping isn't fully working with initialize.
 
 * Deferred contracts on new (watch for class addition)
 
-* Block passed to contracts don't work yet
+* DSL contracts
+
+* Documentation!
