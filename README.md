@@ -1,139 +1,48 @@
-# RDL Build Status
+# Introduction
 
-[![Build Status](https://travis-ci.org/plum-umd/rdl.png?branch=cRDL)](https://travis-ci.org/plum-umd/rdl)
+RDL is...
 
-# What is RDL?
+# Guided Tour
 
-RDL is a Ruby library designed for the annotation of Ruby code with run-time contracts. The RDL Typesig System is a user annotation shortcut for generating Type Contracts. RDL’s Domain Specific Language functionality further provides syntactic sugar for creating DSL contexts, while RDL’s RubyDoc support helps export Typesig and Contract information to html format.
+# RDL Reference
 
-# How to use RDL
+## Installing RDL
 
-## Writing Typesigs
-```
-class MyClass
-  extend RDL
+`gem install rdl` should do it.
 
-  def my_method …
+## Loading RDL
 
-  typesig :method_name, “ANNOTATION”, {Optional Hash of Parameterized Types}, *Additional_Contracts
-  #i.e. typesig :my_method, “(Array<t>)->Array<t>”, {:t}, pre{|arr| arr.size<5}, post{|ret| ret.size<3}, post{|ret| ret.foobar}
-```
+Use `require 'rdl'` to load the RDL library. If you want to use the
+core and standard library type signatures that come with RDL, follow
+it with `require 'rdl_types'`.
 
-
-### Annotation Syntax
-```
-#               ( Method Arguments     ) { Block      } -> Return
-typesig :foo, ” ( arg0Type, … argNType ) { Annotation } -> ReturnType " 
+If you're using Ruby on Rails, add the following lines in
+`application.rb` after the `Bundler.require` call. (This placement is
+needed so the Rails version string is available and the Rails
+environment is loaded):
 
 ```
-
-### Argument Syntax
-```
-# Standard Argument
-"Type …"
-
-# Optional Argument
-"?Type …"
-
-# Variable Number of Arguments (Splat)
-"*Type …"
+require 'rdl'
+require 'rdl_types'
+require 'rails_types'
 ```
 
-### Type Syntax
-```
-# Standard Type Definition
-"… Type”
+## Preconditions and Postconditions
 
-# Parameterized Type
-“Type<t> …”, {:t}
+## Type Signatures
 
-# Symbol Value
-"… :sym" 
+## Other Methods
 
-# Type Placeholder (any Type)
-"… %any" 
+## RDL Configuration
 
-# Boolean Value (TrueClass and FalseClass)
-"… %bool”
-
-# Nil Value (NilClass)
-“… nil”
- 
-# Union Types
-"… Type0 or Type1"
-
-# Labeling (for reference in Contracts)
-“… Label:Type”
-```
-
-## Using Contracts
-```
-# Basic Contract
-contract = FlatCtc.new(“My Contract Description”) {|…| …}
-
-# Precondition Contract
-precond = pre(“My Precondition”) {|…| …}
-
-# Postcondition Contract
-postcond = post(“My Postcondition”) {|…| …}
-
-# Bind Contract
-spec :my_method_name do
-
-  # Add contract with Contract object
-  pre “Additional Description”, precond
-  post “Additional Descripton”, postcond
-
-  # Create and add contract from Block
-  pre_cond(“My Precondition”) {|…| …}
-  post_cond(“My Postcondition”) {|…| …}
-
-end
-
-# Check Contract
-contract.check()
-```
-
-## Creating DSLs
-```
-dsl do
-
-  # Create new keyword
-  keyword :action {…}
-
-  # Create and store nested dsl
-  nested_dsl = dsl do
-    …
-  end
-
-  # Include keywords from other dsl
-  extend other_dsl
-
-  # Use previously declared del context
-  nested_dsl.apply {…}
-
-end
-```
-
-## Generating RDoc
-```
-rdocTypesigFor(Klass) # Deprecated FIXME
-```
-
-## RDL Quick Reference
-
-* TODO
+# Code Overview
 
 ## RDL and Rails
 
-Add these lines in application.rb after Bundler.require (so that the
-Rails version string is available and the Rails environment is loaded):
 
-```
-require '/Users/jfoster/proj/rdl/lib/rdl.rb'
-require '/Users/jfoster/proj/rdl/lib/rdl_types.rb'
-require '/Users/jfoster/proj/rdl/lib/rails_types.rb'
-```
+# RDL Build Status
+
+[![Build Status](https://travis-ci.org/plum-umd/rdl.png?branch=cRDL)](https://travis-ci.org/plum-umd/rdl)
 
 # TODO list
 
