@@ -43,6 +43,7 @@ class TestStdlibTypes < Minitest::Test
   end
 
   def test_benchmark
+    skip "Skip these because they print to stdout"
     # From the Ruby stdlib documentation
     Benchmark.measure { "a"*1_000_000_000 }
     n = 5000000
