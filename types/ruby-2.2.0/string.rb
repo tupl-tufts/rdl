@@ -34,10 +34,10 @@ class String
   type :codepoints, '() -> Array<Fixnum>' # TODO
   type :codepoints, '() {(?%any) -> %any} -> Array<Fixnum>' # TODO
   type :concat, '(Fixnum or Object) -> String'
-  type :count, '(*String) -> Fixnum'
+  type :count, '(String, *String) -> Fixnum'
   type :crypt, '(String) -> String'
-  type :delete, '(*String) -> String'
-  type :delete!, '(*String) -> String or nil'
+  type :delete, '(String, *String) -> String'
+  type :delete!, '(String, *String) -> String or nil'
   type :downcase, '() -> String'
   type :downcase!, '() -> String or nil'
   type :dump, '() -> String'
