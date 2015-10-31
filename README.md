@@ -99,7 +99,7 @@ The `type` method adds a type contract to a method. It supports the same calling
 
 A type string generally has the form `(typ1, ..., typn) -> typ` indicating a method that takes `n` arguments of types `typ1` through `typn` and returns type `typ`. To illustrate the various types RDL supports, we'll use examples from the core library type annotations.
 
-### Nominal Types ###
+### Nominal Types
 
 A nominal type is simply a class name, and it matches any object of that class or any subclass.
 
@@ -107,7 +107,7 @@ A nominal type is simply a class name, and it matches any object of that class o
 type String, :insert, '(Fixnum, String) -> String'
 ```
 
-### Nil ###
+### Nil Type
 
 The nominal type `NilClass` can also be written as `nil`. The only object of this type is `nil`:
 
@@ -122,7 +122,7 @@ x.insert(0, nil) # RDL does not report a type error
 ```
 It's up for debate whether this is the right behavior. It's left over from experience with static type systems where not allowing this leads to a lot of false positive errors from the type system.
 
-### Top (%any) ###
+### Top Type (%any)
 
 RDL includes a special "top" type `%any` that matches any object:
 ```
@@ -132,7 +132,7 @@ We call this the "top" type because it is the top of the subclassing hierarchy R
 
 Note it is not a bug that `==` is typed to allow any object. Though you would think that developers would generally only compare objects of the same class (since otherwise `==` almost always returns false), in practice a lot of code does compare objects of differnet classes.
 
-### Union Types ###
+### Union Types
 
 Many Ruby methods can take several different types of arguments or return different types of results. The union operator `or` can be used to indicate a position where multiple types are possible.
 
@@ -143,9 +143,9 @@ type String, :getbyte, '(Fixnum) -> Fixnum or nil'
 
 Note that for `getbyte`, we could leave off the `nil`, but we include it to match the current documentation of this method.
 
-### Intersection Types ###
+### Intersection Types
 
-Sometimes Ruby methods return different types depending on the types of their arguments. (In Java this would be called an *overloaded* method.) In RDL, such methods are assigned a set of type signatures:
+Sometimes Ruby methods return different types depending on the types of their arguments. (In Java these would be called *overloaded* methods.) In RDL, such methods are assigned a set of type signatures:
 
 ```
 type String, :[], '(Fixnum) -> String or nil'
@@ -156,37 +156,155 @@ type String, :[], '(Regexp, String) -> String or nil'
 type String, :[], '(String) -> String or nil'
 ```
 
+We say the method's type is the *intersection* of the types above.
+
 When this method is called at run time, RDL checks that at least one type signature matches the call:
 
 ```
 "foo"[0]  # matches first type
 "foo"[0,2] # matches second type
 "foo"(0..2) # matches third type
-"foo"[0, "bar"] # type error
+"foo"[0, "bar"] # error, doesn't match any type
 # etc
 ```
 
 Notice that union types in arguments could also be written as intersection types of methods, e.g., instead of the third type of `[]` above we could have equivalently written
+
 ```
 type String, :[], '(Range) -> String or nil'
 type String, :[], '(Regexp) -> String or nil'
 ```
 
-* **Optional Argument Types**
-* **Varargs Types**
-* **Annotated Argument Types**
-* **Block Types**
-* **Self**
-* **Type Aliases**
-* **Singleton Types**
+### Optional Argument Types
+
+Optional arguments are denoted in RDL by putting `?` in front of the argument's type. For example:
+
+```
+type String, :chomp, '(?String) -> String'
+```
+
+This is actually just a shorthand for an equivalent intersection type:
+
+```
+type String, :chomp, '() -> String'
+type String, :chomp, '(String) -> String'
+```
+
+but it helps make types more readable.
+
+Like Ruby, RDL allows optional arguments to appear anywhere in a method's type signature.
+
+### Variable Length Argument Types
+
+A method that can take any number of arguments is denoted in RDL by having a `*`'d type appear as the rightmost argument type, indicating that argument can appear zero or more times. For example, `String#delete` takes one or more `String` arguments:
+
+```
+type String, :delete, '(String, *String) -> String'
+```
+
+### Named Argument Types
+
+RDL allows arguments to be named, for documentation purposes. Names are given after the argument's type, and they do not affect type contract checking in any way. For example:
+
+```
+type Fixnum, :to_s, '(?Fixnum base) -> String'
+```
+
+Here we've named the first argument of `to_s` as `base` to give some extra hint as to its meaning.
+
+### Block Types
+
+Types signatures can include a type for a method's block argument:
+
+```
+type Pathname, :ascend, '() { (Pathname) -> %any } -> %any'
+```
+
+Here the block passed to `Pathname#ascend` must take a `Pathname` and can return any object.
+
+This is a *higher-order* contract, because it applies to a higher-order method, i.e., a method that can take a block argument.
+
+Currently higher-order contracts are not enforced. That is, RDL will not actually check contracts on block arguments.
+
+### Class/Singleton Method Types
+
+RDL method signatures can be used both for instance methods and for class methods (often called *singleton methods* in Ruby). To indicate a type signature applies to a singleton method, prefix the method name with `self.`:
+
+```
+type File, 'self.dirname', '(String file) -> String dir'
+```
+
+(Notice also the use of a named return type, which we haven't seen before.)
+
+Type signatures can be added to `initialize` by giving a type signature for `self.new`:
+
+```
+type File, 'self.new', '(String file, ?String mode, ?String perm, ?Fixnum opt) -> File'
+```
+
+### Singleton Types
+
+Not to be confused with types for singleton methods, RDL includes *singleton types* that denote positions that always have one particular value; this typically happens only in return positions. For example, `Dir#mkdir` always returns the value 0:
+
+```
+type Dir, 'self.mkdir', '(String, ?Fixnum) -> 0'
+```
+
+In RDL, any integer or floating point number denotes a singleton type. Arbitrary values can be turned into singleton types by wrapping them in `${.}`. For example, `Float#angle` always returns 0 or pi.
+
+```
+type Float, :angle, '() -> 0 or ${Math::PI}'
+```
+
+RDL checks if a value matches a singleton type using `equal?`. As a consequence, singleton string types aren't currently possible.
+
+### Self Type
+
+Consider a method that returns `self`:
+
+```
+class A
+  def id
+    self
+  end
+end
+```
+
+If that method might be inherited, we can't just give it a nominal type, because it will return a different object type in a subclass:
+
+```
+class B < A
+end
+
+type A, :id, '() -> A'
+A.new.id # okay, returns an A
+B.new.id # type error, returns a B
+```
+
+To solve this problem, RDL includes a special type `self` for this situation:
+
+```
+type A, :id, '() -> self'
+A.new.id # okay, returns self
+B.new.id # also okay, returns self
+```
+
+Note that type `self` means *exactly* the self object, i.e., it is a singleton type. It does not mean "any object of self's class." Thus, for example, `Object#clone` has type `() -> %any`, since it will return a different object.
+
 * **Tuple Types**
 * **Finite Hash Types**
 * **Structural Types**
 
+### Type Aliases
+
+RDL
+
+
+
 ### Generic Types
 
 type_params(params, all, variance)
-instantiate!(*typs)
+instantiate!(*typs*)
 deinstantiate!
 
 ## Contract queries
