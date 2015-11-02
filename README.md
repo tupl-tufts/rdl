@@ -126,11 +126,9 @@ It's up for debate whether this is the right behavior. It's left over from exper
 
 RDL includes a special "top" type `%any` that matches any object:
 ```
-type String, :==, '(%any) -> %bool'
+type Object, :=~, '(%any other) -> nil'
 ```
 We call this the "top" type because it is the top of the subclassing hierarchy RDL uses. Note that `%any` is more general than `Object`, because not all classes inherit from `Object`, e.g., `BasicObject` does not.
-
-Note it is not a bug that `==` is typed to allow any object. Though you would think that developers would generally only compare objects of the same class (since otherwise `==` almost always returns false), in practice a lot of code does compare objects of differnet classes.
 
 ### Union Types
 
@@ -242,6 +240,18 @@ Type signatures can be added to `initialize` by giving a type signature for `sel
 type File, 'self.new', '(String file, ?String mode, ?String perm, ?Fixnum opt) -> File'
 ```
 
+### Structural Types
+
+Some Ruby methods can take any object that has certain methods. RDL uses *structural types* to denote such cases:
+
+```
+type IO, :puts, '(*[to_s: () -> String]) -> nil'
+```
+
+Here `IO#puts` can take zero or more arguments, all of which must have a `to_s` method that takes no arguments and returns a `String`.
+
+The actual checking that RDL does here varies depending on what type information is available. Suppose we call `puts(o)`. If `o` is an instance of a class that has a type signature `t` for `to_s`, then RDL will check that `t` is compatible with `() -> String`. On the other hand, if `o` is an instance of a class with no type signature for `to_s`, RDL only checks that `o` has a `to_s` method, but it doesn't check its argument or return types.
+
 ### Singleton Types
 
 Not to be confused with types for singleton methods, RDL includes *singleton types* that denote positions that always have one particular value; this typically happens only in return positions. For example, `Dir#mkdir` always returns the value 0:
@@ -291,27 +301,96 @@ B.new.id # also okay, returns self
 
 Note that type `self` means *exactly* the self object, i.e., it is a singleton type. It does not mean "any object of self's class." Thus, for example, `Object#clone` has type `() -> %any`, since it will return a different object.
 
-* **Tuple Types**
-* **Finite Hash Types**
-* **Structural Types**
-
 ### Type Aliases
 
-RDL
+RDL allows types to be aliases to make them faster to write down and more readable. All type aliases begin with `%`. RDL has one built-in alias, `%bool`, which is shorthand for `TrueClass or FalseClass`:
+
+```
+type String, :==, '(%any) -> %bool'
+```
+
+Note it is not a bug that `==` is typed to allow any object. Though you would think that developers would generally only compare objects of the same class (since otherwise `==` almost always returns false), in practice a lot of code does compare objects of different classes.
+
+The `type_alias(name, typ)` can be used to create a user-defined type alias, where `name` must begin with `%`:
+
+```
+type_alias '%real', 'Integer or Float or Rational'
+type_alias '%string', '[to_str: () -> String]'
+type_alias '%path', '%string or Pathname'
+```
+
+Type aliases have to be created before they are used (so above, `%path` must be defined after `%string`).
+
+### Generic Class Types
+
+RDL supports *parametric polymorphism* for classes, a.k.a. *generics*. The `type_params` method names the type parameters of the class, and those parameters can then be used inside type signatures:
+
+```
+class Array
+  type_params [:t], :all?
+
+  type :shift, '() -> t'
+end
+```
+
+Here the first argument to `type_params` is a list of symbols or strings that name the type parameters. In this case there is one parameter, `t`, and it is the return type of `shift`.
+
+Generic types are applied to type arguments using `<...>` notation, e.g., `Array<Fixnum>` is an `Array` class where `t` is replaced by `Fixnum`. Thus, for example, if `o` is an `Array<Fixnum>`, then `o.shift` returns `Fixnum`. As another example, here is the type for the `[]` method of `Array`:
+
+```
+type Array, :[], '(Range) -> Array<t>'
+type Array, :[], '(Fixnum or Float) -> t'
+type Array, :[], '(Fixnum, Fixnum) -> Array<t>'
+```
+
+Thus if `o` is again an `Array<Fixnum>`, then `o[0]` returns a `Fixnum` and `o[0..5]` returns an `Array<Fixnum>`.
+
+In general it's impossible to assign generic types to objects without knowing the programmer's intention. For example, consider code as simple as `x = [1,2]`. Is it the programmer's intention that `x` is an `Array<Fixnum>`? `Array<Numeric>`? `Array<Object>`?
+
+Thus, by default, even though `Array` is declared to take type parameters, by default RDL treats array objects at the *raw* type `Array`, which means the type parameters are ignored whenever they appear in types. For our example, this means a call such as `x.push("three")` would not be reported as an error (the type signature of `Array#push` is `'(?t) -> Array<t>'`).
+
+To fully enforce generic types, RDL requires that the developer `instantiate!` an object with the desired type parameters:
+
+```
+x = [1,2]
+x.instantate!('Fixnum')
+x.push("three") # type error
+```
+
+Note that the instantiated type is associated with the object, not the variable:
+```
+y = x
+y.push("three") # also a type error
+```
+
+When RDL instantiates an object with type parameters, it needs to ensure the object's contents are consistent with the type. Currently this is enforced using the second parameter to `type_params`, which must name a method that behaves like `Array#all?`, i.e., it iterates through the contents, checking that a block argument is satisfied. As seen above, for `Array` we call `type_params(:t, :all?)`. Then at the call `x.instantiate('Fixnum')`, RDL will call `Array#all?` to iterate through the contents of `x` to check they have type `Fixnum`.
+
+RDL also includes a `deinstantiate!` method to remove the type instantiation from an object:
+```
+x.deinstantiate!
+x.push("three") # no longer a type error
+```
+
+Finally, `type_params` can optionally take a third argument that is an array of *variances*, which are either `:+` for covariance, `:-` for contravariance, or `:~` for invariance. If variances aren't listed, type parameters are assumed to be invariant, which is a safe default.
+
+Variances are only used when RDL checks that one type is a subtype of another. This only happens in limited circumstances, really only when there are cases such as arrays of arrays where all levels have instantiated types.
+
+The rules for variances are standard. Let's assume `A` is a subclass of `B`. Also assume there is a class `C` that has one type parameter. Then:
+* `C<A>` is a subtype of `C<A>` always
+* `C<A>` is a subtype of `C<B>` if `C`'s type parameter is covariant
+* `C<B>` is a subtype of `C<A>` if `C`'s type parameter is contravariant
+
+### Tuple Types
+
+### Finite Hash Types
 
 
-
-### Generic Types
-
-type_params(params, all, variance)
-instantiate!(*typs*)
-deinstantiate!
 
 ## Contract queries
 
 XXXTodo
 
-## Raw Contracts
+## Raw Contracts and Types
 
 
 
@@ -320,7 +399,6 @@ XXXTodo
 * rdl_alias(new_name, old_name)
 * nowrap
 * type_cast
-* type_alias(name, typ)
 
 ## RDL Configuration
 
