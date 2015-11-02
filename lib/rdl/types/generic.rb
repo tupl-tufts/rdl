@@ -16,6 +16,7 @@ module RDL::Type
     def self.new(base, *params)
       t = @@cache[[base, params]]
       return t if t
+      raise RuntimeError, "Attempt to create generic type with non-type param" unless params.all? { |p| p.is_a? Type }
       t = GenericType.__new__(base, params)
       return (@@cache[[base, params]] = t) # assignment evaluates to t
     end

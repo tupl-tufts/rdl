@@ -139,46 +139,48 @@ class TestGeneric < Minitest::Test
     assert_raises(RuntimeError) { Object.new.instantiate!(@tstring) }
     
     # Array<String>
-    assert (A.new([]).instantiate!(@tstring))
+    assert (A.new([]).instantiate!('String'))
     assert (A.new(["a", "b", "c"]).instantiate!(@tstring))
-    assert_raises(RDL::Type::TypeError) { A.new([1, 2, 3]).instantiate!(@tstring) }
+    assert (A.new(["a", "b", "c"]).instantiate!('String'))
+    assert_raises(RDL::Type::TypeError) { A.new([1, 2, 3]).instantiate!('String') }
 
     # Array<Object>
-    assert (A.new([])).instantiate!(@tobject)
+    assert (A.new([])).instantiate!('Object')
     assert (A.new(["a", "b", "c"]).instantiate!(@tobject))
-    assert (A.new([1, 2, 3]).instantiate!(@tobject))
+    assert (A.new(["a", "b", "c"]).instantiate!('Object'))
+    assert (A.new([1, 2, 3]).instantiate!('Object'))
 
     # Hash<String, Fixnum>
-    assert (H.new({}).instantiate!(@tstring, @tfixnum))
-    assert (H.new({"one"=>1, "two"=>2}).instantiate!(@tstring, @tfixnum))
+    assert (H.new({}).instantiate!('String', 'Fixnum'))
+    assert (H.new({"one"=>1, "two"=>2}).instantiate!('String', 'Fixnum'))
     assert_raises(RDL::Type::TypeError) {
-      H.new(one: 1, two: 2).instantiate!(@tstring, @tfixnum)
+      H.new(one: 1, two: 2).instantiate!('String', 'Fixnum')
     }
     assert_raises(RDL::Type::TypeError){
-      H.new({"one"=>:one, "two"=>:two}).instantiate!(@tstring, @tfixnum)
+      H.new({"one"=>:one, "two"=>:two}).instantiate!('String', 'Fixnum')
     }
 
     # Hash<Object, Object>
-    assert (H.new({}).instantiate!(@tobject, @tobject))
-    assert (H.new({"one"=>1, "two"=>2}).instantiate!(@tobject, @tobject))
-    assert (H.new(one: 1, two: 2).instantiate!(@tobject, @tobject))
-    assert (H.new({"one"=>:one, "two"=>:two}).instantiate!(@tobject, @tobject))
+    assert (H.new({}).instantiate!('Object', 'Object'))
+    assert (H.new({"one"=>1, "two"=>2}).instantiate!('Object', 'Object'))
+    assert (H.new(one: 1, two: 2).instantiate!('Object', 'Object'))
+    assert (H.new({"one"=>:one, "two"=>:two}).instantiate!('Object', 'Object'))
 
-    # Array<Array<String>>
-    assert (A.new([A.new(["a", "b"]).instantiate!(@tstring),
-                   A.new(["c"]).instantiate!(@tstring)]).instantiate!(@tas))
+    # A<A<String>>
+    assert (A.new([A.new(["a", "b"]).instantiate!('String'),
+                   A.new(["c"]).instantiate!('String')]).instantiate!('TestGeneric::A<String>'))
     assert_raises(RDL::Type::TypeError) {
       # Must instantiate all members
-      A.new([A.new(["a", "b"]).instantiate!(@tstring), A.new([])]).instantiate!(@tas)
+      A.new([A.new(["a", "b"]).instantiate!('String'), A.new([])]).instantiate!('TestGeneric::A<String>')
     }
     assert_raises(RDL::Type::TypeError) {
       # All members must be of same type
-      A.new([A.new(["a", "b"]).instantiate!(@tstring), "A"]).instantiate!(@tas)
+      A.new([A.new(["a", "b"]).instantiate!('String'), "A"]).instantiate!('TestGeneric::A<String>')
     }
     assert_raises(RDL::Type::TypeError) {
       # All members must be instantiated and of same type
-      A.new([A.new(["a", "b"]).instantiate!(@tstring),
-             H.new({a: 1, b: 2}).instantiate!(@tobject, @tobject)]).instantiate!(@tas)
+      A.new([A.new(["a", "b"]).instantiate!('String'),
+             H.new({a: 1, b: 2}).instantiate!('Object', 'Object')]).instantiate!('TestGeneric::A<String>')
     }
   end
 
