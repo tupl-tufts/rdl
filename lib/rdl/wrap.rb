@@ -443,8 +443,9 @@ class Object
   # Returns a new object that wraps self in a type cast. This cast is *unchecked*, so use with caution
   def type_cast(typ)
     $__rdl_contract_switch.off {
+      new_typ = if typ.is_a? RDL::Type::Type then typ else $__rdl_parser.scan_str "## #{typ}" end
       obj = SimpleDelegator.new(self)
-      obj.instance_variable_set('@__rdl_type', typ)
+      obj.instance_variable_set('@__rdl_type', new_typ)
       return obj
     }
   end
