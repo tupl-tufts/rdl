@@ -373,7 +373,7 @@ x.push("three") # no longer a type error
 
 Finally, `type_params` can optionally take a third argument that is an array of *variances*, which are either `:+` for covariance, `:-` for contravariance, or `:~` for invariance. If variances aren't listed, type parameters are assumed to be invariant, which is a safe default.
 
-Variances are only used when RDL checks that one type is a subtype of another. This only happens in limited circumstances, really only when there are cases such as arrays of arrays where all levels have instantiated types.
+Variances are only used when RDL checks that one type is a subtype of another. This only happens in limited circumstances, really only when there are cases such as arrays of arrays where all levels have instantiated types. So generally you don't need to worry much about the variance.
 
 The rules for variances are standard. Let's assume `A` is a subclass of `B`. Also assume there is a class `C` that has one type parameter. Then:
 * `C<A>` is a subtype of `C<A>` always
@@ -382,27 +382,45 @@ The rules for variances are standard. Let's assume `A` is a subclass of `B`. Als
 
 ### Tuple Types
 
+A type such as `Array<Fixnum>` is useful for homogeneous arrays, where all elements have the same type. But Ruby programs often use heterogenous arrays, e.g., `[1, "two"]`. The best generic type we can give this is `Array<Fixnum or String>`, but that's not completely precise.
+
+RDL includes special *tuple types* to handle this situation. Tuple types are written `[t1, ..., tn]`, denoting an `Array` of `n` elements of types `t1` through `tn`, in that order. For example, `[1, "two"]` has type `[Fixnum, String]`. As another example, here is the type of `Process#getrlimit`, which returns a two-element array of `Fixnum`s:
+
+```
+type Process, 'self.getrlimit', '(Symbol or String or Fixnum resource) -> [Fixnum, Fixnum] cur_max_limit'
+```
+
 ### Finite Hash Types
 
+Similarly to tuple types, RDL also supports *finite hash types* for heterogenous hashes. Finite hash types are written `{k1 => v1, ..., kn => vn}` to indicate a `Hash` with `n` mappings of type `ki` maps to `vi`. The `ki` may be strings, integers, floats, or constants denoted with `${.}`. If a key is a symbol, then the mapping should be written `ki: vi`.
 
+For example, `{a: Fixnum, b: String}` types a hash where key `:a` is mapped to a `Fixnum` and key `:b` is mapped to a `String`. Similarly, `{'a'=>Fixnum, 2=>String}` types a hash where keys `'a'` and `2` are mapped to a `Fixnum` and `String`, respectively.
 
 ## Contract queries
 
-XXXTodo
-
-## Raw Contracts and Types
-
-
+*Not implemented yet*
 
 ## Other Methods
 
-* rdl_alias(new_name, old_name)
-* nowrap
-* type_cast
+RDL also includes a few other useful methods:
+
+* `rdl_alias(new_name, old_name)` tells RDL that method `new_name` is an alias for method `old_name`, and therefore they should have the same contracts and types. This method is only needed when adding contracts and types to method that already have been aliased; it's not needed if the method is aliased after the contract or type has been added.
+
+* `o.type_cast(t)` returns a new object that delegates all methods to `o` but that will be treated by RDL as if it had type `t`. For example, `x = "a".type_cast('nil')` will make RDL treat `x` as if it had type `nil`, even though it's a `String`.
+
+* `nowrap`, if called at the top-level of a class, tells RDL to record contracts and types for methods in that class but *not* enforce them. This is mostly used for the core and standard libraries, which have trustworthy behavior hence the overhead of enforcing types and contracts on them is likely not worth it.
+
+## Raw Contracts and Types
+
+*To be written*
 
 ## RDL Configuration
 
+*To be written*
+
 # Code Overview
+
+*To be written*
 
 # RDL Build Status
 
@@ -410,7 +428,7 @@ XXXTodo
 
 # Bibliography
 
-
+*To be written*
 
 # TODO list
 
@@ -419,7 +437,7 @@ XXXTodo
 + Block passed to contracts don't work yet
 
 * How to check whether initialize? is user-defined? method_defined? always
-returns true, meaning wrapping isn't fully working with initialize.
+  returns true, meaning wrapping isn't fully working with initialize.
 
 * Currently if a NominalType name is expressed differently, e.g., A
   vs. EnclosingClass::A, the types will be different when compared
