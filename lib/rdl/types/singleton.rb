@@ -36,7 +36,7 @@ module RDL::Type
 
     def to_s
       if @val.instance_of? Symbol
-        @val.to_s
+        ":{@val}"
       else
         "Singleton(#{@val.to_s})"
       end
