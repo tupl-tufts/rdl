@@ -1,5 +1,7 @@
 module Kernel
-#  type 'self.Array', '([to_ary: () -> Array<t>]) -> Array<t>'
+  nowrap
+
+  #  type 'self.Array', '([to_ary: () -> Array<t>]) -> Array<t>'
 #  type 'self.Array', '([to_a: () -> Array<t>]) -> Array<t>'
   type 'self.Complex', '(Numeric x, Numeric y) -> Complex'
   type 'self.Complex', '(String x) -> Complex'
@@ -76,4 +78,9 @@ module Kernel
 #  type 'self.trap' # TODO
 #  type 'self.untrace_var' # TODO
   type 'self.warn', '(*String msg) -> nil'
+  type :raise, '() -> nil'
+  type :raise, '(String) -> nil'
+  type :raise, '(Class, String, Array<String>) -> nil'
+  type :send, '(String or Symbol, *%any) -> %any'
+  type :send, '(String or Symbol, *%any) { (*%any) -> %any } -> %any'
 end

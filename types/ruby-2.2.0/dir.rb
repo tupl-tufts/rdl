@@ -1,5 +1,6 @@
 class Dir
-
+  nowrap
+  
   rdl_alias :[], :glob
   type 'self.chdir', '(?(String or Pathname)) -> 0'
   type 'self.chdir', '(?(String or Pathname)) { (String) -> u } -> u'

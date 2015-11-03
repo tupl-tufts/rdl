@@ -1,4 +1,6 @@
 module Math
+  nowrap
+
   type 'self.acos', '(%real x) -> Float'
   pre('self.acos') { |x| -1 <= x && x <= 1 }
   post('self.acos') { |r, _| 0 <= r && r <= Math::PI }

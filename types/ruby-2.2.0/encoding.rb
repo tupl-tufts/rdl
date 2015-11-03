@@ -1,4 +1,6 @@
 class Encoding
+  nowrap
+
   type 'self.aliases', '() -> Hash<String, String>'
   type 'self.compatible?', '(%any obj1, %any obj2) -> Encoding or nil'
   type 'self.default_external', '() -> Encoding'

@@ -1,4 +1,6 @@
 class Time
+  nowrap
+
   type 'self.at', '(Time) -> Time'
   type 'self.at', '(Numeric seconds_with_frac) -> Time'
   type 'self.at', '(Numeric seconds, Numeric microseconds_with_frac) -> Time'

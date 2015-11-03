@@ -1,4 +1,6 @@
 class Numeric
+  nowrap
+
   type :+, '() -> self'
   type :-, '() -> Numeric'
   type :<=>, '(Numeric) -> -1 or 0 or 1 or nil'

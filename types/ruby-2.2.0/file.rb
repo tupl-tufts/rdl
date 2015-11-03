@@ -1,4 +1,6 @@
 class File
+  nowrap
+
   type 'self.absolute_path', '(String file, ?String dir) -> String abs_file'
   type 'self.atime', '(%path or IO file) -> Time'
   type 'self.basename', '(String file, ?String suffix) -> String base_name'

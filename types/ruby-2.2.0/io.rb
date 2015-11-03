@@ -1,5 +1,6 @@
 class IO
   nowrap # Do not wrap this class. Leads to mysterious errors.
+
   type 'self.binread', '(String name, ?Fixnum length, ?Fixnum offset) -> String'
   type 'self.binwrite', '(String name, String, ?Fixnum offset, %open_args) -> Fixnum'
   type 'self.copy_stream', '(String or IO src, String or IO dst, ?Fixnum copy_length, ?Fixnum src_offset) -> Fixnum'

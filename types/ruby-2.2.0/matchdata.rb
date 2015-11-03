@@ -1,5 +1,6 @@
 class MatchData
-
+  nowrap
+  
   type :==, '(%any) -> %bool'
   type :[], '(Fixnum i) -> String or nil'
   type :[], '(Fixnum start, Fixnum length) -> Array<String>'
@@ -22,5 +23,4 @@ class MatchData
   type :to_a, '() -> Array<String>'
   type :to_s, '() -> String'
   type :values_at, '(*Fixnum indexes) -> Array<String>'
-
 end

@@ -1,4 +1,6 @@
 class Range
+  nowrap
+
   type_params([:t], nil) { |t| t.member?(self.begin) && t.member?(self.end) } # TODO: And instantiated if t instantiated
 
   # TODO: Parse error
@@ -8,7 +10,7 @@ class Range
   type :begin, '() -> u'
   type :bsearch, '() { (u) -> %bool } -> u or nil'
   type :cover?, '(%any obj) -> %bool'
-  type :each, '() { (u) -> %any } -> self'
+  type :each, '() { (t) -> %any } -> self'
   type :each, '() -> Enumerator<u>'
   type :end, '() -> u'
   rdl_alias :eql?, :==

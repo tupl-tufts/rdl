@@ -1,4 +1,6 @@
 class Random
+  nowrap
+
   type 'self.new', '(?Integer seed) -> Random' # Floats can be passed also, but just truncated to int?
   type 'self.new_seed', '() -> Integer'
   type 'self.rand', '(?Integer max) -> Numeric'

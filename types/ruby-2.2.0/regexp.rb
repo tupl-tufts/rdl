@@ -1,4 +1,6 @@
 class Regexp
+  nowrap
+
   type 'self.escape', '(String or Symbol) -> String'
 #  type 'self.last_match', '() -> MatchData' # Can't wrap or screws up MatchData
 #  type 'self.last_match', '(Fixnum) -> String'
