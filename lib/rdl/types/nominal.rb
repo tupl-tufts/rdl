@@ -60,6 +60,9 @@ module RDL::Type
         }
         return true
       end
+      if other.instance_of? UnionType
+        other.types.each {|ot| return true if self <= ot}
+      end
       return false
     end
 
