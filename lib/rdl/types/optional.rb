@@ -13,6 +13,7 @@ module RDL::Type
     def self.new(type)
       t = @@cache[type]
       return t if t
+      raise RuntimeError, "Attempt to create vararg type with non-type" unless type.is_a? Type
       t = OptionalType.__new__ type
       return (@@cache[type] = t) # assignment evaluates to t
     end

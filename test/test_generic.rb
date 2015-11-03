@@ -47,6 +47,7 @@ class TestGeneric < Minitest::Test
     @thoo = RDL::Type::GenericType.new(@th, @tobject, @tobject)
     @thsf = RDL::Type::GenericType.new(@th, @tstring, @tfixnum)
     @tb = RDL::Type::NominalType.new "TestGeneric::B"
+    @tnil = RDL::Type::NilType.new
   end
 
   def test_le
@@ -94,9 +95,9 @@ class TestGeneric < Minitest::Test
 
   def test_le_structural
     tbss = RDL::Type::GenericType.new(@tb, @tstring, @tstring)
-    tma = RDL::Type::MethodType.new([], nil, @nil)
-    tmb = RDL::Type::MethodType.new([@tstring], nil, @nil)
-    tmc = RDL::Type::MethodType.new([@tfixnum], nil, @nil)
+    tma = RDL::Type::MethodType.new([], nil, @tnil)
+    tmb = RDL::Type::MethodType.new([@tstring], nil, @tnil)
+    tmc = RDL::Type::MethodType.new([@tfixnum], nil, @tnil)
     ts1 = RDL::Type::StructuralType.new(m2: tma)
     assert (tbss <= ts1)
     ts2 = RDL::Type::StructuralType.new(m1: tmb)

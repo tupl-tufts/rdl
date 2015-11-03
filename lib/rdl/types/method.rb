@@ -36,6 +36,7 @@ module RDL::Type
           raise "Only one set of named arguments allowed" if state == :hash
           state = :hash
         else
+          raise "Attempt to create method type with non-type arg" unless arg.is_a? Type
           raise "Required arguments not allowed after varargs" if state == :vararg
           raise "Required arguments not allowed after named arguments" if state == :hash
         end
@@ -45,6 +46,7 @@ module RDL::Type
       raise "Block must be MethodType" unless (not block) or (block.instance_of? MethodType)
       @block = block
 
+      raise "Attempt to create method type with non-type ret" unless ret.is_a? Type
       @ret = ret
 
       super()

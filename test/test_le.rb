@@ -24,6 +24,7 @@ class TestLe < Minitest::Test
     @ta = NominalType.new A
     @tb = NominalType.new B
     @tc = NominalType.new C
+    @tfixnum = NominalType.new "Fixnum"
   end
   
   def test_nil
