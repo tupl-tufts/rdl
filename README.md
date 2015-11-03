@@ -14,8 +14,6 @@ end
 
 to indicate the `sqrt` method assumes its input is positive and returns and output that is positive. (Let's ignore complex numbers to keep things simple...)
 
-Contracts have been around for a long time. They originated with the Eiffel programming language [cite], and have been...(XXX fill in history)
-
 RDL contracts are enforced at method entry and exit. For example, if we call `sqrt(49)`, RDL first checks that `49 > 0`; then it passes `49` to `sqrt`, which (presumably) returns `7`; then RDL checks that `7 > 0`; and finally it returns `7`.
 
 In addition to arbitrary pre- and post-conditions, RDL also has extensive support for contracts that are *types*. For example, we can write the following in RDL:
@@ -35,10 +33,10 @@ RDL contracts and types are stored in memory at run time, so it's also possible 
 require 'rdl'
 require 'rdl_types'
 
-XXXfill in
+rdl_query 'hash'             # get type for instance method of current class
+rdl_query 'String#include'   # get type for instance method of another class
+rdl_query 'Pathname.ascend'  # get type for singleton method of a class
 ```
-
-XXXexplain above
 
 # RDL Reference
 
@@ -69,7 +67,7 @@ require 'rails_types'
 
 Currently RDL has types for the following versions of Rails:
 
-* Under development
+* Rails support is currently almost non-existent; more coming in the future
 
 ## Preconditions and Postconditions
 
@@ -218,7 +216,7 @@ Types signatures can include a type for a method's block argument:
 type Pathname, :ascend, '() { (Pathname) -> %any } -> %any'
 ```
 
-Here the block passed to `Pathname#ascend` must take a `Pathname` and can return any object.
+Here the block passed to `Pathname.ascend` must take a `Pathname` and can return any object.
 
 This is a *higher-order* contract, because it applies to a higher-order method, i.e., a method that can take a block argument.
 
