@@ -25,6 +25,8 @@ class Array
   type :clear, '() -> Array<t>'
   type :map, '() {(t) ->u} -> Array<u>'
   type :map, '() -> Enumerator<t>'
+  type :map!, '() {(t) ->u} -> Array<u>'
+  type :map!, '() -> Enumerator<t>'
   type :collect, '() { (t) -> u } -> Array<u>'
   type :collect, '() -> Enumerator<t>'
   type :combination, '(Fixnum) { (Array<t>) -> %any } -> Array<t>'

@@ -36,7 +36,10 @@ module Kernel
   type 'self.exit', '(Fixnum or %bool status) -> %any'
   type 'self.exit!', '(Fixnum or %bool status) -> %any'
   type 'self.fail', '() -> %any'
-#  type 'self.fail', '(String or [exception : () -> String], ?String, ?Array<String>) -> %any'
+  type 'self.fail', '(String) -> %any'
+  type 'self.fail', '(Class, Array<String>) -> %any'
+  type 'self.fail', '(Class, String, Array<String>) -> %any'
+  #  type 'self.fail', '(String or [exception : () -> String], ?String, ?Array<String>) -> %any'
 #  type 'self.fork' #TODO
   type 'self.format', '(String format, *%any args) -> String'
   type 'self.gets', '(?String, ?Fixnum) -> String'
@@ -52,9 +55,9 @@ module Kernel
 #  type 'self.p', '(*[inspect : () -> String]) -> nil'
 #  type 'self.print', '(*[to_s : () -> String] -> nil'
   type 'self.printf', '(?IO, ?String, *%any) -> nil'
-#  type 'self.proc' # TODO
+  type(:proc, "() {(*%any) -> %any} -> Proc") # TODO more precise
   type 'self.putc', '(Fixnum) -> Fixnum'
-#  type 'self.puts', '(*[to_s : () -> String] -> nil'
+  type 'self.puts', '(*[to_s : () -> String]) -> nil'
   type 'self.raise', '() -> %any'
 #  type 'self.raise', '(String or [exception : () -> String], ?String, ?Array<String>) -> %any'
 # TODO: above same as fail?
