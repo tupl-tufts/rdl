@@ -1,4 +1,6 @@
 module Base64
+  nowrap
+
   type 'self.decode64', '(String) -> String'
   type 'self.encode64', '(String) -> String'
   type 'self.strict_decode64', '(String) -> String'

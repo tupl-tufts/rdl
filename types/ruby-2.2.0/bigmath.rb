@@ -1,4 +1,6 @@
 module BigMath
+  nowrap
+
   type 'self.exp', '(Fixnum, Fixnum) -> BigDecimal'
   type 'self.log', '(Fixnum, Fixnum) -> BigDecimal'
   type :E, '(Fixnum) -> BigDecimal'

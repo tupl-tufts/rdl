@@ -1,4 +1,6 @@
 class Symbol
+  nowrap
+
   type 'self.all_symbols', '() -> Array<Symbol>'
   type :<=>, '(Symbol other) -> Fixnum or nil'
   type :==, '(%any obj) -> %bool'

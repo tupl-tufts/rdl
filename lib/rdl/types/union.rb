@@ -21,6 +21,7 @@ module RDL::Type
         elsif t.instance_of? UnionType
           ts.concat t.types
         else
+          raise RuntimeError, "Attempt to create union type with non-type" unless t.is_a? Type
           ts << t
         end
       }

@@ -1,4 +1,6 @@
 class String
+  nowrap
+
   type :new, '(?String str) -> String new_str'
   type :try_convert, '(Object obj) -> String or nil new_string'
   type :%, '(Object) -> String'
@@ -6,12 +8,11 @@ class String
   type :+, '(String) -> String'
   type :<<, '(Object) -> String'
   type :<=>, '(String other) -> Fixnum or nil ret'
-  type :==, '(Object) -> %bool'
-  type :===, '(Object) -> %bool'
+  type :==, '(%any) -> %bool'
+  type :===, '(%any) -> %bool'
 #  type :=~, '(Object) -> Fixnum or nil' # TODO: Wrapping this messes up $1 etc
   type :[], '(Fixnum, ?Fixnum) -> String or nil'
-  type :[], '(Range) -> String or nil'
-  type :[], '(Regexp) -> String or nil'
+  type :[], '(Range<Fixnum> or Regexp) -> String or nil'
   type :[], '(Regexp, Fixnum) -> String or nil'
   type :[], '(Regexp, String) -> String or nil'
   type :[], '(String) -> String or nil'
@@ -20,7 +21,7 @@ class String
   type :bytes, '() -> Array' # TODO: bindings to parameterized (vars)
   type :bytesize, '() -> Fixnum'
   type :byteslice, '(Fixnum, ?Fixnum) -> String or nil'
-  type :byteslice, '(Range) -> String or nil'
+  type :byteslice, '(Range<Fixnum>) -> String or nil'
   type :capitalize, '() -> String'
   type :capitalize!, '() -> String or nil'
   type :casecmp, '(String) -> nil or Fixnum'
@@ -35,10 +36,10 @@ class String
   type :codepoints, '() -> Array<Fixnum>' # TODO
   type :codepoints, '() {(?%any) -> %any} -> Array<Fixnum>' # TODO
   type :concat, '(Fixnum or Object) -> String'
-  type :count, '(*String) -> Fixnum'
+  type :count, '(String, *String) -> Fixnum'
   type :crypt, '(String) -> String'
-  type :delete, '(*String) -> String'
-  type :delete!, '(*String) -> String or nil'
+  type :delete, '(String, *String) -> String'
+  type :delete!, '(String, *String) -> String or nil'
   type :downcase, '() -> String'
   type :downcase!, '() -> String or nil'
   type :dump, '() -> String'
@@ -59,13 +60,14 @@ class String
   type :force_encoding, '(String or Encoding) -> String'
   type :getbyte, '(Fixnum) -> Fixnum or nil'
 # Can't wrap these, since they mess with $1 etc
-#  type :gsub, '(Regexp or String, String) -> String'
-#  type :gsub, '(Regexp or String, Hash) -> String'
-#  type :gsub, '(Regexp or String) {(String) -> %any } -> String'
-#  type :gsub, '(Regexp or String) ->  Enumerator'
-#  type :gsub!, '(Regexp or String, String) -> String or nil'
-#  type :gsub!, '(Regexp or String) {(String) -> %any } -> String or nil'
-#  type :gsub!, '(Regexp or String) -> Enumerator'
+  type :gsub, '(Regexp or String, String) -> String'
+  type :gsub, '(Regexp or String, Hash) -> String'
+  type :gsub, '(Regexp or String) {(String) -> %any } -> String'
+  type :gsub, '(Regexp or String) ->  Enumerator'
+  type :gsub, '(Regexp or String) -> String'
+  type :gsub!, '(Regexp or String, String) -> String or nil'
+  type :gsub!, '(Regexp or String) {(String) -> %any } -> String or nil'
+  type :gsub!, '(Regexp or String) -> Enumerator'
   type :hash, '() -> Fixnum'
   type :hex, '() -> Fixnum'
   type :include?, '(String) -> %bool'
@@ -103,8 +105,7 @@ class String
   type :size, '() -> Fixnum'
   rdl_alias :slice, :[]
   type :slice!, '(Fixnum, ?Fixnum) -> String or nil'
-  type :slice!, '(Range) -> String or nil'
-  type :slice!, '(Regexp) -> String or nil'
+  type :slice!, '(Range<Fixnum> or Regexp) -> String or nil'
   type :slice!, '(Regexp, Fixnum) -> String or nil'
   type :slice!, '(Regexp, String) -> String or nil'
   type :slice!, '(String) -> String or nil'
@@ -116,10 +117,10 @@ class String
   type :strip, '() -> String'
   type :strip!, '() -> String'
 # Can't wrap these, since they mess with $1 etc
-  # type :sub, '(Regexp or String, String or Hash) -> String'
-  # type :sub, '(Regexp or String) {(String) -> %any} -> String'
-  # type :sub!, '(Regexp or String, String) -> String' # TODO: Does this really not allow Hash?
-  # type :sub!, '(Regexp or String) {(String) -> %any} -> String'
+   type :sub, '(Regexp or String, String or Hash) -> String'
+   type :sub, '(Regexp or String) {(String) -> %any} -> String'
+   type :sub!, '(Regexp or String, String) -> String' # TODO: Does this really not allow Hash?
+   type :sub!, '(Regexp or String) {(String) -> %any} -> String'
   type :succ, '() -> String'
   type :sum, '(?Fixnum) -> Fixnum'
   type :swapcase, '() -> String'

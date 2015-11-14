@@ -1,4 +1,6 @@
 module Enumerable
+  nowrap
+
   type_params [:t], :all?
   
   type :all?, '() -> %bool'

@@ -1,4 +1,6 @@
 class Rational
+  nowrap
+
   type :*, '(Numeric) -> Numeric'
   type :**, '(Numeric) -> Numeric'
   type :+, '(Numeric) -> Numeric'

@@ -1,4 +1,6 @@
 class Fixnum
+  nowrap
+
   type :%, '(Numeric other) -> Numeric'
   post(:%) { |r, _| r.real? }
   type :&, '(Integer) -> Integer'

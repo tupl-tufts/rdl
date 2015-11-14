@@ -1,4 +1,6 @@
 class Enumerator
+  nowrap
+
   type_params [:t], :all?
 
   type 'self.new', '(?Fixnum) { (Array<u>) -> %any } -> Enumerator<u>'

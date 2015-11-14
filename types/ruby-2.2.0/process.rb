@@ -1,4 +1,6 @@
 module Process
+  nowrap
+
   type 'self.abort', '(?String msg) -> %any'
   type 'self.argv0', '() -> String frozen_string'
   type 'self.clock_getres', '(Symbol or Fixnum clock_id, ?Symbol unit) -> Float or Integer'
@@ -45,6 +47,8 @@ module Process
   type 'self.waitpid2', '(?Fixnum pid, ?Fixnum flags) -> [Fixnum, Fixnum] pid_and_status'
 
   module GID
+    nowrap
+
     type 'self.change_privilege', '(Fixnum group) -> Fixnum'
     type 'self.eid', '() -> Fixnum'
     type 'self.from_name', '(String name) -> Fixnum gid'
@@ -59,6 +63,8 @@ module Process
   end
 
   module UID
+    nowrap
+    
     type 'self.change_privilege', '(Fixnum user) -> Fixnum'
     type 'self.eid', '() -> Fixnum'
     type 'self.from_name', '(String name) -> Fixnum uid'
@@ -73,6 +79,8 @@ module Process
   end
 
   class Status
+    nowrap
+
     type :&, '(Fixnum num) -> Fixnum'
     type :==, '(%any other) -> %bool'
     type :>>, '(Fixnum num) -> Fixnum'
@@ -92,6 +100,8 @@ module Process
   end
 
   module Sys
+    nowrap
+
     type 'self.geteid', '() -> Fixnum'
     type 'self.geteuid', '() -> Fixnum'
     type 'self.getgid', '() -> Fixnum'
@@ -110,6 +120,8 @@ module Process
   end
 
   class Waiter
+    nowrap
+
     type 'pid', '() -> Fixnum'
   end
 end

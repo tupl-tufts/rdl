@@ -10,11 +10,12 @@ module RDL::Type
     def initialize(name, type)
       @name = name
       @type = type
+      raise RuntimeError, "Attempt to create vararg type with non-type" unless type.is_a? Type
       super()
     end
 
     def to_s
-      "#{@type.to_s} \"#{@name}\""
+      "#{@type.to_s} #{@name}"
     end
 
     def eql?(other)

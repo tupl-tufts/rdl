@@ -21,6 +21,7 @@ end
 class TestStdlibTypes < Minitest::Test
 
   def test_abbrev
+    skip "Skip when nowrap is enabled"
     assert_raises(RDL::Type::TypeError) { s0 = Abbrev.abbrev 5}
     # From the Ruby stdlib documentation
     s1 = Abbrev.abbrev(['ruby']) # -> {"ruby"=>"ruby", "rub"=>"ruby", "ru"=>"ruby", "r"=>"ruby"}
@@ -31,6 +32,7 @@ class TestStdlibTypes < Minitest::Test
   end
 
   def test_base64
+    skip "Skip when nowrap is enabled"
     # From the Ruby stdlib documentation
     e0 = Base64.encode64('Send reinforcements') # -> "U2VuZCByZWluZm9yY2VtZW50cw==\n"
     d0 = Base64.decode64(e0) # -> "Send reinforcements"
@@ -72,6 +74,7 @@ class TestStdlibTypes < Minitest::Test
   end
 
   def test_bigdecimal
+    skip "Skip when nowrap is enabled"
     # From the RUby stdlib documentation
     BigDecimal.save_exception_mode do
       BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
@@ -115,6 +118,7 @@ class TestStdlibTypes < Minitest::Test
   end
 
   def test_coverage
+    skip "Skip when nowrap is enabled"
     Coverage.start
     Coverage.result
     #Coverage.result # TODO This cannot be typechecked
@@ -134,6 +138,7 @@ class TestStdlibTypes < Minitest::Test
   end
   
   def test_set
+    skip "Skip when nowrap is enabled"
     assert_raises(RDL::Type::TypeError) { s6 = Set.new(1,2) }
     # From the Ruby stdlib documentation
     s1 = Set.new [1, 2]                   # -> #<Set: {1, 2}>

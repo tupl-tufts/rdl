@@ -1,4 +1,6 @@
 class Pathname
+  nowrap
+
   type 'self.getwd', '() -> Pathname'
   type 'self.glob', '(String p1, ?String p2) -> Array<Pathname>'
   type 'self.new', '(%string or Pathname p1) -> Pathname' # p1 can be String-like

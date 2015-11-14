@@ -410,10 +410,11 @@ class Object
       raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
       raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless formals.size == typs.size
       raise RuntimeError, "Instance already has type instantiation" if @__rdl_type
-      t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *typs)
+      new_typs = typs.map { |t| if t.is_a? RDL::Type::Type then t else $__rdl_parser.scan_str "## #{t}" end }
+      t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *new_typs)
       if all.instance_of? Symbol
         self.send(all) { |*objs|
-          typs.zip(objs).each { |t, obj|
+          new_typs.zip(objs).each { |t, obj|
             if t.instance_of? RDL::Type::GenericType # require obj to be instantiated
               t_obj = RDL::Util.rdl_type(obj)
               raise RDL::Type::TypeError, "Expecting element of type #{t.to_s}, but got uninstantiated object #{obj.inspect}" unless t_obj
@@ -424,7 +425,7 @@ class Object
           }
         }
       else
-        raise RDL::Type::TypeError, "Not an instance of #{t}" unless instance_exec(*typs, &all)
+        raise RDL::Type::TypeError, "Not an instance of #{t}" unless instance_exec(*new_typs, &all)
       end
       @__rdl_type = t
       self
@@ -442,8 +443,9 @@ class Object
   # Returns a new object that wraps self in a type cast. This cast is *unchecked*, so use with caution
   def type_cast(typ)
     $__rdl_contract_switch.off {
+      new_typ = if typ.is_a? RDL::Type::Type then typ else $__rdl_parser.scan_str "## #{typ}" end
       obj = SimpleDelegator.new(self)
-      obj.instance_variable_set('@__rdl_type', typ)
+      obj.instance_variable_set('@__rdl_type', new_typ)
       return obj
     }
   end
@@ -463,6 +465,40 @@ class Object
         $__rdl_special_types[name] = typ
       else
         raise RuntimeError, "Unexpected typ argument #{typ.inspect}"
+      end
+    }
+  end
+
+  def rdl_query(q)
+    $__rdl_contract_switch.off {
+      if q =~ /^(\w+(#|\.))?(\w+(!|\?|=)?|!|~|\+|\*\*|-|\*|\/|%|<<|>>|&|\||\^|<|<=|=>|>|==|===|!=|=~|!~|<=>|\[\]|\[\]=)$/
+        klass = nil
+        klass_pref = nil
+        meth = nil
+        if q =~ /(.+)#(.+)/
+          klass = $1
+          klass_pref = "#{klass}#"
+          meth = $2.to_sym
+        elsif q =~ /(.+)\.(.+)/
+          klass_pref = "#{$1}."
+          klass = RDL::Util.add_singleton_marker($1)
+          meth = $2.to_sym
+        else
+          klass = self.class.to_s
+          klass_pref = "#{klass}#"
+          meth = q.to_sym
+        end
+        if RDL::Wrap.has_contracts?(klass, meth, :type)
+          typs = RDL::Wrap.get_contracts(klass, meth, :type)
+          typs.each { |t|
+            puts "#{klass_pref}#{meth}: #{t}"
+          }
+          nil
+        else
+          puts "No type for #{klass_pref}#{meth}"
+        end
+      else
+        puts "Not implemented"
       end
     }
   end

@@ -1,4 +1,6 @@
 class Integer
+  nowrap
+
   rdl_alias :ceil, :to_i
   type :chr, '(?Encoding) -> String'
   type :denominator, '() -> 1'

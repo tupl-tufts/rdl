@@ -1,5 +1,6 @@
 class BigDecimal
-
+  nowrap
+  
   #type 'self._load', '()'
   type 'self.double_fig', '() -> Fixnum'
   type 'self.limit', '(Fixnum) -> Fixnum'

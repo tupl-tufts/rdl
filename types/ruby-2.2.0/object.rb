@@ -1,4 +1,6 @@
 class Object
+  nowrap
+
   # type :ARGF, ARGF
   # type :ARGV, 'Array<String>'
   # type :DATA, 'File'

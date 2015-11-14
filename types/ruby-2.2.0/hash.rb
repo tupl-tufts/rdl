@@ -1,6 +1,10 @@
 class Hash
+  nowrap
+
   type_params [:k, :v], :all?
 
+  type 'self.[]', '(Array<Array<u>>) -> Hash<u, u>'
+  
   type :[], '(k) -> v'
   type :[]=, '(k, v) -> v'
   type :store, '(k,v) -> v'

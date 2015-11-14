@@ -1,4 +1,6 @@
 class Float
+  nowrap
+
   type :%, '(Numeric other) -> Numeric'
   type :*, '(Numeric other) -> Numeric'
   type :**, '(Numeric other) -> Numeric'

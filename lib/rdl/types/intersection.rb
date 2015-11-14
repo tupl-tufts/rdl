@@ -18,6 +18,7 @@ module RDL::Type
         elsif t.instance_of? IntersectionType
           ts.concat t.types
         else
+          raise RuntimeError, "Attempt to create intersection type with non-type" unless t.is_a? Type
           ts << t
         end
       }

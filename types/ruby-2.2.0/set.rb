@@ -1,4 +1,6 @@
 class Set
+  nowrap
+
   type_params [:t], :all?
   
   type 'self.[]', '(*u) -> Set<u>'

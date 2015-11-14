@@ -1,7 +1,10 @@
 class Array
+  nowrap
+
   type_params [:t], :all?
   
-  type :[], '(Range) -> Array<t>'
+  type :<<, '(t) -> Array<t>'
+  type :[], '(Range<Fixnum>) -> Array<t>'
   type :[], '(Fixnum or Float) -> t'
   type :[], '(Fixnum, Fixnum) -> Array<t>'
   type :&, '(Array<u>) -> Array<t>'
@@ -9,19 +12,21 @@ class Array
   type :*, '(String) -> String'
   type :+, '(Enumerable<u>) -> Array<u or t>'
   type :-, '(Array<u>) -> Array<u or t>'
-  type :slice, '(Range) -> Array<t>'
+  type :slice, '(Range<Fixnum>) -> Array<t>'
   type :slice, '(Fixnum) -> t'
   type :slice, '(Fixnum, Fixnum) -> Array<t>'
   type :[]=, '(Fixnum, t) -> t'
   type :[]=, '(Fixnum, Fixnum, t) -> t'
   #type :[]=, '(Fixnum, Fixnum, Array<t>) -> Array<t>'
   #type :[]=, '(Range, Array<t>) -> Array<t>'
-  type :[]=, '(Range, t) -> t'
+  type :[]=, '(Range<Fixnum>, t) -> t'
   type :assoc, '(t) -> Array<t>'
   type :at, '(Fixnum) -> t'
   type :clear, '() -> Array<t>'
   type :map, '() {(t) ->u} -> Array<u>'
   type :map, '() -> Enumerator<t>'
+  type :map!, '() {(t) ->u} -> Array<u>'
+  type :map!, '() -> Enumerator<t>'
   type :collect, '() { (t) -> u } -> Array<u>'
   type :collect, '() -> Enumerator<t>'
   type :combination, '(Fixnum) { (Array<t>) -> %any } -> Array<t>'
@@ -53,10 +58,11 @@ class Array
   type :fetch, '(Fixnum) { (Fixnum) -> u } -> t or u'
   type :fill, '(t) -> Array<t>'
   type :fill, '(t,Fixnum,?Fixnum) -> Array<t>'
-  type :fill, '(t, Range) -> Array<t>'
+  type :fill, '(t, Range<Fixnum>) -> Array<t>'
   type :fill, '() { (Fixnum) -> t } -> Array<t>'
   type :fill, '(Fixnum, ?Fixnum) { (Fixnum) -> t } -> Array<t>'
-  type :fill, '(Range) { (Fixnum) -> t } -> Array<t>'
+  type :fill, '(Range<Fixnum>) { (Fixnum) -> t } -> Array<t>'
+  type :flatten, '() -> Array<%any>' # Can't give a more precise type
   type :index, '(u) -> Fixnum'
   type :index, '() { (t) -> %bool } -> Fixnum'
   type :index, '() -> Enumerator<t>'
@@ -69,6 +75,7 @@ class Array
   type :keep_if, '() { (t) -> %bool } -> Array<t>'
   type :last, '() -> t'
   type :last, '(Fixnum) -> Array<t>'
+  type :member, '(u) -> %bool'
   type :length, '() -> Fixnum'
   type :permutation, '(?Fixnum) -> Enumerator<t>'
   type :permutation, '(?Fixnum) { (Array<t>) -> %any } -> Array<t>'
@@ -105,7 +112,7 @@ class Array
   type :shuffle!, '() -> Array<t>'
   rdl_alias :size, :length
   rdl_alias :slice, :[]
-  type :slice!, '(Range) -> Array<t>'
+  type :slice!, '(Range<Fixnum>) -> Array<t>'
   type :slice!, '(Fixnum, Fixnum) -> Array<t>'
   type :slice!, '(Fixnum or Float) -> t'
   type :sort, '() -> Array<t>'
@@ -124,7 +131,7 @@ class Array
   type :uniq, '() -> Array<t>'
   type :uniq!, '() -> Array<t>'
   type :unshift, '(*t) -> Array<t>'
-  type :values_at, '(*Range or Fixnum) -> Array<t>'
+  type :values_at, '(*Range<Fixnum> or Fixnum) -> Array<t>'
   type :zip, '(*Array<u>) -> Array<Array<t or u>>'
   type :|, '(Array<u>) -> Array<t or u>'
 end

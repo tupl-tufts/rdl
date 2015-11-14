@@ -25,18 +25,28 @@ type '(Fixnum, Fixnum) -> String'
 def m ... end
 ```
 
-This indicates that `m` is that method that returns a `String` if given two `Fixnum` arguments. Again this contract is enforced at run-time: When `m` is called, RDL checks that `m` is given exactly two arguments and both are `Fixnum`s, and that `m` returns an instance of `String`. RDL supports many more complex type annotations; see below for a complete discussion and examples.
+This indicates that `m` is that method that returns a `String` if given two `Fixnum` arguments. Again this contract is enforced at run-time: When `m` is called, RDL checks that `m` is given exactly two arguments and both are `Fixnum`s, and that `m` returns an instance of `String`. RDL supports many more complex type annotations; see below for a complete discussion and examples. We should emphasize here that RDL types are enforced as contracts at method entry and exit. There is no static checking that the method body conforms to the types.
 
-RDL contracts and types are stored in memory at run time, so it's also possible for programs to query them. RDL includes lots of contracts and type for the core and standard libraries. Since those methods are generally trustworthy, RDL doesn't actually enforce the contracts (since that would add overhead), but they are available to search and query. For example:
+RDL contracts and types are stored in memory at run time, so it's also possible for programs to query them. RDL includes lots of contracts and type for the core and standard libraries. Since those methods are generally trustworthy, RDL doesn't actually enforce the contracts (since that would add overhead with no point), but they are available to search and query. For example:
 
 ```
-require 'rdl'
-require 'rdl_types'
+> require 'rdl'
+ => true
+> require 'rdl_types'
+ => true
 
-rdl_query 'hash'             # get type for instance method of current class
-rdl_query 'String#include'   # get type for instance method of another class
-rdl_query 'Pathname.ascend'  # get type for singleton method of a class
+> rdl_query 'hash'             # get type for instance method of current class
+Object#hash: () -> Fixnum
+ => nil
+> rdl_query 'String#include'   # get type for instance method of another class
+String#include?: (String) -> FalseClass or TrueClass
+ => nil
+ > rdl_query 'Pathname.glob'   # get type for singleton method of a class
+ Pathname.glob: (String p1, ?String p2) -> Array<Pathname>
+ => nil
 ```
+
+Currently only type information is returned by `rdl_query` (and not arbitrary pre or postconditions).
 
 # RDL Reference
 

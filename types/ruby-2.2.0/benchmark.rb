@@ -1,4 +1,6 @@
 module Benchmark
+  nowrap
+
   type 'self.benchmark', '(String, ?Fixnum, ?String, *String) -> Array<Benchmark::Tms>'
   type 'self.bm', '(?Fixnum, *String) { (Benchmark::Process) -> nil} -> Array<Benchmark::Tms>'
   #type 'self.benchmark', '(Caption: String, Label_Width: ?Fixnum, Format: ?String, Labels: *String) -> Benchmark::Tms'

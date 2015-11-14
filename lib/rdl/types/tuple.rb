@@ -14,6 +14,7 @@ module RDL::Type
     def self.new(*params)
       t = @@cache[params]
       return t if t
+      raise RuntimeError, "Attempt to create generic type with non-type param" unless params.all? { |p| p.is_a? Type }
       t = TupleType.__new__(params)
       return (@@cache[params] = t) # assignment evaluates to t
     end

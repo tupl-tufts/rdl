@@ -1,4 +1,6 @@
 class Complex
+  nowrap
+
   type 'self.polar', '(%real abs, ?%real arg) -> Complex'
   type 'self.rect', '(%real real, ?%real imag) -> Complex'
   pre('self.rect') { |r, i| (not i) || (i.real?) }
