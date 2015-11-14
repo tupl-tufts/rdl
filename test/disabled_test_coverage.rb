@@ -5,11 +5,12 @@ require 'benchmark'
 require 'bigdecimal'
 require 'bigdecimal/math'
 require 'coverage.so'
-require 'uri'
 
 require 'minitest/autorun'
 require_relative '../lib/rdl.rb'
 require_relative '../lib/rdl_types.rb'
+
+RDL::Config.instance.profile_stats
 
 class Dummy
   def self.each
@@ -107,30 +108,11 @@ class TestStdlibTypes < Minitest::Test
     BigMath.sin(BigMath.PI(5)/4, 5)
     BigMath.sqrt(BigDecimal.new('2'), 16)
   end
-  
-  def test_class
-    Dummy.allocate
-    Dummy.new
-    Dummy.superclass
-  end
 
   def test_coverage
     Coverage.start
     Coverage.result
     #Coverage.result # TODO This cannot be typechecked
-  end
-  
-  def test_exception
-    e1 = Exception.new
-    e1 == 5
-    tmp = e1.backtrace
-    e1.backtrace_locations
-    e1.cause
-    e1.exception
-    e1.inspect
-    e1.message
-    e1.set_backtrace(tmp)
-    e1.to_s
   end
   
   def test_set
@@ -170,20 +152,5 @@ class TestStdlibTypes < Minitest::Test
     s1.difference [1,2,3]
     s1.to_a
     s5 = s1 + s2
-  end
-  
-  def test_uri
-    URI.decode_www_form("a=1&a=2&b=3")
-    URI.encode_www_form([["q", "ruby"], ["lang", "en"]]) # Internally uses _component
-    URI.encode_www_form("q" => "ruby", "lang" => "en")
-    URI.encode_www_form("q" => ["ruby", "perl"], "lang" => "en")
-    URI.encode_www_form([["q", "ruby"], ["q", "perl"], ["lang", "en"]])
-    URI.extract("text here http://foo.example.org/bla and here mailto:test@example.com and here also.")
-    URI.join("http://example.com/","main.rbx")
-    URI.parse("http://www.ruby-lang.org/")
-    URI.scheme_list
-    URI.split("http://www.ruby-lang.org/")
-    enc_uri = URI.escape("http://example.com/?a=\11\15")
-    URI.unescape(enc_uri)
   end
 end

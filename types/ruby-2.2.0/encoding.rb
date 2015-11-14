@@ -7,7 +7,7 @@ class Encoding
   type 'self.default_internal', '() -> Encoding'
   type 'self.default_internal=', '(String) -> String or nil'
   type 'self.default_internal=', '(Encoding) -> Encoding or nil'
-  type 'self.find', '(String) -> Encoding'
+  type 'self.find', '(String or Encoding) -> Encoding'
   type 'self.list', '() -> Array<Encoding>'
   type 'self.name_list', '() -> Array<String>'
 
