@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.version     = '1.0.0.beta.1'
   s.date        = '2015-12-15'
   s.summary     = "Ruby type and contract system"
-  s.description = "Add preconditions, postconditions, and type annotations to your Ruby program"
+  s.description = s.summary
   s.authors     = ['University of Maryland, College Park']
   s.email       = ['rdl-devel@googlegroups.com']
   s.files       = Dir["lib/**/*", "types/**/*"]
