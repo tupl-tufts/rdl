@@ -22,12 +22,12 @@ In addition to arbitrary pre- and post-conditions, RDL also has extensive suppor
 require 'rdl'
 
 type '(Fixnum, Fixnum) -> String'
-def m ... end
+def m(x,y) ... end
 ```
 
-This indicates that `m` is that method that returns a `String` if given two `Fixnum` arguments. Again this contract is enforced at run-time: When `m` is called, RDL checks that `m` is given exactly two arguments and both are `Fixnum`s, and that `m` returns an instance of `String`. RDL supports many more complex type annotations; see below for a complete discussion and examples. We should emphasize here that RDL types are enforced as contracts at method entry and exit. There is no static checking that the method body conforms to the types.
+This indicates that `m` is that method that returns a `String` if given two `Fixnum` arguments. Again this contract is enforced at run-time: When `m` is called, RDL checks that `m` is given exactly two arguments and both are `Fixnums`, and that `m` returns an instance of `String`. RDL supports many more complex type annotations; see below for a complete discussion and examples. We should emphasize here that RDL types are enforced as contracts at method entry and exit. There is no static checking that the method body conforms to the types.
 
-RDL contracts and types are stored in memory at run time, so it's also possible for programs to query them. RDL includes lots of contracts and type for the core and standard libraries. Since those methods are generally trustworthy, RDL doesn't actually enforce the contracts (since that would add overhead with no point), but they are available to search and query. For example:
+RDL contracts and types are stored in memory at run time, so it's also possible for programs to query them. RDL includes lots of contracts and types for the core and standard libraries. Since those methods are generally trustworthy, RDL doesn't actually enforce the contracts (since that would add overhead), but they are available to search and query. For example:
 
 ```
 > require 'rdl'
@@ -46,7 +46,7 @@ String#include?: (String) -> FalseClass or TrueClass
  => nil
 ```
 
-Currently only type information is returned by `rdl_query` (and not arbitrary pre or postconditions).
+Currently only type information is returned by `rdl_query` (and not other pre or postconditions).
 
 # RDL Reference
 
@@ -81,17 +81,17 @@ Currently RDL has types for the following versions of Rails:
 
 ## Preconditions and Postconditions
 
-The `pre` method takes a block and adds that block as a precondition to a method. When it's time to check the precondition, the block will be called with the method's arguments. If the block returns `false` or `nil` the precondition is considered to have failed, and RDL will raise a `ContractError`. Otherwise the block is assumed to succeed. The block can also raise its own error if the contract fails.
+The `pre` method takes a block and adds that block as a precondition to a method. When it's time to check the precondition, the block will be called with the method's arguments. If the block returns `false` or `nil` the precondition is considered to have failed, and RDL will raise a `ContractError`. Otherwise, if the block returns a true value, then the method executes as usual. The block can also raise its own error if the contract fails.
 
 The `pre` method can be called in several ways:
 
 * `pre { block }` - Apply precondition to the next method to be defined
-* `pre mth { block }` - Apply precondition to method `mth` of the current class, where `mth` is a `Symbol` or `String`
-* `pre cls, mth { block }` - Apply precondition to method `mth` of class `cls`, where `cls` is a `Class`, `Symbol`, or `String`, and `mth` is a `Symbol` or `String`
+* `pre(mth) { block }` - Apply precondition to method `mth` of the current class, where `mth` is a `Symbol` or `String`
+* `pre(cls, mth) { block }` - Apply precondition to method `mth` of class `cls`, where `cls` is a `Class`, `Symbol`, or `String`, and `mth` is a `Symbol` or `String`
 
 The `post` method is similar, except its block is called with the return value of the method (in the first position) followed by all the method's arguments. For example, you probably noticed that for `sqrt` above the `post` block took the return value `r` and the method argument `x`.
 
-(Note: RDL does *not* clone or dup the arguments at method entry, so if the method body has mutated, for example, fields stored inside those argument objects, the `post` block or any other check evaluated afterwards will see the mutated field values rather than the original values.)
+(Note: RDL does *not* clone or dup the arguments at method entry. So, for example, if the method body has mutated fields stored inside those argument objects, the `post` block or any other check evaluated afterwards will see the mutated field values rather than the original values.)
 
 The `post` method can be called in the same ways as `pre`.
 
@@ -128,7 +128,7 @@ Currently, `nil` is treated as if it were an instance of any class.
 x = "foo"
 x.insert(0, nil) # RDL does not report a type error
 ```
-It's up for debate whether this is the right behavior. It's left over from experience with static type systems where not allowing this leads to a lot of false positive errors from the type system.
+We chose this design based on prior experience with static type systems for Ruby, where not allowing this leads to a lot of false positive errors from the type system. However, we may change this in the future.
 
 ### Top Type (%any)
 
@@ -151,7 +151,7 @@ Note that for `getbyte`, we could leave off the `nil`, but we include it to matc
 
 ### Intersection Types
 
-Sometimes Ruby methods return different types depending on the types of their arguments. (In Java these would be called *overloaded* methods.) In RDL, such methods are assigned a set of type signatures:
+Sometimes Ruby methods have several different type signatures. (In Java these would be called *overloaded* methods.) In RDL, such methods are assigned a set of type signatures:
 
 ```
 type String, :[], '(Fixnum) -> String or nil'
@@ -169,7 +169,7 @@ When this method is called at run time, RDL checks that at least one type signat
 ```
 "foo"[0]  # matches first type
 "foo"[0,2] # matches second type
-"foo"(0..2) # matches third type
+"foo"[0..2] # matches third type
 "foo"[0, "bar"] # error, doesn't match any type
 # etc
 ```
@@ -202,7 +202,7 @@ Like Ruby, RDL allows optional arguments to appear anywhere in a method's type s
 
 ### Variable Length Argument Types
 
-A method that can take any number of arguments is denoted in RDL by having a `*`'d type appear as the rightmost argument type, indicating that argument can appear zero or more times. For example, `String#delete` takes one or more `String` arguments:
+In RDL, `*` is used to decorate the rightmost argument if it may appear zero or more times. For example, `String#delete` takes one or more `String` arguments:
 
 ```
 type String, :delete, '(String, *String) -> String'
@@ -250,7 +250,7 @@ type File, 'self.new', '(String file, ?String mode, ?String perm, ?Fixnum opt) -
 
 ### Structural Types
 
-Some Ruby methods can take any object that has certain methods. RDL uses *structural types* to denote such cases:
+Some Ruby methods are intended to take any object that has certain methods. RDL uses *structural types* to denote such cases:
 
 ```
 type IO, :puts, '(*[to_s: () -> String]) -> nil'
@@ -307,7 +307,7 @@ A.new.id # okay, returns self
 B.new.id # also okay, returns self
 ```
 
-Note that type `self` means *exactly* the self object, i.e., it is a singleton type. It does not mean "any object of self's class." Thus, for example, `Object#clone` has type `() -> %any`, since it will return a different object.
+Note that type `self` means *exactly* the self object, i.e., it is a singleton type. It does not mean "any object of self's class." Thus, for example, `Object#clone` has type `() -> %any`, since it will return a different object. We might change this behavior in the future.
 
 ### Type Aliases
 
@@ -319,7 +319,7 @@ type String, :==, '(%any) -> %bool'
 
 Note it is not a bug that `==` is typed to allow any object. Though you would think that developers would generally only compare objects of the same class (since otherwise `==` almost always returns false), in practice a lot of code does compare objects of different classes.
 
-The `type_alias(name, typ)` can be used to create a user-defined type alias, where `name` must begin with `%`:
+Method `type_alias(name, typ)` can be used to create a user-defined type alias, where `name` must begin with `%`:
 
 ```
 type_alias '%real', 'Integer or Float or Rational'
@@ -381,7 +381,7 @@ x.push("three") # no longer a type error
 
 Finally, `type_params` can optionally take a third argument that is an array of *variances*, which are either `:+` for covariance, `:-` for contravariance, or `:~` for invariance. If variances aren't listed, type parameters are assumed to be invariant, which is a safe default.
 
-Variances are only used when RDL checks that one type is a subtype of another. This only happens in limited circumstances, really only when there are cases such as arrays of arrays where all levels have instantiated types. So generally you don't need to worry much about the variance.
+Variances are only used when RDL checks that one type is a subtype of another. This only happens in limited circumstances, e.g., arrays of arrays where all levels have instantiated types. So generally you don't need to worry much about the variance.
 
 The rules for variances are standard. Let's assume `A` is a subclass of `B`. Also assume there is a class `C` that has one type parameter. Then:
 * `C<A>` is a subtype of `C<A>` always
@@ -390,9 +390,9 @@ The rules for variances are standard. Let's assume `A` is a subclass of `B`. Als
 
 ### Tuple Types
 
-A type such as `Array<Fixnum>` is useful for homogeneous arrays, where all elements have the same type. But Ruby programs often use heterogenous arrays, e.g., `[1, "two"]`. The best generic type we can give this is `Array<Fixnum or String>`, but that's not completely precise.
+A type such as `Array<Fixnum>` is useful for homogeneous arrays, where all elements have the same type. But Ruby programs often use heterogenous arrays, e.g., `[1, "two"]`. The best generic type we can give this is `Array<Fixnum or String>`, but that's imprecise.
 
-RDL includes special *tuple types* to handle this situation. Tuple types are written `[t1, ..., tn]`, denoting an `Array` of `n` elements of types `t1` through `tn`, in that order. For example, `[1, "two"]` has type `[Fixnum, String]`. As another example, here is the type of `Process#getrlimit`, which returns a two-element array of `Fixnum`s:
+RDL includes special *tuple types* to handle this situation. Tuple types are written `[t1, ..., tn]`, denoting an `Array` of `n` elements of types `t1` through `tn`, in that order. For example, `[1, "two"]` has type `[Fixnum, String]`. As another example, here is the type of `Process#getrlimit`, which returns a two-element array of `Fixnums`:
 
 ```
 type Process, 'self.getrlimit', '(Symbol or String or Fixnum resource) -> [Fixnum, Fixnum] cur_max_limit'
@@ -414,11 +414,11 @@ For example, `{a: Fixnum, b: String}` types a hash where key `:a` is mapped to a
 
 RDL also includes a few other useful methods:
 
-* `rdl_alias(new_name, old_name)` tells RDL that method `new_name` is an alias for method `old_name`, and therefore they should have the same contracts and types. This method is only needed when adding contracts and types to method that already have been aliased; it's not needed if the method is aliased after the contract or type has been added.
+* `rdl_alias(new_name, old_name)` tells RDL that method `new_name` is an alias for method `old_name`, and therefore they should have the same contracts and types. This method is only needed when adding contracts and types to method that have already been aliased; it's not needed if the method is aliased after the contract or type has been added.
 
 * `o.type_cast(t)` returns a new object that delegates all methods to `o` but that will be treated by RDL as if it had type `t`. For example, `x = "a".type_cast('nil')` will make RDL treat `x` as if it had type `nil`, even though it's a `String`.
 
-* `nowrap`, if called at the top-level of a class, tells RDL to record contracts and types for methods in that class but *not* enforce them. This is mostly used for the core and standard libraries, which have trustworthy behavior hence the overhead of enforcing types and contracts on them is likely not worth it.
+* `nowrap`, if called at the top-level of a class, tells RDL to record contracts and types for methods in that class but *not* enforce them. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead.
 
 ## Raw Contracts and Types
 
@@ -443,8 +443,8 @@ RDL also includes a few other useful methods:
 # TODO list
 
 * ProcContract, Wrap, MethodType, support higher-order contracts for blocks
-+ And higher-order type checking
-+ Block passed to contracts don't work yet
+  * And higher-order type checking
+  * Block passed to contracts don't work yet
 
 * How to check whether initialize? is user-defined? method_defined? always
   returns true, meaning wrapping isn't fully working with initialize.
@@ -469,3 +469,6 @@ RDL also includes a few other useful methods:
 * Documentation!
 
 * double-splat arguments, which bind to an arbitrary set of keywords.
+
+* included versus extended modules, e.g., Kernel is included in
++  Object, so its class methods become Object's instance methods.
