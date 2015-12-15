@@ -438,7 +438,52 @@ RDL also includes a few other useful methods:
 
 # Bibliography
 
-*To be written*
+Here we list some papers on various systems we built exploring contracts, types and Ruby.
+
+* T. Stephen Strickland, Brianna Ren, and Jeffrey S. Foster.
+[Contracts for Domain-Specific Languages in Ruby](http://www.cs.umd.edu/~jfoster/papers/dls12.pdf).
+In Dynamic Languages Symposium (DLS), Portland, OR, October 2014.
+
+* Brianna M. Ren, John Toman, T. Stephen Strickland, and Jeffrey S. Foster.
+[The Ruby Type Checker](http://www.cs.umd.edu/~jfoster/papers/oops13.pdf).
+In Object-Oriented Program Languages and Systems (OOPS) Track at ACM Symposium on Applied Computing, pages 1565–1572, Coimbra, Portugal, March 2013.
+
+* Jong-hoon (David) An, Avik Chaudhuri, Jeffrey S. Foster, and Michael Hicks.
+[Dynamic Inference of Static Types for Ruby](http://www.cs.umd.edu/~jfoster/papers/popl11.pdf).
+In ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages (POPL), pages 459–472, Austin, TX, USA, January 2011.
+
+* Jong-hoon (David) An.
+[Dynamic Inference of Static Types for Ruby](http://www.cs.umd.edu/~jfoster/papers/thesis-an.pdf).
+MS theis, University of Maryland, College Park, 2010.
+
+* Michael Furr.
+[Combining Static and Dynamic Typing in Ruby](https://www.cs.umd.edu/~jfoster/papers/thesis-furr.pdf).
+PhD thesis, University of Maryland, College Park, 2009.
+
+* Michael Furr, Jong-hoon (David) An, Jeffrey S. Foster, and Michael Hicks.
+[The Ruby Intermediate Langauge](http://www.cs.umd.edu/~jfoster/papers/dls09-ril.pdf).
+In Dynamic Languages Symposium (DLS), pages 89–98, Orlando, Florida, October 2009.
+
+* Michael Furr, Jong-hoon (David) An, and Jeffrey S. Foster.
+[Profile-Guided Static Typing for Dynamic Scripting Languages](http://www.cs.umd.edu/~jfoster/papers/oopsla09.pdf).
+In ACM SIGPLAN International Conference on Object-Oriented Programming, Systems, Languages and Applications (OOPSLA), pages 283–300, Orlando, Floria, October 2009. Best student paper award.
+
+* Michael Furr, Jong-hoon (David) An, Jeffrey S. Foster, and Michael Hicks.
+[Static Type Inference for Ruby](http://www.cs.umd.edu/~jfoster/papers/oops09.pdf).
+In Object-Oriented Program Languages and Systems (OOPS) Track at ACM Symposium on Applied Computing (SAC), pages 1859–1866, Honolulu, Hawaii, March 2009.
+
+# Copyright
+
+Copyright (c) 2014-2015, University of Maryland, College Park. All rights reserved.
+
+# Contributors
+
+## Authors
+
+Jeffrey S. Foster
+Brianna M. Ren
+T. Stephen Strickland
+Alex T. Yu
 
 # TODO list
 
