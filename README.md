@@ -202,7 +202,7 @@ Like Ruby, RDL allows optional arguments to appear anywhere in a method's type s
 
 ### Variable Length Argument Types
 
-In RDL, `*` is used to decorate the rightmost argument if it may appear zero or more times. For example, `String#delete` takes one or more `String` arguments:
+In RDL, `*` is used to decorate an argument that may appear zero or more times. Currently in RDL this annotation may only appear on the rightmost argument. For example, `String#delete` takes one or more `String` arguments:
 
 ```
 type String, :delete, '(String, *String) -> String'
@@ -400,11 +400,11 @@ type Process, 'self.getrlimit', '(Symbol or String or Fixnum resource) -> [Fixnu
 
 ### Finite Hash Types
 
-Similarly to tuple types, RDL also supports *finite hash types* for heterogenous hashes. Finite hash types are written `{k1 => v1, ..., kn => vn}` to indicate a `Hash` with `n` mappings of type `ki` maps to `vi`. The `ki` may be strings, integers, floats, or constants denoted with `${.}`. If a key is a symbol, then the mapping should be written `ki: vi`.
+Similarly to tuple types, RDL also supports *finite hash types* for heterogenous hashes. Finite hash types are written `{k1 => v1, ..., kn => vn}` to indicate a `Hash` with `n` mappings of type `ki` maps to `vi`. The `ki` may be strings, integers, floats, or constants denoted with `${.}`. If a key is a symbol, then the mapping should be written `ki: vi`. In the latter case, the `{}`'s can be left off:
 ```
-type MyClass, :foo, '({a: Fixnum, b: String}) { () -> %any } -> %any'
+type MyClass, :foo, '(a: Fixnum, b: String) { () -> %any } -> %any'
 ```
-For example, `{a: Fixnum, b: String}` types a hash where key `:a` is mapped to a `Fixnum` and key `:b` is mapped to a `String`. Similarly, `{'a'=>Fixnum, 2=>String}` types a hash where keys `'a'` and `2` are mapped to a `Fixnum` and `String`, respectively. Both syntaxes can be used to define hash types.
+Here `foo`, takes a hash where key `:a` is mapped to a `Fixnum` and key `:b` is mapped to a `String`. Similarly, `{'a'=>Fixnum, 2=>String}` types a hash where keys `'a'` and `2` are mapped to a `Fixnum` and `String`, respectively. Both syntaxes can be used to define hash types.
 
 ## Contract queries
 
@@ -476,10 +476,10 @@ Copyright (c) 2014-2015, University of Maryland, College Park. All rights reserv
 
 ## Authors
 
-Jeffrey S. Foster
-Brianna M. Ren
-T. Stephen Strickland
-Alex T. Yu
+* [Jeff Foster](http://www.cs.umd.edu/~jfoster/)
+* [Brianna M. Ren](https://www.cs.umd.edu/~bren/)
+* [T. Stephen Strickland](https://www.cs.umd.edu/~sstrickl/)
+* Alexander T. Yu
 
 # RDL Build Status
 
