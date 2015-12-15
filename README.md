@@ -432,10 +432,6 @@ RDL also includes a few other useful methods:
 
 *To be written*
 
-# RDL Build Status
-
-[![Build Status](https://travis-ci.org/plum-umd/rdl.png?branch=cRDL)](https://travis-ci.org/plum-umd/rdl)
-
 # Bibliography
 
 Here we list some papers on various systems we built exploring contracts, types and Ruby.
@@ -454,7 +450,7 @@ In ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages (POPL), p
 
 * Jong-hoon (David) An.
 [Dynamic Inference of Static Types for Ruby](http://www.cs.umd.edu/~jfoster/papers/thesis-an.pdf).
-MS theis, University of Maryland, College Park, 2010.
+MS thesis, University of Maryland, College Park, 2010.
 
 * Michael Furr.
 [Combining Static and Dynamic Typing in Ruby](https://www.cs.umd.edu/~jfoster/papers/thesis-furr.pdf).
@@ -484,6 +480,10 @@ Jeffrey S. Foster
 Brianna M. Ren
 T. Stephen Strickland
 Alex T. Yu
+
+# RDL Build Status
+
+[![Build Status](https://travis-ci.org/plum-umd/rdl.svg?branch=master)](https://travis-ci.org/plum-umd/rdl)
 
 # TODO list
 
