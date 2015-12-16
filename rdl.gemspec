@@ -4,7 +4,7 @@
 
 Gem::Specification.new do |s|
   s.name        = 'rdl'
-  s.version     = '1.0.0'
+  s.version     = '1.0.0.rc1'
   s.date        = '2015-12-16'
   s.summary     = "Ruby type and contract system"
   s.description = s.summary
