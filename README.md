@@ -66,6 +66,7 @@ Use `require 'rdl'` to load the RDL library. If you want to use the core and sta
 * 2.2.1 [same as 2.2.0]
 * 2.2.2 [same as 2.2.0]
 * 2.2.3 [same as 2.2.0]
+* 2.2.4 [same as 2.2.0]
 
 If you're using Ruby on Rails, you can similarly `require 'rails_types'` to load in type annotations for the current `Rails::VERSION::STRING`. More specifically, add the following lines in `application.rb` after the `Bundler.require` call. (This placement is needed so the Rails version string is available and the Rails environment is loaded):
 
@@ -517,3 +518,5 @@ Copyright (c) 2014-2015, University of Maryland, College Park. All rights reserv
 
 * included versus extended modules, e.g., Kernel is included in
 +  Object, so its class methods become Object's instance methods.
+
+* Better story for different types for different Ruby versions.
