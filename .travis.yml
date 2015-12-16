@@ -2,5 +2,9 @@ language: ruby
 gemfile:
   - gemfiles/Gemfile.travis
 rvm:
+  - 2.2.0
+  - 2.2.1
   - 2.2.2
+  - 2.2.3
+  - 2.2.4
 sudo: false
