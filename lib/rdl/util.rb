@@ -28,7 +28,7 @@ class RDL::Util
     
   def self.method_defined?(klass, method)
     begin
-      (self.to_class klass).method_defined? method.to_sym ||
+      (self.to_class klass).method_defined?(method.to_sym) ||
         (self.to_class klass).private_instance_methods.include?(method.to_sym) ||
         (self.to_class klass).protected_instance_methods.include?(method.to_sym)
     rescue NameError
