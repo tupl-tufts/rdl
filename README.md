@@ -39,7 +39,7 @@ RDL contracts and types are stored in memory at run time, so it's also possible 
 > rdl_query 'hash'             # get type for instance method of current class
 Object#hash: () -> Fixnum
  => nil
-> rdl_query 'String#include'   # get type for instance method of another class
+> rdl_query 'String#include?'   # get type for instance method of another class
 String#include?: (String) -> FalseClass or TrueClass
  => nil
  > rdl_query 'Pathname.glob'   # get type for singleton method of a class
