@@ -406,10 +406,6 @@ type MyClass, :foo, '(a: Fixnum, b: String) { () -> %any } -> %any'
 ```
 Here `foo`, takes a hash where key `:a` is mapped to a `Fixnum` and key `:b` is mapped to a `String`. Similarly, `{'a'=>Fixnum, 2=>String}` types a hash where keys `'a'` and `2` are mapped to a `Fixnum` and `String`, respectively. Both syntaxes can be used to define hash types.
 
-## Contract queries
-
-*Not implemented yet*
-
 ## Other Methods
 
 RDL also includes a few other useful methods:
@@ -419,18 +415,6 @@ RDL also includes a few other useful methods:
 * `o.type_cast(t)` returns a new object that delegates all methods to `o` but that will be treated by RDL as if it had type `t`. For example, `x = "a".type_cast('nil')` will make RDL treat `x` as if it had type `nil`, even though it's a `String`.
 
 * `nowrap`, if called at the top-level of a class, tells RDL to record contracts and types for methods in that class but *not* enforce them. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead.
-
-## Raw Contracts and Types
-
-*To be written*
-
-## RDL Configuration
-
-*To be written*
-
-# Code Overview
-
-*To be written*
 
 # Bibliography
 
@@ -476,7 +460,7 @@ Copyright (c) 2014-2015, University of Maryland, College Park. All rights reserv
 
 ## Authors
 
-* [Jeff Foster](http://www.cs.umd.edu/~jfoster/)
+* [Jeffrey S. Foster](http://www.cs.umd.edu/~jfoster/)
 * [Brianna M. Ren](https://www.cs.umd.edu/~bren/)
 * [T. Stephen Strickland](https://www.cs.umd.edu/~sstrickl/)
 * Alexander T. Yu
@@ -519,3 +503,7 @@ Copyright (c) 2014-2015, University of Maryland, College Park. All rights reserv
 +  Object, so its class methods become Object's instance methods.
 
 * Better story for different types for different Ruby versions.
+
+* Better query facility (more kinds of searches). Contract queries?
+
+* Write documentation on: Raw Contracts and Types, RDL Configuration, Code Overview

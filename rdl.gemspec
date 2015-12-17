@@ -14,7 +14,7 @@ postconditions are checked at run time when the method returns.
 RDL also includes extensive support for type contracts, which check the types of arguments and returns
 when the method is called and when it returns, respectively.
 EOF
-  s.authors     = ['University of Maryland, College Park']
+  s.authors     = ['Jeffrey S. Foster', 'Brianna M. Ren', 'T. Stephen Strickland', 'Alexander T. Yu']
   s.email       = ['rdl-users@googlegroups.com']
   s.files       = Dir['lib/**/*', 'types/**/*']
   s.homepage    = 'https://github.com/plum-umd/rdl'
