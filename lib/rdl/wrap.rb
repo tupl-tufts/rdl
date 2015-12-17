@@ -401,7 +401,7 @@ class Object
     }
   end
 
-  def nowrap
+  def rdl_nowrap
     $__rdl_contract_switch.off {
       RDL.config { |config| config.add_nowrap(self, self.singleton_class) }
     }

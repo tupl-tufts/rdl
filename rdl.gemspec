@@ -4,7 +4,7 @@
 
 Gem::Specification.new do |s|
   s.name        = 'rdl'
-  s.version     = '1.0.0.rc3'
+  s.version     = '1.0.0.rc4'
   s.date        = '2015-12-17'
   s.summary     = 'Ruby type and contract system'
   s.description = <<-EOF
@@ -16,7 +16,7 @@ when the method is called and when it returns, respectively.
 EOF
   s.authors     = ['Jeffrey S. Foster', 'Brianna M. Ren', 'T. Stephen Strickland', 'Alexander T. Yu']
   s.email       = ['rdl-users@googlegroups.com']
-  s.files       = Dir['lib/**/*', 'types/**/*']
+  s.files       = `git ls-files`.split($/)
   s.homepage    = 'https://github.com/plum-umd/rdl'
   s.license     = 'BSD-3-Clause'
   s.add_runtime_dependency 'require_all', '~> 1.3', '>= 1.3.3'

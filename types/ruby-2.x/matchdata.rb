@@ -1,0 +1,26 @@
+class MatchData
+  rdl_nowrap
+
+  type :==, '(%any) -> %bool'
+  type :[], '(Fixnum i) -> String or nil'
+  type :[], '(Fixnum start, Fixnum length) -> Array<String>'
+  type :[], '(Range<Fixnum> range) -> Array<String>'
+  type :[], '(String or Symbol name) -> String or nil'
+  type :begin, '(Fixnum n) -> Fixnum'
+  type :captures, '() -> Array<String>'
+  type :end, '(Fixnum n) -> Fixnum'
+  type :eql?, '(%any other) -> %bool'
+  type :hash, '() -> Fixnum'
+  type :inspect, '() -> String'
+  type :length, '() -> Fixnum'
+  type :names, '() -> Array<String>'
+  type :offset, '(Fixnum n) -> Array<Fixnum>'
+  type :post_match, '() -> String'
+  type :pre_match, '() -> String'
+  type :regexp, '() -> Regexp'
+  type :size, '() -> Fixnum'
+  type :string, '() -> String'
+  type :to_a, '() -> Array<String>'
+  type :to_s, '() -> String'
+  type :values_at, '(*Fixnum indexes) -> Array<String>'
+end

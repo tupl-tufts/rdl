@@ -63,8 +63,7 @@ RDL currently supports Ruby 2.2. It may or may not work with other versions.
 
 Use `require 'rdl'` to load the RDL library. If you want to use the core and standard library type signatures that come with RDL, follow it with `require 'rdl_types'`.  This will load the types based on the current `RUBY_VERSION`. Currently RDL has types for the following versions of Ruby:
 
-* 2.1.0-2.1.8
-* 2.2.0-2.2.4
+* 2.x
 
 (Currently all these are assume to have the same library type signatures, which may not be correct.)
 
@@ -415,7 +414,7 @@ RDL also includes a few other useful methods:
 
 * `o.type_cast(t)` returns a new object that delegates all methods to `o` but that will be treated by RDL as if it had type `t`. For example, `x = "a".type_cast('nil')` will make RDL treat `x` as if it had type `nil`, even though it's a `String`.
 
-* `nowrap`, if called at the top-level of a class, tells RDL to record contracts and types for methods in that class but *not* enforce them. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead.
+* `rdl_nowrap`, if called at the top-level of a class, tells RDL to record contracts and types for methods in that class but *not* enforce them. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead.
 
 # Bibliography
 
