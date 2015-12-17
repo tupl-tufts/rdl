@@ -8,7 +8,7 @@ Gem::Specification.new do |s|
   s.date        = '2015-12-17'
   s.summary     = 'Ruby type and contract system'
   s.description = <<-EOF
-RDL add support for adding contracts (pre- and postconditions) to methods.
+RDL is a gem that allows contracts (pre- and postconditions) to be added to methods.
 Preconditions are checked at run time when the method is called, and
 postconditions are checked at run time when the method returns.
 RDL also includes extensive support for type contracts, which check the types of arguments and returns

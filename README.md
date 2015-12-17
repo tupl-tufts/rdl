@@ -12,7 +12,8 @@ def sqrt(x)
 end
 ```
 
-to indicate the `sqrt` method assumes its input is positive and returns an output that is positive. (Let's ignore complex numbers to keep things simple...)
+Given this program, RDL intercepts the call to `sqrt` and passes its argument to the `pre` block, which checks that the arugment is positive. Then when `sqrt` returns, RDL passes the return value (as `r`) and the initial argument (as `x`) to the `post` block, which checks that the return is positive. (Let's ignore complex numbers to keep things simple...)
+
 
 RDL contracts are enforced at method entry and exit. For example, if we call `sqrt(49)`, RDL first checks that `49 > 0`; then it passes `49` to `sqrt`, which (presumably) returns `7`; then RDL checks that `7 > 0`; and finally it returns `7`.
 
