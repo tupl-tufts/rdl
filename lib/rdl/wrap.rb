@@ -47,7 +47,7 @@ class RDL::Wrap
     klass = klass.to_s
     $__rdl_type_params[klass]
   end
-  
+
   # [+klass+] may be a Class, String, or Symbol
   # [+meth+] may be a String or Symbol
   #
@@ -57,13 +57,14 @@ class RDL::Wrap
     $__rdl_wrap_switch.off {
       klass_str = klass_str.to_s
       klass = RDL::Util.to_class klass_str
+      return if wrapped? klass, meth
       return if RDL::Config.instance.nowrap.member? klass
       raise ArgumentError, "Attempt to wrap #{klass.to_s}\##{meth.to_s}" if klass.to_s =~ /^RDL::/
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
-      return if (klass.method_defined? meth_old)
+      # return if (klass.method_defined? meth_old) # now checked above by wrapped? call
       is_singleton_method = RDL::Util.has_singleton_marker(klass_str)
       full_method_name = RDL::Util.pp_klass_method(klass_str, meth)
-      
+
       klass.class_eval <<-RUBY, __FILE__, __LINE__
         alias_method meth_old, meth
         def #{meth}(*args, &blk)
@@ -111,6 +112,7 @@ RUBY
   # [+name+] is the name to give the block as a contract
   def self.process_pre_post_args(default_class, name, *args, &blk)
     klass = slf = meth = contract = nil
+    default_class = "Object" if (default_class.is_a? Object) && (default_class.to_s == "main") # special case for main
     if args.size == 3
       klass = class_to_string args[0]
       slf, meth = meth_to_sym args[1]
@@ -132,7 +134,7 @@ RUBY
       contract = args[0]
     elsif blk
       klass = default_class.to_s
-      contract = RDL::Contract::FlatContract.new(name, &blk)        
+      contract = RDL::Contract::FlatContract.new(name, &blk)
     else
       raise ArgumentError, "Invalid arguments"
     end
@@ -145,6 +147,7 @@ RUBY
   # [+default_class+] should be a class
   def self.process_type_args(default_class, *args, &blk)
     klass = meth = type = nil
+    default_class = "Object" if (default_class.is_a? Object) && (default_class.to_s == "main") # special case for main
     if args.size == 3
       klass = class_to_string args[0]
       slf, meth = meth_to_sym args[1]
@@ -164,7 +167,7 @@ RUBY
     klass = RDL::Util.add_singleton_marker(klass) if slf
     return [klass, meth, type]
   end
-    
+
   private
 
   def self.wrapped_name(klass, meth)
@@ -290,6 +293,7 @@ class Object
   def self.method_added(meth)
     $__rdl_contract_switch.off {
       klass = self.to_s
+      klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
 
       # Apply any deferred contracts and reset list
       if $__rdl_deferred.size > 0
@@ -317,6 +321,7 @@ class Object
   def self.singleton_method_added(meth)
     $__rdl_contract_switch.off {
       klass = self.to_s
+      klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
       sklass = RDL::Util.add_singleton_marker(klass)
 
       # Apply any deferred contracts and reset list
@@ -337,20 +342,21 @@ class Object
       end
     }
   end
-  
+
   # Aliases contracts for meth_old and meth_new. Currently, this must
   # be called for any aliases or they will not be wrapped with
   # contracts. Only creates aliases in the current class.
   def rdl_alias(new_name, old_name)
     $__rdl_contract_switch.off {
       klass = self.to_s
+      klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
       $__rdl_aliases[klass] = {} unless $__rdl_aliases[klass]
       if $__rdl_aliases[klass][new_name]
         raise RuntimeError,
               "Tried to alias #{new_name}, already aliased to #{$__rdl_aliases[klass][new_name]}"
       end
       $__rdl_aliases[klass][new_name] = old_name
-    
+
       if self.method_defined? new_name
         RDL::Wrap.wrap(klass, new_name)
       else
@@ -375,6 +381,7 @@ class Object
     $__rdl_contract_switch.off {
       raise RuntimeError, "Empty type parameters not allowed" if params.empty?
       klass = self.to_s
+      klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
       if $__rdl_type_params[klass]
         raise RuntimeError, "#{klass} already has type parameters #{$__rdl_type_params[klass]}"
       end
@@ -399,13 +406,14 @@ class Object
       RDL.config { |config| config.add_nowrap(self, self.singleton_class) }
     }
   end
-  
+
   # [+typs+] is an array of types, classes, symbols, or strings to instantiate
   # the type parameters. If a class, symbol, or string is given, it is
   # converted to a NominalType.
   def instantiate!(*typs)
     $__rdl_contract_switch.off {
       klass = self.class.to_s
+      klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
       formals, variance, all = $__rdl_type_params[klass]
       raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
       raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless formals.size == typs.size
