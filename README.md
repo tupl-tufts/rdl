@@ -62,11 +62,10 @@ RDL currently supports Ruby 2.2. It may or may not work with other versions.
 
 Use `require 'rdl'` to load the RDL library. If you want to use the core and standard library type signatures that come with RDL, follow it with `require 'rdl_types'`.  This will load the types based on the current `RUBY_VERSION`. Currently RDL has types for the following versions of Ruby:
 
-* 2.2.0
-* 2.2.1 [same as 2.2.0]
-* 2.2.2 [same as 2.2.0]
-* 2.2.3 [same as 2.2.0]
-* 2.2.4 [same as 2.2.0]
+* 2.1.0-2.1.8
+* 2.2.0-2.2.4
+
+(Currently all these are assume to have the same library type signatures, which may not be correct.)
 
 If you're using Ruby on Rails, you can similarly `require 'rails_types'` to load in type annotations for the current `Rails::VERSION::STRING`. More specifically, add the following lines in `application.rb` after the `Bundler.require` call. (This placement is needed so the Rails version string is available and the Rails environment is loaded):
 
