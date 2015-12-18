@@ -418,7 +418,7 @@ RDL also includes a few other useful methods:
 
 # Bibliography
 
-Here we list some papers on various systems we built exploring contracts, types and Ruby.
+Here are some research papers we have written exploring contracts, types, and Ruby.
 
 * T. Stephen Strickland, Brianna Ren, and Jeffrey S. Foster.
 [Contracts for Domain-Specific Languages in Ruby](http://www.cs.umd.edu/~jfoster/papers/dls12.pdf).
