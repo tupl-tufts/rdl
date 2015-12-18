@@ -4,8 +4,8 @@
 
 Gem::Specification.new do |s|
   s.name        = 'rdl'
-  s.version     = '1.0.0.rc5'
-  s.date        = '2015-12-17'
+  s.version     = '1.0.0'
+  s.date        = '2015-12-18'
   s.summary     = 'Ruby type and contract system'
   s.description = <<-EOF
 RDL is a gem that allows contracts (pre- and postconditions) to be added to methods.

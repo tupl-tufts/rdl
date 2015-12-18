@@ -1,3 +1,5 @@
+[![Gem Version](https://badge.fury.io/rb/rdl.svg)](https://badge.fury.io/rb/rdl)
+
 # Introduction
 
 RDL is a lightweight system for adding contracts to Ruby. A *contract* decorates a method with assertions describing what the method assumes about its inputs (called a *precondition*) and what the method guarantees about its outputs (called a *postcondition*). For example, using RDL we can write
