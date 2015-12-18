@@ -55,7 +55,7 @@ Currently only type information is returned by `rdl_query` (and not other pre or
 
 ## Supported versions of Ruby
 
-RDL currently supports Ruby 2.2. It may or may not work with other versions.
+RDL currently supports Ruby 2.1 and 2.2. It may or may not work with other versions.
 
 ## Installing RDL
 
@@ -67,7 +67,7 @@ Use `require 'rdl'` to load the RDL library. If you want to use the core and sta
 
 * 2.x
 
-(Currently all these are assume to have the same library type signatures, which may not be correct.)
+(Currently all these are assumed to have the same library type signatures, which may not be correct.)
 
 If you're using Ruby on Rails, you can similarly `require 'rails_types'` to load in type annotations for the current `Rails::VERSION::STRING`. More specifically, add the following lines in `application.rb` after the `Bundler.require` call. (This placement is needed so the Rails version string is available and the Rails environment is loaded):
 
