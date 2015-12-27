@@ -55,7 +55,7 @@ Currently only type information is returned by `rdl_query` (and not other pre or
 
 ## Supported versions of Ruby
 
-RDL currently supports Ruby 2.1 and 2.2. It may or may not work with other versions.
+RDL currently supports Ruby 2.x. It may or may not work with other versions.
 
 ## Installing RDL
 
