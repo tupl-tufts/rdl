@@ -103,8 +103,11 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/\*/))
          action { [:STAR, text] }
 
-      when (text = @ss.scan(/\#\#/))
-         action { [:DOUBLE_HASH, text] }
+      when (text = @ss.scan(/\#T/))
+         action { [:HASH_TYPE, text] }
+
+      when (text = @ss.scan(/\#Q/))
+         action { [:HASH_QUERY, text] }
 
       when (text = @ss.scan(/\$\{/))
          action { [:CONST_BEGIN, text] }

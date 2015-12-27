@@ -72,16 +72,16 @@ class TestParser < Minitest::Test
   end
 
   def test_bare
-    t1 = @p.scan_str "## nil"
+    t1 = @p.scan_str "#T nil"
     assert_equal @tnil, t1
-    t2 = @p.scan_str "## %any"
+    t2 = @p.scan_str "#T %any"
     assert_equal @ttop, t2
-    t3 = @p.scan_str "## A"
+    t3 = @p.scan_str "#T A"
     assert_equal NominalType.new("A"), t3
   end
 
   def test_symbol
-    t1 = @p.scan_str "## :symbol"
+    t1 = @p.scan_str "#T :symbol"
     assert_equal @tsymbol, t1
   end
 
@@ -109,66 +109,66 @@ class TestParser < Minitest::Test
   end
 
   def test_generic
-    t1 = @p.scan_str "## t"
+    t1 = @p.scan_str "#T t"
     assert_equal (VarType.new "t"), t1
-    t2 = @p.scan_str "## Array"
+    t2 = @p.scan_str "#T Array"
     assert_equal (NominalType.new "Array"), t2
-    t3 = @p.scan_str "## Array<t>"
+    t3 = @p.scan_str "#T Array<t>"
     assert_equal (GenericType.new(t2, t1)), t3
-    t4 = @p.scan_str "## Array<Array<t>>"
+    t4 = @p.scan_str "#T Array<Array<t>>"
     assert_equal (GenericType.new(t2, t3)), t4
-    t5 = @p.scan_str "## Hash"
+    t5 = @p.scan_str "#T Hash"
     assert_equal (NominalType.new "Hash"), t5
-    t6 = @p.scan_str "## Hash<u, v>"
+    t6 = @p.scan_str "#T Hash<u, v>"
     assert_equal (GenericType.new(t5, VarType.new("u"), VarType.new("v"))), t6
-    t7 = @p.scan_str "## Foo<String, Array<t>, Array<Array<t>>>"
+    t7 = @p.scan_str "#T Foo<String, Array<t>, Array<Array<t>>>"
     assert_equal (GenericType.new(NominalType.new("Foo"), @tstring, t3, t4)), t7
   end
 
   def test_tuple
-    t1 = @p.scan_str "## [Fixnum, String]"
+    t1 = @p.scan_str "#T [Fixnum, String]"
     assert_equal (TupleType.new(@tfixnum, @tstring)), t1
-    t2 = @p.scan_str "## [String]"
+    t2 = @p.scan_str "#T [String]"
     assert_equal (TupleType.new(@tstring)), t2
-  end 
+  end
 
   def test_fixnum
-    t1 = @p.scan_str "## 42"
+    t1 = @p.scan_str "#T 42"
     assert_equal (SingletonType.new(42)), t1
-    t2 = @p.scan_str "## -42"
+    t2 = @p.scan_str "#T -42"
     assert_equal (SingletonType.new(-42)), t2
   end
 
   def test_float
-    t1 = @p.scan_str "## 3.14"
+    t1 = @p.scan_str "#T 3.14"
     assert_equal (SingletonType.new(3.14)), t1
   end
 
   def test_const
-    t1 = @p.scan_str "## ${Math::PI}"
+    t1 = @p.scan_str "#T ${Math::PI}"
     assert_equal (SingletonType.new(Math::PI)), t1
   end
 
   def test_type_alias
     type_alias '%foobarbaz', @tnil
-    assert_equal @tnil, (@p.scan_str "## %foobarbaz")
+    assert_equal @tnil, (@p.scan_str "#T %foobarbaz")
     type_alias '%quxquxqux', 'nil'
-    assert_equal @tnil, (@p.scan_str "## %quxquxqux")
+    assert_equal @tnil, (@p.scan_str "#T %quxquxqux")
     assert_raises(RuntimeError) { type_alias '%quxquxqux', 'nil' }
-    assert_raises(RuntimeError) { @p.scan_str "## %qux" }
+    assert_raises(RuntimeError) { @p.scan_str "#T %qux" }
   end
 
   def test_structural
-    t1 = @p.scan_str "## [to_str: () -> String]"
+    t1 = @p.scan_str "#T [to_str: () -> String]"
     tm1 = MethodType.new [], nil, @tstring
     ts1 = StructuralType.new(to_str: tm1)
     assert_equal ts1, t1
   end
 
   def test_finite_hash
-    t1 = @p.scan_str "## {a: Fixnum, b: String}"
+    t1 = @p.scan_str "#T {a: Fixnum, b: String}"
     assert_equal (FiniteHashType.new({a: @tfixnum, b: @tstring})), t1
-    t2 = @p.scan_str "## {'a'=>Fixnum, 2=>String}"
+    t2 = @p.scan_str "#T {'a'=>Fixnum, 2=>String}"
     assert_equal (FiniteHashType.new({"a"=>@tfixnum, 2=>@tstring})), t2
   end
 

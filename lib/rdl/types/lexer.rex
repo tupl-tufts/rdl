@@ -24,7 +24,8 @@ rule
   ,             { [:COMMA, text] }
   \?            { [:QUERY, text] }
   \*            { [:STAR, text] }
-  \#\#      	{ [:DOUBLE_HASH, text] }
+  \#T      	    { [:HASH_TYPE, text] }
+  \#Q      	    { [:HASH_QUERY, text] }
   \$\{          { [:CONST_BEGIN, text] }
   {FLOAT}       { [:FLOAT, text] } # Must go before FIXNUM
   {FIXNUM}      { [:FIXNUM, text] }

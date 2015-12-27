@@ -418,7 +418,7 @@ class Object
       raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
       raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless formals.size == typs.size
       raise RuntimeError, "Instance already has type instantiation" if @__rdl_type
-      new_typs = typs.map { |t| if t.is_a? RDL::Type::Type then t else $__rdl_parser.scan_str "## #{t}" end }
+      new_typs = typs.map { |t| if t.is_a? RDL::Type::Type then t else $__rdl_parser.scan_str "#T #{t}" end }
       t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *new_typs)
       if all.instance_of? Symbol
         self.send(all) { |*objs|
@@ -451,7 +451,7 @@ class Object
   # Returns a new object that wraps self in a type cast. This cast is *unchecked*, so use with caution
   def type_cast(typ)
     $__rdl_contract_switch.off {
-      new_typ = if typ.is_a? RDL::Type::Type then typ else $__rdl_parser.scan_str "## #{typ}" end
+      new_typ = if typ.is_a? RDL::Type::Type then typ else $__rdl_parser.scan_str "#T #{typ}" end
       obj = SimpleDelegator.new(self)
       obj.instance_variable_set('@__rdl_type', new_typ)
       return obj
@@ -467,7 +467,7 @@ class Object
       raise RuntimeError, "Attempt to redefine type #{name}" if $__rdl_special_types[name]
       case typ
       when String
-        t = $__rdl_parser.scan_str "## #{typ}"
+        t = $__rdl_parser.scan_str "#T #{typ}"
         $__rdl_special_types[name] = t
       when RDL::Type::Type
         $__rdl_special_types[name] = typ

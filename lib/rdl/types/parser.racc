@@ -7,7 +7,7 @@ class Parser
 
   start entry
 
-token DOUBLE_HASH CONST_BEGIN RASSOC
+token HASH_TYPE HASH_QUERY CONST_BEGIN RASSOC
 token OR FIXNUM FLOAT COLON RARROW ID SYMBOL SPECIAL_ID STRING
 token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
 token COMMA QUERY STAR LESS GREATER
@@ -20,7 +20,7 @@ rule
     | bare_type { result = val[0] }
 
   bare_type:
-      DOUBLE_HASH type_expr {
+      HASH_TYPE type_expr {
         result = val[1]
       }
 
@@ -112,7 +112,7 @@ rule
         fail "Unexpected special type identifier #{val[0]}"
       end
     }
-    | ID LESS type_expr_comma_list GREATER { 
+    | ID LESS type_expr_comma_list GREATER {
       n = RDL::Type::NominalType.new(val[0])
       result = RDL::Type::GenericType.new(n, *val[2])
     }
