@@ -11,7 +11,7 @@ module RDL::Type
     attr_reader :ret
 
     @@contract_cache = {}
-    
+
     # Create a new MethodType
     #
     # [+args+] List of types of the arguments of the procedure (use [] for no args).
@@ -36,7 +36,7 @@ module RDL::Type
           raise "Only one set of named arguments allowed" if state == :hash
           state = :hash
         else
-          raise "Attempt to create method type with non-type arg" unless arg.is_a? Type
+          raise "Attempt to create method type/query with non-type/query arg" unless arg.is_a? Type or arg.is_a? RDL::Query::Query
           raise "Required arguments not allowed after varargs" if state == :vararg
           raise "Required arguments not allowed after named arguments" if state == :hash
         end
@@ -46,7 +46,7 @@ module RDL::Type
       raise "Block must be MethodType" unless (not block) or (block.instance_of? MethodType)
       @block = block
 
-      raise "Attempt to create method type with non-type ret" unless ret.is_a? Type
+      raise "Attempt to create method type/query with non-type/non-query ret" unless ret.is_a? Type or ret.is_a? RDL::Query::Query
       @ret = ret
 
       super()
@@ -190,13 +190,13 @@ RUBY
         return false # one has a block and the other doesn't
       end
     end
-    
+
     def instantiate(inst)
       return MethodType.new(@args.map { |arg| arg.instantiate(inst) },
                             @block ? @block.instantiate(inst) : nil,
                             @ret.instantiate(inst))
     end
-    
+
     def eql?(other)
       self == other
     end
@@ -216,4 +216,3 @@ RUBY
     end
 end
 end
-

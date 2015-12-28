@@ -8,7 +8,7 @@ class Parser
   start entry
 
 token HASH_TYPE HASH_QUERY CONST_BEGIN RASSOC
-token OR FIXNUM FLOAT COLON RARROW ID SYMBOL SPECIAL_ID STRING
+token OR FIXNUM FLOAT COLON RARROW DOT DOTS ID SYMBOL SPECIAL_ID STRING
 token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
 token COMMA QUERY STAR LESS GREATER
 token EOF
@@ -18,11 +18,13 @@ rule
   entry:
       method_type { result = val[0] }
     | bare_type { result = val[0] }
+    | query_type { result = val[0] }
 
   bare_type:
-      HASH_TYPE type_expr {
-        result = val[1]
-      }
+      HASH_TYPE type_expr { result = val[1] }
+
+  query_type:
+      HASH_QUERY method_query { result = RDL::Query::MethodQuery.new val[1].args, val[1].block, val[1].ret }
 
   method_type:
       LPAREN arg_list RPAREN block RARROW type_expr {
@@ -132,6 +134,8 @@ rule
     }
 # The following can't be used in SingletonTypes because those compare using .equal?
 #    | STRING { result = RDL::Type::SingletonType.new(val[0]) }
+    | DOT { result = RDL::Query::WildQuery.new }
+    | DOTS { result = RDL::Query::DotsQuery.new }
 
 ---- header ----
 

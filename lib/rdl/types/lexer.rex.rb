@@ -112,6 +112,12 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/\$\{/))
          action { [:CONST_BEGIN, text] }
 
+      when (text = @ss.scan(/\./))
+         action { [:DOT, text] }
+
+      when (text = @ss.scan(/\.\.\./))
+         action { [:DOTS, text] }
+
       when (text = @ss.scan(/-?\d\.\d+/))
          action { [:FLOAT, text] } # Must go before FIXNUM
 
