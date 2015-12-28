@@ -44,7 +44,6 @@ $__rdl_contract_switch = RDL::Switch.new
 
 require_rel 'rdl/types/*.rb'
 require_rel 'rdl/contracts/*.rb'
-require_rel 'rdl/queries/*.rb'
 require_rel 'rdl/util.rb'
 require_rel 'rdl/wrap.rb'
 #require_rel 'rdl/stats.rb'

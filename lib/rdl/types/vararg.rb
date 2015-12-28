@@ -42,11 +42,11 @@ module RDL::Type
     end
 
     # Note: no member?, because these can only appear in MethodType, where they're handled specially
-    
+
     def instantiate(inst)
       return VarargType.new(@type.instantiate(inst))
     end
-    
+
     def hash # :nodoc:
       return 59 + @type.hash
     end

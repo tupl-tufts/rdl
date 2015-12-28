@@ -13,7 +13,7 @@ module RDL::Type
     def self.new(type)
       t = @@cache[type]
       return t if t
-      raise RuntimeError, "Attempt to create vararg type with non-type" unless type.is_a? Type
+      raise RuntimeError, "Attempt to create optional type with non-type" unless type.is_a? Type
       t = OptionalType.__new__ type
       return (@@cache[type] = t) # assignment evaluates to t
     end
@@ -42,11 +42,11 @@ module RDL::Type
     end
 
     # Note: no member?, because these can only appear in MethodType, where they're handled specially
-    
+
     def instantiate(inst)
       return OptionalType.new(@type.instantiate(inst))
     end
-    
+
     def hash # :nodoc:
       return 57 + @type.hash
     end

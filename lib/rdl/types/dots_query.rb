@@ -1,7 +1,7 @@
 require_relative 'query'
 
-module RDL::Query
-  class WildQuery < Query
+module RDL::Type
+  class DotsQuery < Query
     @@cache = nil
 
     class << self
@@ -9,17 +9,16 @@ module RDL::Query
     end
 
     def self.new
-      @@cache = WildQuery.__new__ unless @@cache
+      @@cache = DotsQuery.__new__ unless @@cache
       return @@cache
     end
 
     def to_s
-      "*"
+      "..."
     end
 
     def ==(other)
-      return (other.instance_of? WildQuery)
+      return (other.instance_of? DotsQuery)
     end
-
   end
 end

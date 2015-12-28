@@ -509,3 +509,5 @@ Copyright (c) 2014-2015, University of Maryland, College Park. All rights reserv
 * Better query facility (more kinds of searches). Contract queries?
 
 * Write documentation on: Raw Contracts and Types, RDL Configuration, Code Overview
+
+* Structural type queries, allow name to be unknown; same with finite hash keys, same with generic base types?

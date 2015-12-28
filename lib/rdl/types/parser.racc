@@ -24,7 +24,7 @@ rule
       HASH_TYPE type_expr { result = val[1] }
 
   query_type:
-      HASH_QUERY method_query { result = RDL::Query::MethodQuery.new val[1].args, val[1].block, val[1].ret }
+      HASH_QUERY method_type { result = RDL::Type::MethodType.new val[1].args, val[1].block, val[1].ret }
 
   method_type:
       LPAREN arg_list RPAREN block RARROW type_expr {
@@ -46,6 +46,7 @@ rule
       }
   nonempty_arg_list:
       arg { result = [val[0]] }
+    | DOTS { result = RDL::Type::DotsQuery.new }
     | arg COMMA nonempty_arg_list { result = val[2].unshift val[0] }
     | arg COMMA named_arg_list { # named arg list must come last
       result = [val[0], RDL::Type::FiniteHashType.new(Hash[*val[2]])]
@@ -134,8 +135,7 @@ rule
     }
 # The following can't be used in SingletonTypes because those compare using .equal?
 #    | STRING { result = RDL::Type::SingletonType.new(val[0]) }
-    | DOT { result = RDL::Query::WildQuery.new }
-    | DOTS { result = RDL::Query::DotsQuery.new }
+    | DOT { result = RDL::Type::WildQuery.new }
 
 ---- header ----
 
