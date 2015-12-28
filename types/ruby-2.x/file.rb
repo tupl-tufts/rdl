@@ -77,6 +77,8 @@ class File
   type :truncate, '(Fixnum) -> 0'
 
   class Stat
+    rdl_nowrap
+
     type 'self.new', '(String file) -> File::Stat'
     type :<=>, '(File::Stat other) -> -1 or 0 or 1 or nil'
     type :atime, '() -> Time'
@@ -89,7 +91,7 @@ class File
     type :dev, '() -> Fixnum'
     type :dev_major, '() -> Fixnum'
     type :dev_minor, '() -> Fixnum'
-    type :directory?, '(String file) -> %bool'
+    type :directory?, '() -> %bool'
     type :executable?, '() -> %bool'
     type :executable_real?, '() -> %bool'
     type :file?, '() -> %bool'
