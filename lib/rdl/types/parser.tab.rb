@@ -23,9 +23,9 @@ end
 ##### State transition tables begin ###
 
 racc_action_table = [
-    20,    55,    18,    19,    71,    21,    27,    30,    13,    15,
+    20,    55,    18,    19,    71,    21,    28,    30,    13,    15,
     73,    11,    42,    17,    61,    16,    37,    31,    32,    20,
-    80,    18,    19,     7,    21,    27,    30,    13,    15,    37,
+    80,    18,    19,     7,    21,    28,    30,    13,    15,    37,
     11,    85,    17,    88,    16,     7,    31,    32,    20,    91,
     18,    19,    92,    21,    94,    14,    13,    15,    95,    11,
     98,    17,    61,    16,    20,    78,    18,    19,     8,    21,
@@ -60,7 +60,7 @@ racc_action_check = [
     93,    55,    95,    55,    62,    55,    62,    62,     1,    62,
      6,    62,    62,    62,     8,    62,    12,    62,    65,    62,
     65,    65,    14,    65,    20,    65,    65,    65,    23,     0,
-     0,    65,    66,    65,    66,    66,    26,    66,    28,    66,
+     0,    65,    66,    65,    66,    66,    26,    66,    27,    66,
     66,    66,     0,    29,    35,    66,    68,    66,    68,    68,
     39,    68,    40,    68,    68,    68,    41,    42,    44,    68,
     31,    68,    31,    31,    45,    31,    46,    31,    31,    31,
@@ -83,7 +83,7 @@ racc_action_check = [
 racc_action_pointer = [
     74,    58,   nil,   nil,   nil,   117,    42,    -7,    64,   nil,
    nil,   201,    62,   nil,    46,   nil,   131,   249,   nil,   nil,
-    60,   nil,   nil,    59,   nil,   nil,    84,   nil,    74,    91,
+    60,   nil,   nil,    59,   nil,   nil,    84,    74,   nil,    91,
    -10,   103,   173,   nil,   nil,    75,   215,   145,     3,    98,
     79,    83,    96,   nil,   100,   106,   102,   112,   120,   107,
    -17,   -10,    12,   nil,    -2,    31,   nil,   nil,   nil,   nil,
@@ -95,12 +95,12 @@ racc_action_pointer = [
 racc_action_default = [
    -54,   -54,    -1,    -2,    -3,   -54,   -54,   -10,   -54,    -4,
    -29,   -54,   -41,   -43,   -44,   -45,   -54,   -33,   -50,   -51,
-   -54,   -53,    -5,   -54,   -11,   -12,   -13,   -14,   -17,   -19,
+   -54,   -53,    -5,   -54,   -11,   -12,   -13,   -16,   -18,   -19,
    -44,   -54,   -54,   -24,    99,   -54,   -54,   -54,   -44,   -31,
    -54,   -54,   -54,   -34,   -54,   -54,   -54,   -54,   -39,   -54,
-   -54,   -27,   -54,   -18,   -54,   -54,   -22,   -23,   -30,   -42,
+   -54,   -27,   -54,   -17,   -54,   -54,   -22,   -23,   -30,   -42,
    -54,   -54,   -54,   -47,   -48,   -54,   -54,   -54,   -54,   -33,
-   -49,   -52,   -54,   -54,   -15,   -16,   -20,   -21,   -54,   -26,
+   -49,   -52,   -54,   -54,   -14,   -15,   -20,   -21,   -54,   -26,
    -46,    -8,   -32,   -35,   -36,   -54,   -38,   -40,   -54,   -54,
    -25,   -54,   -54,    -6,   -28,   -54,    -9,   -37,    -7 ]
 
@@ -132,7 +132,7 @@ racc_goto_pointer = [
 
 racc_goto_default = [
    nil,   nil,   nil,   nil,   nil,    39,   nil,   nil,   nil,   nil,
-   nil,    26,    28,    29,   nil,    10,   nil,    48,   nil,    12 ]
+   nil,    26,    27,    29,   nil,    10,   nil,    48,   nil,    12 ]
 
 racc_reduce_table = [
   0, 0, :racc_error,
@@ -149,11 +149,11 @@ racc_reduce_table = [
   1, 35, :_reduce_11,
   1, 35, :_reduce_12,
   1, 38, :_reduce_13,
-  1, 38, :_reduce_14,
+  3, 38, :_reduce_14,
   3, 38, :_reduce_15,
-  3, 38, :_reduce_16,
-  1, 40, :_reduce_17,
-  2, 40, :_reduce_18,
+  1, 40, :_reduce_16,
+  2, 40, :_reduce_17,
+  1, 40, :_reduce_18,
   1, 39, :_reduce_19,
   3, 39, :_reduce_20,
   3, 42, :_reduce_21,
@@ -398,20 +398,13 @@ module_eval(<<'.,.,', 'parser.racc', 47)
 
 module_eval(<<'.,.,', 'parser.racc', 48)
   def _reduce_14(val, _values, result)
-     result = RDL::Type::DotsQuery.new 
+     result = val[2].unshift val[0] 
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'parser.racc', 49)
   def _reduce_15(val, _values, result)
-     result = val[2].unshift val[0] 
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'parser.racc', 50)
-  def _reduce_16(val, _values, result)
      # named arg list must come last
       result = [val[0], RDL::Type::FiniteHashType.new(Hash[*val[2]])]
       
@@ -419,16 +412,23 @@ module_eval(<<'.,.,', 'parser.racc', 50)
   end
 .,.,
 
+module_eval(<<'.,.,', 'parser.racc', 53)
+  def _reduce_16(val, _values, result)
+     result = val[0] 
+    result
+  end
+.,.,
+
 module_eval(<<'.,.,', 'parser.racc', 54)
   def _reduce_17(val, _values, result)
-     result = val[0] 
+     result = RDL::Type::AnnotatedArgType.new(val[1], val[0]) 
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'parser.racc', 55)
   def _reduce_18(val, _values, result)
-     result = RDL::Type::AnnotatedArgType.new(val[1], val[0]) 
+     result = RDL::Type::DotsQuery.new 
     result
   end
 .,.,

@@ -12,6 +12,7 @@ class TestQuery < Minitest::Test
     @qwildopt = OptionalType.new @qwild
     @qwildvararg = VarargType.new @qwild
     @qwildx = AnnotatedArgType.new("x", @qwild)
+    @qdots = DotsQuery.new
   end
 
   def test_parse
@@ -39,5 +40,11 @@ class TestQuery < Minitest::Test
     assert_equal (MethodType.new [FiniteHashType.new({a: @tfixnum, b: @qwild})], nil, @tfixnum), q11
     q12 = @p.scan_str "#Q (Fixnum, x: .) -> Fixnum"
     assert_equal (MethodType.new [@tfixnum, FiniteHashType.new(x: @qwild)], nil, @tfixnum), q12
+    q13 = @p.scan_str "#Q (Fixnum, ..., Fixnum) -> Fixnum"
+    assert_equal (MethodType.new [@tfixnum, @qdots, @tfixnum], nil, @tfixnum), q13
+    q14 = @p.scan_str "#Q (Fixnum, ...) -> Fixnum"
+    assert_equal (MethodType.new [@tfixnum, @qdots], nil, @tfixnum), q14
+    q15 = @p.scan_str "#Q (...) -> Fixnum"
+    assert_equal (MethodType.new [@qdots], nil, @tfixnum), q15
   end
 end

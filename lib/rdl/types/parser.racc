@@ -46,7 +46,6 @@ rule
       }
   nonempty_arg_list:
       arg { result = [val[0]] }
-    | DOTS { result = RDL::Type::DotsQuery.new }
     | arg COMMA nonempty_arg_list { result = val[2].unshift val[0] }
     | arg COMMA named_arg_list { # named arg list must come last
       result = [val[0], RDL::Type::FiniteHashType.new(Hash[*val[2]])]
@@ -54,6 +53,7 @@ rule
   arg:
       base_arg { result = val[0] }
     | base_arg ID { result = RDL::Type::AnnotatedArgType.new(val[1], val[0]) }
+    | DOTS { result = RDL::Type::DotsQuery.new }
   named_arg_list:
       named_arg { result = val[0] }
     | named_arg COMMA named_arg_list { result = val[0] + val[2] }
