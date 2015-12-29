@@ -10,7 +10,8 @@ module RDL::Type
     def initialize(name, type)
       @name = name
       @type = type
-      raise RuntimeError, "Attempt to create vararg type with non-type" unless type.is_a? Type
+      raise RuntimeError, "Attempt to create annotated type with non-type" unless type.is_a? Type
+      raise RuntimeError, "Attempt to create doubly annotated type" if type.is_a? AnnotatedArgType
       super()
     end
 
@@ -25,6 +26,8 @@ module RDL::Type
     def ==(other) # :nodoc:
       return (other.instance_of? AnnotatedArgType) && (other.name == @name) && (other.type == @type)
     end
+
+    # doesn't have a match method - queries shouldn't have annotations in them
 
     def hash # :nodoc:
       return (57 + @name.hash) * @type.hash

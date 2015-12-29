@@ -42,7 +42,7 @@ module RDL::Type
     def to_s  # :nodoc:
       "(#{@types.map { |t| t.to_s }.join(' and ')})"
     end
-    
+
     def eql?(other)
       self == other
     end
@@ -51,14 +51,21 @@ module RDL::Type
       return (other.instance_of? IntersectionType) && (other.types == @types)
     end
 
+    def match(other)
+      other = other.type if other.instance_of? AnnotatedArgType
+      return true if other.instance_of? WildQuery
+      # assumes @types is in canonical order, established in constructor
+      return @types.length == other.types.length && @types.zip(other.types).all? { |t,o| t.match(o) }
+    end
+
     def member?(obj, *args)
       @types.all? { |t| t.member?(obj, *args) }
     end
-    
+
     def instantiate(inst)
       return IntersectionType.new(*(@types.map { |t| t.instantiate(inst) }))
     end
-    
+
     def hash  # :nodoc:
       47 + @types.hash
     end

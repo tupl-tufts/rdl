@@ -209,6 +209,35 @@ RUBY
         (other.ret == @ret)
     end
 
+    # other may not be a query
+    def match(other)
+      other = other.type if other.instance_of? AnnotatedArgType
+      return true if other.instance_of? WildQuery
+      return false unless @ret.match(other.ret)
+      return false unless (@block == nil && other.block == nil) || (@block.match(other.block))
+      # Check arg matches; logic is similar to pre_cond
+      states = [[0,0]] # [position in self, position in other]
+      until states.empty?
+        s_arg, o_arg = states.pop
+        return true if s_arg == @args.size && o_arg == other.args.size # everything matches
+        next if s_arg >= @args.size # match not possible, not enough args in self
+        if @args[s_arg].instance_of? DotsQuery then
+          if o_arg == other.args.size
+            # no args left in other, skip ...
+            states << [s_arg+1, o_arg]
+          else
+            states << [s_arg+1, o_arg+1] # match, no more matches to ...
+            states << [s_arg, o_arg+1]   # match, more matches to ... coming
+          end
+        else
+          next if o_arg == other.args.size # match not possible, not enough args in other
+          next unless @args[s_arg].match(other.args[o_arg])
+          states << [s_arg+1, o_arg+1]
+        end
+      end
+      return false
+    end
+
     def hash  # :nodoc:
       h = (37 + @ret.hash) * 41 + @args.hash
       h = h * 31 + @block.hash if @block

@@ -41,6 +41,12 @@ module RDL::Type
       return (other.instance_of? GenericType) && (other.base == @base) && (other.params == @params)
     end
 
+    def match(other)
+      other = other.type if other.instance_of? AnnotatedArgType
+      return true if other.instance_of? WildQuery
+      return @params.length == other.params.length && @params.zip(other.params).all? { |t,o| t.match(o) }
+    end
+
     def <=(other)
       formals, variance, check = $__rdl_type_params[base.name]
       # do check here to avoid hiding errors if generic type written
@@ -79,7 +85,7 @@ module RDL::Type
       end
       return false
     end
-    
+
     def member?(obj, *args)
       raise "No type parameters defined for #{base.name}" unless $__rdl_type_params[base.name]
       formals = $__rdl_type_params[base.name][0]
@@ -92,7 +98,7 @@ module RDL::Type
     def instantiate(inst)
       GenericType.new(base, *params.map { |t| t.instantiate(inst) })
     end
-    
+
     def hash
       h = (61 + @base.hash) * @params.hash
     end

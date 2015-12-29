@@ -3,7 +3,7 @@ require_relative 'type'
 module RDL::Type
   class UnionType < Type
     attr_reader :types
-    
+
     @@cache = {}
 
     class << self
@@ -26,7 +26,7 @@ module RDL::Type
         end
       }
 
-      ts.sort! { |a,b| a.object_id <=> b.object_id }      
+      ts.sort! { |a,b| a.object_id <=> b.object_id }
       ts.uniq!
 
       return NilType.new if ts.size == 0
@@ -55,6 +55,13 @@ module RDL::Type
       return (other.instance_of? UnionType) && (other.types == @types)
     end
 
+    def match(other)
+      other = other.type if other.instance_of? AnnotatedArgType
+      return true if other.instance_of? WildQuery
+      # assumes @types is in canonical order, established in constructor
+      return @types.length == other.types.length && @types.zip(other.types).all? { |t,o| t.match(o) }
+    end
+
     def <=(other)
       @types.all? { |t| t <= other }
     end
@@ -62,11 +69,11 @@ module RDL::Type
     def member?(obj, *args)
       @types.any? { |t| t.member?(obj, *args) }
     end
-    
+
     def instantiate(inst)
       return UnionType.new(*(@types.map { |t| t.instantiate(inst) }))
     end
-    
+
     def hash  # :nodoc:
       41 + @types.hash
     end

@@ -3,7 +3,7 @@ require_relative 'type'
 module RDL::Type
   class NominalType < Type
     attr_reader :name # string
-    
+
     @@cache = {}
 
     class << self
@@ -29,6 +29,12 @@ module RDL::Type
 
     def ==(other)
       return (other.instance_of? self.class) && (other.name == @name)
+    end
+
+    def match(other)
+      other = other.type if other.instance_of? AnnotatedArgType
+      return true if other.instance_of? WildQuery
+      return self == other
     end
 
     def hash # :nodoc:
@@ -72,7 +78,7 @@ module RDL::Type
       return true if obj.nil?
       return obj.is_a? klass
     end
-    
+
     def instantiate(inst)
       return self
     end

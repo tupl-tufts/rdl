@@ -24,9 +24,15 @@ module RDL::Type
     def eql?(other)
       self == other
     end
-      
+
     def ==(other)
       other.instance_of? TopType
+    end
+
+    def match(other)
+      other = other.type if other.instance_of? AnnotatedArgType
+      return true if other.instance_of? WildQuery
+      return self == other
     end
 
     def <=(other)
@@ -38,11 +44,11 @@ module RDL::Type
       return t <= self if t
       true
     end
-    
+
     def instantiate(inst)
       return self
     end
-    
+
     def hash
       17
     end

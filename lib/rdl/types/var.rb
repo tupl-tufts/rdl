@@ -34,6 +34,12 @@ module RDL::Type
       return (other.instance_of? self.class) && (other.name.to_s == @name.to_s)
     end
 
+    def match(other)
+      other = other.type if other.instance_of? AnnotatedArgType
+      return true if other.instance_of? WildQuery
+      return self == other
+    end
+
     def hash # :nodoc:
       return @name.to_s.hash
     end

@@ -20,5 +20,7 @@ module RDL::Type
     def ==(other)
       return (other.instance_of? DotsQuery)
     end
+
+    # doesn't have match method---taken care of at a higher level, in MethodType#match
   end
 end

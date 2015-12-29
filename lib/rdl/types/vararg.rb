@@ -41,6 +41,12 @@ module RDL::Type
       return (other.instance_of? VarargType) && (other.type == @type)
     end
 
+    def match(other)
+      other = other.type if other.instance_of? AnnotatedArgType
+      return true if other.instance_of? WildQuery
+      return (other.instance_of? VarargType) && (@type.match(other.type))
+    end
+
     # Note: no member?, because these can only appear in MethodType, where they're handled specially
 
     def instantiate(inst)

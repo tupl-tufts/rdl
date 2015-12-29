@@ -52,17 +52,24 @@ module RDL::Type
       return t <= self if t
       return NominalType.new(obj.class) <= self
     end
-    
+
     def instantiate(inst)
       StructuralType.new(Hash[*@methods.each_pair.map { |m, t| [m, t.instantiate(inst)] }.flatten])
     end
-    
+
     def eql?(other)
       self == other
     end
 
     def ==(other)  # :nodoc:
       return (other.instance_of? StructuralType) && (other.methods == @methods)
+    end
+
+    def match(other)
+      other = other.type if other.instance_of? AnnotatedArgType
+      return true if other.instance_of? WildQuery
+      return (@methods.length == other.methods.length &&
+              @methods.all? { |k, v| other.methods.has_key? k && v.match(other.methods[k])})
     end
 
     def hash  # :nodoc:

@@ -20,6 +20,7 @@ module RDL::Type
       return (@@cache[elts] = t) # assignment evaluates to t
     end
 
+    # [+elts+] is a map from keys to types
     def initialize(elts)
       elts.each { |k, t|
         raise RuntimeError, "Got #{t.inspect} where Type expected" unless t.is_a? Type
@@ -41,20 +42,27 @@ module RDL::Type
       return (other.instance_of? FiniteHashType) && (other.elts == @elts)
     end
 
+    def match(other)
+      other = other.type if other.instance_of? AnnotatedArgType
+      return true if other.instance_of? WildQuery
+      return (@elts.length == other.elts.length &&
+              @elts.all? { |k, v| other.elt.has_key? k && v.match(other.elts[k])})
+    end
+
     def <=(other)
       return true if other.instance_of? TopType
       return self == other
       # Subtyping with Hash not allowed
       # All positions of HashTuple are invariant since tuples are mutable
     end
-    
+
     def member?(obj, *args)
       t = RDL::Util.rdl_type obj
       return t <= self if t
       rest = @elts.clone # shallow copy
 
       return false unless obj.instance_of? Hash
-      
+
       # Check that every mapping in obj exists in @map and matches the type
       obj.each_pair { |k, v|
         return false unless @elts.has_key?(k)
@@ -73,7 +81,7 @@ module RDL::Type
     def instantiate(inst)
       FiniteHashType.new(Hash[@elts.map { |k, t| [k, t.instantiate(inst)] }])
     end
-    
+
     def hash
       h = 229 * @elts.hash
     end

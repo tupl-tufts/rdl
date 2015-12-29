@@ -21,5 +21,8 @@ module RDL::Type
       return (other.instance_of? WildQuery)
     end
 
+    def match(other)
+      return true
+    end
   end
 end
