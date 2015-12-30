@@ -1,7 +1,7 @@
-require_relative 'query'
+require_relative 'type_query'
 
 module RDL::Type
-  class DotsQuery < Query
+  class DotsQuery < TypeQuery
     @@cache = nil
 
     class << self

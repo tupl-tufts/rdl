@@ -1,5 +1,5 @@
 module RDL::Type
-  class Query < Type
+  class TypeQuery < Type
 
   end
 end

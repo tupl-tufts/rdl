@@ -46,6 +46,7 @@ require_rel 'rdl/types/*.rb'
 require_rel 'rdl/contracts/*.rb'
 require_rel 'rdl/util.rb'
 require_rel 'rdl/wrap.rb'
+require_rel 'rdl/query.rb'
 #require_rel 'rdl/stats.rb'
 
 $__rdl_parser = RDL::Type::Parser.new

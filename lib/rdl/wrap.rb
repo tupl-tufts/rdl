@@ -476,38 +476,4 @@ class Object
       end
     }
   end
-
-  def rdl_query(q)
-    $__rdl_contract_switch.off {
-      if q =~ /^(\w+(#|\.))?(\w+(!|\?|=)?|!|~|\+|\*\*|-|\*|\/|%|<<|>>|&|\||\^|<|<=|=>|>|==|===|!=|=~|!~|<=>|\[\]|\[\]=)$/
-        klass = nil
-        klass_pref = nil
-        meth = nil
-        if q =~ /(.+)#(.+)/
-          klass = $1
-          klass_pref = "#{klass}#"
-          meth = $2.to_sym
-        elsif q =~ /(.+)\.(.+)/
-          klass_pref = "#{$1}."
-          klass = RDL::Util.add_singleton_marker($1)
-          meth = $2.to_sym
-        else
-          klass = self.class.to_s
-          klass_pref = "#{klass}#"
-          meth = q.to_sym
-        end
-        if RDL::Wrap.has_contracts?(klass, meth, :type)
-          typs = RDL::Wrap.get_contracts(klass, meth, :type)
-          typs.each { |t|
-            puts "#{klass_pref}#{meth}: #{t}"
-          }
-          nil
-        else
-          puts "No type for #{klass_pref}#{meth}"
-        end
-      else
-        puts "Not implemented"
-      end
-    }
-  end
 end
