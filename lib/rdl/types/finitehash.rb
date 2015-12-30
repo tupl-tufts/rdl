@@ -46,7 +46,7 @@ module RDL::Type
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return (@elts.length == other.elts.length &&
-              @elts.all? { |k, v| other.elt.has_key? k && v.match(other.elts[k])})
+              @elts.all? { |k, v| (other.elts.has_key? k) && (v.match(other.elts[k]))})
     end
 
     def <=(other)

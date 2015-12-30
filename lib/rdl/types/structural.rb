@@ -69,7 +69,7 @@ module RDL::Type
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return (@methods.length == other.methods.length &&
-              @methods.all? { |k, v| other.methods.has_key? k && v.match(other.methods[k])})
+              @methods.all? { |k, v| (other.methods.has_key? k) && (v.match(other.methods[k]))})
     end
 
     def hash  # :nodoc:

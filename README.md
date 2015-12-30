@@ -513,3 +513,5 @@ Copyright (c) 2014-2015, University of Maryland, College Park. All rights reserv
 * Structural type queries, allow name to be unknown; same with finite hash keys, same with generic base types?
 
 * Allow ... in named args list in queries
+
+* Queries, include more regexp operators aside from . and ...

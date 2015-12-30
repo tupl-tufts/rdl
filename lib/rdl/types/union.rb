@@ -58,8 +58,8 @@ module RDL::Type
     def match(other)
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
-      # assumes @types is in canonical order, established in constructor
-      return @types.length == other.types.length && @types.zip(other.types).all? { |t,o| t.match(o) }
+      return false if @types.length != other.types.length
+      @types.all? { |t| other.types.any? { |ot| t.match(ot) } }
     end
 
     def <=(other)

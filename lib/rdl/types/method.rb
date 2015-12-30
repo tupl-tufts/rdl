@@ -231,7 +231,11 @@ RUBY
           end
         else
           next if o_arg == other.args.size # match not possible, not enough args in other
-          next unless @args[s_arg].match(other.args[o_arg])
+          s_arg_t = @args[s_arg]
+          s_arg_t = s_arg_t.type if s_arg_t.instance_of? AnnotatedArgType
+          o_arg_t = other.args[o_arg]
+          o_arg_t = o_arg_t.type if o_arg_t.instance_of? AnnotatedArgType
+          next unless s_arg_t.match(o_arg_t)
           states << [s_arg+1, o_arg+1]
         end
       end
