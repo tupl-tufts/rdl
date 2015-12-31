@@ -20,7 +20,4 @@ EOF
   exit 0
 end
 
-name, typs = RDL::Query.method_query(ARGV[0])
-typs.each { |t|
-  puts "#{name}: #{t}"
-}
+rdl_query(ARGV[0])

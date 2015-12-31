@@ -44,7 +44,8 @@ module RDL::Type
       if @val.instance_of? Symbol
         ":{@val}"
       else
-        "Singleton(#{@val.to_s})"
+        @val.to_s
+#        "Singleton(#{@val.to_s})"
       end
     end
 
