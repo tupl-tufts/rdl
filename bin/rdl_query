@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
-require_relative '../lib/rdl.rb' # Fix for release!
-require_relative '../lib/rdl_types.rb' # Fix for release!
+require_relative '../lib/rdl.rb'
+require_relative '../lib/rdl_types.rb'
 
 if ARGV.length != 1 then
 print <<EOF

@@ -78,14 +78,14 @@ class Object
 
   def rdl_query(q)
     $__rdl_contract_switch.off {
-      if q =~ /^([A-Z]\w*(#|\.))?([a-z_]\w*(!|\?|=)?|!|~|\+|\*\*|-|\*|\/|%|<<|>>|&|\||\^|<|<=|=>|>|==|===|!=|=~|!~|<=>|\[\]|\[\]=)$/
+      if q =~ /^[A-Z]\w*(#|\.)([a-z_]\w*(!|\?|=)?|!|~|\+|\*\*|-|\*|\/|%|<<|>>|&|\||\^|<|<=|=>|>|==|===|!=|=~|!~|<=>|\[\]|\[\]=)$/
         name, typs = RDL::Query.method_query(q)
         typs.each { |t|
           puts "#{name}: #{t}"
         }
       elsif q =~ /^[A-Z]\w*$/
         RDL::Query.class_query(q).each { |m, t| puts "#{m}: #{t}"}
-      elsif q =~ /(.*)/
+      elsif q =~ /\(.*\)/
         RDL::Query.method_type_query(q)
       else
         raise "Don't know how to handle query"
