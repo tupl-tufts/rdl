@@ -30,23 +30,28 @@ def m(x,y) ... end
 
 This indicates that `m` is that method that returns a `String` if given two `Fixnum` arguments. Again this contract is enforced at run-time: When `m` is called, RDL checks that `m` is given exactly two arguments and both are `Fixnums`, and that `m` returns an instance of `String`. RDL supports many more complex type annotations; see below for a complete discussion and examples. We should emphasize here that RDL types are enforced as contracts at method entry and exit. There is no static checking that the method body conforms to the types.
 
-RDL contracts and types are stored in memory at run time, so it's also possible for programs to query them. RDL includes lots of contracts and types for the core and standard libraries. Since those methods are generally trustworthy, RDL doesn't actually enforce the contracts (since that would add overhead), but they are available to search and query. For example:
+RDL contracts and types are stored in memory at run time, so it's also possible for programs to query them. RDL includes lots of contracts and types for the core and standard libraries. Since those methods are generally trustworthy, RDL doesn't actually enforce the contracts (since that would add overhead), but they are available to search and query. RDL includes a small script `rdl_query` to look up type information from the command line. Note you might need to put the argument in quotes depending on your shell.
 
 ```
+$ rdl_query String#include?            # print type for instance method of another class
+$ rdl_query Pathname.glob              # print type for singleton method of a class
+$ rdl_query Array                      # print types for all methods of a class
+$ rdl_query "(Fixnum) -> Fixnum"       # print all methods that take a Fixnum and return a Fixnum
+$ rdl_query "(.) -> Fixnum"            # print all methods that take a single arg of any type
+$ rdl_query "(..., Fixnum, ...) -> ."  # print all methods that take a Fixnum as some argument
+
+```
+
+See below for more details of the query format. The `rdl_query` method performs the same function as long as the gem is loaded, so you can use this in `irb`.
+
+```
+$ irb
 > require 'rdl'
  => true
 > require 'rdl_types'
  => true
 
-> rdl_query 'hash'             # get type for instance method of current class
-Object#hash: () -> Fixnum
- => nil
-> rdl_query 'String#include?'   # get type for instance method of another class
-String#include?: (String) -> FalseClass or TrueClass
- => nil
- > rdl_query 'Pathname.glob'   # get type for singleton method of a class
- Pathname.glob: (String p1, ?String p2) -> Array<Pathname>
- => nil
+> rdl_query '...' # as above
 ```
 
 Currently only type information is returned by `rdl_query` (and not other pre or postconditions).
@@ -417,6 +422,58 @@ RDL also includes a few other useful methods:
 * `o.type_cast(t)` returns a new object that delegates all methods to `o` but that will be treated by RDL as if it had type `t`. For example, `x = "a".type_cast('nil')` will make RDL treat `x` as if it had type `nil`, even though it's a `String`.
 
 * `rdl_nowrap`, if called at the top-level of a class, tells RDL to record contracts and types for methods in that class but *not* enforce them. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead.
+
+* `rdl_query` prints information about types; see below for details.
+
+## Queries
+
+As discussed above, RDL includes a small script, `rdl_query`, to look up type information. (Currently it does not support other pre- and postconditions.) The script takes a single argument, which should be a string. Note that when using the shell script, you may need to use quotes depending on your shell. Currently several queries are supported:
+
+* Instance methods can be looked up as `Class#method`.
+
+```
+$ rdl_query String#include?
+String#include?: (String) -> TrueClass or FalseClass
+```
+
+* Singleton (class) methods can be looked up as `Class.method`.
+
+```
+$ rdl_query Pathname.glob
+Pathname.glob: (String p1, ?String p2) -> Array<Pathname>
+```
+
+* All methods of a class can be listed by passing the class name `Class`.
+
+```
+$ rdl_query Array
+&: (Array<u>) -> Array<t>
+*: (String) -> String
+... and a lot more
+```
+
+* Methods can also be search for by their type signature:
+
+```
+$ rdl_query "(Fixnum) -> Fixnum"      # print all methods of type (Fixnum) -> Fixnum
+BigDecimal.limit: (Fixnum) -> Fixnum
+Dir#pos=: (Fixnum) -> Fixnum
+... and a lot more
+```
+
+The type signature uses the standard RDL syntax, with two extensions: `.` can be used as a wildcard to match any type, and `...` can be used to match any sequence of arguments.
+
+```
+$ rdl_query "(.) -> ."                 # methods that take one argument and return anything
+$ rdl_query "(Fixnum, .) -> ."         # methods that take two arguments, the first of which is a Fixnum
+$ rdl_query "(Fixnum, ...) -> ."       # methods whose first argument is a Fixnum
+$ rdl_query "(..., Fixnum) -> ."       # methods whose last argument is a Fixnum
+$ rdl_query "(..., Fixnum, ...) -> ."  # methods that take a Fixnum somewhere
+$ rdl_query "(Fixnum or .) -> ."       # methods that take a single argument that is a union containing a Fixnum
+$ rdl_query "(.?) -> ."                # methods that take one, optional argument
+```
+
+Note that aside from `.` and `...`, the matching is exact. For example `(Fixnum) -> Fixnum` will not match a method of type `(Fixnum or String) -> Fixnum`.
 
 # Bibliography
 

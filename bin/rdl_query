@@ -5,7 +5,7 @@ require_relative '../lib/rdl_types.rb' # Fix for release!
 
 if ARGV.length != 1 then
 print <<EOF
-  Usage: rq <query>
+  Usage: rdl_query <query>
 
   Valid queries:
 
@@ -13,9 +13,10 @@ print <<EOF
   Class.method - Display type of class (singleton) method
   (method type) - Display methods that have given type
 
-  Method type queries follow the usual syntax for RDL types, but can also include
-  `.' to match any type, and `...' to match any sequence of types. See the
-  README.md file for more detail.
+  Method type queries follow the usual syntax for RDL types,
+  but can also include `.' to match any type, and `...' to
+  match any sequence of types. See the README.md file for more
+  detail.
 EOF
   exit 0
 end
