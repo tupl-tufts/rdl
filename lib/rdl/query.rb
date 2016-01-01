@@ -50,26 +50,29 @@ class RDL::Query
         end
       }
     end
-    cls_meths.sort! { |p1,p2| p1[0] <=> p2[0] }
+    cls_meths.sort! { |p1, p2| p1[0] <=> p2[0] }
     cls_meths.each { |m, t| m.insert(0, "self.") }
-    inst_meths.sort! { |p1,p2| p1[0] <=> p2[0] }
+    inst_meths.sort! { |p1, p2| p1[0] <=> p2[0] }
     return cls_meths + inst_meths
   end
 
-  # Return . The query should be a string containing a method type query.
+  # Returns sorted list of pairs [method name, type] matching query. The query should be a string containing a method type query.
   def self.method_type_query(q)
     q = $__rdl_parser.scan_str "#Q #{q}"
+    result = []
     $__rdl_contracts.each { |klass, meths|
       meths.each { |meth, kinds|
         if kinds.has_key? :type then
           kinds[:type].each { |t|
             if q.match(t)
-              puts "#{RDL::Util.pretty_name(klass, meth)}: #{t}"
+              result << [RDL::Util.pretty_name(klass, meth), t]
             end
           }
         end
       }
     }
+    result.sort! { |p1, p2| p1[0] <=> p2[0] }
+    return result
   end
 
 end
@@ -86,10 +89,11 @@ class Object
       elsif q =~ /^[A-Z]\w*$/
         RDL::Query.class_query(q).each { |m, t| puts "#{m}: #{t}"}
       elsif q =~ /\(.*\)/
-        RDL::Query.method_type_query(q)
+        RDL::Query.method_type_query(q).each { |m, t| puts "#{m}: #{t}" }
       else
         raise "Don't know how to handle query"
       end
+      nil
     }
   end
 
