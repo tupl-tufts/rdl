@@ -214,7 +214,12 @@ RUBY
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return false unless @ret.match(other.ret)
-      return false unless (@block == nil && other.block == nil) || (@block.match(other.block))
+      if @block == nil
+        return false unless other.block == nil
+      else
+        return false if other.block == nil
+        return false unless @block.match(other.block)
+      end
       # Check arg matches; logic is similar to pre_cond
       states = [[0,0]] # [position in self, position in other]
       until states.empty?

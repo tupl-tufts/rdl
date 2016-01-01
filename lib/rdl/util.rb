@@ -1,4 +1,8 @@
 class RDL::Util
+
+  SINGLETON_MARKER = "[s]"
+  SINGLETON_MARKER_REGEXP = Regexp.escape(SINGLETON_MARKER)
+
   def self.to_class(klass)
     return klass if klass.class == Class
     if has_singleton_marker(klass)
@@ -11,11 +15,11 @@ class RDL::Util
   end
 
   def self.has_singleton_marker(klass)
-    return (klass =~ /^\[singleton\]/)
+    return (klass =~ /^#{SINGLETON_MARKER_REGEXP}/)
   end
-  
+
   def self.remove_singleton_marker(klass)
-    if klass =~ /^\[singleton\](.*)/
+    if klass =~ /^#{SINGLETON_MARKER_REGEXP}(.*)/
       return $1
     else
       return nil
@@ -23,9 +27,18 @@ class RDL::Util
   end
 
   def self.add_singleton_marker(klass)
-    return "[singleton]" + klass
+    return SINGLETON_MARKER + klass
   end
-    
+
+  # Klass should be a string and may have a singleton marker
+  def self.pretty_name(klass, meth)
+    if klass =~ /^#{SINGLETON_MARKER_REGEXP}(.*)/
+      return "#{$1}.#{meth}"
+    else
+      return "#{klass}##{meth}"
+    end
+  end
+
   def self.method_defined?(klass, method)
     begin
       (self.to_class klass).method_defined?(method.to_sym) ||

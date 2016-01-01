@@ -31,7 +31,7 @@ class TestRDL < Minitest::Test
     ppos = RDL::Contract::FlatContract.new("Positive") { |x| x > 0 }
     assert_equal ["TestRDL", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, :m1, ppos)
     assert_equal ["TestRDL", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, "m1", ppos)
-    assert_equal ["[singleton]TestRDL", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, "self.m1", ppos)
+    assert_equal ["#{RDL::Util::SINGLETON_MARKER}TestRDL", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, "self.m1", ppos)
     assert_equal ["TestRDL", :m1, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", :m1, ppos)
     assert_equal ["TestRDL", nil, ppos], RDL::Wrap.process_pre_post_args(self.class, "C", ppos)
     klass1, meth1, c1 = RDL::Wrap.process_pre_post_args(self.class, "C", TestRDL, :m1) { |x| x > 0 }
@@ -45,7 +45,7 @@ class TestRDL < Minitest::Test
     klass3, meth3, c3 = RDL::Wrap.process_pre_post_args(self.class, "C") { |x| x > 0 }
     assert_equal ["TestRDL", nil], [klass3, meth3]
     assert (c3.is_a? RDL::Contract::FlatContract)
-    
+
     assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C") }
     assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C", 42) }
     assert_raises(ArgumentError) { RDL::Wrap.process_pre_post_args(self.class, "C", 42) { |x| x > 0} }
@@ -297,5 +297,5 @@ RUBY
     }
     assert_equal 3, m23(3)
   end
-  
+
 end
