@@ -1,4 +1,4 @@
-class BigDecimal
+class BigDecimal < Numeric
   rdl_nowrap
 
   #type 'self._load', '()'
