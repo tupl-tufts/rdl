@@ -1,4 +1,4 @@
-class Fixnum < Integer
+class Bignum < Integer
   rdl_nowrap
 
   type :%, '(Numeric other) -> Numeric'

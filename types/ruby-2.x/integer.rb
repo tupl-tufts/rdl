@@ -1,4 +1,4 @@
-class Integer
+class Integer < Numeric
   rdl_nowrap
 
   rdl_alias :ceil, :to_i

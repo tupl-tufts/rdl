@@ -1,4 +1,4 @@
-class Complex
+class Complex < Numeric
   rdl_nowrap
 
   type 'self.polar', '(%real abs, ?%real arg) -> Complex'

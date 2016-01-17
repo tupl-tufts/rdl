@@ -1,4 +1,4 @@
-class Rational
+class Rational < Numeric
   rdl_nowrap
 
   type :*, '(Numeric) -> Numeric'

@@ -1,4 +1,4 @@
-class Float
+class Float < Numeric
   rdl_nowrap
 
   type :%, '(Numeric other) -> Numeric'
