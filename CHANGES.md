@@ -3,7 +3,6 @@
 ## [Unreleased]
 ### Added
 - Added 'BigDecimal' to alias '%real'
-- Added alias '%bool'
 ### Added
 - Changelog added!
 
