@@ -1,6 +1,9 @@
 # Change log!
 
 ## [Unreleased]
+### Fixed
+- Comprehensive changes to types of Numeric subclass methods to make types more specific & accurate
+
 ### Added
 - Added 'BigDecimal' to alias '%real'
 ### Added

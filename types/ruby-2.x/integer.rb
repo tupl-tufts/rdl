@@ -1,31 +1,32 @@
 class Integer < Numeric
   rdl_nowrap
 
-  rdl_alias :ceil, :to_i
-  type :chr, '(?Encoding) -> String'
-  type :denominator, '() -> 1'
-  type :downto, '(Integer limit) { (Integer) -> %any } -> self'
+  type :ceil, '() -> Integer'
+  type :chr, '(Encoding) -> String'
+  type :denominator, '() -> Fixnum'
+  post(:denominator) { |x| x == 1 }
+  type :downto, '(Integer) { (Integer) -> %any } -> Integer'
   type :downto, '(Integer limit) -> Enumerator<Integer>'
   type :even?, '() -> %bool'
   type :gcd, '(Integer) -> Integer'
   type :gcdlcm, '(Integer) -> [Integer, Integer]'
-  rdl_alias :floor, :to_i
+  type :floor, '() -> Integer'
   type :integer?, '() -> TrueClass'
   type :lcm, '(Integer) -> Integer'
   type :next, '() -> Integer'
-  type :numerator, '() -> self'
+  type :numerator, '() -> Integer'
   type :odd?, '() -> %bool'
-  type :ord, '() -> self'
+  type :ord, '() -> Integer'
   type :pred, '() -> Integer'
-  type :rationalize, '(?%any eps) -> Rational'
-  type :round, '(?Fixnum ndigits) -> Integer or Float'
-  rdl_alias :succ, :next
-  type :times, '() { (Integer) -> %any } -> self'
+  type :rationalize, '(Numeric) -> Rational'
+  type :round, '(Numeric) -> Numeric'
+  type :succ, '() -> Integer'
+  type :times, '() { (Integer) -> %any } -> Integer'
   type :times, '() -> Enumerator<Integer>'
   type :to_i, '() -> Integer'
-  rdl_alias :to_int, :to_i
+  type :to_int, '() -> Integer'
   type :to_r, '() -> Rational'
-  rdl_alias :truncate, :to_i
-  type :upto, '(Integer limit) { (Integer) -> %any } -> self'
-  type :upto, '(Integer limit) -> Enumerator<Integer>'
+  type :truncate, '() -> Integer'
+  type :upto, '(Integer) { (Integer) -> %any } -> Integer'
+  type :upto, '(Integer) -> Enumerator<Integer>'
 end
