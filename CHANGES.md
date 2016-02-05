@@ -1,6 +1,9 @@
 # Change log!
 
 ## [Unreleased]
+### Added
+- Added '/extras' directory which contains random type tests for numeric subclass method types
+
 ### Fixed
 - Comprehensive changes to types of Numeric subclass methods to make types more specific & accurate
 
