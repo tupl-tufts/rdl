@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 ### Fixed
-- Errors in post condtions of numeric types (incorrect number of args.)
+- Errors in post condtions of numeric types (incorrect number of args)
 
 ### Added
 - Added '/extras' directory which contains random type tests for numeric subclass method types
