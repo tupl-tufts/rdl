@@ -52,10 +52,10 @@ class Complex < Numeric
   type:==, '(Object) -> %bool'
 
   type :abs, '() -> Numeric'
-  post(:abs) { |x| x >= 0 }
+  post(:abs) { |r,x| r >= 0 }
 
   type :abs2, '() -> Numeric'
-  post(:abs) { |x| x >= 0 }
+  post(:abs2) { |r,x| r >= 0 }
 
   type :angle, '() -> Float'
 

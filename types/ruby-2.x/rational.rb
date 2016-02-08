@@ -36,7 +36,7 @@ class Rational < Numeric
   type :**, '(Rational) -> Numeric'
   type :**, '(BigDecimal) -> BigDecimal'
   pre(:**) { |x| x!=BigDecimal::INFINITY && if self<0 then x<=-1||x>=0 else true end}
-  post(:**) { |x| x.real?}
+  post(:**) { |r,x| r.real?}
   type :**, '(Complex) -> Complex'
   pre(:**) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end}
 
@@ -80,27 +80,27 @@ class Rational < Numeric
   pre(:>=) { |x| !x.nan?}
 
   type :<=>, '(Integer) -> Object'
-  post(:<=>) { |x| x == -1 || x==0 || x==1}
+  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
   type :<=>, '(Float) -> Object'
-  post(:<=>) { |x| x == -1 || x==0 || x==1}
+  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
   type :<=>, '(Rational) -> Object'
-  post(:<=>) { |x| x == -1 || x==0 || x==1}
+  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
   type :<=>, '(BigDecimal) -> Object'
-  post(:<=>) { |x| x == -1 || x==0 || x==1}
+  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
 
   type :==, '(Object) -> %bool'
 
   type :abs, '() -> Rational'
-  post(:abs) { |x| x >= 0 }
+  post(:abs) { |r,x| r >= 0 }
 
   type :abs2, '() -> Rational'
-  post(:abs2) { |x| x >= 0 }
+  post(:abs2) { |r,x| r >= 0 }
 
   type :angle, '() -> Numeric'
-  post(:angle) { |x| x == 0 || x == Math::PI}
+  post(:angle) { |r,x| r == 0 || r == Math::PI}
 
   type :arg, '() -> Numeric'
-  post(:arg) { |x| x == 0 || x == Math::PI}
+  post(:arg) { |r,x| r == 0 || r == Math::PI}
 
   type :div, '(Fixnum) -> Integer'
   pre(:div) { |x| x!=0}
@@ -126,7 +126,7 @@ class Rational < Numeric
   type :ceil, '(Integer) -> Numeric'
 
   type :denominator, '() -> Integer'
-  post(:denominator) { |r| r > 0 }
+  post(:denominator) { |r,x| r > 0 }
 
   type :divmod, '(%real) -> [%real, %real]'
   pre(:divmod) { |x| x!=0 && if x.is_a?(BigDecimal) then !x.nan? else true end}
@@ -191,16 +191,16 @@ class Rational < Numeric
   type :conjugate, '() -> Rational'
 
   type :imag, '() -> Fixnum'
-  post(:imag) { |x| x == 0 }
+  post(:imag) { |r,x| r == 0 }
   type :imaginary, '() -> Fixnum'
-  post(:imaginary) { |x| x == 0 }
+  post(:imaginary) { |r,x| r == 0 }
 
   type :real, '() -> Rational'
 
   type :real?, '() -> TrueClass'
 
   type :to_c, '() -> Complex'
-  post(:to_c) { |x| x.imaginary == 0 }
+  post(:to_c) { |r,x| r.imaginary == 0 }
 
   type :coerce, '(Integer) -> [Rational, Rational]'
   type :coerce, '(Float) -> [Float, Float]'

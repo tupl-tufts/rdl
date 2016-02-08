@@ -117,10 +117,10 @@ class Float < Numeric
   pre(:divmod) { |x| x!=0 && if x.is_a?(Float) then !x.nan? else true end && self!=Float::INFINITY && !self.nan?}
 
   type :angle, '() -> Numeric'
-  post(:angle) { |x| x == 0 || x == Math::PI || x == Float::NAN}
+  post(:angle) { |r,x| r == 0 || r == Math::PI || r == Float::NAN}
 
   type :arg, '() -> Numeric'
-  post(:arg) { |x| x == 0 || x == Math::PI || x == Float::NAN}
+  post(:arg) { |r,x| r == 0 || r == Math::PI || r == Float::NAN}
 
   type :ceil, '() -> Integer'
   pre(:ceil) { self!=Float::INFINITY && !self.nan?}
@@ -128,7 +128,7 @@ class Float < Numeric
   type :coerce, '(%real) -> [Float, Float]'
 
   type :denominator, '() -> Integer'
-  post(:denominator) { |r| r > 0 }
+  post(:denominator) { |r,x| r > 0 }
 
   type :equal?, '(Object) -> %bool'
 
@@ -150,13 +150,13 @@ class Float < Numeric
   type :hash, '() -> Integer'
 
   type :infinite?, '() -> Object'
-  post(:infinite?) { |x| x == -1 || x == 1 || x == nil }
+  post(:infinite?) { |r,x| r == -1 || r == 1 || r == nil }
 
   type :to_s, '() -> String'
   type :inspect, '() -> String'
 
   type :magnitude, '() -> Float'
-  post(:magnitude) { |x| x>=0 }
+  post(:magnitude) { |r,x| r>=0 }
 
   type :modulo, '(Integer) -> Float'
   pre(:modulo) { |x| x!=0}
@@ -174,7 +174,7 @@ class Float < Numeric
   type :numerator, '() -> Integer'
 
   type :phase, '() -> Numeric'
-  post(:angle) { |x| x == 0 || x == Math::PI || x == Float::NAN}
+  post(:phase) { |r,x| r == 0 || r == Math::PI || r == Float::NAN}
 
   type :prev_float, '() -> Float'
 
@@ -220,16 +220,16 @@ class Float < Numeric
   type :conjugate, '() -> Float'
 
   type :imag, '() -> Fixnum'
-  post(:imag) { |x| x == 0 }
+  post(:imag) { |r,x| r == 0 }
   type :imaginary, '() -> Fixnum'
-  post(:imaginary) { |x| x == 0 }
+  post(:imaginary) { |r,x| r == 0 }
 
   type :real, '() -> Float'
 
   type :real?, '() -> TrueClass'
 
   type :to_c, '() -> Complex'
-  post(:to_c) { |x| x.imaginary == 0 }
+  post(:to_c) { |r,x| r.imaginary == 0 }
 
   type :coerce, '(Numeric) -> [Float, Float]'
   pre(:coerce) { |x| if x.is_a?(Complex) then x.imaginary==0 else true end}

@@ -4,7 +4,7 @@ class Integer < Numeric
   type :ceil, '() -> Integer'
   type :chr, '(Encoding) -> String'
   type :denominator, '() -> Fixnum'
-  post(:denominator) { |x| x == 1 }
+  post(:denominator) { |r,x| r == 1 }
   type :downto, '(Integer) { (Integer) -> %any } -> Integer'
   type :downto, '(Integer limit) -> Enumerator<Integer>'
   type :even?, '() -> %bool'

@@ -27,7 +27,7 @@ class Bignum < Integer
   type :**, '(Rational) -> Numeric'
   type :**, '(BigDecimal) -> BigDecimal'
   pre(:**) { |x| x!=BigDecimal::INFINITY && if self<0 then x<=-1||x>=0 else true end}
-  post(:**) { |x| x.real?}
+  post(:**) { |r,x| r.real?}
   type :**, '(Complex) -> Complex'
   pre(:**) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end}
 
@@ -69,13 +69,13 @@ class Bignum < Integer
   type :<=, '(BigDecimal) -> %bool'
 
   type :<=>, '(Integer) -> Object'
-  post(:<=>) { |x| x == -1 || x==0 || x==1}
+  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
   type :<=>, '(Float) -> Object'
-  post(:<=>) { |x| x == -1 || x==0 || x==1}
+  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
   type :<=>, '(Rational) -> Object'
-  post(:<=>) { |x| x == -1 || x==0 || x==1}
+  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
   type :<=>, '(BigDecimal) -> Object'
-  post(:<=>) { |x| x == -1 || x==0 || x==1}
+  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
 
   type :==, '(Object) -> %bool'
 
@@ -92,18 +92,18 @@ class Bignum < Integer
   type :>=, '(BigDecimal) -> %bool'
 
   type :>>, '(Integer) -> Integer'
-  post(:>>) { |x| x >= 0 }
+  post(:>>) { |r,x| r >= 0 }
 
   type :[], '(Integer) -> Fixnum'
-  post(:[]) { |x| x == 0 || x==1}
+  post(:[]) { |r,x| r == 0 || r==1}
   type :[], '(Rational) -> Fixnum'
-  post(:[]) { |x| x == 0 || x==1}
+  post(:[]) { |r,x| r == 0 || r==1}
   type :[], '(Float) -> Fixnum'
   pre(:[]) { |x| x!=Float::INFINITY && !x.nan? }
-  post(:[]) { |x| x == 0 || x==1}
+  post(:[]) { |r,x| r == 0 || r==1}
   type :[], '(BigDecimal) -> Fixnum'
   pre(:[]) { |x| x!=BigDecimal::INFINITY && !x.nan? }
-  post(:[]) { |x| x == 0 || x==1}
+  post(:[]) { |r,x| r == 0 || r==1}
 
   type :^, '(Integer) -> Integer'
 
@@ -112,10 +112,10 @@ class Bignum < Integer
   type :~, '() -> Bignum'
 
   type :abs, '() -> Bignum'
-  post(:abs) { |x| x >= 0 }
+  post(:abs) { |r,x| r >= 0 }
 
   type :bit_length, '() -> Integer'
-  post(:bit_length) { |x| x >= 0 }
+  post(:bit_length) { |r,x| r >= 0 }
 
   type :div, '(Fixnum) -> Integer'
   pre(:div) { |x| x!=0}
@@ -144,7 +144,7 @@ class Bignum < Integer
   type :inspect, '() -> String'
 
   type :magnitude, '() -> Bignum'
-  post(:abs) { |x| x >= 0 }
+  post(:magnitude) { |r,x| r >= 0 }
 
   type :modulo, '(Fixnum) -> Fixnum'
   pre(:modulo) { |x| x!=0}
@@ -172,7 +172,7 @@ class Bignum < Integer
   type :ceil, '() -> Integer'
 
   type :denominator, '() -> Fixnum'
-  post(:denominator) { |x| x == 1 }
+  post(:denominator) { |r,x| r == 1 }
 
   type :floor, '() -> Integer'
 
@@ -205,10 +205,10 @@ class Bignum < Integer
   type :truncate, '() -> Integer'
 
   type :angle, '() -> Numeric'
-  post(:angle) { |x| x == 0 || x == Math::PI}
+  post(:angle) { |r,x| r == 0 || r == Math::PI}
 
   type :arg, '() -> Numeric'
-  post(:arg) { |x| x == 0 || x == Math::PI}
+  post(:arg) { |r,x| r == 0 || r == Math::PI}
 
   type :equal?, '(Object) -> %bool' 
   type :eql?, '(Object) -> %bool'
@@ -218,34 +218,34 @@ class Bignum < Integer
   type :phase, '() -> Numeric'
 
   type :abs2, '() -> Bignum'
-  post(:abs2) { |x| x >= 0 }
+  post(:abs2) { |r,x| r >= 0 }
 
   type :conj, '() -> Bignum'
   type :conjugate, '() -> Bignum'
 
   type :imag, '() -> Fixnum'
-  post(:imag) { |x| x == 0 }
+  post(:imag) { |r,x| r == 0 }
   type :imaginary, '() -> Fixnum'
-  post(:imaginary) { |x| x == 0 }
+  post(:imaginary) { |r,x| r == 0 }
 
   type :real, '() -> Bignum'
 
   type :real?, '() -> TrueClass'
 
   type :to_c, '() -> Complex'
-  post(:to_c) { |x| x.imaginary == 0 }
+  post(:to_c) { |r,x| r.imaginary == 0 }
 
   type :remainder, '(Fixnum) -> Fixnum'
   pre(:remainder) { |x| x!=0}
-  post(:remainder) { |x| x>0}
+  post(:remainder) { |r,x| r>0}
   type :remainder, '(Bignum) -> Fixnum'
   pre(:remainder) { |x| x!=0}
-  post(:remainder) { |x| x>0}
+  post(:remainder) { |r,x| r>0}
   type :remainder, '(Float) -> Float'
   pre(:remainder) { |x| x!=0}
   type :remainder, '(Rational) -> Rational'
   pre(:remainder) { |x| x!=0}
-  post(:remainder) { |x| x>0}
+  post(:remainder) { |r,x| r>0}
   type :remainder, '(BigDecimal) -> BigDecimal'
   pre(:remainder) { |x| x!=0}
 

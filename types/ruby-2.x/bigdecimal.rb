@@ -80,26 +80,26 @@ class BigDecimal < Numeric
   pre(:===) { |x| if (x.is_a?(Float)) then (!x.nan? && x!=Float::INFINITY) else true end}
 
   type :<=>, '(Integer) -> Object'
-  post(:<=>) { |x| x == -1 || x==0 || x==1}
+  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
   type :<=>, '(Float) -> Object'
   pre(:<=>) { |x| !x.nan? && x!=Float::INFINITY}
-  post(:<=>) { |x| x == -1 || x==0 || x==1}
+  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
   type :<=>, '(Rational) -> Object'
-  post(:<=>) { |x| x == -1 || x==0 || x==1}
+  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
   type :<=>, '(BigDecimal) -> Object'
-  post(:<=>) { |x| x == -1 || x==0 || x==1}
+  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
 
   type :abs, '() -> BigDecimal'
-  post(:abs) { |x| x >= 0 }
+  post(:abs) { |r,x| r >= 0 }
 
   type :abs2, '() -> BigDecimal'
-  post(:abs2) { |x| x >= 0 }
+  post(:abs2) { |r,x| r >= 0 }
 
   type :angle, '() -> Numeric'
-  post(:angle) { |x| x == 0 || x == Math::PI}
+  post(:angle) { |r,x| r == 0 || r == Math::PI}
 
   type :arg, '() -> Numeric'
-  post(:arg) { |x| x == 0 || x == Math::PI}
+  post(:arg) { |r,x| r == 0 || r == Math::PI}
 
   type :ceil, '() -> Integer'
   pre(:ceil) { !self.ininite? && !self.nan?}
@@ -109,7 +109,7 @@ class BigDecimal < Numeric
 
   type :denominator, '() -> Integer'
   pre(:denominator) { !self.ininite? && !self.nan?}
-  post(:denominator) { |x| x>0}
+  post(:denominator) { |r,x| r>0}
 
   type :div, '(Fixnum) -> Integer'
   pre(:div) { |x| x!=0 && !self.infinite? && !self.nan?}
@@ -143,9 +143,9 @@ class BigDecimal < Numeric
   type :hash, '() -> Integer'
 
   type :imag, '() -> Fixnum'
-  post(:imag) { |x| x == 0 }
+  post(:imag) { |r,x| r == 0 }
   type :imaginary, '() -> Fixnum'
-  post(:imaginary) { |x| x == 0 }
+  post(:imaginary) { |r,x| r == 0 }
 
   type :infinite?, '() -> %bool'
 
@@ -153,7 +153,7 @@ class BigDecimal < Numeric
   type :inspect, '() -> String'
 
   type :magnitude, '() -> BigDecimal'
-  post(:denominator) { |x| x>0}
+  post(:magnitude) { |r,x| r>0}
 
   type :modulo, '(Numeric) -> BigDecimal'
   pre(:modulo) { |x| x!=0&&(if x.is_a?(Float) then x!=Float::INFINITY && !x.nan? else true end)}
@@ -197,7 +197,7 @@ class BigDecimal < Numeric
   pre(:to_r) { !self.infinite? && !self.nan?}
 
   type :to_c, '() -> Complex'
-  post(:to_c) { |x| x.imaginary == 0 }
+  post(:to_c) { |r,x| r.imaginary == 0 }
 
   type :truncate, '() -> Integer'
 

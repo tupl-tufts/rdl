@@ -6,11 +6,11 @@ class Numeric
   type :+, '(Numeric) -> Numeric'
   type :-, '() -> Numeric'
   type :<=>, '(Numeric) -> Object'
-  post(:<=>) { |x| x == -1 || x==0 || x==1 || x==nil}
+  post(:<=>) { |r,x| r == -1 || r==0 || r==1 || r==nil}
   type :abs, '() -> Numeric'
-  post(:abs) { |x| x >= 0 }
+  post(:abs) { |r,x| r >= 0 }
   type :abs2, '() -> Numeric'
-  post(:abs2) { |x| x >= 0 }
+  post(:abs2) { |r,x| r >= 0 }
   type :angle, '() -> Numeric'
   type :arg, '() -> Numeric'
   type :ceil, '() -> Integer'
@@ -18,7 +18,7 @@ class Numeric
   type :conj, '() -> Numeric'
   type :conjugate, '() -> Numeric'
   type :denominator, '() -> Integer'
-  post(:denominator) { |x| x >= 0 }
+  post(:denominator) { |r,x| r >= 0 }
   type :div, '(Numeric) -> Integer'
   pre(:div) { |x| x!=0}
   type :divmod, '(Numeric) -> [Numeric, Numeric]'
