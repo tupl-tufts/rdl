@@ -52,10 +52,6 @@ module RDL::Type
       super()
     end
 
-    def get_args()
-	return @args
-    end
-
     def get_block()
 	return @block
     end

@@ -12,7 +12,7 @@ module RDL::Contract
         if (@pred &&
             ((@pred.arity < 0) ? (@pred.arity.abs - 1) <= v.size : @pred.arity == v.size)) then
           unless blk ? slf.instance_exec(*v, blk, &@pred) : slf.instance_exec(*v, &@pred) # TODO: Fix blk
-          #unless blk ? x=@pred.call(*v, &blk) : x=@pred.call(*v)
+#          unless blk ? @pred.call(*v, &blk) : @pred.call(*v)
             raise ContractError,
                   "#{v.inspect} does not satisfy #{self.to_s}"
           end
