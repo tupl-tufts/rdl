@@ -52,12 +52,20 @@ module RDL::Type
       super()
     end
 
+    def get_args()
+	return @args
+    end
+
+    def get_block()
+	return @block
+    end
+
     def le(other, h={})
       raise RuntimeError, "should not be called"
     end
 
     # TODO: Check blk
-    def pre_cond?(inst, *args, &blk)
+    def pre_cond?(inst, *args)
       states = [[0, 0]] # [position in @arg, position in args]
       until states.empty?
         formal, actual = states.pop
@@ -118,7 +126,7 @@ module RDL::Type
       slf = self # Bind self so it's captured in a closure, since contracts are executed
                  # with self bound to the receiver method's self
       prec = RDL::Contract::FlatContract.new { |*args, &blk|
-        raise TypeError, "Arguments #{args} do not match argument types #{slf}" unless slf.pre_cond?(inst, *args, &blk)
+        raise TypeError, "Arguments #{args} do not match argument types #{slf}" unless slf.pre_cond?(inst, *args)
         true
       }
       postc = RDL::Contract::FlatContract.new { |ret, *args|
@@ -136,8 +144,11 @@ module RDL::Type
     def self.check_arg_types(method_name, types, inst, *args, &blk)
       $__rdl_contract_switch.off {
         matches = [] # types that matched args
-        types.each_with_index { |t, i| matches << i if t.pre_cond?(inst, *args, &blk) }
-        return matches if matches.size > 0
+	blocks = []
+        types.each_with_index { |t, i| x= t.instantiate(inst).get_block()
+	blocks << x if !x.nil?
+	matches << i if t.pre_cond?(inst, *args) }
+        return [matches,blocks] if matches.size > 0
         method_name = method_name ? method_name + ": " : ""
         raise TypeError, <<RUBY
 #{method_name}Argument type error.
@@ -252,5 +263,41 @@ RUBY
       h = h * 31 + @block.hash if @block
       return h
     end
+
+    def self.check_block_arg_types(types, inst, *args)
+      $__rdl_contract_switch.off {
+        matches = [] # types that matched args
+        types.each_with_index { |t, i|
+	matches << i if t.pre_cond?(inst, *args) }
+        return matches if matches.size > 0
+        #method_name = method_name ? method_name + ": " : ""
+        raise TypeError, <<RUBY
+Block argument type error.
+Block type:
+#{ types.map { |t| "        " + t.to_s }.join("\n") }
+Actual argument type#{args.size > 1 ? "s" : ""}:
+        (#{args.map { |arg| RDL::Util.rdl_type_or_class(arg) }.join(', ')})
+Actual argument values (one per line):
+#{ args.map { |arg| "        " + arg.inspect }.join("\n") }
+RUBY
+      }
+    end
+
+    def self.check_block_ret_types(types, inst, matches, ret, *args)
+      $__rdl_contract_switch.off {
+        matches.each { |i| return true if types[i].post_cond?(inst, ret, *args) }
+        method_name = method_name ? method_name + ": " : ""
+        raise TypeError, <<RUBY
+Block return type error. *'s indicate argument lists that matched.
+Method type:
+#{types.each_with_index.map { |t,i| "       " + (matches.member?(i) ? "*" : " ") + t.to_s }.join("\n") }
+Actual return type:
+        #{ RDL::Util.rdl_type_or_class(ret)}
+Actual return value:
+        #{ ret.inspect }
+RUBY
+      }
+    end
+
 end
 end

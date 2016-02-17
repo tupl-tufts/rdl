@@ -69,8 +69,9 @@ class RDL::Wrap
         alias_method meth_old, meth
         def #{meth}(*args, &blk)
           klass = "#{klass_str}"
-          meth = types = matches = nil
+          meth = types = matches = blocks = nil
           inst = nil
+	  new_args = nil
           $__rdl_wrap_switch.off {
             $__rdl_wrapped_calls["#{full_method_name}"] += 1 if RDL::Config.instance.gather_stats
             inst = @__rdl_inst
@@ -85,10 +86,13 @@ class RDL::Wrap
             end
             if RDL::Wrap.has_contracts?(klass, meth, :type)
               types = RDL::Wrap.get_contracts(klass, meth, :type)
-              matches = RDL::Type::MethodType.check_arg_types("#{full_method_name}", types, inst, *args, &blk)
+              matches,blocks = RDL::Type::MethodType.check_arg_types("#{full_method_name}", types, inst, *args, &blk)
             end
+	    if blocks then
+		blk = block_wrap(self, inst, blocks, &blk)
+	    end
           }
-          ret = send(#{meth_old.inspect}, *args, &blk)
+	  ret = send(#{meth_old.inspect}, *args, &blk)
           $__rdl_wrap_switch.off {
             if RDL::Wrap.has_contracts?(klass, meth, :post)
               posts = RDL::Wrap.get_contracts(klass, meth, :post)
@@ -476,4 +480,19 @@ class Object
       end
     }
   end
+
+#########################################################
+
+    def block_wrap(slf, inst, types, &blk)
+      Proc.new {|*v|
+        matches = RDL::Type::MethodType.check_block_arg_types( types, inst, *v)
+        tmp = slf.instance_exec(*v, &blk) # TODO fix blk
+        # tmp = blk.call(*v, &other_blk) # TODO: Instance eval with self
+        if matches then
+		RDL::Type::MethodType.check_block_ret_types(types, inst, matches, tmp, *v)
+	end
+        tmp
+      }
+    end
+
 end

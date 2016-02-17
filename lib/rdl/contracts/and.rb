@@ -15,7 +15,9 @@ module RDL::Contract
     # [:slf:] is bound to self when the contracts are checked
     def self.check_array(a, slf, *v, &blk)
       # All contracts must be satisfied
-      a.all? { |c| c.check(slf, *v, &blk) }
+      a.all? { |c| 
+	c.check(slf, *v, &blk) 
+	}
     end
     
     def to_s
