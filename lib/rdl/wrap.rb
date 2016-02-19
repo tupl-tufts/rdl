@@ -86,11 +86,11 @@ class RDL::Wrap
             end
             if RDL::Wrap.has_contracts?(klass, meth, :type)
               types = RDL::Wrap.get_contracts(klass, meth, :type)
-              matches,blocks = RDL::Type::MethodType.check_arg_types("#{full_method_name}", types, inst, *args, &blk)
+              matches,args,blk = RDL::Type::MethodType.check_arg_types("#{full_method_name}", self, types, inst, *args, &blk)
             end
-	    if blocks then
-		blk = block_wrap(self, inst, blocks, &blk)
-	    end
+	    #if blocks then
+		#blk = block_wrap(self, inst, blocks, &blk)
+	    #end
           }
 	  ret = send(#{meth_old.inspect}, *args, &blk)
           $__rdl_wrap_switch.off {
