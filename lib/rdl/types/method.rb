@@ -133,8 +133,12 @@ module RDL::Type
     end
 
     def post_cond?(inst, ret, *args)
-      method_name = method_name ? method_name + ": " : ""
-      return @ret.instantiate(inst).member?(ret, vars_wild: true)
+	x = @ret.instatiate(inst)
+	puts "uuuuuuuuuuuuuuuuuuu"
+	puts x
+	puts "uuuuuuuuuuuuuuuuuuu"
+	method_name = method_name ? method_name + ": " : ""
+	return @ret.instantiate(inst).member?(ret, vars_wild: true)
     end
 
     def to_contract(inst: nil)
