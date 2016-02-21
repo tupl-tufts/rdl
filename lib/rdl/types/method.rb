@@ -52,18 +52,35 @@ module RDL::Type
       super()
     end
 
+    def get_block()
+	return @block
+    end
+
     def le(other, h={})
       raise RuntimeError, "should not be called"
     end
 
     # TODO: Check blk
-    def pre_cond?(inst, *args, &blk)
+    def pre_cond?(blk, slf, inst, *args)
+	if @block then
+		blk = block_wrap(slf,inst,@block,&blk)
+	end
+	new_args = []
+	new_arg_typs = []
+	@args.each_with_index {|a,i| if a.is_a?(RDL::Type::MethodType) then
+					new_arg_typs << RDL::Type::NominalType.new('Proc')
+					new_args << block_wrap(slf,inst,a,&args[i])
+					else
+					new_arg_typs << @args[i]
+					new_args << args[i]
+					end }
+
       states = [[0, 0]] # [position in @arg, position in args]
       until states.empty?
         formal, actual = states.pop
-        return true if formal == @args.size && actual == args.size # Matched all actuals, no formals left over
+        return [true, new_args, blk] if formal == @args.size && actual == args.size # Matched all actuals, no formals left over
         next if formal >= @args.size # Too many actuals to match
-        t = @args[formal]
+        t = new_arg_typs[formal]
         t = t.type if t.instance_of? AnnotatedArgType
         case t
         when OptionalType
@@ -101,12 +118,19 @@ module RDL::Type
           end
         end
       end
-      return false
+      return [false, new_args, blk]
     end
 
-    def post_cond?(inst, ret, *args)
-      method_name = method_name ? method_name + ": " : ""
-      return @ret.instantiate(inst).member?(ret, vars_wild: true)
+    def post_cond?(slf, inst, ret, *args)
+	new_ret = ret
+	if @ret.is_a?(RDL::Type::MethodType) then
+		if !ret.is_a?(Proc) then return [false,ret] else
+		new_ret = block_wrap(slf,inst,@ret,&ret)
+		return [true, new_ret]
+		end
+	end
+	method_name = method_name ? method_name + ": " : ""
+	return [@ret.instantiate(inst).member?(ret, vars_wild: true), new_ret]
     end
 
     def to_contract(inst: nil)
@@ -118,11 +142,11 @@ module RDL::Type
       slf = self # Bind self so it's captured in a closure, since contracts are executed
                  # with self bound to the receiver method's self
       prec = RDL::Contract::FlatContract.new { |*args, &blk|
-        raise TypeError, "Arguments #{args} do not match argument types #{slf}" unless slf.pre_cond?(inst, *args, &blk)
+        raise TypeError, "Arguments #{args} do not match argument types #{slf}" unless slf.pre_cond?(blk, slf, inst, *args)
         true
       }
       postc = RDL::Contract::FlatContract.new { |ret, *args|
-        raise TypeError, "Return #{ret} does not match return type #{slf}" unless slf.post_cond?(inst, ret, *args)
+        raise TypeError, "Return #{ret} does not match return type #{slf}" unless slf.post_cond?(slf, inst, ret, *args)[0]
         true
       }
       c = RDL::Contract::ProcContract.new(pre_cond: prec, post_cond: postc)
@@ -133,11 +157,18 @@ module RDL::Type
     # [+blk+] match at least one arm of the intersection type;
     # otherwise raises exception. Returns array of method types that
     # matched [+args+] and [+blk+]
-    def self.check_arg_types(method_name, types, inst, *args, &blk)
+    def self.check_arg_types(method_name, slf, types, inst, *args, &blk)
       $__rdl_contract_switch.off {
         matches = [] # types that matched args
-        types.each_with_index { |t, i| matches << i if t.pre_cond?(inst, *args, &blk) }
-        return matches if matches.size > 0
+	new_args = nil
+        types.each_with_index { |t, i|
+	x = t.pre_cond?(blk, slf, inst, *args)
+	if x[0] then
+	    matches << i
+	    args = x[1]
+	    blk = x[2]
+	end }
+	return [matches, args, blk] if matches.size > 0
         method_name = method_name ? method_name + ": " : ""
         raise TypeError, <<RUBY
 #{method_name}Argument type error.
@@ -151,9 +182,10 @@ RUBY
       }
     end
 
-    def self.check_ret_types(method_name, types, inst, matches, ret, *args, &blk)
+    def self.check_ret_types(slf, method_name, types, inst, matches, ret, *args, &blk)
       $__rdl_contract_switch.off {
-        matches.each { |i| return true if types[i].post_cond?(inst, ret, *args) }
+        matches.each { |i| x = types[i].post_cond?(slf, inst, ret, *args)
+			if x[0] then return x[1] end  }
         method_name = method_name ? method_name + ": " : ""
         raise TypeError, <<RUBY
 #{method_name}Return type error. *'s indicate argument lists that matched.
@@ -252,5 +284,51 @@ RUBY
       h = h * 31 + @block.hash if @block
       return h
     end
+
+    def self.check_block_arg_types(slf, types, inst, *args)
+      $__rdl_contract_switch.off {
+	x = types.pre_cond?(nil, slf, inst, *args)
+        if x[0] then
+		return true
+	end
+        raise TypeError, <<RUBY
+Proc argument type error.
+Proc type:
+#{ [types].map { |t| "        " + t.to_s }.join("\n") }
+Actual argument type#{args.size > 1 ? "s" : ""}:
+        (#{args.map { |arg| RDL::Util.rdl_type_or_class(arg) }.join(', ')})
+Actual argument values (one per line):
+#{ args.map { |arg| "        " + arg.inspect }.join("\n") }
+RUBY
+      }
+    end
+
+    def self.check_block_ret_types(slf, types, inst, ret, *args)
+      $__rdl_contract_switch.off {
+	x = types.post_cond?(slf, inst, ret, *args)
+	if x[0] then
+		return x[1]
+	end
+        raise TypeError, <<RUBY
+Proc return type error.
+Proc type:
+#{[types].each_with_index.map { |t,i| "       " + t.to_s }.join("\n") }
+Actual Proc return type:
+        #{ RDL::Util.rdl_type_or_class(ret)}
+Actual Proc return value:
+        #{ ret.inspect }
+RUBY
+      }
+    end
+
+    def block_wrap(slf, inst, types, &blk)
+      Proc.new {|*v|
+        test = RDL::Type::MethodType.check_block_arg_types(slf, types, inst, *v)
+        tmp = slf.instance_exec(*v, &blk)
+	tmp = RDL::Type::MethodType.check_block_ret_types(slf, types, inst, tmp, *v)
+        tmp
+      }
+    end
+
 end
 end

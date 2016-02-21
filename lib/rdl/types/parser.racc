@@ -119,6 +119,7 @@ rule
       n = RDL::Type::NominalType.new(val[0])
       result = RDL::Type::GenericType.new(n, *val[2])
     }
+    | LBRACE method_type RBRACE { result = val[1] }
     | LBRACKET type_expr_comma_list RBRACKET {
       result = RDL::Type::TupleType.new(*val[1])
     }
