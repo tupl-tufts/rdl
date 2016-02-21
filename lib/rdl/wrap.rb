@@ -88,9 +88,6 @@ class RDL::Wrap
               types = RDL::Wrap.get_contracts(klass, meth, :type)
               matches,args,blk = RDL::Type::MethodType.check_arg_types("#{full_method_name}", self, types, inst, *args, &blk)
             end
-	    #if blocks then
-		#blk = block_wrap(self, inst, blocks, &blk)
-	    #end
           }
 	  ret = send(#{meth_old.inspect}, *args, &blk)
           $__rdl_wrap_switch.off {
@@ -99,7 +96,7 @@ class RDL::Wrap
               RDL::Contract::AndContract.check_array(posts, self, ret, *args, &blk)
             end
             if matches
-              RDL::Type::MethodType.check_ret_types("#{full_method_name}", types, inst, matches, ret, *args, &blk)
+              ret = RDL::Type::MethodType.check_ret_types(self, "#{full_method_name}", types, inst, matches, ret, *args, &blk)
             end
           }
           return ret
@@ -481,18 +478,5 @@ class Object
     }
   end
 
-#########################################################
-
-    def block_wrap(slf, inst, types, &blk)
-      Proc.new {|*v|
-        matches = RDL::Type::MethodType.check_block_arg_types( types, inst, *v)
-        tmp = slf.instance_exec(*v, &blk) # TODO fix blk
-        # tmp = blk.call(*v, &other_blk) # TODO: Instance eval with self
-        if matches then
-		RDL::Type::MethodType.check_block_ret_types(types, inst, matches, tmp, *v)
-	end
-        tmp
-      }
-    end
 
 end
