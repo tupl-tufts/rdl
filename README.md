@@ -4,7 +4,7 @@
 
 RDL is a lightweight system for adding contracts to Ruby. A *contract* decorates a method with assertions describing what the method assumes about its inputs (called a *precondition*) and what the method guarantees about its outputs (called a *postcondition*). For example, using RDL we can write
 
-```
+```ruby
 require 'rdl'
 
 pre { |x| x > 0 }
@@ -21,7 +21,7 @@ RDL contracts are enforced at method entry and exit. For example, if we call `sq
 
 In addition to arbitrary pre- and post-conditions, RDL also has extensive support for contracts that are *types*. For example, we can write the following in RDL:
 
-```
+```ruby
 require 'rdl'
 
 type '(Fixnum, Fixnum) -> String'
@@ -32,7 +32,7 @@ This indicates that `m` is that method that returns a `String` if given two `Fix
 
 RDL contracts and types are stored in memory at run time, so it's also possible for programs to query them. RDL includes lots of contracts and types for the core and standard libraries. Since those methods are generally trustworthy, RDL doesn't actually enforce the contracts (since that would add overhead), but they are available to search and query. RDL includes a small script `rdl_query` to look up type information from the command line. Note you might need to put the argument in quotes depending on your shell.
 
-```
+```ruby
 $ rdl_query String#include?            # print type for instance method of another class
 $ rdl_query Pathname.glob              # print type for singleton method of a class
 $ rdl_query Array                      # print types for all methods of a class
@@ -44,7 +44,7 @@ $ rdl_query "(..., Fixnum, ...) -> ."  # print all methods that take a Fixnum as
 
 See below for more details of the query format. The `rdl_query` method performs the same function as long as the gem is loaded, so you can use this in `irb`.
 
-```
+```ruby
 $ irb
 > require 'rdl'
  => true
@@ -76,7 +76,7 @@ Use `require 'rdl'` to load the RDL library. If you want to use the core and sta
 
 If you're using Ruby on Rails, you can similarly `require 'rails_types'` to load in type annotations for the current `Rails::VERSION::STRING`. More specifically, add the following lines in `application.rb` after the `Bundler.require` call. (This placement is needed so the Rails version string is available and the Rails environment is loaded):
 
-```
+```ruby
 require 'rdl'
 require 'rdl_types'
 require 'rails_types'
@@ -118,7 +118,7 @@ A type string generally has the form `(typ1, ..., typn) -> typ` indicating a met
 
 A nominal type is simply a class name, and it matches any object of that class or any subclass.
 
-```
+```ruby
 type String, :insert, '(Fixnum, String) -> String'
 ```
 
@@ -126,12 +126,12 @@ type String, :insert, '(Fixnum, String) -> String'
 
 The nominal type `NilClass` can also be written as `nil`. The only object of this type is `nil`:
 
-```
+```ruby
 type IO, :close, '() -> nil' # IO#close always returns nil
 ```
 
 Currently, `nil` is treated as if it were an instance of any class.
-```
+```ruby
 x = "foo"
 x.insert(0, nil) # RDL does not report a type error
 ```
@@ -140,7 +140,7 @@ We chose this design based on prior experience with static type systems for Ruby
 ### Top Type (%any)
 
 RDL includes a special "top" type `%any` that matches any object:
-```
+```ruby
 type Object, :=~, '(%any) -> nil'
 ```
 We call this the "top" type because it is the top of the subclassing hierarchy RDL uses. Note that `%any` is more general than `Object`, because not all classes inherit from `Object`, e.g., `BasicObject` does not.
@@ -149,7 +149,7 @@ We call this the "top" type because it is the top of the subclassing hierarchy R
 
 Many Ruby methods can take several different types of arguments or return different types of results. The union operator `or` can be used to indicate a position where multiple types are possible.
 
-```
+```ruby
 type IO, :putc, '(Numeric or String) -> %any'
 type String, :getbyte, '(Fixnum) -> Fixnum or nil'
 ```
@@ -160,7 +160,7 @@ Note that for `getbyte`, we could leave off the `nil`, but we include it to matc
 
 Sometimes Ruby methods have several different type signatures. (In Java these would be called *overloaded* methods.) In RDL, such methods are assigned a set of type signatures:
 
-```
+```ruby
 type String, :[], '(Fixnum) -> String or nil'
 type String, :[], '(Fixnum, Fixnum) -> String or nil'
 type String, :[], '(Range or Regexp) -> String or nil'
@@ -173,7 +173,7 @@ We say the method's type is the *intersection* of the types above.
 
 When this method is called at run time, RDL checks that at least one type signature matches the call:
 
-```
+```ruby
 "foo"[0]  # matches first type
 "foo"[0,2] # matches second type
 "foo"[0..2] # matches third type
@@ -183,7 +183,7 @@ When this method is called at run time, RDL checks that at least one type signat
 
 Notice that union types in arguments could also be written as intersection types of methods, e.g., instead of the third type of `[]` above we could have equivalently written
 
-```
+```ruby
 type String, :[], '(Range) -> String or nil'
 type String, :[], '(Regexp) -> String or nil'
 ```
@@ -192,13 +192,13 @@ type String, :[], '(Regexp) -> String or nil'
 
 Optional arguments are denoted in RDL by putting `?` in front of the argument's type. For example:
 
-```
+```ruby
 type String, :chomp, '(?String) -> String'
 ```
 
 This is actually just a shorthand for an equivalent intersection type:
 
-```
+```ruby
 type String, :chomp, '() -> String'
 type String, :chomp, '(String) -> String'
 ```
@@ -211,7 +211,7 @@ Like Ruby, RDL allows optional arguments to appear anywhere in a method's type s
 
 In RDL, `*` is used to decorate an argument that may appear zero or more times. Currently in RDL this annotation may only appear on the rightmost argument. For example, `String#delete` takes one or more `String` arguments:
 
-```
+```ruby
 type String, :delete, '(String, *String) -> String'
 ```
 
@@ -219,7 +219,7 @@ type String, :delete, '(String, *String) -> String'
 
 RDL allows arguments to be named, for documentation purposes. Names are given after the argument's type, and they do not affect type contract checking in any way. For example:
 
-```
+```ruby
 type Fixnum, :to_s, '(?Fixnum base) -> String'
 ```
 
@@ -229,7 +229,7 @@ Here we've named the first argument of `to_s` as `base` to give some extra hint 
 
 Types signatures can include a type for a method's block argument:
 
-```
+```ruby
 type Pathname, :ascend, '() { (Pathname) -> %any } -> %any'
 ```
 
@@ -243,7 +243,7 @@ Currently higher-order contracts are not enforced. That is, RDL will not actuall
 
 RDL method signatures can be used both for instance methods and for class methods (often called *singleton methods* in Ruby). To indicate a type signature applies to a singleton method, prefix the method name with `self.`:
 
-```
+```ruby
 type File, 'self.dirname', '(String file) -> String dir'
 ```
 
@@ -251,7 +251,7 @@ type File, 'self.dirname', '(String file) -> String dir'
 
 Type signatures can be added to `initialize` by giving a type signature for `self.new`:
 
-```
+```ruby
 type File, 'self.new', '(String file, ?String mode, ?String perm, ?Fixnum opt) -> File'
 ```
 
@@ -259,7 +259,7 @@ type File, 'self.new', '(String file, ?String mode, ?String perm, ?Fixnum opt) -
 
 Some Ruby methods are intended to take any object that has certain methods. RDL uses *structural types* to denote such cases:
 
-```
+```ruby
 type IO, :puts, '(*[to_s: () -> String]) -> nil'
 ```
 
@@ -271,13 +271,13 @@ The actual checking that RDL does here varies depending on what type information
 
 Not to be confused with types for singleton methods, RDL includes *singleton types* that denote positions that always have one particular value; this typically happens only in return positions. For example, `Dir#mkdir` always returns the value 0:
 
-```
+```ruby
 type Dir, 'self.mkdir', '(String, ?Fixnum) -> 0'
 ```
 
 In RDL, any integer or floating point number denotes a singleton type. Arbitrary values can be turned into singleton types by wrapping them in `${.}`. For example, `Float#angle` always returns 0 or pi.
 
-```
+```ruby
 type Float, :angle, '() -> 0 or ${Math::PI}'
 ```
 
@@ -287,7 +287,7 @@ RDL checks if a value matches a singleton type using `equal?`. As a consequence,
 
 Consider a method that returns `self`:
 
-```
+```ruby
 class A
   def id
     self
@@ -297,7 +297,7 @@ end
 
 If that method might be inherited, we can't just give it a nominal type, because it will return a different object type in a subclass:
 
-```
+```ruby
 class B < A
 end
 
@@ -308,7 +308,7 @@ B.new.id # type error, returns a B
 
 To solve this problem, RDL includes a special type `self` for this situation:
 
-```
+```ruby
 type A, :id, '() -> self'
 A.new.id # okay, returns self
 B.new.id # also okay, returns self
@@ -320,7 +320,7 @@ Note that type `self` means *exactly* the self object, i.e., it is a singleton t
 
 RDL allows types to be aliases to make them faster to write down and more readable. All type aliases begin with `%`. RDL has one built-in alias, `%bool`, which is shorthand for `TrueClass or FalseClass`:
 
-```
+```ruby
 type String, :==, '(%any) -> %bool'
 ```
 
@@ -328,7 +328,7 @@ Note it is not a bug that `==` is typed to allow any object. Though you would th
 
 Method `type_alias(name, typ)` can be used to create a user-defined type alias, where `name` must begin with `%`:
 
-```
+```ruby
 type_alias '%real', 'Integer or Float or Rational'
 type_alias '%string', '[to_str: () -> String]'
 type_alias '%path', '%string or Pathname'
@@ -340,7 +340,7 @@ Type aliases have to be created before they are used (so above, `%path` must be 
 
 RDL supports *parametric polymorphism* for classes, a.k.a. *generics*. The `type_params` method names the type parameters of the class, and those parameters can then be used inside type signatures:
 
-```
+```ruby
 class Array
   type_params [:t], :all?
 
@@ -352,7 +352,7 @@ Here the first argument to `type_params` is a list of symbols or strings that na
 
 Generic types are applied to type arguments using `<...>` notation, e.g., `Array<Fixnum>` is an `Array` class where `t` is replaced by `Fixnum`. Thus, for example, if `o` is an `Array<Fixnum>`, then `o.shift` returns `Fixnum`. As another example, here is the type for the `[]` method of `Array`:
 
-```
+```ruby
 type Array, :[], '(Range) -> Array<t>'
 type Array, :[], '(Fixnum or Float) -> t'
 type Array, :[], '(Fixnum, Fixnum) -> Array<t>'
@@ -366,14 +366,14 @@ Thus, by default, even though `Array` is declared to take type parameters, by de
 
 To fully enforce generic types, RDL requires that the developer `instantiate!` an object with the desired type parameters:
 
-```
+```ruby
 x = [1,2]
 x.instantate!('Fixnum')
 x.push("three") # type error
 ```
 
 Note that the instantiated type is associated with the object, not the variable:
-```
+```ruby
 y = x
 y.push("three") # also a type error
 ```
@@ -381,7 +381,7 @@ y.push("three") # also a type error
 When RDL instantiates an object with type parameters, it needs to ensure the object's contents are consistent with the type. Currently this is enforced using the second parameter to `type_params`, which must name a method that behaves like `Array#all?`, i.e., it iterates through the contents, checking that a block argument is satisfied. As seen above, for `Array` we call `type_params(:t, :all?)`. Then at the call `x.instantiate('Fixnum')`, RDL will call `Array#all?` to iterate through the contents of `x` to check they have type `Fixnum`.
 
 RDL also includes a `deinstantiate!` method to remove the type instantiation from an object:
-```
+```ruby
 x.deinstantiate!
 x.push("three") # no longer a type error
 ```
@@ -401,14 +401,14 @@ A type such as `Array<Fixnum>` is useful for homogeneous arrays, where all eleme
 
 RDL includes special *tuple types* to handle this situation. Tuple types are written `[t1, ..., tn]`, denoting an `Array` of `n` elements of types `t1` through `tn`, in that order. For example, `[1, "two"]` has type `[Fixnum, String]`. As another example, here is the type of `Process#getrlimit`, which returns a two-element array of `Fixnums`:
 
-```
+```ruby
 type Process, 'self.getrlimit', '(Symbol or String or Fixnum resource) -> [Fixnum, Fixnum] cur_max_limit'
 ```
 
 ### Finite Hash Types
 
 Similarly to tuple types, RDL also supports *finite hash types* for heterogenous hashes. Finite hash types are written `{k1 => v1, ..., kn => vn}` to indicate a `Hash` with `n` mappings of type `ki` maps to `vi`. The `ki` may be strings, integers, floats, or constants denoted with `${.}`. If a key is a symbol, then the mapping should be written `ki: vi`. In the latter case, the `{}`'s can be left off:
-```
+```ruby
 type MyClass, :foo, '(a: Fixnum, b: String) { () -> %any } -> %any'
 ```
 Here `foo`, takes a hash where key `:a` is mapped to a `Fixnum` and key `:b` is mapped to a `String`. Similarly, `{'a'=>Fixnum, 2=>String}` types a hash where keys `'a'` and `2` are mapped to a `Fixnum` and `String`, respectively. Both syntaxes can be used to define hash types.
@@ -431,21 +431,21 @@ As discussed above, RDL includes a small script, `rdl_query`, to look up type in
 
 * Instance methods can be looked up as `Class#method`.
 
-```
+```ruby
 $ rdl_query String#include?
 String#include?: (String) -> TrueClass or FalseClass
 ```
 
 * Singleton (class) methods can be looked up as `Class.method`.
 
-```
+```ruby
 $ rdl_query Pathname.glob
 Pathname.glob: (String p1, ?String p2) -> Array<Pathname>
 ```
 
 * All methods of a class can be listed by passing the class name `Class`.
 
-```
+```ruby
 $ rdl_query Array
 &: (Array<u>) -> Array<t>
 *: (String) -> String
@@ -454,7 +454,7 @@ $ rdl_query Array
 
 * Methods can also be search for by their type signature:
 
-```
+```ruby
 $ rdl_query "(Fixnum) -> Fixnum"      # print all methods of type (Fixnum) -> Fixnum
 BigDecimal.limit: (Fixnum) -> Fixnum
 Dir#pos=: (Fixnum) -> Fixnum
@@ -463,7 +463,7 @@ Dir#pos=: (Fixnum) -> Fixnum
 
 The type signature uses the standard RDL syntax, with two extensions: `.` can be used as a wildcard to match any type, and `...` can be used to match any sequence of arguments.
 
-```
+```ruby
 $ rdl_query "(.) -> ."                 # methods that take one argument and return anything
 $ rdl_query "(Fixnum, .) -> ."         # methods that take two arguments, the first of which is a Fixnum
 $ rdl_query "(Fixnum, ...) -> ."       # methods whose first argument is a Fixnum
