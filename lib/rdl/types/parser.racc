@@ -52,6 +52,7 @@ rule
       }
   arg:
       base_arg { result = val[0] }
+    | base_arg ID LBRACE ID RBRACE {result = RDL::Type::DependentArgType.new(val[1], val[0], val[3])}
     | base_arg ID { result = RDL::Type::AnnotatedArgType.new(val[1], val[0]) }
     | DOTS { result = RDL::Type::DotsQuery.new }
   named_arg_list:

@@ -65,6 +65,9 @@ module RDL::Type
 	if @block then
 		blk = block_wrap(slf,inst,@block,&blk)
 	end
+	puts 'xxxxxxxxxxxxxxxx'
+	@args.each {|x| puts x.class}
+	puts 'xxxxxxxxxxxxxxxx'
 	new_args = []
 	new_arg_typs = []
 	@args.each_with_index {|a,i| if a.is_a?(RDL::Type::MethodType) then
