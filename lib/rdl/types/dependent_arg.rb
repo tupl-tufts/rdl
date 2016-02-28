@@ -18,7 +18,7 @@ module RDL::Type
     end
 
     def to_s
-      "#{@type.to_s} #{@name}"
+      "#{@type.to_s} #{@name} {#{@predicate}}"
     end
 
     def eql?(other)

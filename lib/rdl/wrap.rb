@@ -70,6 +70,7 @@ class RDL::Wrap
         def #{meth}(*args, &blk)
           klass = "#{klass_str}"
           meth = types = matches = blocks = nil
+	  bind = binding
           inst = nil
 	  new_args = nil
           $__rdl_wrap_switch.off {
@@ -86,7 +87,7 @@ class RDL::Wrap
             end
             if RDL::Wrap.has_contracts?(klass, meth, :type)
               types = RDL::Wrap.get_contracts(klass, meth, :type)
-              matches,args,blk = RDL::Type::MethodType.check_arg_types("#{full_method_name}", self, types, inst, *args, &blk)
+              matches,args,blk,bind = RDL::Type::MethodType.check_arg_types("#{full_method_name}", self, types, inst, *args, &blk)
             end
           }
 	  ret = send(#{meth_old.inspect}, *args, &blk)
@@ -96,7 +97,7 @@ class RDL::Wrap
               RDL::Contract::AndContract.check_array(posts, self, ret, *args, &blk)
             end
             if matches
-              ret = RDL::Type::MethodType.check_ret_types(self, "#{full_method_name}", types, inst, matches, ret, *args, &blk)
+              ret = RDL::Type::MethodType.check_ret_types(self, "#{full_method_name}", types, inst, matches, ret, bind, *args, &blk)
             end
           }
           return ret
