@@ -80,9 +80,8 @@ module RDL::Type
       until states.empty?
         formal, actual = states.pop
         if formal == @args.size && actual == args.size then # Matched all actuals, no formals left over
-	  b = true
-          b = check_arg_preds(bind, preds) if preds.size>0
-          return [b, new_args, blk, bind] 
+	  check_arg_preds(bind, preds) if preds.size>0
+          return [true, new_args, blk, bind] 
         end
         next if formal >= @args.size # Too many actuals to match
         t = new_arg_typs[formal]
@@ -114,7 +113,7 @@ module RDL::Type
           end
         when DependentArgType
 	  bind.local_variable_set(t.name.to_sym,args[actual])
-          preds.push(t.predicate)
+          preds.push(t)
           t = t.type.instantiate(inst)
           the_actual = nil
           if actual == args.size
@@ -144,8 +143,31 @@ module RDL::Type
     end
 
     def check_arg_preds(bind, preds)
-      preds.each { |p| return false if !eval(p, bind) } 
+      preds.each_with_index { |p,i|
+        if !eval(p.predicate, bind) then
+          raise TypeError, <<RUBY
+Argument does not match type predicate.
+Expected arg type:
+#{p}
+Actual argument value:
+#{bind.local_variable_get(p.name)}
+RUBY
+        end
+      }
       return true
+    end
+
+    def check_ret_pred(bind, pred)
+      if !eval(pred.predicate, bind) then
+        raise TypeError, <<RUBY
+Return value does not match type predicate.
+Expected return type:
+#{pred}
+Actual return value:
+#{bind.local_variable_get(pred.name)}
+RUBY
+        end
+       return true
     end
 
     def post_cond?(slf, inst, ret, bind, *args)
@@ -161,7 +183,7 @@ module RDL::Type
       method_name = method_name ? method_name + ": " : ""
       if @ret.is_a?(DependentArgType) then
         bind.local_variable_set(@ret.name.to_sym, ret)
-        return [false, ret] if !eval(@ret.predicate,bind)
+        check_ret_pred(bind,@ret)
       end
       return [@ret.instantiate(inst).member?(ret, vars_wild: true), new_ret]
     end
