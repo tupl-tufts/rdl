@@ -13,7 +13,7 @@ module RDL::Type
       @type = type
       @predicate = predicate
       raise RuntimeError, "Attempt to create annotated type with non-type" unless type.is_a? Type
-      raise RuntimeError, "Attempt to create doubly annotated type" if type.is_a? AnnotatedArgType
+      raise RuntimeError, "Attempt to create doubly annotated type" if (type.is_a? AnnotatedArgType)||(type.is_a? DependentArgType)
       super()
     end
 
@@ -26,7 +26,7 @@ module RDL::Type
     end
 
     def ==(other) # :nodoc:
-      return (other.instance_of? AnnotatedArgType) && (other.name == @name) && (other.type == @type)
+      return (other.instance_of? DependentArgType) && (other.name == @name) && (other.type == @type)
     end
 
     # doesn't have a match method - queries shouldn't have annotations in them
@@ -40,7 +40,7 @@ module RDL::Type
     end
 
     def instantiate(inst)
-      return AnnotatedArgType.new(@name, @type.instantiate(inst))
+      return DependentArgType.new(@name, @type.instantiate(inst),@predicate)
     end
   end
 end
