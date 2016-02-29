@@ -142,6 +142,9 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/"[^"]*"/))
          action { [:STRING, text.gsub('"', "")] }
 
+      when (text = @ss.scan(/([^{}])+/))
+         action { [:PREDCHAR, text] }
+
       else
         text = @ss.string[@ss.pos .. -1]
         raise  ScanError, "can not match: '" + text + "'"

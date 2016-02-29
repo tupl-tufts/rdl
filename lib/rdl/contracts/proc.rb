@@ -2,10 +2,11 @@ module RDL::Contract
   class ProcContract < Contract
     attr_accessor :pre_cond, :post_cond
 
-    def initialize(pre_cond:nil, post_cond:nil)
+    def initialize(pre_cond, post_cond)
       @pre_cond = pre_cond
       @post_cond = post_cond
     end
+
 
     def wrap(slf, &blk)
       Proc.new {|*v, &other_blk|

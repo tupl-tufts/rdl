@@ -7,6 +7,7 @@ macro
   SPECIAL_ID %\w+
   FIXNUM -?(\d)+
   FLOAT -?\d\.\d+
+  PREDCHAR ([^{}])+
 
 rule
   \s            # skip
@@ -37,6 +38,7 @@ rule
   {SPECIAL_ID}  { [:SPECIAL_ID, text] }
   '[^']*'       { [:STRING, text.gsub("'", "")] }
   "[^"]*"       { [:STRING, text.gsub('"', "")] }
+  {PREDCHAR}     { [:PREDCHAR, text] }
 
 end
 end

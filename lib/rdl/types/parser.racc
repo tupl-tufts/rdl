@@ -8,7 +8,7 @@ class Parser
   start entry
 
 token HASH_TYPE HASH_QUERY CONST_BEGIN RASSOC
-token OR FIXNUM FLOAT COLON RARROW DOT DOTS ID SYMBOL SPECIAL_ID STRING
+token OR FIXNUM FLOAT COLON RARROW DOT DOTS ID SYMBOL SPECIAL_ID STRING PREDCHAR
 token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
 token COMMA QUERY STAR LESS GREATER
 token EOF
@@ -33,6 +33,9 @@ rule
    | LPAREN arg_list RPAREN block RARROW type_expr ID {
         result = RDL::Type::MethodType.new val[1], val[3], RDL::Type::AnnotatedArgType.new(val[6], val[5])
       }
+   | LPAREN arg_list RPAREN block RARROW type_expr ID LBRACE pred_string RBRACE {
+        result = RDL::Type::MethodType.new val[1], val[3], RDL::Type::DependentArgType.new(val[6], val[5], val[8])
+      }
 
   method_sig_list:
      ID COLON method_type { result = [val[0].to_sym, val[2]] }
@@ -52,6 +55,7 @@ rule
       }
   arg:
       base_arg { result = val[0] }
+    | base_arg ID LBRACE pred_string RBRACE {result = RDL::Type::DependentArgType.new(val[1], val[0], val[3])}
     | base_arg ID { result = RDL::Type::AnnotatedArgType.new(val[1], val[0]) }
     | DOTS { result = RDL::Type::DotsQuery.new }
   named_arg_list:
@@ -60,6 +64,37 @@ rule
   named_arg:
       ID COLON base_arg_query_only { result = [val[0].to_sym, val[2]] }
 
+  pred_string:
+      pred_char { result = val[0] }
+    | pred_char pred_string { result = val[0] + val[1] }
+    | LBRACE pred_string RBRACE { result = val[0] + val[1] + val[2] }
+
+  pred_char:
+      PREDCHAR { result = val[0] }
+    | HASH_TYPE { result = val[0] }
+    | HASH_QUERY { result = val[0] }
+    | CONST_BEGIN { result = val[0] }
+    | RASSOC { result = val[0] }
+    | OR { result = val[0] }
+    | FIXNUM { result = val[0] }
+    | FLOAT { result = val[0] }
+    | COLON { result = val[0] }
+    | RARROW { result = val[0] }
+    | DOT { result = val[0] }
+    | DOTS { result = val[0] }
+    | ID { result = val[0] }
+    | SYMBOL { result = val[0] }
+    | SPECIAL_ID { result = val[0] }
+    | STRING { result = val[0] }
+    | LPAREN { result = val[0] }
+    | RPAREN { result = val[0] }
+    | LBRACKET { result = val[0] }
+    | RBRACKET { result = val[0] }
+    | COMMA { result = val[0] }
+    | QUERY { result = val[0] }
+    | STAR { result = val[0] }
+    | LESS { result = val[0] }
+    | GREATER { result = val[0] }
   base_arg:
       QUERY type_expr { result = RDL::Type::OptionalType.new val[1] }
     | STAR type_expr { result = RDL::Type::VarargType.new val[1] }
@@ -119,6 +154,7 @@ rule
       n = RDL::Type::NominalType.new(val[0])
       result = RDL::Type::GenericType.new(n, *val[2])
     }
+    | LBRACE method_type RBRACE { result = val[1] }
     | LBRACKET type_expr_comma_list RBRACKET {
       result = RDL::Type::TupleType.new(*val[1])
     }
