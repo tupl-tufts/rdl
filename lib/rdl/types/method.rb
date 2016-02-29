@@ -62,18 +62,17 @@ module RDL::Type
 
     # TODO: Check blk
     def pre_cond?(blk, slf, inst, *args)
-      blk = block_wrap(slf,inst,@block,&blk) if @block
-      new_args = []
-      new_arg_typs = []
-      @args.each_with_index {|a,i| 
-        if a.is_a?(RDL::Type::MethodType) then
-	  new_arg_typs << RDL::Type::NominalType.new('Proc')
-	  new_args << block_wrap(slf,inst,a,&args[i])
-	else
-	  new_arg_typs << @args[i]
-	  new_args << args[i]
-	end 
-      }
+      #new_args = []
+      #new_arg_typs = []
+#      @args.each_with_index {|a,i| 
+#        if a.is_a?(RDL::Type::MethodType) then
+#	  new_arg_typs << RDL::Type::NominalType.new('Proc')
+#	  new_args << block_wrap(slf,inst,a,&args[i])
+#	else
+#	  new_arg_typs << @args[i]
+#	  new_args << args[i]
+#	end 
+#     }
       states = [[0, 0]] # [position in @arg, position in args]
       bind = binding
       preds = []
@@ -81,10 +80,12 @@ module RDL::Type
         formal, actual = states.pop
         if formal == @args.size && actual == args.size then # Matched all actuals, no formals left over
 	  check_arg_preds(bind, preds) if preds.size>0
-          return [true, new_args, blk, bind] 
+          @args.each_with_index {|a,i| args << block_wrap(slf,inst,a,&args[i]) if a.is_a?(RDL::Type::MethodType) } 
+          blk = block_wrap(slf,inst,@block,&blk) if @block
+          return [true, args, blk, bind] 
         end
         next if formal >= @args.size # Too many actuals to match
-        t = new_arg_typs[formal]
+        t = @args[formal]
         if t.instance_of? AnnotatedArgType then
 	  bind.local_variable_set(t.name.to_sym,args[actual])
 	  t = t.type
@@ -126,6 +127,7 @@ module RDL::Type
             # no else case; if there is no match, this is a dead end
           end
         else
+          t = RDL::Type::NominalType.new 'Proc' if t.instance_of? MethodType
           t = t.instantiate(inst)
           the_actual = nil
           if actual == args.size
@@ -139,7 +141,7 @@ module RDL::Type
           end
         end
       end
-      return [false, new_args, blk, bind]
+      return [false, args, blk, bind]
     end
 
     def check_arg_preds(bind, preds)
@@ -215,7 +217,6 @@ RUBY
     def self.check_arg_types(method_name, slf, types, inst, *args, &blk)
       $__rdl_contract_switch.off {
         matches = [] # types that matched args
-	new_args = nil
 	bind = binding
         types.each_with_index { |t, i|
 	  x = t.pre_cond?(blk, slf, inst, *args)
