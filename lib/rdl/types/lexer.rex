@@ -1,13 +1,17 @@
 module RDL::Type
 class Parser
 
+inner
+  nest = 0
+
 macro
   ID (\w|\:\:)+
   SYMBOL :\w+
   SPECIAL_ID %\w+
   FIXNUM -?(\d)+
   FLOAT -?\d\.\d+
-  PREDCHAR ([^{}])+
+  PREDICATE \{\{.+\}\}
+
 
 rule
   \s            # skip
@@ -16,6 +20,7 @@ rule
   =>            { [:RASSOC, text] }
   \(            { [:LPAREN, text] }
   \)            { [:RPAREN, text] }
+  {PREDICATE}   { [:PREDICATE, text] } 
   \{            { [:LBRACE, text] }
   \}            { [:RBRACE, text] }
   \[            { [:LBRACKET, text] }
@@ -25,8 +30,8 @@ rule
   ,             { [:COMMA, text] }
   \?            { [:QUERY, text] }
   \*            { [:STAR, text] }
-  \#T      	    { [:HASH_TYPE, text] }
-  \#Q      	    { [:HASH_QUERY, text] }
+  \#T           { [:HASH_TYPE, text] }
+  \#Q           { [:HASH_QUERY, text] }
   \$\{          { [:CONST_BEGIN, text] }
   \.\.\.        { [:DOTS, text] }
   \.            { [:DOT, text] }
@@ -38,7 +43,6 @@ rule
   {SPECIAL_ID}  { [:SPECIAL_ID, text] }
   '[^']*'       { [:STRING, text.gsub("'", "")] }
   "[^"]*"       { [:STRING, text.gsub('"', "")] }
-  {PREDCHAR}     { [:PREDCHAR, text] }
 
 end
 end

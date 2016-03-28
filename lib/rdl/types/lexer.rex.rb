@@ -76,6 +76,9 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/\)/))
          action { [:RPAREN, text] }
 
+      when (text = @ss.scan(/\{\{.+\}\}/))
+         action { [:PREDICATE, text] }
+
       when (text = @ss.scan(/\{/))
          action { [:LBRACE, text] }
 
@@ -142,9 +145,6 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/"[^"]*"/))
          action { [:STRING, text.gsub('"', "")] }
 
-      when (text = @ss.scan(/([^{}])+/))
-         action { [:PREDCHAR, text] }
-
       else
         text = @ss.string[@ss.pos .. -1]
         raise  ScanError, "can not match: '" + text + "'"
@@ -156,5 +156,6 @@ class Parser < Racc::Parser
     token
   end  # def _next_token
 
+  nest = 0
 end # class
 end
