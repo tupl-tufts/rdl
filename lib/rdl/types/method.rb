@@ -182,13 +182,12 @@ RUBY
     def to_contract(inst: nil)
       c = @@contract_cache[self]
       return c if c
-
       # slf.ret, slf.args are the formals
       # ret, args are the actuals
       slf = self # Bind self so it's captured in a closure, since contracts are executed
                  # with self bound to the receiver method's self
       prec = RDL::Contract::FlatContract.new { |*args, &blk|
-        raise TypeError, "Arguments #{args} do not match argument types #{slf}" unless slf.pre_cond?(blk, slf, inst, bind, *args)[0]
+        raise TypeError, "Arguments #{args} do not match argument types #{slf}" unless slf.pre_cond?(blk, slf, inst, nil, *args)[0]
         true
       }
       postc = RDL::Contract::FlatContract.new { |ret, *args|

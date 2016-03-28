@@ -2,7 +2,7 @@ module RDL::Contract
   class ProcContract < Contract
     attr_accessor :pre_cond, :post_cond
 
-    def initialize(pre_cond, post_cond)
+    def initialize(pre_cond:nil, post_cond:nil)
       @pre_cond = pre_cond
       @post_cond = post_cond
     end
