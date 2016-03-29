@@ -11,7 +11,8 @@ module RDL::Type
     def initialize(name, type, predicate)
       @name = name
       @type = type
-      @predicate = predicate
+      /\{\{(.+)\}\}/ =~ predicate
+      @predicate = $1
       raise RuntimeError, "Attempt to create annotated type with non-type" unless type.is_a? Type
       raise RuntimeError, "Attempt to create doubly annotated type" if (type.is_a? AnnotatedArgType)||(type.is_a? DependentArgType)
       super()

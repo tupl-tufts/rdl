@@ -10,7 +10,7 @@ macro
   SPECIAL_ID %\w+
   FIXNUM -?(\d)+
   FLOAT -?\d\.\d+
-  PREDICATE \{\{.+\}\}
+  PREDICATE \{\{(?:(?!}}).)+\}\}
 
 
 rule
