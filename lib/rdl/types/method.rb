@@ -52,10 +52,6 @@ module RDL::Type
       super()
     end
 
-    def get_block()
-	return @block
-    end
-
     def le(other, h={})
       raise RuntimeError, "should not be called"
     end
