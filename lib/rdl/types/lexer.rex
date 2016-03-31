@@ -1,9 +1,6 @@
 module RDL::Type
 class Parser
 
-inner
-  nest = 0
-
 macro
   ID (\w|\:\:)+
   SYMBOL :\w+

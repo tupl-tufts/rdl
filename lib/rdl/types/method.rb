@@ -186,17 +186,35 @@ RUBY
       # ret, args are the actuals
       slf = self # Bind self so it's captured in a closure, since contracts are executed
                  # with self bound to the receiver method's self
+      bind = binding
       prec = RDL::Contract::FlatContract.new { |*args, &blk|
-        raise TypeError, "Arguments #{args} do not match argument types #{slf}" unless slf.pre_cond?(blk, slf, inst, nil, *args)[0]
+        raise TypeError, "Arguments #{args} do not match argument types #{slf}" unless slf.pre_cond?(blk, slf, inst, bind, *args)[0]
         true
       }
       postc = RDL::Contract::FlatContract.new { |ret, *args|
-        raise TypeError, "Return #{ret} does not match return type #{slf}" unless slf.post_cond?(slf, inst, ret, nil, *args)[0]
+        raise TypeError, "Return #{ret} does not match return type #{slf}" unless slf.post_cond?(slf, inst, ret, bind, *args)[0]
         true
       }
       c = RDL::Contract::ProcContract.new(pre_cond: prec, post_cond: postc)
       return (@@contract_cache[self] = c) # assignment evaluates to c
     end
+
+    def to_higher_contract(sf, &blk)
+      #method for testing higher order contracts
+      #to_contract method only works for flat contracts
+      slf = self
+      inst = nil
+      bind = binding
+      Proc.new {|*args, &other_blk|
+        res,args,other_blk,bind = slf.pre_cond?(other_blk, slf, inst, bind, *args)
+        raise TypeError, "Arguments #{args} do not match argument types #{slf}" unless res
+        tmp = other_blk ? sf.instance_exec(*args, other_blk, &blk) : sf.instance_exec(*args, &blk)
+        res_post, ret = slf.post_cond?(slf, inst, tmp, bind, *args)
+        raise TypeError, "Return #{ret} does not match return type #{slf}" unless res_post
+        ret
+      }
+    end
+
 
     # [+types+] is an array of method types. Checks that [+args+] and
     # [+blk+] match at least one arm of the intersection type;
