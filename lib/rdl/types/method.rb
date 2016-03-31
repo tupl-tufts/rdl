@@ -227,13 +227,6 @@ RUBY
         types.each_with_index { |t, i|
           res,args,blk,bind =t.pre_cond?(blk,slf,inst,bind,*args)
           matches << i if res
-#	  x = t.pre_cond?(blk, slf, inst, bind, *args)
-#	  if x[0] then
-#	    matches << i
-#	    args = x[1]
-#	    blk = x[2]
-#	    bind = x[3]
-#	  end 
 	}
 	return [matches, args, blk, bind] if matches.size > 0
         method_name = method_name ? method_name + ": " : ""
