@@ -145,6 +145,20 @@ class TestTypeContract < Minitest::Test
     p14c = t14.to_higher_contract(self) { |x,y| Proc.new {|z| x+y+z+0.5} }
     p14d = p14c.call(42,42)
     assert_raises(TypeError) { p14d.call(42) }
+
+    assert_equal 47, block_contract_test1(42) {|z| z}
+    assert_raises(TypeError) { block_contract_test1(42) {|z| 0.5} } 
+    assert_raises(TypeError) { block_contract_test2(42) {|z| z} }
+  end
+
+  type '(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum'
+  def block_contract_test1(x)
+    x+yield(5)
+  end
+  
+  type '(Fixnum) { (Fixnum) -> Fixnum } -> Float'
+  def block_contract_test2(x)
+    x+yield(4.5)
   end
 
   def test_proc_names

@@ -384,9 +384,9 @@ RUBY
     end
 
     def block_wrap(slf, inst, types, bind, &blk)
-      Proc.new {|*v|
+      Proc.new {|*v, &other_blk|
         result,bind = RDL::Type::MethodType.check_block_arg_types(slf, types, inst, bind, *v)
-        tmp = slf.instance_exec(*v, &blk)
+        tmp = other_blk ? slf.instance_exec(*v, other_blk, &blk) : slf.instance_exec(*v, &blk)
 	tmp = RDL::Type::MethodType.check_block_ret_types(slf, types, inst, tmp, bind, *v)
         tmp
       }
