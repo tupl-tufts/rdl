@@ -69,10 +69,10 @@ class RDL::Wrap
         alias_method meth_old, meth
         def #{meth}(*args, &blk)
           klass = "#{klass_str}"
-          meth = types = matches = blocks = nil
+          meth = types = matches = nil
 	  bind = binding
           inst = nil
-	  new_args = nil
+
           $__rdl_wrap_switch.off {
             $__rdl_wrapped_calls["#{full_method_name}"] += 1 if RDL::Config.instance.gather_stats
             inst = @__rdl_inst
