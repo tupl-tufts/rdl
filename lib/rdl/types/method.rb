@@ -225,13 +225,15 @@ RUBY
         matches = [] # types that matched args
 	bind = binding
         types.each_with_index { |t, i|
-	  x = t.pre_cond?(blk, slf, inst, bind, *args)
-	  if x[0] then
-	    matches << i
-	    args = x[1]
-	    blk = x[2]
-	    bind = x[3]
-	  end 
+          res,args,blk,bind =t.pre_cond?(blk,slf,inst,bind,*args)
+          matches << i if res
+#	  x = t.pre_cond?(blk, slf, inst, bind, *args)
+#	  if x[0] then
+#	    matches << i
+#	    args = x[1]
+#	    blk = x[2]
+#	    bind = x[3]
+#	  end 
 	}
 	return [matches, args, blk, bind] if matches.size > 0
         method_name = method_name ? method_name + ": " : ""
@@ -249,8 +251,8 @@ RUBY
 
     def self.check_ret_types(slf, method_name, types, inst, matches, ret, bind, *args, &blk)
       $__rdl_contract_switch.off {
-        matches.each { |i| x = types[i].post_cond?(slf, inst, ret, bind, *args)
-          return x[1] if x[0] 
+        matches.each { |i| res,new_ret = types[i].post_cond?(slf, inst, ret, bind, *args)
+          return new_ret if res 
 	}
         method_name = method_name ? method_name + ": " : ""
         raise TypeError, <<RUBY
@@ -260,7 +262,7 @@ Method type:
 Actual return type:
         #{ RDL::Util.rdl_type_or_class(ret)}
 Actual return value:
-        #{ ret.inspect }
+        #{ ret.inspect }nn
 RUBY
       }
     end
@@ -369,8 +371,8 @@ RUBY
 
     def self.check_block_ret_types(slf, types, inst, ret, bind, *args)
       $__rdl_contract_switch.off {
-	x = types.post_cond?(slf, inst, ret, bind, *args)
-	return x[1] if x[0]
+	res,new_ret = types.post_cond?(slf, inst, ret, bind, *args)
+	return new_ret if res
         raise TypeError, <<RUBY
 Proc return type error.
 Proc type:
