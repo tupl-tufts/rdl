@@ -7,6 +7,7 @@ module RDL::Contract
       @post_cond = post_cond
     end
 
+
     def wrap(slf, &blk)
       Proc.new {|*v, &other_blk|
         @pre_cond.check(slf, *v, &other_blk)

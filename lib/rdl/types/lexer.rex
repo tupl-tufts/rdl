@@ -7,6 +7,8 @@ macro
   SPECIAL_ID %\w+
   FIXNUM -?(\d)+
   FLOAT -?\d\.\d+
+  PREDICATE \{\{(?:(?!}}).)+\}\}
+
 
 rule
   \s            # skip
@@ -15,6 +17,7 @@ rule
   =>            { [:RASSOC, text] }
   \(            { [:LPAREN, text] }
   \)            { [:RPAREN, text] }
+  {PREDICATE}   { [:PREDICATE, text] } 
   \{            { [:LBRACE, text] }
   \}            { [:RBRACE, text] }
   \[            { [:LBRACKET, text] }
@@ -24,8 +27,8 @@ rule
   ,             { [:COMMA, text] }
   \?            { [:QUERY, text] }
   \*            { [:STAR, text] }
-  \#T      	    { [:HASH_TYPE, text] }
-  \#Q      	    { [:HASH_QUERY, text] }
+  \#T           { [:HASH_TYPE, text] }
+  \#Q           { [:HASH_QUERY, text] }
   \$\{          { [:CONST_BEGIN, text] }
   \.\.\.        { [:DOTS, text] }
   \.            { [:DOT, text] }

@@ -76,6 +76,9 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/\)/))
          action { [:RPAREN, text] }
 
+      when (text = @ss.scan(/\{\{(?:(?!}}).)+\}\}/))
+         action { [:PREDICATE, text] }
+
       when (text = @ss.scan(/\{/))
          action { [:LBRACE, text] }
 
@@ -153,5 +156,6 @@ class Parser < Racc::Parser
     token
   end  # def _next_token
 
+  nest = 0
 end # class
 end
