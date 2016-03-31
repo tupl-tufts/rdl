@@ -345,7 +345,7 @@ RUBY
     def self.check_block_arg_types(slf, types, inst, bind, *args)
       $__rdl_contract_switch.off {
 	res,args,blk,bind = types.pre_cond?(nil, slf, inst, bind, *args)
-	return [true, bind] if res
+	return [true, args,blk,bind] if res
         raise TypeError, <<RUBY
 Proc argument type error.
 Proc type:
@@ -376,7 +376,7 @@ RUBY
 
     def block_wrap(slf, inst, types, bind, &blk)
       Proc.new {|*v, &other_blk|
-        result,bind = RDL::Type::MethodType.check_block_arg_types(slf, types, inst, bind, *v)
+        res,v,other_blk,bind = RDL::Type::MethodType.check_block_arg_types(slf, types, inst, bind, *v)
         tmp = other_blk ? slf.instance_exec(*v, other_blk, &blk) : slf.instance_exec(*v, &blk)
 	tmp = RDL::Type::MethodType.check_block_ret_types(slf, types, inst, tmp, bind, *v)
         tmp
