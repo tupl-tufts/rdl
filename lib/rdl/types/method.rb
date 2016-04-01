@@ -59,7 +59,7 @@ module RDL::Type
     # TODO: Check blk
     def pre_cond?(blk, slf, inst, bind, *args)
       states = [[0, 0]] # [position in @arg, position in args]
-      bind = binding if !bind
+#      bind = binding if !bind
       preds = []
       until states.empty?
         formal, actual = states.pop
