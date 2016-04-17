@@ -3,7 +3,7 @@
 ## [Unreleased]
 ### Added
 - Testing for higher-order contracts
-- Dependent types
+- Testing for dependent types
 
 ### Fixed
 - Errors in post condtions of numeric types (incorrect number of args)
