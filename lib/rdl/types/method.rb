@@ -139,7 +139,7 @@ Actual argument value:
 #{bind.local_variable_get(p.name)}
 RUBY
         end
-      }
+      } 
       return true
     end
 
@@ -215,10 +215,9 @@ RUBY
     # [+blk+] match at least one arm of the intersection type;
     # otherwise raises exception. Returns array of method types that
     # matched [+args+] and [+blk+]
-    def self.check_arg_types(method_name, slf, types, inst, *args, &blk)
+    def self.check_arg_types(method_name, slf, bind, types, inst, *args, &blk)
       $__rdl_contract_switch.off {
         matches = [] # types that matched args
-	bind = binding
         types.each_with_index { |t, i|
           res,args,blk,bind =t.pre_cond?(blk,slf,inst,bind,*args)
           matches << i if res
@@ -250,7 +249,7 @@ Method type:
 Actual return type:
         #{ RDL::Util.rdl_type_or_class(ret)}
 Actual return value:
-        #{ ret.inspect }nn
+        #{ ret.inspect }
 RUBY
       }
     end

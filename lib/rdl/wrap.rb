@@ -87,7 +87,7 @@ class RDL::Wrap
             end
             if RDL::Wrap.has_contracts?(klass, meth, :type)
               types = RDL::Wrap.get_contracts(klass, meth, :type)
-              matches,args,blk,bind = RDL::Type::MethodType.check_arg_types("#{full_method_name}", self, types, inst, *args, &blk)
+              matches,args,blk,bind = RDL::Type::MethodType.check_arg_types("#{full_method_name}", self, bind, types, inst, *args, &blk)
             end
           }
 	  ret = send(#{meth_old.inspect}, *args, &blk)
