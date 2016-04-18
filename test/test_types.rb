@@ -165,6 +165,7 @@ class TestTypes < Minitest::Test
     toptionalA = OptionalType.new tA
     tvarargA = VarargType.new tA
     tannotatedA = AnnotatedArgType.new("arg", tA)
+    tdependentA = DependentArgType.new("arg", tA, "{{ arg > 10 }}")
     tunionAB = UnionType.new(tA, tB)
     tinterAB = IntersectionType.new(tA, tB)
     tsyma = SingletonType.new(:a)
@@ -200,6 +201,7 @@ class TestTypes < Minitest::Test
     assert_equal toptionalA, toptionalA.instantiate(inst)
     assert_equal tvarargA, tvarargA.instantiate(inst)
     assert_equal tannotatedA, tannotatedA.instantiate(inst)
+    assert_equal tdependentA, tdependentA.instantiate(inst)
     assert_equal tunionAB, tunionAB.instantiate(inst)
     assert_equal tinterAB, tinterAB.instantiate(inst)
     assert_equal tsyma, tsyma.instantiate(inst)

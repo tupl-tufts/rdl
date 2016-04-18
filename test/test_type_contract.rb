@@ -107,6 +107,68 @@ class TestTypeContract < Minitest::Test
     assert_equal 42, p10.call(43, "44")
     assert_raises(TypeError) { p10.call() }
     assert_raises(TypeError) { p10.call(43, "44", 45) }
+
+    t11 = @p.scan_str "(Fixnum x {{ x > 42 }}) -> Fixnum"
+    p11 = t11.to_contract.wrap(self) { |x| x }
+    assert_equal 43, p11.call(43)
+    assert_raises(TypeError) { p11.call(42) }
+
+    t12 = @p.scan_str "(Fixnum x {{ x>10 }}, Fixnum y {{ y > x }}) -> Fixnum z {{z > (x+y) }}"
+    p12 = t12.to_contract.wrap(self) { |x,y| x+y+1 }
+    assert_equal 30, p12.call(14, 15)
+    assert_equal 50, p12.call(24, 25)
+    assert_raises(TypeError) { p12.call(9,10) }
+    assert_raises(TypeError) { p12.call(20,19) }
+    p12b = t12.to_contract.wrap(self) { |x,y| x+y }
+    assert_raises(TypeError) { p12b.call(42, 43) }
+    assert_raises(TypeError) { p12b.call(11, 10) }
+    assert_raises(TypeError) { p12b.call(9, 10) }
+
+    t13 = @p.scan_str "(Fixnum, {(Fixnum x {{x>10}}) -> Fixnum}) -> Float"
+    p13 = t13.to_higher_contract(self) { |x,y| x+y.call(11)+0.5 } 
+    assert_equal 53.5, p13.call(42, Proc.new { |x| x })
+    assert_raises(TypeError) { p13.call(42.5, Proc.new { |x| x} ) }
+    assert_raises(TypeError) { p13.call(42, Proc.new { |x| 0.5 } ) }
+    p13b = t13.to_higher_contract(self) { |x,y| x+y.call(10)+0.5 } 
+    assert_raises(TypeError) { p13b.call(42, Proc.new { |x| x } ) }
+    p13c = t13.to_higher_contract(self) { |x,y| x+y.call(11.5)+0.5 }
+    assert_raises(TypeError) { p13c.call(42, Proc.new { |x| x } ) }
+    p13d = t13.to_higher_contract(self) { |x,y| x+y.call(42) }
+    assert_raises(TypeError) { p13d.call(42, Proc.new { |x| x } ) }
+
+    t14 = @p.scan_str "(Fixnum, Fixnum) -> {(Fixnum) -> Fixnum}"
+    p14 = t14.to_higher_contract(self) { |x,y| Proc.new {|z| x+y+z} }
+    assert_raises(TypeError) { p14.call(42.5, 42) }
+    p14b = p14.call(42,42)
+    assert_equal 126, p14b.call(42)
+    assert_raises(TypeError) { p14b.call(42.5) }
+    p14c = t14.to_higher_contract(self) { |x,y| Proc.new {|z| x+y+z+0.5} }
+    p14d = p14c.call(42,42)
+    assert_raises(TypeError) { p14d.call(42) }
+
+    assert_equal 47, block_contract_test1(42) {|z| z}
+    assert_raises(TypeError) { block_contract_test1(42) {|z| 0.5} } 
+    assert_raises(TypeError) { block_contract_test2(42) {|z| z} }
+
+
+    t15 = @p.scan_str "(Fixnum x {{x>y}}, Fixnum y) -> Fixnum"
+    p15 = t15.to_contract.wrap(self) { |x, y| x+y } 
+    assert_equal 21, p15.call(11, 10)
+    assert_raises(TypeError) { p15.call(10, 11) }
+
+    t16 = @p.scan_str "(Fixnum x {{x > undefvar}}, Fixnum) -> Fixnum"
+    p16 = t16.to_contract.wrap(self) { |x,y| x }
+    assert_raises(NameError) { p16.call(10,10) } 
+  end
+
+  type '(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum'
+  def block_contract_test1(x)
+    x+yield(5)
+  end
+  
+  type '(Fixnum) { (Fixnum) -> Fixnum } -> Float'
+  def block_contract_test2(x)
+    x+yield(4.5)
   end
 
   def test_proc_names

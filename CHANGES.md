@@ -1,6 +1,10 @@
 # Change log!
 
 ## [Unreleased]
+### Added
+- Testing for higher-order contracts
+- Dependent types
+
 ### Fixed
 - Errors in post condtions of numeric types (incorrect number of args)
 - Added syntax highlighting in README.md as pointed out by jsyeo
