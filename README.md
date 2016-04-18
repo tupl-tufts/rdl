@@ -225,19 +225,61 @@ type Fixnum, :to_s, '(?Fixnum base) -> String'
 
 Here we've named the first argument of `to_s` as `base` to give some extra hint as to its meaning.
 
-### Block Types
+### Dependent Types
 
-Types signatures can include a type for a method's block argument:
+RDL allows for refinement predicates to be attached to named arguments. These predicates are then verified when the method is called and returns. For instance:
 
 ```
-type Pathname, :ascend, '() { (Pathname) -> %any } -> %any'
+type '(Float x {{ x>=0 }}) -> Float y {{ y>=0 }}'
+def sqrt(x)
+    # return the square root of x
+end
 ```
 
-Here the block passed to `Pathname.ascend` must take a `Pathname` and can return any object.
+Here, RDL will verify that the `sqrt` method is called on an argument of type `Float` which is greater than or equal to 0, and it will verify the same of the return value of the method. Note that, in effect, dependent type contracts can be used in place of pre and post contracts.
 
-This is a *higher-order* contract, because it applies to a higher-order method, i.e., a method that can take a block argument.
+Dependencies can also exist across a method's arguments and return value:
 
-Currently higher-order contracts are not enforced. That is, RDL will not actually check contracts on block arguments.
+```
+type '(Fixnum x {{ x>y }}, Fixnum y) -> Float z {{ z==(x+y) }}'
+def m(x,y) ... end
+```
+
+Any arbitrary code can be placed between the double braces of a type refinement, and RDL will dynmically verify that this predicate evaluates to true, or raise a type error if it evaluates to false.
+
+### Higher-Order Contracts
+
+RDL supports contracts for arguments or return values which are themselves `Proc` objects. Simply enclose the corresponding argument's type with braces to denote that it is a `Proc`. For example:
+
+```
+type '(Fixnum, {(Fixnum) -> Fixnum}) -> Fixnum'
+def m(x, y) ... end
+```
+
+The type annotation above states that the method m takes two arguments: one of type `Fixnum`, and another which is a `Proc` which itself takes a `Fixnum` and returns a `Fixnum`. A `Proc` may be the return value of a method as well:
+
+```
+type '(Fixnum) -> {(Float) -> Float}'
+def m(x) ... end
+```
+
+These higher-order contracts are verified by wrapping the corresponding `Proc` argument/return in a new `Proc` which checks that the type contract holds.
+
+A type contract can be provided for a method block as well. The block's type should be included after the method argument types:
+
+```
+type '(Fixnum, Float) {(Fixnum, String) -> String } -> Float'
+def m(x,y,&blk) ... end
+```
+
+Note that this notation will work whether or not a method block is explicitly referenced in the parameters, i.e. whether or not `&blk` is included above. Finally, dependent types work across higher order contracts:
+
+```
+type '(Fixnum x, Float y) -> {(Fixnum z {{ z>y }}) -> Fixnum}'
+def m(x,y,&blk) ... end
+```
+
+The type contract above states that method `m` returns a `Proc` which takes a `Fixnum z` which must be greater than the argument `Float y`. Whenver this `Proc` is called, it will be verified that this contract holds.
 
 ### Class/Singleton Method Types
 
@@ -282,6 +324,7 @@ type Float, :angle, '() -> 0 or ${Math::PI}'
 ```
 
 RDL checks if a value matches a singleton type using `equal?`. As a consequence, singleton string types aren't currently possible.
+
 
 ### Self Type
 
@@ -530,10 +573,6 @@ Copyright (c) 2014-2015, University of Maryland, College Park. All rights reserv
 
 # TODO list
 
-* ProcContract, Wrap, MethodType, support higher-order contracts for blocks
-  * And higher-order type checking
-  * Block passed to contracts don't work yet
-
 * How to check whether initialize? is user-defined? method_defined? always
   returns true, meaning wrapping isn't fully working with initialize.
 
@@ -547,8 +586,6 @@ Copyright (c) 2014-2015, University of Maryland, College Park. All rights reserv
   enclosing class parameters)
 
 * Rails types
-
-* Proc types
 
 * Deferred contracts on new (watch for class addition)
 
