@@ -229,7 +229,8 @@ Here we've named the first argument of `to_s` as `base` to give some extra hint 
 
 RDL allows for refinement predicates to be attached to named arguments. These predicates are then checked when the method is called and returns. For instance:
 
-```ruby
+<<<<<<< HEAD
+```
 type '(Float x {{ x>=0 }}) -> Float y {{ y>=0 }}'
 def sqrt(x)
     # return the square root of x
@@ -240,7 +241,7 @@ Here, RDL will check that the `sqrt` method is called on an argument of type `Fl
 
 Dependencies can also exist across a method's arguments and return value:
 
-```ruby
+```
 type '(Fixnum x {{ x>y }}, Fixnum y) -> Float z {{ z==(x+y) }}'
 def m(x,y) ... end
 ```
@@ -251,14 +252,18 @@ Any arbitrary code can be placed between the double braces of a type refinement,
 
 RDL supports contracts for arguments or return values which are themselves `Proc` objects. Simply enclose the corresponding argument's type with braces to denote that it is a `Proc`. For example:
 
-```ruby
+```
 type '(Fixnum, {(Fixnum) -> Fixnum}) -> Fixnum'
 def m(x, y) ... end
+=======
+```ruby
+type Pathname, :ascend, '() { (Pathname) -> %any } -> %any'
+>>>>>>> ce56448bb557e587ef789f5d2b506c7958a5d887
 ```
 
 The type annotation above states that the method m takes two arguments: one of type `Fixnum`, and another which is a `Proc` which itself takes a `Fixnum` and returns a `Fixnum`. A `Proc` may be the return value of a method as well:
 
-```ruby
+```
 type '(Fixnum) -> {(Float) -> Float}'
 def m(x) ... end
 ```
@@ -267,14 +272,14 @@ These higher-order contracts are checked by wrapping the corresponding `Proc` ar
 
 A type contract can be provided for a method block as well. The block's type should be included after the method argument types:
 
-```ruby
+```
 type '(Fixnum, Float) {(Fixnum, String) -> String } -> Float'
 def m(x,y,&blk) ... end
 ```
 
 Note that this notation will work whether or not a method block is explicitly referenced in the parameters, i.e., whether or not `&blk` is included above. Finally, dependent types work across higher order contracts:
 
-```ruby
+```
 type '(Fixnum x, Float y) -> {(Fixnum z {{ z>y }}) -> Fixnum}'
 def m(x,y,&blk) ... end
 ```
