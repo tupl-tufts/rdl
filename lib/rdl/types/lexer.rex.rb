@@ -156,6 +156,5 @@ class Parser < Racc::Parser
     token
   end  # def _next_token
 
-  nest = 0
 end # class
 end
