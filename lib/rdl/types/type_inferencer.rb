@@ -20,14 +20,14 @@ module RDL
     end
 
     private
-    
+
     def self.extract_types(param_type)
       param_type.instance_of?(RDL::Type::UnionType) ? param_type.types.to_a : [param_type]
     end
-    
+
     # Unifies i.e. #<Set: {Array<String>, Array<Array<String>>}> into
     # Array<(Array<String> or String)>
-    # If this step is not called, then infer_type for 
+    # If this step is not called, then infer_type for
     # [["a", "b"], [["c"]]].rdl_type would return
     # (Array<Array<String>> or Array<String>) instead of
     # (Array<(Array<String> or String)>)
@@ -49,7 +49,7 @@ module RDL
           type_parameters = cls.instance_variable_get :@__cls_params
           ((0..(type_parameters.size - 1)).map {|tparam_index|
              extract_types(member_type.params[tparam_index])
-           }).each_with_index {|type_parameter,index|            
+           }).each_with_index {|type_parameter,index|
             tparam_set[index]+=type_parameter
           }
 
@@ -59,12 +59,12 @@ module RDL
         end
       }
 
-      parameterized_classes.each {|nominal, type_set|
-        t = type_set.map {|unioned_type_parameter|
+      parameterized_classes.each {|nominal, ts|
+        nt = ts.map {|unioned_type_parameter|
           RDL::Type::UnionType.new(*unify_param_types(unioned_type_parameter))
         }
 
-        non_param_classes << RDL::Type::GenericType.new(nominal, *t)
+        non_param_classes << RDL::Type::GenericType.new(nominal, *nt)
       }
 
       non_param_classes

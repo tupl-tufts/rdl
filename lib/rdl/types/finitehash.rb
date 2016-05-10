@@ -14,8 +14,8 @@ module RDL::Type
     end
 
     def self.new(elts)
-      t = @@cache[elts]
-      return t if t
+      ct = @@cache[elts]
+      return ct if ct
       t = FiniteHashType.__new__(elts)
       return (@@cache[elts] = t) # assignment evaluates to t
     end
@@ -73,8 +73,8 @@ module RDL::Type
       }
 
       # Check that any remaining types are optional
-      rest.each_pair { |k, t|
-        return false unless t.instance_of? OptionalType
+      rest.each_pair { |k, vt|
+        return false unless vt.instance_of? OptionalType
       }
     end
 
@@ -83,7 +83,7 @@ module RDL::Type
     end
 
     def hash
-      h = 229 * @elts.hash
+      229 * @elts.hash
     end
   end
 end

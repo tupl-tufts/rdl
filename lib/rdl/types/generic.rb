@@ -48,7 +48,7 @@ module RDL::Type
     end
 
     def <=(other)
-      formals, variance, check = $__rdl_type_params[base.name]
+      formals, variance, _ = $__rdl_type_params[base.name]
       # do check here to avoid hiding errors if generic type written
       # with wrong number of parameters but never checked against
       # instantiated instances
@@ -88,7 +88,7 @@ module RDL::Type
 
     def member?(obj, *args)
       raise "No type parameters defined for #{base.name}" unless $__rdl_type_params[base.name]
-      formals = $__rdl_type_params[base.name][0]
+#      formals = $__rdl_type_params[base.name][0]
       t = RDL::Util.rdl_type obj
       return t <= self if t
       return false unless base.member?(obj, *args)
@@ -100,7 +100,7 @@ module RDL::Type
     end
 
     def hash
-      h = (61 + @base.hash) * @params.hash
+      (61 + @base.hash) * @params.hash
     end
   end
 end

@@ -12,7 +12,7 @@ class TestMember < Minitest::Test
 
   class C < B
   end
-  
+
   def setup
     @tnil = NilType.new
     @ttop = TopType.new
@@ -72,7 +72,7 @@ class TestMember < Minitest::Test
     assert (@tkernel.member? "Foo")
     assert (@tkernel.member? :Foo)
     assert (@tkernel.member? o)
-    
+
     a = A.new
     b = B.new
     c = C.new
@@ -88,7 +88,7 @@ class TestMember < Minitest::Test
 
     assert (@tstring.member? nil)
     assert (@tobject.member? nil)
-end
+  end
 
   def test_symbol
     assert (@tsym.member? :foo)

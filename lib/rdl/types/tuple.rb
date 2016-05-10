@@ -61,7 +61,7 @@ module RDL::Type
     end
 
     def hash
-      h = 73 * @params.hash
+      73 * @params.hash
     end
   end
 end

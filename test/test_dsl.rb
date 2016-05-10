@@ -61,16 +61,16 @@ class TestDsl < Minitest::Test
       [@val, l, r]
     end
   end
-  
-  def test_pair 
-    p = Pair.new.entry {
+
+  def test_pair
+    _ = Pair.new.entry {
       left 3
       right 4
     }
   end
 
   def test_tree
-    t = Tree.new.entry(2) {
+    _ = Tree.new.entry(2) {
       left(3)
       right(4) {
         left(5) {
@@ -82,4 +82,3 @@ class TestDsl < Minitest::Test
     }
   end
 end
-  

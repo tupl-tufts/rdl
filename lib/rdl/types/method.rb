@@ -64,9 +64,9 @@ module RDL::Type
         formal, actual = states.pop
         if formal == @args.size && actual == args.size then # Matched all actuals, no formals left over
 	  check_arg_preds(bind, preds) if preds.size>0
-          @args.each_with_index {|a,i| args[i] = block_wrap(slf,inst,a,bind,&args[i]) if a.is_a?(RDL::Type::MethodType) } 
+          @args.each_with_index {|a,i| args[i] = block_wrap(slf,inst,a,bind,&args[i]) if a.is_a?(RDL::Type::MethodType) }
           blk = block_wrap(slf,inst,@block,bind,&blk) if @block
-          return [true, args, blk, bind] 
+          return [true, args, blk, bind]
         end
         next if formal >= @args.size # Too many actuals to match
         t = @args[formal]
@@ -139,7 +139,7 @@ Actual argument value:
 #{bind.local_variable_get(p.name)}
 RUBY
         end
-      } 
+      }
       return true
     end
 
@@ -152,15 +152,15 @@ Expected return type:
 Actual return value:
 #{bind.local_variable_get(pred.name)}
 RUBY
-        end
-       return true
+      end
+      return true
     end
 
     def post_cond?(slf, inst, ret, bind, *args)
       new_ret = ret
       if @ret.is_a?(RDL::Type::MethodType) then
-        if !ret.is_a?(Proc) then 
-          return [false,ret] 
+        if !ret.is_a?(Proc) then
+          return [false,ret]
         else
 	  new_ret = block_wrap(slf,inst,@ret,bind,&ret)
 	  return [true, new_ret]
@@ -239,7 +239,7 @@ RUBY
     def self.check_ret_types(slf, method_name, types, inst, matches, ret, bind, *args, &blk)
       $__rdl_contract_switch.off {
         matches.each { |i| res,new_ret = types[i].post_cond?(slf, inst, ret, bind, *args)
-          return new_ret if res 
+          return new_ret if res
 	}
         method_name = method_name ? method_name + ": " : ""
         raise TypeError, <<RUBY
@@ -374,12 +374,12 @@ RUBY
 
     def block_wrap(slf, inst, types, bind, &blk)
       Proc.new {|*v, &other_blk|
-        res,v,other_blk,bind = RDL::Type::MethodType.check_block_arg_types(slf, types, inst, bind, *v)
+        _, v, other_blk, bind = RDL::Type::MethodType.check_block_arg_types(slf, types, inst, bind, *v)
         tmp = other_blk ? slf.instance_exec(*v, other_blk, &blk) : slf.instance_exec(*v, &blk)
-	tmp = RDL::Type::MethodType.check_block_ret_types(slf, types, inst, tmp, bind, *v)
+	      tmp = RDL::Type::MethodType.check_block_ret_types(slf, types, inst, tmp, bind, *v)
         tmp
       }
     end
 
-end
+  end
 end

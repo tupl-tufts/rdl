@@ -70,12 +70,13 @@ class RDL::Wrap
         def #{meth}(*args, &blk)
           klass = "#{klass_str}"
           meth = types = matches = nil
-	  bind = binding
+	        bind = binding
           inst = nil
 
           $__rdl_wrap_switch.off {
             $__rdl_wrapped_calls["#{full_method_name}"] += 1 if RDL::Config.instance.gather_stats
-            inst = @__rdl_inst
+            inst = nil
+            inst = @__rdl_inst if defined? @__rdl_inst
             inst = Hash[$__rdl_type_params[klass][0].zip []] if (not(inst) && $__rdl_type_params[klass])
             inst = {} if not inst
             #{if not(is_singleton_method) then "inst[:self] = RDL::Type::SingletonType.new(self)" end}
@@ -416,21 +417,21 @@ class Object
     $__rdl_contract_switch.off {
       klass = self.class.to_s
       klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-      formals, variance, all = $__rdl_type_params[klass]
+      formals, _, all = $__rdl_type_params[klass]
       raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
       raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless formals.size == typs.size
-      raise RuntimeError, "Instance already has type instantiation" if @__rdl_type
+      raise RuntimeError, "Instance already has type instantiation" if (defined? @__rdl_type) && @rdl_type
       new_typs = typs.map { |t| if t.is_a? RDL::Type::Type then t else $__rdl_parser.scan_str "#T #{t}" end }
       t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *new_typs)
       if all.instance_of? Symbol
         self.send(all) { |*objs|
-          new_typs.zip(objs).each { |t, obj|
-            if t.instance_of? RDL::Type::GenericType # require obj to be instantiated
+          new_typs.zip(objs).each { |nt, obj|
+            if nt.instance_of? RDL::Type::GenericType # require obj to be instantiated
               t_obj = RDL::Util.rdl_type(obj)
-              raise RDL::Type::TypeError, "Expecting element of type #{t.to_s}, but got uninstantiated object #{obj.inspect}" unless t_obj
-              raise RDL::Type::TypeError, "Expecting type #{t.to_s}, got type #{t_obj.to_s}" unless t_obj <= t
+              raise RDL::Type::TypeError, "Expecting element of type #{nt.to_s}, but got uninstantiated object #{obj.inspect}" unless t_obj
+              raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got type #{t_obj.to_s}" unless t_obj <= nt
             else
-              raise RDL::Type::TypeError, "Expecting type #{t.to_s}, got #{obj.inspect}" unless t.member? obj
+              raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got #{obj.inspect}" unless nt.member? obj
             end
           }
         }

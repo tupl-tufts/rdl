@@ -46,7 +46,7 @@ module RDL::Type
     end
 
     def klass
-      @klass = RDL::Util.to_class(name) unless @klass
+      @klass = RDL::Util.to_class(name) unless defined? @klass
       return @klass
     end
 

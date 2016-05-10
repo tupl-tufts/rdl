@@ -12,7 +12,7 @@ class TestLe < Minitest::Test
 
   class C < B
   end
-  
+
   def setup
     @tnil = NilType.new
     @ttop = TopType.new
@@ -26,7 +26,7 @@ class TestLe < Minitest::Test
     @tc = NominalType.new C
     @tfixnum = NominalType.new "Fixnum"
   end
-  
+
   def test_nil
     assert (@tnil <= @ttop)
     assert (@tnil <= @tstring)
@@ -85,7 +85,7 @@ class TestLe < Minitest::Test
   def test_union
     tstring_or_sym = UnionType.new(@tstring, @tsym)
     assert (tstring_or_sym <= @tobject)
-    assert (not (@tobject <= @tstring_or_sym))
+    assert (not (@tobject <= tstring_or_sym))
   end
 
   def test_tuple
@@ -182,12 +182,12 @@ class TestLe < Minitest::Test
     assert (tnom <= ts4) # types don't matter, only methods
     assert (not (tnomt <= ts4))
   end
-  
+
   # def test_intersection
   #   skip "<= not defined on intersection"
   #   tobject_and_basicobject = IntersectionType.new(@tobject, @tbasicobject)
   #   assert (not (tobject_and_basicobject <= @tobject))
   #   assert (@tobject <= tobject_and_basicobject)
   # end
-  
+
 end
