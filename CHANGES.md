@@ -1,6 +1,9 @@
 # Change log!
 
 ## [Unreleased]
+### Fixed
+- Update code to eliminate ruby 2.3 warning messages
+
 ### Added
 - Testing for higher-order contracts
 - Dependent types
