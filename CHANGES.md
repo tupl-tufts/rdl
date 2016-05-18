@@ -1,6 +1,8 @@
 # Change log!
 
 ## [Unreleased]
+
+## [1.1.1] - 2016-05-18
 ### Fixed
 - Update code to eliminate Ruby 2.3 warning messages
 - Fixed errors in post conditions of numeric types (incorrect number of args)
