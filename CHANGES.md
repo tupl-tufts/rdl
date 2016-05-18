@@ -11,7 +11,7 @@
 - Changed superclasses of numeric classes to be `Numeric`
 
 ### Added
-- Testing for higher-order contracts
+- Higher-order types and tests for them
 - Dependent types
 - `/extras` directory, which contains random type tests for numeric subclass method types
 - `BigDecimal` added to alias `%real`
