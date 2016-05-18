@@ -2,30 +2,18 @@
 
 ## [Unreleased]
 ### Fixed
-- Update code to eliminate ruby 2.3 warning messages
+- Update code to eliminate Ruby 2.3 warning messages
+- Fixed errors in post conditions of numeric types (incorrect number of args)
+- Added syntax highlighting in README.md as pointed out by jsyeo
+- Comprehensive changes to types of Numeric subclass methods to make types more specific & accurate
+- Changed superclasses of numeric classes to be `Numeric`
 
 ### Added
 - Testing for higher-order contracts
 - Dependent types
-
-### Fixed
-- Errors in post condtions of numeric types (incorrect number of args)
-- Added syntax highlighting in README.md as pointed out by jsyeo
-
-### Added
-- Added '/extras' directory which contains random type tests for numeric subclass method types
-
-### Fixed
-- Comprehensive changes to types of Numeric subclass methods to make types more specific & accurate
-
-### Added
-- Added 'BigDecimal' to alias '%real'
-### Added
+- `/extras` directory, which contains random type tests for numeric subclass method types
+- `BigDecimal` added to alias `%real`
 - Changelog added!
-
-### Fixed
-- Changed superclasses of numeric classes to be `Numeric`.
-
 
 ## [1.1.0] - 2016-01-03
 ### Added
