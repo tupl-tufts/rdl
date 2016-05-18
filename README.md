@@ -522,6 +522,10 @@ Note that aside from `.` and `...`, the matching is exact. For example `(Fixnum)
 
 Here are some research papers we have written exploring contracts, types, and Ruby.
 
+* Brianna M. Ren and Jeffrey S. Foster.
+[Just-in-Time Static Type Checking for Dynamic Languages](http://www.cs.umd.edu/~jfoster/papers/pldi16.pdf).
+In ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI), Santa Barbara, CA, June 2016.
+
 * T. Stephen Strickland, Brianna Ren, and Jeffrey S. Foster.
 [Contracts for Domain-Specific Languages in Ruby](http://www.cs.umd.edu/~jfoster/papers/dls12.pdf).
 In Dynamic Languages Symposium (DLS), Portland, OR, October 2014.
@@ -566,6 +570,7 @@ Copyright (c) 2014-2016, University of Maryland, College Park. All rights reserv
 * [Brianna M. Ren](https://www.cs.umd.edu/~bren/)
 * [T. Stephen Strickland](https://www.cs.umd.edu/~sstrickl/)
 * Alexander T. Yu
+* Milod Kazerounian
 
 # RDL Build Status
 
@@ -591,19 +596,22 @@ Copyright (c) 2014-2016, University of Maryland, College Park. All rights reserv
 
 * DSL contracts
 
-* double-splat arguments, which bind to an arbitrary set of keywords.
+* double-splat arguments, which bind to an arbitrary set of keywords
 
-* included versus extended modules, e.g., Kernel is included in
-+  Object, so its class methods become Object's instance methods.
+* included versus extended modules, e.g., Kernel is included in Object, so its
+  class methods become Object's instance methods
 
-* Better story for different types for different Ruby versions.
+* Better story for different types for different Ruby versions
 
 * Better query facility (more kinds of searches). Contract queries?
 
 * Write documentation on: Raw Contracts and Types, RDL Configuration, Code Overview
 
-* Structural type queries, allow name to be unknown; same with finite hash keys, same with generic base types?
+* Structural type queries, allow name to be unknown; same with finite hash keys,
+  same with generic base types?
 
 * Allow ... in named args list in queries
 
 * Queries, include more regexp operators aside from . and ...
+
+* Queries, allow regexp in class and method names; suggested by Andreas Adamcik, Vienna
