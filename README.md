@@ -1,4 +1,5 @@
-[![Gem Version](https://badge.fury.io/rb/rdl.svg)](https://badge.fury.io/rb/rdl)
+[![Gem Version](https://badge.fury.io/rb/rdl.svg)](https://badge.fury.io/rb/rdl) [![Build Status](https://travis-ci.org/plum-umd/rdl.svg?branch=master)](https://travis-ci.org/plum-umd/rdl)
+
 
 # Introduction
 
@@ -571,10 +572,6 @@ Copyright (c) 2014-2016, University of Maryland, College Park. All rights reserv
 * [T. Stephen Strickland](https://www.cs.umd.edu/~sstrickl/)
 * Alexander T. Yu
 * Milod Kazerounian
-
-# RDL Build Status
-
-[![Build Status](https://travis-ci.org/plum-umd/rdl.svg?branch=master)](https://travis-ci.org/plum-umd/rdl)
 
 # TODO list
 
