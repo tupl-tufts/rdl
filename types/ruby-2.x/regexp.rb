@@ -2,8 +2,8 @@ class Regexp
   rdl_nowrap
 
   type 'self.escape', '(String or Symbol) -> String'
-  type 'self.last_match', '() -> MatchData' # Can't wrap or screws up MatchData
-  type 'self.last_match', '(Fixnum) -> String'
+  type 'self.last_match', '() -> MatchData', wrap: false # Can't wrap or messes up MatchData
+  type 'self.last_match', '(Fixnum) -> String', wrap: false
   type 'self.new', '(String, ?%any options, ?String kcode) -> Regexp'
   type 'self.new', '(Regexp) -> Regexp'
   rdl_alias 'self.compile', 'self.new'
@@ -12,8 +12,8 @@ class Regexp
   type 'self.union', '(*(Regexp or String) pats) -> Regexp'
   type 'self.union', '(Array<Regexp or String> pats) -> Regexp'
   type :==, '(%any other) -> %bool'
-  # type :===, '(%any other) -> %bool' # Can't wrap this of it messes with $1, $2, etc as well!
-  # type :=~, '(String str) -> Fixnum or nil' # Can't wrap this or it will mess with $1, $2, etc
+  type :===, '(%any other) -> %bool', wrap: false # Can't wrap this of it messes with $1, $2, etc as well!
+  type :=~, '(String str) -> Fixnum or nil', wrap: false # Can't wrap this or it will mess with $1, $2, etc
   type :casefold?, '() -> %bool'
   type :encoding, '() -> Encoding'
   rdl_alias :eql?, :==

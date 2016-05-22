@@ -457,6 +457,16 @@ type MyClass, :foo, '(a: Fixnum, b: String) { () -> %any } -> %any'
 ```
 Here `foo`, takes a hash where key `:a` is mapped to a `Fixnum` and key `:b` is mapped to a `String`. Similarly, `{'a'=>Fixnum, 2=>String}` types a hash where keys `'a'` and `2` are mapped to a `Fixnum` and `String`, respectively. Both syntaxes can be used to define hash types.
 
+### Other arguments to type
+
+The `type` method can be called with `wrap: false` so the type information is stored but the type is not enforced. For example, due to the way RDL is implemented, the method `String#=~` can't have a type or contract on it because then it won't set the correct `$1` etc variables:
+
+```ruby
+type :=~, '(Object) -> Fixnum or nil', wrap: false # Wrapping this messes up $1 etc
+```
+
+`pre` and `post` can also be called with `wrap: false` for consistency, but this is generally not as useful.
+
 ## Other Methods
 
 RDL also includes a few other useful methods:
@@ -465,7 +475,7 @@ RDL also includes a few other useful methods:
 
 * `o.type_cast(t)` returns a new object that delegates all methods to `o` but that will be treated by RDL as if it had type `t`. For example, `x = "a".type_cast('nil')` will make RDL treat `x` as if it had type `nil`, even though it's a `String`.
 
-* `rdl_nowrap`, if called at the top-level of a class, tells RDL to record contracts and types for methods in that class but *not* enforce them. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead.
+* `rdl_nowrap`, if called at the top-level of a class, causes RDL to behave as if `wrap: false` were passed to all `type`, `pre`, and `post` calls in the class. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead.
 
 * `rdl_query` prints information about types; see below for details.
 

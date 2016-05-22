@@ -298,4 +298,38 @@ RUBY
     assert_equal 3, m23(3)
   end
 
+  def test_nowrap
+    pre(TestRDL, :nwrap1) { true }
+    def nwrap1(x) return x; end
+    assert(RDL::Wrap.wrapped?(TestRDL, :nwrap1))
+    pre(TestRDL, :nwrap2, wrap: false) { true }
+    def nwrap2(x) return x; end
+    assert(not(RDL::Wrap.wrapped?(TestRDL, :nwrap2)))
+
+    post(TestRDL, :nwrap3) { true }
+    def nwrap3(x) return x; end
+    assert(RDL::Wrap.wrapped?(TestRDL, :nwrap3))
+    post(TestRDL, :nwrap4, wrap: false) { true }
+    def nwrap4(x) return x; end
+    assert(not(RDL::Wrap.wrapped?(TestRDL, :nwrap4)))
+
+    type TestRDL, :nwrap5, "(Fixnum) -> Fixnum"
+    def nwrap5(x) return x; end
+    assert(RDL::Wrap.wrapped?(TestRDL, :nwrap5))
+    type TestRDL, :nwrap6, "(Fixnum) -> Fixnum", wrap: false
+    def nwrap6(x) return x; end
+    assert(not(RDL::Wrap.wrapped?(TestRDL, :nwrap6)))
+
+    self.class.class_eval {
+      type "(Fixnum) -> Fixnum"
+      def nwrap7(x) return x; end
+    }
+    assert(RDL::Wrap.wrapped?(TestRDL, :nwrap7))
+    self.class.class_eval {
+      type "(Fixnum) -> Fixnum", wrap: false
+      def nwrap8(x) return x; end
+    }
+    assert(not(RDL::Wrap.wrapped?(TestRDL, :nwrap8)))
+  end
+
 end

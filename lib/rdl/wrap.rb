@@ -221,35 +221,39 @@ class Object
   # pre(meth) { block } = pre(self, meth, FlatContract.new { block })
   # pre(contract) = pre(self, next method, contract)
   # pre { block } = pre(self, next method, FlatContract.new { block })
-  def pre(*args, &blk)
+  def pre(*args, wrap: true, &blk)
     $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
       klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Precondition", *args, &blk)
       if meth
         RDL::Wrap.add_contract(klass, meth, :pre, contract)
-        if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
-          RDL::Wrap.wrap(klass, meth)
-        else
-          $__rdl_to_wrap << [klass, meth]
+        if wrap
+          if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
+            RDL::Wrap.wrap(klass, meth)
+          else
+            $__rdl_to_wrap << [klass, meth]
+          end
         end
       else
-        $__rdl_deferred << [klass, :pre, contract]
+        $__rdl_deferred << [klass, :pre, contract, wrap]
       end
     }
   end
 
   # Add a postcondition to a method. Same possible invocations as pre.
-  def post(*args, &blk)
+  def post(*args, wrap: true, &blk)
     $__rdl_contract_switch.off {
       klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Postcondition", *args, &blk)
       if meth
         RDL::Wrap.add_contract(klass, meth, :post, contract)
-        if RDL::Util.method_defined?(klass, meth) || meth == :initialize
-          RDL::Wrap.wrap(klass, meth)
-        else
-          $__rdl_to_wrap << [klass, meth]
+        if wrap
+          if RDL::Util.method_defined?(klass, meth) || meth == :initialize
+            RDL::Wrap.wrap(klass, meth)
+          else
+            $__rdl_to_wrap << [klass, meth]
+          end
         end
       else
-        $__rdl_deferred << [klass, :post, contract]
+        $__rdl_deferred << [klass, :post, contract, wrap]
       end
     }
   end
@@ -262,7 +266,7 @@ class Object
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
-  def type(*args, &blk)
+  def type(*args, wrap: true, &blk)
     $__rdl_contract_switch.off {
       klass, meth, type = begin
                             RDL::Wrap.process_type_args(self, *args, &blk)
@@ -282,13 +286,15 @@ class Object
 #          warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
 #        end
         RDL::Wrap.add_contract(klass, meth, :type, type)
-        if RDL::Util.method_defined?(klass, meth) || meth == :initialize
-          RDL::Wrap.wrap(klass, meth)
-        else
-          $__rdl_to_wrap << [klass, meth]
+        if wrap
+          if RDL::Util.method_defined?(klass, meth) || meth == :initialize
+            RDL::Wrap.wrap(klass, meth)
+          else
+            $__rdl_to_wrap << [klass, meth]
+          end
         end
       else
-        $__rdl_deferred << [klass, :type, type]
+        $__rdl_deferred << [klass, :type, type, wrap]
       end
     }
   end
@@ -302,10 +308,10 @@ class Object
       if $__rdl_deferred.size > 0
         a = $__rdl_deferred
         $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
-        a.each { |prev_klass, kind, contract|
+        a.each { |prev_klass, kind, contract, wrap|
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
           RDL::Wrap.add_contract(klass, meth, kind, contract)
-          RDL::Wrap.wrap(klass, meth)
+          RDL::Wrap.wrap(klass, meth) if wrap
 # It turns out Ruby core/stdlib don't always follow this convention...
 #          if (kind == :type) && (meth.to_s[-1] == "?") && (contract.ret != $__rdl_type_bool)
 #            warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
@@ -331,10 +337,10 @@ class Object
       if $__rdl_deferred.size > 0
         a = $__rdl_deferred
         $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
-        a.each { |prev_klass, kind, contract|
+        a.each { |prev_klass, kind, contract, wrap|
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
           RDL::Wrap.add_contract(sklass, meth, kind, contract)
-          RDL::Wrap.wrap(sklass, meth)
+          RDL::Wrap.wrap(sklass, meth) if wrap
         }
       end
 

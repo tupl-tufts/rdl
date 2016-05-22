@@ -10,7 +10,7 @@ class String
   type :<=>, '(String other) -> Fixnum or nil ret'
   type :==, '(%any) -> %bool'
   type :===, '(%any) -> %bool'
-#  type :=~, '(Object) -> Fixnum or nil' # TODO: Wrapping this messes up $1 etc
+  type :=~, '(Object) -> Fixnum or nil', wrap: false # Wrapping this messes up $1 etc
   type :[], '(Fixnum, ?Fixnum) -> String or nil'
   type :[], '(Range<Fixnum> or Regexp) -> String or nil'
   type :[], '(Regexp, Fixnum) -> String or nil'
@@ -59,15 +59,14 @@ class String
   type :eql?, '(String) -> %bool'
   type :force_encoding, '(String or Encoding) -> String'
   type :getbyte, '(Fixnum) -> Fixnum or nil'
-# Can't wrap these, since they mess with $1 etc
-  type :gsub, '(Regexp or String, String) -> String'
-  type :gsub, '(Regexp or String, Hash) -> String'
-  type :gsub, '(Regexp or String) {(String) -> %any } -> String'
-  type :gsub, '(Regexp or String) ->  Enumerator'
-  type :gsub, '(Regexp or String) -> String'
-  type :gsub!, '(Regexp or String, String) -> String or nil'
-  type :gsub!, '(Regexp or String) {(String) -> %any } -> String or nil'
-  type :gsub!, '(Regexp or String) -> Enumerator'
+  type :gsub, '(Regexp or String, String) -> String', wrap: false # Can't wrap these, since they mess with $1 etc
+  type :gsub, '(Regexp or String, Hash) -> String', wrap: false
+  type :gsub, '(Regexp or String) {(String) -> %any } -> String', wrap: false
+  type :gsub, '(Regexp or String) ->  Enumerator', wrap: false
+  type :gsub, '(Regexp or String) -> String', wrap: false
+  type :gsub!, '(Regexp or String, String) -> String or nil', wrap: false
+  type :gsub!, '(Regexp or String) {(String) -> %any } -> String or nil', wrap: false
+  type :gsub!, '(Regexp or String) -> Enumerator', wrap: false
   type :hash, '() -> Fixnum'
   type :hex, '() -> Fixnum'
   type :include?, '(String) -> %bool'
@@ -95,8 +94,8 @@ class String
   type :rpartition, '(String or Regexp) -> Array<String>'
   type :rstrip, '() -> String'
   type :rstrip!, '() -> String'
-#  type :scan, '(Regexp or String) -> Array<String or Array<String>>' # Can't wrap or screws up last_match
-#  type :scan, '(Regexp or String) {(*%any) -> %any} -> Array<String or Array<String>>'
+  type :scan, '(Regexp or String) -> Array<String or Array<String>>', wrap: false # Can't wrap or screws up last_match
+  type :scan, '(Regexp or String) {(*%any) -> %any} -> Array<String or Array<String>>', wrap: false
   type :scrub, '(?String) -> String'
   type :scrub, '(?String) {(%any) -> %any} -> String'
   type :scrub!, '(?String) -> String'
@@ -116,11 +115,10 @@ class String
   type :start_with?, '(* String) -> %bool'
   type :strip, '() -> String'
   type :strip!, '() -> String'
-# Can't wrap these, since they mess with $1 etc
-   type :sub, '(Regexp or String, String or Hash) -> String'
-   type :sub, '(Regexp or String) {(String) -> %any} -> String'
-   type :sub!, '(Regexp or String, String) -> String' # TODO: Does this really not allow Hash?
-   type :sub!, '(Regexp or String) {(String) -> %any} -> String'
+  type :sub, '(Regexp or String, String or Hash) -> String', wrap: false # Can't wrap these, since they mess with $1 etc
+  type :sub, '(Regexp or String) {(String) -> %any} -> String', wrap: false
+  type :sub!, '(Regexp or String, String) -> String', wrap: false # TODO: Does this really not allow Hash?
+  type :sub!, '(Regexp or String) {(String) -> %any} -> String', wrap: false
   type :succ, '() -> String'
   type :sum, '(?Fixnum) -> Fixnum'
   type :swapcase, '() -> String'
