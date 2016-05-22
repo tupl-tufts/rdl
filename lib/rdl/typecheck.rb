@@ -2,26 +2,45 @@ class RDL::Typecheck
 
   class StaticTypeError < StandardError; end
 
+  class ASTMapper < AST::Processor
+    attr_accessor :line_defs
+
+    def initialize(file)
+      @file = file
+      @line_defs = Hash.new # map from line numbers to defs
+    end
+
+    def handler_missing(node)
+      node.children.each { |n| process n if n.is_a?(AST::Node) }
+    end
+
+    def on_def(node)
+      name, _, body = *node
+      if @line_defs[node.loc.line]
+        raise RuntimeError, "Multiple defs per line (#{name} and #{@line_defs[node.loc.line].children[1]} in #{@file}) currently not allowed"
+      end
+      @line_defs[node.loc.line] = node
+      process body
+      node.updated(nil, nil)
+    end
+  end
+
   def self.typecheck(klass, meth)
     c = RDL::Util.to_class(klass)
     m = c.instance_method(meth)
     file, line = m.source_location
 
-    ast = nil
-    if $__rdl_ruby_parser_cache.has_key? file
-      old_digest, old_ast = $__rdl_ruby_parser_cache[file]
-      new_digest = Digest::MD5.file file
-      if old_digest == new_digest
-        ast = old_ast
-      else
-        ast = Parser::CurrentRuby.parse_file file
-        $__rdl_ruby_parser_cache[file] = [new_digest, ast]
-      end
-    else
-      digest = Digest::MD5.file file
+    digest = Digest::MD5.file file
+    cache_hit = (($__rdl_ruby_parser_cache.has_key? file) &&
+                 ($__rdl_ruby_parser_cache[file][0] == digest))
+    unless cache_hit
       ast = Parser::CurrentRuby.parse_file file
-      $__rdl_ruby_parser_cache[file] = [digest, ast]
+      mapper = ASTMapper.new(file)
+      mapper.process(ast)
+      cache = {ast: ast, line_defs: mapper.line_defs}
+      $__rdl_ruby_parser_cache[file] = [digest, cache]
     end
+
   end
 
 end

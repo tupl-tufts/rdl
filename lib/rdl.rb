@@ -57,7 +57,9 @@ require_rel 'rdl/typecheck.rb'
 
 $__rdl_parser = RDL::Type::Parser.new
 
-# Map from file names to [digest, AST]
+# Map from file names to [digest, cache] where 2nd elt maps
+#  :ast to the AST
+#  :line_defs maps linenumber to AST for def at that line
 $__rdl_ruby_parser_cache = Hash.new
 
 # Hash from special type names to their values
