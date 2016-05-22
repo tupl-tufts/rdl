@@ -1,6 +1,8 @@
 # Change log!
 
 ## [Unreleased]
+### Added
+- Added `wrap: false` optional argument to `type`, `pre`, and `post`
 
 ## [1.1.1] - 2016-05-21
 ### Fixed
