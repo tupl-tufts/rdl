@@ -1,6 +1,8 @@
-require 'set'
 require 'delegate'
+require 'digest'
+require 'set'
 require 'require_all'
+require 'parser/current'
 
 module RDL
 end
@@ -54,6 +56,9 @@ require_rel 'rdl/typecheck.rb'
 #require_rel 'rdl/stats.rb'
 
 $__rdl_parser = RDL::Type::Parser.new
+
+# Map from file names to [digest, AST]
+$__rdl_ruby_parser_cache = Hash.new
 
 # Hash from special type names to their values
 $__rdl_special_types = {'%any' => RDL::Type::TopType.new,

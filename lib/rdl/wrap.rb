@@ -291,8 +291,8 @@ class Object
         RDL::Wrap.add_contract(klass, meth, :type, type)
         if wrap
           if RDL::Util.method_defined?(klass, meth) || meth == :initialize
+            RDL::Typecheck.typecheck(klass, meth) if typecheck # must typecheck *before* wrap
             RDL::Wrap.wrap(klass, meth)
-            RDL::Typecheck.typecheck(klass, meth) if typecheck
           else
             $__rdl_to_wrap << [klass, meth]
             $__rdl_to_typecheck << [klass, meth] if typecheck
@@ -316,8 +316,8 @@ class Object
         a.each { |prev_klass, kind, contract, h|
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
           RDL::Wrap.add_contract(klass, meth, kind, contract)
+          RDL::Typecheck.typecheck(klass, meth) if h[:typecheck] # must typecheck *before* wrap
           RDL::Wrap.wrap(klass, meth) if h[:wrap]
-          RDL::Typecheck.typecheck(klass, meth) if h[:typecheck]
 
 # It turns out Ruby core/stdlib don't always follow this convention...
 #          if (kind == :type) && (meth.to_s[-1] == "?") && (contract.ret != $__rdl_type_bool)
@@ -326,16 +326,16 @@ class Object
         }
       end
 
+      # Type check method if requested; must typecheck before wrap
+      if $__rdl_to_typecheck.member? [klass, meth]
+        $__rdl_to_typecheck.delete [klass, meth]
+        RDL::Typecheck.typecheck(klass, meth)
+      end
+
       # Wrap method if there was a prior contract for it.
       if $__rdl_to_wrap.member? [klass, meth]
         $__rdl_to_wrap.delete [klass, meth]
         RDL::Wrap.wrap(klass, meth)
-      end
-
-      # Type check method if requested
-      if $__rdl_to_typecheck.member? [klass, meth]
-        $__rdl_to_typecheck.delete [klass, meth]
-        RDL::Typecheck.typecheck(klass, meth)
       end
     }
   end
@@ -353,21 +353,21 @@ class Object
         a.each { |prev_klass, kind, contract, h|
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
           RDL::Wrap.add_contract(sklass, meth, kind, contract)
+          RDL::Typecheck.typecheck(sklass, meth) if h[:typecheck] # must typecheck before wrap
           RDL::Wrap.wrap(sklass, meth) if h[:wrap]
-          RDL::Typecheck.typecheck(sklass, meth) if h[:typecheck]
         }
+      end
+
+      # Type check method if requested; must typecheck before wrap
+      if $__rdl_to_typecheck.member? [sklass, meth]
+        $__rdl_to_typecheck.delete [sklass, meth]
+        RDL::Typecheck.typecheck(sklass, meth)
       end
 
       # Wrap method if there was a prior contract for it.
       if $__rdl_to_wrap.member? [sklass, meth]
         $__rdl_to_wrap.delete [sklass, meth]
         RDL::Wrap.wrap(sklass, meth)
-      end
-
-      # Type check method if requested
-      if $__rdl_to_typecheck.member? [sklass, meth]
-        $__rdl_to_typecheck.delete [sklass, meth]
-        RDL::Typecheck.typecheck(sklass, meth)
       end
     }
   end
