@@ -213,6 +213,7 @@ class Object
   # [+klass+] may be Class, Symbol, or String
   # [+method+] may be Symbol or String
   # [+contract+] must be a Contract
+  # [+wrap+] indicates whether the contract should be enforced (true) or just recorded (false)
   #
   # Add a precondition to a method. Possible invocations:
   # pre(klass, meth, contract)
@@ -234,7 +235,7 @@ class Object
           end
         end
       else
-        $__rdl_deferred << [klass, :pre, contract, wrap]
+        $__rdl_deferred << [klass, :pre, contract, {wrap: wrap}]
       end
     }
   end
@@ -253,7 +254,7 @@ class Object
           end
         end
       else
-        $__rdl_deferred << [klass, :post, contract, wrap]
+        $__rdl_deferred << [klass, :post, contract, {wrap: wrap}]
       end
     }
   end
@@ -261,12 +262,14 @@ class Object
   # [+klass+] may be Class, Symbol, or String
   # [+method+] may be Symbol or String
   # [+type+] may be Type or String
+  # [+wrap+] indicates whether the type should be enforced (true) or just recorded (false)
+  # [+typecheck+] indicates whether the method should be statically checked against this type (not yet implemented)
   #
   # Set a method's type. Possible invocations:
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
-  def type(*args, wrap: true, &blk)
+  def type(*args, wrap: true, typecheck: false, &blk)
     $__rdl_contract_switch.off {
       klass, meth, type = begin
                             RDL::Wrap.process_type_args(self, *args, &blk)
@@ -289,12 +292,14 @@ class Object
         if wrap
           if RDL::Util.method_defined?(klass, meth) || meth == :initialize
             RDL::Wrap.wrap(klass, meth)
+            RDL::Typecheck.typecheck(klass, meth) if typecheck
           else
             $__rdl_to_wrap << [klass, meth]
+            $__rdl_to_typecheck << [klass, meth] if typecheck
           end
         end
       else
-        $__rdl_deferred << [klass, :type, type, wrap]
+        $__rdl_deferred << [klass, :type, type, {wrap: wrap, typecheck: typecheck}]
       end
     }
   end
@@ -308,10 +313,12 @@ class Object
       if $__rdl_deferred.size > 0
         a = $__rdl_deferred
         $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
-        a.each { |prev_klass, kind, contract, wrap|
+        a.each { |prev_klass, kind, contract, h|
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
           RDL::Wrap.add_contract(klass, meth, kind, contract)
-          RDL::Wrap.wrap(klass, meth) if wrap
+          RDL::Wrap.wrap(klass, meth) if h[:wrap]
+          RDL::Typecheck.typecheck(klass, meth) if h[:typecheck]
+
 # It turns out Ruby core/stdlib don't always follow this convention...
 #          if (kind == :type) && (meth.to_s[-1] == "?") && (contract.ret != $__rdl_type_bool)
 #            warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
@@ -323,6 +330,12 @@ class Object
       if $__rdl_to_wrap.member? [klass, meth]
         $__rdl_to_wrap.delete [klass, meth]
         RDL::Wrap.wrap(klass, meth)
+      end
+
+      # Type check method if requested
+      if $__rdl_to_typecheck.member? [klass, meth]
+        $__rdl_to_typecheck.delete [klass, meth]
+        RDL::Typecheck.typecheck(klass, meth)
       end
     }
   end
@@ -337,10 +350,11 @@ class Object
       if $__rdl_deferred.size > 0
         a = $__rdl_deferred
         $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
-        a.each { |prev_klass, kind, contract, wrap|
+        a.each { |prev_klass, kind, contract, h|
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
           RDL::Wrap.add_contract(sklass, meth, kind, contract)
-          RDL::Wrap.wrap(sklass, meth) if wrap
+          RDL::Wrap.wrap(sklass, meth) if h[:wrap]
+          RDL::Typecheck.typecheck(sklass, meth) if h[:typecheck]
         }
       end
 
@@ -348,6 +362,12 @@ class Object
       if $__rdl_to_wrap.member? [sklass, meth]
         $__rdl_to_wrap.delete [sklass, meth]
         RDL::Wrap.wrap(sklass, meth)
+      end
+
+      # Type check method if requested
+      if $__rdl_to_typecheck.member? [sklass, meth]
+        $__rdl_to_typecheck.delete [sklass, meth]
+        RDL::Typecheck.typecheck(sklass, meth)
       end
     }
   end

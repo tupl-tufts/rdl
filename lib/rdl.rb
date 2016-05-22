@@ -32,6 +32,9 @@ $__rdl_aliases = Hash.new
 # method is a symbol
 $__rdl_to_wrap = Set.new
 
+# Same as $__rdl_to_wrap, but records [class, method] pairs to type check
+$__rdl_to_typecheck = Set.new
+
 # List of contracts that should be applied to the next method definition
 $__rdl_deferred = []
 
@@ -47,6 +50,7 @@ require_rel 'rdl/contracts/*.rb'
 require_rel 'rdl/util.rb'
 require_rel 'rdl/wrap.rb'
 require_rel 'rdl/query.rb'
+require_rel 'rdl/typecheck.rb'
 #require_rel 'rdl/stats.rb'
 
 $__rdl_parser = RDL::Type::Parser.new
