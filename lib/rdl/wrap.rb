@@ -301,7 +301,12 @@ class Object
 #          warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
 #        end
         RDL::Wrap.add_info(klass, meth, :type, type)
-        RDL::Wrap.set_info(klass, meth, :typecheck, typecheck)
+        if (RDL::Wrap.has_info?(klass, meth, :typecheck)) &&
+          (RDL::Wrap.get_info(klass, meth, :typecheck) != typecheck)
+          raise RuntimeError, "Inconsistent typecheck flag on #{klass}##{meth}"
+        else
+          RDL::Wrap.set_info(klass, meth, :typecheck, typecheck)
+        end
         if wrap
           if RDL::Util.method_defined?(klass, meth) || meth == :initialize
             RDL::Typecheck.typecheck(klass, meth) if typecheck_now
