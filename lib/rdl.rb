@@ -11,17 +11,15 @@ require_relative 'rdl/config.rb'
 def RDL.config
   yield(RDL::Config.instance)
 end
+require_relative 'rdl/info.rb'
 
-# Hash from class name (String) to method name (Symbol) to Hash from
+# Method info table with kinds:
 # :pre to array of precondition contracts
 # :post to array of postcondition contracts
 # :type to array of types
 # :source_location to [filename, linenumber] location of most recent definition
 # :typecheck - boolean that is true if method should be statically type checked
-# class names are strings (because they need to be manipulated in case they include ::)
-#  (class names may have Util.add_singleton_marker applied to them to indicate they're singleton classes.)
-# method names are symbols
-$__rdl_meth_info = Hash.new
+$__rdl_meths = RDL::Info.new
 
 # Map from full_method_name to number of times called when wrapped
 $__rdl_wrapped_calls = Hash.new 0

@@ -76,8 +76,8 @@ module RDL::Type
         k = base.klass
         other.methods.each_pair { |m, t|
           return false unless k.method_defined? m
-          if RDL::Wrap.has_info?(k, m, :type)
-            types = RDL::Wrap.get_info(k, m, :type)
+          if $__rdl_meths.has?(k, m, :type)
+            types = $__rdl_meths.get(k, m, :type)
             return false unless types.all? { |t_self| t_self.instantiate(inst) <= t }
           end
         }
