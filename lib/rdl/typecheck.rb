@@ -26,10 +26,7 @@ class RDL::Typecheck
   end
 
   def self.typecheck(klass, meth)
-    c = RDL::Util.to_class(klass)
-    m = c.instance_method(meth)
-    file, line = m.source_location
-
+    file, line = RDL::Wrap.get_info(klass, meth, :source_location)
     digest = Digest::MD5.file file
     cache_hit = (($__rdl_ruby_parser_cache.has_key? file) &&
                  ($__rdl_ruby_parser_cache[file][0] == digest))

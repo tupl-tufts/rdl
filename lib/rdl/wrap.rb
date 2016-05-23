@@ -13,34 +13,45 @@ class RDL::Wrap
     return meth
   end
 
-  def self.add_contract(klass, meth, kind, val)
+  # kind must map to an array
+  def self.add_info(klass, meth, kind, val)
     klass = klass.to_s
     meth = meth.to_sym
-    $__rdl_contracts[klass] = {} unless $__rdl_contracts[klass]
-    $__rdl_contracts[klass][meth] = {} unless $__rdl_contracts[klass][meth]
-    $__rdl_contracts[klass][meth][kind] = [] unless $__rdl_contracts[klass][meth][kind]
-    $__rdl_contracts[klass][meth][kind] << val
+    $__rdl_meth_info[klass] = {} unless $__rdl_meth_info[klass]
+    $__rdl_meth_info[klass][meth] = {} unless $__rdl_meth_info[klass][meth]
+    $__rdl_meth_info[klass][meth][kind] = [] unless $__rdl_meth_info[klass][meth][kind]
+    $__rdl_meth_info[klass][meth][kind] << val
   end
 
-  def self.has_contracts?(klass, meth, kind)
+  # replace info for kind
+  def self.set_info(klass, meth, kind, val)
     klass = klass.to_s
     meth = meth.to_sym
-    return ($__rdl_contracts.has_key? klass) &&
-           ($__rdl_contracts[klass].has_key? meth) &&
-           ($__rdl_contracts[klass][meth].has_key? kind)
+    $__rdl_meth_info[klass] = {} unless $__rdl_meth_info[klass]
+    $__rdl_meth_info[klass][meth] = {} unless $__rdl_meth_info[klass][meth]
+    $__rdl_meth_info[klass][meth][kind] = val
+  end
+
+  def self.has_info?(klass, meth, kind)
+    klass = klass.to_s
+    meth = meth.to_sym
+    return ($__rdl_meth_info.has_key? klass) &&
+           ($__rdl_meth_info[klass].has_key? meth) &&
+           ($__rdl_meth_info[klass][meth].has_key? kind)
   end
 
   def self.has_any_contracts?(klass, meth)
     klass = klass.to_s
     meth = meth.to_sym
-    return ($__rdl_contracts.has_key? klass) &&
-           ($__rdl_contracts[klass].has_key? meth)
+    return ($__rdl_meth_info.has_key? klass) &&
+           ($__rdl_meth_info[klass].has_key? meth) &&
+           ([:pre, :post, :type].any? { |k| $__rdl_meth_info[klass][meth].has_key? k })
   end
 
-  def self.get_contracts(klass, meth, kind)
+  def self.get_info(klass, meth, kind)
     klass = klass.to_s
     meth = meth.to_sym
-    return $__rdl_contracts[klass][meth][kind]
+    return $__rdl_meth_info[klass][meth][kind]
   end
 
   def self.get_type_params(klass)
@@ -52,7 +63,7 @@ class RDL::Wrap
   # [+meth+] may be a String or Symbol
   #
   # Wraps klass#method to check contracts and types. Does not rewrap
-  # if already wrapped.
+  # if already wrapped. Also records source location of method.
   def self.wrap(klass_str, meth)
     $__rdl_wrap_switch.off {
       klass_str = klass_str.to_s
@@ -60,6 +71,7 @@ class RDL::Wrap
       return if wrapped? klass, meth
       return if RDL::Config.instance.nowrap.member? klass
       raise ArgumentError, "Attempt to wrap #{klass.to_s}\##{meth.to_s}" if klass.to_s =~ /^RDL::/
+      RDL::Wrap.set_info(klass_str, meth, :source_location, klass.instance_method(meth).source_location)
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
       # return if (klass.method_defined? meth_old) # now checked above by wrapped? call
       is_singleton_method = RDL::Util.has_singleton_marker(klass_str)
@@ -82,19 +94,19 @@ class RDL::Wrap
             #{if not(is_singleton_method) then "inst[:self] = RDL::Type::SingletonType.new(self)" end}
 #            puts "Intercepted #{full_method_name}(\#{args.join(", ")}) { \#{blk} }, inst = \#{inst.inspect}"
             meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
-            if RDL::Wrap.has_contracts?(klass, meth, :pre)
-              pres = RDL::Wrap.get_contracts(klass, meth, :pre)
+            if RDL::Wrap.has_info?(klass, meth, :pre)
+              pres = RDL::Wrap.get_info(klass, meth, :pre)
               RDL::Contract::AndContract.check_array(pres, self, *args, &blk)
             end
-            if RDL::Wrap.has_contracts?(klass, meth, :type)
-              types = RDL::Wrap.get_contracts(klass, meth, :type)
+            if RDL::Wrap.has_info?(klass, meth, :type)
+              types = RDL::Wrap.get_info(klass, meth, :type)
               matches,args,blk,bind = RDL::Type::MethodType.check_arg_types("#{full_method_name}", self, bind, types, inst, *args, &blk)
             end
           }
 	  ret = send(#{meth_old.inspect}, *args, &blk)
           $__rdl_wrap_switch.off {
-            if RDL::Wrap.has_contracts?(klass, meth, :post)
-              posts = RDL::Wrap.get_contracts(klass, meth, :post)
+            if RDL::Wrap.has_info?(klass, meth, :post)
+              posts = RDL::Wrap.get_info(klass, meth, :post)
               RDL::Contract::AndContract.check_array(posts, self, ret, *args, &blk)
             end
             if matches
@@ -226,7 +238,7 @@ class Object
     $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
       klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Precondition", *args, &blk)
       if meth
-        RDL::Wrap.add_contract(klass, meth, :pre, contract)
+        RDL::Wrap.add_info(klass, meth, :pre, contract)
         if wrap
           if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
             RDL::Wrap.wrap(klass, meth)
@@ -245,7 +257,7 @@ class Object
     $__rdl_contract_switch.off {
       klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Postcondition", *args, &blk)
       if meth
-        RDL::Wrap.add_contract(klass, meth, :post, contract)
+        RDL::Wrap.add_info(klass, meth, :post, contract)
         if wrap
           if RDL::Util.method_defined?(klass, meth) || meth == :initialize
             RDL::Wrap.wrap(klass, meth)
@@ -269,7 +281,7 @@ class Object
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
-  def type(*args, wrap: true, typecheck: false, &blk)
+  def type(*args, wrap: true, typecheck: false, typecheck_now: false, &blk)
     $__rdl_contract_switch.off {
       klass, meth, type = begin
                             RDL::Wrap.process_type_args(self, *args, &blk)
@@ -288,18 +300,19 @@ class Object
 #        if (meth.to_s[-1] == "?") && (type.ret != $__rdl_type_bool)
 #          warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
 #        end
-        RDL::Wrap.add_contract(klass, meth, :type, type)
+        RDL::Wrap.add_info(klass, meth, :type, type)
+        RDL::Wrap.set_info(klass, meth, :typecheck, typecheck)
         if wrap
           if RDL::Util.method_defined?(klass, meth) || meth == :initialize
-            RDL::Typecheck.typecheck(klass, meth) if typecheck # must typecheck *before* wrap
+            RDL::Typecheck.typecheck(klass, meth) if typecheck_now
             RDL::Wrap.wrap(klass, meth)
           else
             $__rdl_to_wrap << [klass, meth]
-            $__rdl_to_typecheck << [klass, meth] if typecheck
+            $__rdl_to_typecheck_now << [klass, meth] if typecheck_now
           end
         end
       else
-        $__rdl_deferred << [klass, :type, type, {wrap: wrap, typecheck: typecheck}]
+        $__rdl_deferred << [klass, :type, type, {wrap: wrap, typecheck_now: typecheck_now}]
       end
     }
   end
@@ -315,9 +328,9 @@ class Object
         $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
         a.each { |prev_klass, kind, contract, h|
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
-          RDL::Wrap.add_contract(klass, meth, kind, contract)
-          RDL::Typecheck.typecheck(klass, meth) if h[:typecheck] # must typecheck *before* wrap
+          RDL::Wrap.add_info(klass, meth, kind, contract)
           RDL::Wrap.wrap(klass, meth) if h[:wrap]
+          RDL::Typecheck.typecheck(klass, meth) if h[:typecheck_now]
 
 # It turns out Ruby core/stdlib don't always follow this convention...
 #          if (kind == :type) && (meth.to_s[-1] == "?") && (contract.ret != $__rdl_type_bool)
@@ -326,16 +339,16 @@ class Object
         }
       end
 
-      # Type check method if requested; must typecheck before wrap
-      if $__rdl_to_typecheck.member? [klass, meth]
-        $__rdl_to_typecheck.delete [klass, meth]
-        RDL::Typecheck.typecheck(klass, meth)
-      end
-
       # Wrap method if there was a prior contract for it.
       if $__rdl_to_wrap.member? [klass, meth]
         $__rdl_to_wrap.delete [klass, meth]
         RDL::Wrap.wrap(klass, meth)
+      end
+
+      # Type check method if requested; must typecheck before wrap
+      if $__rdl_to_typecheck_now.member? [klass, meth]
+        $__rdl_to_typecheck_now.delete [klass, meth]
+        RDL::Typecheck.typecheck(klass, meth)
       end
     }
   end
@@ -352,22 +365,22 @@ class Object
         $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
         a.each { |prev_klass, kind, contract, h|
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
-          RDL::Wrap.add_contract(sklass, meth, kind, contract)
-          RDL::Typecheck.typecheck(sklass, meth) if h[:typecheck] # must typecheck before wrap
+          RDL::Wrap.add_info(sklass, meth, kind, contract)
           RDL::Wrap.wrap(sklass, meth) if h[:wrap]
+          RDL::Typecheck.typecheck(sklass, meth) if h[:typecheck_now]
         }
-      end
-
-      # Type check method if requested; must typecheck before wrap
-      if $__rdl_to_typecheck.member? [sklass, meth]
-        $__rdl_to_typecheck.delete [sklass, meth]
-        RDL::Typecheck.typecheck(sklass, meth)
       end
 
       # Wrap method if there was a prior contract for it.
       if $__rdl_to_wrap.member? [sklass, meth]
         $__rdl_to_wrap.delete [sklass, meth]
         RDL::Wrap.wrap(sklass, meth)
+      end
+
+      # Type check method if requested
+      if $__rdl_to_typecheck_now.member? [sklass, meth]
+        $__rdl_to_typecheck_now.delete [sklass, meth]
+        RDL::Typecheck.typecheck(sklass, meth)
       end
     }
   end

@@ -59,8 +59,8 @@ module RDL::Type
         # similar logic in GenericType
         other.methods.each_pair { |m, t|
           return false unless k.method_defined? m
-          if RDL::Wrap.has_contracts?(k, m, :type)
-            types = RDL::Wrap.get_contracts(k, m, :type)
+          if RDL::Wrap.has_info?(k, m, :type)
+            types = RDL::Wrap.get_info(k, m, :type)
             return false unless types.all? { |t_self| t_self <= t }
           end
         }

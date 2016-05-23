@@ -17,26 +17,26 @@ class RDL::Query
 #      klass = self.class.to_s
 #      meth = q.to_sym
     end
-    return nil unless RDL::Wrap.has_contracts?(klass, meth, :type)
-    return RDL::Wrap.get_contracts(klass, meth, :type)
+    return nil unless RDL::Wrap.has_info?(klass, meth, :type)
+    return RDL::Wrap.get_info(klass, meth, :type)
   end
 
   # Return an ordered list of all method types of a class. The query should be a class name.
   def self.class_query(q)
     klass = q.to_s
-    return nil unless $__rdl_contracts.has_key? klass
+    return nil unless $__rdl_meth_info.has_key? klass
     cls_meths = []
     cls_klass = RDL::Util.add_singleton_marker(klass)
-    if $__rdl_contracts.has_key? cls_klass then
-      $__rdl_contracts[cls_klass].each { |meth, kinds|
+    if $__rdl_meth_info.has_key? cls_klass then
+      $__rdl_meth_info[cls_klass].each { |meth, kinds|
         if kinds.has_key? :type then
           kinds[:type].each { |t| cls_meths << [meth.to_s, t] }
         end
       }
     end
     inst_meths = []
-    if $__rdl_contracts.has_key? klass then
-      $__rdl_contracts[klass].each { |meth, kinds|
+    if $__rdl_meth_info.has_key? klass then
+      $__rdl_meth_info[klass].each { |meth, kinds|
         if kinds.has_key? :type then
           kinds[:type].each { |t| inst_meths << [meth.to_s, t] }
         end
@@ -52,7 +52,7 @@ class RDL::Query
   def self.method_type_query(q)
     q = $__rdl_parser.scan_str "#Q #{q}"
     result = []
-    $__rdl_contracts.each { |klass, meths|
+    $__rdl_meth_info.each { |klass, meths|
       meths.each { |meth, kinds|
         if kinds.has_key? :type then
           kinds[:type].each { |t|
