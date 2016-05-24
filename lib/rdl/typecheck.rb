@@ -40,11 +40,11 @@ class RDL::Typecheck
     ast = $__rdl_ruby_parser_cache[file][1][:line_defs][line]
     types = $__rdl_meths.get(klass, meth, :type)
     raise RuntimeError, "Can't typecheck method with no types?!" if types.nil? or types == []
-    puts
-    puts ast
-    types.each { |type|
-      puts type
-    }
+#    puts
+#    puts ast
+#    types.each { |type|
+#      puts type
+#    }
   end
 
 end

@@ -55,6 +55,7 @@ class RDL::Wrap
             #{if not(is_singleton_method) then "inst[:self] = RDL::Type::SingletonType.new(self)" end}
 #            puts "Intercepted #{full_method_name}(\#{args.join(", ")}) { \#{blk} }, inst = \#{inst.inspect}"
             meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
+            RDL::Typecheck.typecheck(klass, meth) if $__rdl_meths.get(klass, meth, :typecheck)
             pres = $__rdl_meths.get(klass, meth, :pre)
             RDL::Contract::AndContract.check_array(pres, self, *args, &blk) if pres
             types = $__rdl_meths.get(klass, meth, :type)
