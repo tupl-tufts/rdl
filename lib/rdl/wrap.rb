@@ -259,11 +259,8 @@ class Object
 #          warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
 #        end
         $__rdl_meths.add(klass, meth, :type, type)
-        if ($__rdl_meths.has?(klass, meth, :typecheck)) &&
-          ($__rdl_meths.get(klass, meth, :typecheck) != typecheck)
+        unless $__rdl_meths.set(klass, meth, :typecheck, typecheck)
           raise RuntimeError, "Inconsistent typecheck flag on #{klass}##{meth}"
-        else
-          $__rdl_meths.set(klass, meth, :typecheck, typecheck)
         end
         if wrap
           if RDL::Util.method_defined?(klass, meth) || meth == :initialize
@@ -275,7 +272,9 @@ class Object
           end
         end
       else
-        $__rdl_deferred << [klass, :type, type, {wrap: wrap, typecheck_now: typecheck_now}]
+        $__rdl_deferred << [klass, :type, type, {wrap: wrap,
+                                                 typecheck: typecheck,
+                                                 typecheck_now: typecheck_now}]
       end
     }
   end
@@ -294,6 +293,9 @@ class Object
           $__rdl_meths.add(klass, meth, kind, contract)
           RDL::Wrap.wrap(klass, meth) if h[:wrap]
           RDL::Typecheck.typecheck(klass, meth) if h[:typecheck_now]
+          unless $__rdl_meths.set(klass, meth, :typecheck, h[:typecheck])
+            raise RuntimeError, "Inconsistent typecheck flag on #{klass}##{meth}"
+          end
 
 # It turns out Ruby core/stdlib don't always follow this convention...
 #          if (kind == :type) && (meth.to_s[-1] == "?") && (contract.ret != $__rdl_type_bool)
@@ -331,6 +333,9 @@ class Object
           $__rdl_meths.add(sklass, meth, kind, contract)
           RDL::Wrap.wrap(sklass, meth) if h[:wrap]
           RDL::Typecheck.typecheck(sklass, meth) if h[:typecheck_now]
+          unless $__rdl_meths.set(klass, meth, :typecheck, h[:typecheck])
+            raise RuntimeError, "Inconsistent typecheck flag on #{klass}##{meth}"
+          end
         }
       end
 

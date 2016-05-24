@@ -20,8 +20,23 @@ class RDL::Info
     @info[klass][meth][kind] << val
   end
 
-  # replace info for kind
+  # if no prev info for kind, set to val and return true
+  # if prev info for kind, return true if prev == val and false otherwise
   def set(klass, meth, kind, val)
+    klass = klass.to_s
+    meth = meth.to_sym
+    @info[klass] = {} unless @info[klass]
+    @info[klass][meth] = {} unless @info[klass][meth]
+    if @info[klass][meth].has_key? kind
+      return (val == @info[klass][meth][kind])
+    else
+      @info[klass][meth][kind] = val
+      return true
+    end
+  end
+
+  # replace info for kind
+  def set!(klass, meth, kind, val)
     klass = klass.to_s
     meth = meth.to_sym
     @info[klass] = {} unless @info[klass]
