@@ -67,14 +67,23 @@ class RDL::Typecheck
   # and t is the type of the expression
   def self.tc(a, e)
     case e.type
-    when :true
-      [a, @@type_true]
-    when :false
-      [a, @@type_false]
-    when :str, :string
-      [a, @@type_string]
+    when :nil
+      [a, RDL::Type::NilType.new]
+    when :true, :false, :complex, :rational, :str, :string # constants
+      [a, RDL::Type::NominalType.new(e.children[0].class)]
+    when :int, :float, :sym # singletons
+      [a, RDL::Type::SingletonType.new(e.children[0])]
+    when :dstr # string with interpolation
+      ai = a
+      e.children.each { |ei| ai, _ = tc(ai, ei) }
+      [ai, RDL::Type::NominalType.new(String)]
     when :lvar  # local variable
       [a, a[e.children[0]]]
+    when :begin # sequencing
+      ai = a
+      ti = nil
+      e.children.each { |ei| ai, ti = tc(ai, ei) }
+      [ai, ti]
     else
       raise RuntimeError, "Expression kind #{e.type} unsupported"
     end
