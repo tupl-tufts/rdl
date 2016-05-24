@@ -45,9 +45,15 @@ class RDL::Info
            (kinds.any? { |k| @info[klass][meth].has_key? k })
   end
 
+  # eventually replace with Hash#dig
   def get(klass, meth, kind)
     klass = klass.to_s
     meth = meth.to_sym
-    return @info[klass][meth][kind]
+    t1 = @info[klass]
+    return t1 if t1.nil?
+    t2 = t1[meth]
+    return t2 if t2.nil?
+    return t2[kind]
+#    return @info[klass][meth][kind]
   end
 end

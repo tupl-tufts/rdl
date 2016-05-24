@@ -17,7 +17,6 @@ class RDL::Query
 #      klass = self.class.to_s
 #      meth = q.to_sym
     end
-    return nil unless $__rdl_meths.has?(klass, meth, :type)
     return $__rdl_meths.get(klass, meth, :type)
   end
 

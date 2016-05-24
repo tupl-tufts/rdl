@@ -31,13 +31,20 @@ class RDL::Typecheck
     cache_hit = (($__rdl_ruby_parser_cache.has_key? file) &&
                  ($__rdl_ruby_parser_cache[file][0] == digest))
     unless cache_hit
-      ast = Parser::CurrentRuby.parse_file file
+      file_ast = Parser::CurrentRuby.parse_file file
       mapper = ASTMapper.new(file)
-      mapper.process(ast)
-      cache = {ast: ast, line_defs: mapper.line_defs}
+      mapper.process(file_ast)
+      cache = {ast: file_ast, line_defs: mapper.line_defs}
       $__rdl_ruby_parser_cache[file] = [digest, cache]
     end
-
+    ast = $__rdl_ruby_parser_cache[file][1][:line_defs][line]
+    types = $__rdl_meths.get(klass, meth, :type)
+    raise RuntimeError, "Can't typecheck method with no types?!" if types.nil? or types == []
+    puts
+    puts ast
+    types.each { |type|
+      puts type
+    }
   end
 
 end

@@ -55,21 +55,17 @@ class RDL::Wrap
             #{if not(is_singleton_method) then "inst[:self] = RDL::Type::SingletonType.new(self)" end}
 #            puts "Intercepted #{full_method_name}(\#{args.join(", ")}) { \#{blk} }, inst = \#{inst.inspect}"
             meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
-            if $__rdl_meths.has?(klass, meth, :pre)
-              pres = $__rdl_meths.get(klass, meth, :pre)
-              RDL::Contract::AndContract.check_array(pres, self, *args, &blk)
-            end
-            if $__rdl_meths.has?(klass, meth, :type)
-              types = $__rdl_meths.get(klass, meth, :type)
+            pres = $__rdl_meths.get(klass, meth, :pre)
+            RDL::Contract::AndContract.check_array(pres, self, *args, &blk) if pres
+            types = $__rdl_meths.get(klass, meth, :type)
+            if types
               matches,args,blk,bind = RDL::Type::MethodType.check_arg_types("#{full_method_name}", self, bind, types, inst, *args, &blk)
             end
           }
 	  ret = send(#{meth_old.inspect}, *args, &blk)
           $__rdl_wrap_switch.off {
-            if $__rdl_meths.has?(klass, meth, :post)
-              posts = $__rdl_meths.get(klass, meth, :post)
-              RDL::Contract::AndContract.check_array(posts, self, ret, *args, &blk)
-            end
+            posts = $__rdl_meths.get(klass, meth, :post)
+            RDL::Contract::AndContract.check_array(posts, self, ret, *args, &blk) if posts
             if matches
               ret = RDL::Type::MethodType.check_ret_types(self, "#{full_method_name}", types, inst, matches, ret, bind, *args, &blk)
             end
