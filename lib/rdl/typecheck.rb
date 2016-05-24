@@ -69,16 +69,39 @@ class RDL::Typecheck
     case e.type
     when :nil
       [a, RDL::Type::NilType.new]
-    when :true, :false, :complex, :rational, :str, :string # constants
+    when :true
+      [a, RDL::Type::NominalType.new(TrueClass)]
+    when :false
+      [a, RDL::Type::NominalType.new(FalseClass)]
+    when :complex, :rational, :str, :string # constants
+      puts "True!" if e.type == :true
       [a, RDL::Type::NominalType.new(e.children[0].class)]
     when :int, :float, :sym # singletons
       [a, RDL::Type::SingletonType.new(e.children[0])]
-    when :dstr # string with interpolation
+    when :dstr, :xstr # string (or execute-string) with interpolation
       ai = a
       e.children.each { |ei| ai, _ = tc(ai, ei) }
       [ai, RDL::Type::NominalType.new(String)]
+    when :dsym # symbol with interpolation
+      ai = a
+      e.children.each { |ei| ai, _ = tc(ai, ei) }
+      [ai, RDL::Type::NominalType.new(Symbol)]
     when :lvar  # local variable
       [a, a[e.children[0]]]
+#    when :regexp # TODO! Options a bit complex
+    when :array
+      ai = a
+      tis = []
+      e.children.each { |ei| ai, ti = tc(ai, ei); tis << ti }
+      [a, RDL::Type::TupleType.new(*tis)]
+#    when :splat # TODO!
+#    when :hash # TODO!
+#    when :kwsplat # TODO!
+    when :irange, :erange
+      a1, t1 = tc(a, e.children[0])
+      a2, t2 = tc(a1, e.children[1])
+      error :nonmatching_range_type, [t1, t2], e if t1 != t2
+      [a2, RDL::Type::GenericType.new(RDL::Type::NominalType.new(Range), t1)]
     when :begin # sequencing
       ai = a
       ti = nil
@@ -94,6 +117,7 @@ end
 # Modify Parser::MESSAGES so can use the awesome parser diagnostics printing!
 type_error_messages = {
   bad_return_type: 'Got type %s where return type %s expected',
+  nonmatching_range_type: 'Attempt to construct range with non-matching types %s and %s'
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

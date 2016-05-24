@@ -88,10 +88,13 @@ class TestTypecheck < Minitest::Test
     }
   end
 
-  def test_dstr
+  def test_dstr_xstr
     self.class.class_eval {
       type "() -> String", typecheck_now: true
       def dstr() "Foo #{42} Bar #{43}"; end
+
+      type "() -> String", typecheck_now: true
+      def xstr() `ls #{42}`; end
     }
   end
 
@@ -118,4 +121,51 @@ class TestTypecheck < Minitest::Test
       def seq() 42; 43; "foo" end
     }
   end
+
+  def test_dsym
+    self.class.class_eval {
+      type "() -> Symbol", typecheck_now: true
+      def dsym() :"foo#{42}"; end
+    }
+  end
+
+  def test_tuple
+    self.class.class_eval {
+      type "() -> [TrueClass, String]", typecheck_now: true
+      def tuple_ts() [true, "42"]; end
+    }
+
+    skip "not supported yet"
+    self.class.class_eval {
+      type "() -> Array<String>", typecheck_now: true
+      def tuple_ss() ["foo", "bar"]; end
+    }
+
+    self.class.class_eval {
+      type "() -> [Fixnum, String]", typecheck_now: true
+      def tuple_fs() [42, "42"]; end
+    }
+  end
+
+  def test_range
+    skip "not supported yet"
+    self.class.class_eval {
+      type "() -> Range<Fixnum>", typecheck_now: true
+      def range1() 1..5; end
+    }
+
+    self.class.class_eval {
+      type "() -> Range<Fixnum>", typecheck_now: true
+      def range2() 1...5; end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "() -> Range<Fixnum>", typecheck_now: true
+        def range1() 1.."foo"; end
+      }
+    }
+
+  end
+
 end
