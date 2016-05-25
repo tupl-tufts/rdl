@@ -1,4 +1,4 @@
-class RDL::Typecheck
+module RDL::Typecheck
 
   class StaticTypeError < StandardError; end
 
@@ -100,6 +100,9 @@ class RDL::Typecheck
     when :irange, :erange
       a1, t1 = tc(a, e.children[0])
       a2, t2 = tc(a1, e.children[1])
+      # promote singleton types to nominal types; safe since Ranges are immutable
+      t1 = RDL::Type::NominalType.new(t1.val.class) if t1.is_a? RDL::Type::SingletonType
+      t2 = RDL::Type::NominalType.new(t2.val.class) if t2.is_a? RDL::Type::SingletonType
       error :nonmatching_range_type, [t1, t2], e if t1 != t2
       [a2, RDL::Type::GenericType.new(RDL::Type::NominalType.new(Range), t1)]
     when :begin # sequencing

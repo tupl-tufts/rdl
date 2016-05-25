@@ -148,7 +148,6 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_range
-    skip "not supported yet"
     self.class.class_eval {
       type "() -> Range<Fixnum>", typecheck_now: true
       def range1() 1..5; end
@@ -162,7 +161,7 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "() -> Range<Fixnum>", typecheck_now: true
-        def range1() 1.."foo"; end
+        def range3() 1.."foo"; end
       }
     }
 

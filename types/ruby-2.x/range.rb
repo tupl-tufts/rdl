@@ -1,7 +1,8 @@
 class Range
   rdl_nowrap
 
-  type_params([:t], nil) { |t| t.member?(self.begin) && t.member?(self.end) } # TODO: And instantiated if t instantiated
+  # Range is immutable, so covariant
+  type_params([:t], nil, variance: [:+]) { |t| t.member?(self.begin) && t.member?(self.end) } # TODO: And instantiated if t instantiated
 
   # TODO: Parse error
 #  type 'self.new', '(begin: [<=> : (u, u) -> Fixnum], end: [<=>, (u, u) -> Fixnum], exclude_end: ?%bool) -> Range<u>'
