@@ -186,10 +186,15 @@ class TestTypecheck < Minitest::Test
     }
   end
 
-  def test_nth
+  def test_nth_back
     self.class.class_eval {
       type "() -> String", typecheck_now: true
-      def nth() $4; end
+      def nth_ref() $4; end
+    }
+
+    self.class.class_eval {
+      type "() -> String", typecheck_now: true
+      def back_ref() $+; end
     }
   end
 

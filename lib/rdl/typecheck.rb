@@ -112,10 +112,10 @@ module RDL::Typecheck
       [a, a[:self]]
     when :lvar  # local variable
       [a, a[e.children[0]]]
-    # when :ivar # TODO!
-    # when :cvar # TODO!
-    # when :gvar # TODO!
-    when :nth_ref
+#    when :ivar # TODO!
+#    when :cvar # TODO!
+#    when :gvar # TODO!
+    when :nth_ref, :back_ref
       [a, RDL::Type::NominalType.new(String)]
     when :begin # sequencing
       ai = a
