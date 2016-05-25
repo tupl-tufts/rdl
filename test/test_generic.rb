@@ -32,7 +32,7 @@ class TestGeneric < Minitest::Test
       nil
     end
   end
-  
+
   def setup
     @ta = RDL::Type::NominalType.new "TestGeneric::A"
     @th = RDL::Type::NominalType.new "TestGeneric::H"
@@ -109,18 +109,25 @@ class TestGeneric < Minitest::Test
     ts5 = RDL::Type::StructuralType.new(m1: tmb, m2: tmc)
     assert (tbss <= ts5)
   end
-  
+
   class C
     type "() -> self"
     def m1() return self; end
     type "() -> self"
     def m2() return C.new; end
+    type "() -> self"
+    def m3() return Object.new; end
   end
-  
+
+  class D < C
+  end
+
   def test_self_type
     c = C.new
     assert(c.m1)
-    assert_raises(RDL::Type::TypeError) { c.m2 }
+    assert(c.m2)
+    assert_raises(RDL::Type::TypeError) { c.m3 }
+    assert(D.new.m1)
   end
 
   def test_member
@@ -138,7 +145,7 @@ class TestGeneric < Minitest::Test
 
   def test_instantiate
     assert_raises(RuntimeError) { Object.new.instantiate!(@tstring) }
-    
+
     # Array<String>
     assert (A.new([]).instantiate!('String'))
     assert (A.new(["a", "b", "c"]).instantiate!(@tstring))

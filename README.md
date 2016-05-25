@@ -358,7 +358,7 @@ A.new.id # okay, returns self
 B.new.id # also okay, returns self
 ```
 
-Note that type `self` means *exactly* the self object, i.e., it is a singleton type. It does not mean "any object of self's class." Thus, for example, `Object#clone` has type `() -> %any`, since it will return a different object. We might change this behavior in the future.
+Thus, the type `self` means "any object of self's class."
 
 ### Type Aliases
 

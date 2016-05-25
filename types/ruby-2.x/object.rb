@@ -26,10 +26,10 @@ class Object
   type :===, '(%any other) -> %bool'
   type :=~, '(%any other) -> nil'
   type :class, '() -> Class'
-  type :clone, '() -> %any'
+  type :clone, '() -> self'
 #  type :define_singleton_method, '(XXXX : *XXXX)') # TODO
   type :display, '(IO port) -> nil'
-  type :dup, '() -> %any an_object'
+  type :dup, '() -> self an_object'
   type :enum_for, '(?Symbol method, *%any args) -> Enumerator<%any>'
   type :enum_for, '(?Symbol method, *%any args) { (*%any args) -> %any } -> Enumerator<%any>'
   type :eql?, '(%any other) -> %bool'

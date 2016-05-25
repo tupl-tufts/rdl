@@ -4,6 +4,9 @@
 ### Added
 - Added `wrap: false` optional argument to `type`, `pre`, and `post`
 
+### Changed
+- Modified `self` type to be any instance of the self's class
+
 ## [1.1.1] - 2016-05-21
 ### Fixed
 - Update code to eliminate Ruby 2.3 warning messages
