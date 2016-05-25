@@ -63,8 +63,8 @@ module RDL::Type
       until states.empty?
         formal, actual = states.pop
         if formal == @args.size && actual == args.size then # Matched all actuals, no formals left over
-	        check_arg_preds(bind, preds) if preds.size>0
-          @args.each_with_index {|a,i| args[i] = block_wrap(slf,inst,a,bind,&args[i]) if a.is_a?(RDL::Type::MethodType) }
+	        check_arg_preds(bind, preds) if preds.size > 0
+          @args.each_with_index {|a,i| args[i] = block_wrap(slf,inst,a,bind,&args[i]) if a.is_a? MethodType }
           blk = block_wrap(slf,inst,@block,bind,&blk) if @block
           return [true, args, blk, bind]
         end
@@ -111,7 +111,7 @@ module RDL::Type
             # no else case; if there is no match, this is a dead end
           end
         else
-          t = RDL::Type::NominalType.new 'Proc' if t.instance_of? MethodType
+          t = NominalType.new 'Proc' if t.instance_of? MethodType
           t = t.instantiate(inst)
           the_actual = nil
           if actual == args.size
@@ -158,7 +158,7 @@ RUBY
 
     def post_cond?(slf, inst, ret, bind, *args)
       new_ret = ret
-      if @ret.is_a?(RDL::Type::MethodType) then
+      if @ret.is_a?(MethodType) then
         if !ret.is_a?(Proc) then
           return [false,ret]
         else
@@ -167,7 +167,7 @@ RUBY
 	end
       end
       method_name = method_name ? method_name + ": " : ""
-      if @ret.is_a?(DependentArgType) then
+      if @ret.is_a? DependentArgType then
         bind.local_variable_set(@ret.name.to_sym, ret)
         check_ret_pred(bind,@ret)
       end
@@ -219,10 +219,10 @@ RUBY
       $__rdl_contract_switch.off {
         matches = [] # types that matched args
         types.each_with_index { |t, i|
-          res,args,blk,bind =t.pre_cond?(blk,slf,inst,bind,*args)
+          res, args, blk, bind = t.pre_cond?(blk, slf, inst, bind, *args)
           matches << i if res
-	}
-	return [matches, args, blk, bind] if matches.size > 0
+	      }
+	      return [matches, args, blk, bind] if matches.size > 0
         method_name = method_name ? method_name + ": " : ""
         raise TypeError, <<RUBY
 #{method_name}Argument type error.
@@ -342,8 +342,8 @@ RUBY
 
     def self.check_block_arg_types(slf, types, inst, bind, *args)
       $__rdl_contract_switch.off {
-	res,args,blk,bind = types.pre_cond?(nil, slf, inst, bind, *args)
-	return [true, args,blk,bind] if res
+	      res,args,blk,bind = types.pre_cond?(nil, slf, inst, bind, *args)
+	      return [true, args, blk, bind] if res
         raise TypeError, <<RUBY
 Proc argument type error.
 Proc type:
@@ -358,8 +358,8 @@ RUBY
 
     def self.check_block_ret_types(slf, types, inst, ret, bind, *args)
       $__rdl_contract_switch.off {
-	res,new_ret = types.post_cond?(slf, inst, ret, bind, *args)
-	return new_ret if res
+	      res,new_ret = types.post_cond?(slf, inst, ret, bind, *args)
+	      return new_ret if res
         raise TypeError, <<RUBY
 Proc return type error.
 Proc type:
