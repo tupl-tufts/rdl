@@ -91,7 +91,10 @@ module RDL::Typecheck
       ai = a
       e.children.each { |ei| ai, _ = tc(env, ai, ei) }
       [ai, RDL::Type::NominalType.new(Symbol)]
-#    when :regexp # TODO! Options a bit complex
+    when :regexp
+      ai = a
+      e.children.each { |ei| ai, _ = tc(env, ai, ei) unless ei.type == :regopt }
+      [ai, RDL::Type::NominalType.new(Regexp)]
     when :array
       ai = a
       tis = []
@@ -137,6 +140,10 @@ module RDL::Typecheck
     when :defined?
       # do not type check subexpression, since it may not be type correct, e.g., undefined variable
       [a, RDL::Type::NominalType.new(String)]
+    # when :lvasgn # TODO!
+    # when :ivasgn # TODO!
+    # when :cvasgn # TODO!
+    # when :gvasgn # TODO!
     when :begin # sequencing
       ai = a
       ti = nil
@@ -151,8 +158,9 @@ end
 
 # Modify Parser::MESSAGES so can use the awesome parser diagnostics printing!
 type_error_messages = {
-  bad_return_type: 'Got type %s where return type %s expected',
-  nonmatching_range_type: 'Attempt to construct range with non-matching types %s and %s'
+  bad_return_type: "got type `%s' where return type `%s' expected",
+  undefined_local_or_method: "undefined local variable or method `%s'",
+  nonmatching_range_type: "attempt to construct range with non-matching types `%s' and `%s'",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

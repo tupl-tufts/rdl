@@ -129,6 +129,18 @@ class TestTypecheck < Minitest::Test
     }
   end
 
+  def test_regexp
+    self.class.class_eval {
+      type "() -> Regexp", typecheck_now: true
+      def regexp1() /foo/; end
+    }
+
+    self.class.class_eval {
+      type "() -> Regexp", typecheck_now: true
+      def regexp2() /foo#{42}bar#{"baz"}/i; end
+    }
+  end
+
   def test_tuple
     self.class.class_eval {
       type "() -> [TrueClass, String]", typecheck_now: true
@@ -215,6 +227,23 @@ class TestTypecheck < Minitest::Test
       type "() -> String", typecheck_now: true
       def defined() defined?(x); end
     }
+  end
+
+  def test_lvar
+    self.class.class_eval {
+      type "(Fixnum, String) -> Fixnum", typecheck_now: true
+      def lvar1(x, y) x; end
+    }
+
+    self.class.class_eval {
+      type "(Fixnum, String) -> String", typecheck_now: true
+      def lvar2(x, y) y; end
+    }
+
+    # self.class.class_eval {
+    #   type "(Fixnum, String) -> String", typecheck_now: true
+    #   def lvar3(x, y) z; end
+    # }
   end
 
 end
