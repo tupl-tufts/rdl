@@ -117,6 +117,23 @@ module RDL::Typecheck
 #    when :gvar # TODO!
     when :nth_ref, :back_ref
       [a, RDL::Type::NominalType.new(String)]
+    when :const
+      c = nil
+      if e.children[0].nil?
+        c = const_get(e.children[1])
+      elsif e.children[0].type == :cbase
+        raise "const cbase not implemented yet" # TODO!
+      elsif e.children[0].type == :lvar
+        raise "const lvar not implemented yet" # TODO!
+      else
+        raise "const other not implemented yet"
+      end
+      case c
+      when TrueClass, FalseClass, Complex, Rational, Fixnum, Bignum, Float, Symbol, Class
+        [a, RDL::Type::SingletonType.new(c)]
+      else
+        [a, RDL::Type::NominalType.new(const_get(e.children[1]).class)]
+      end
     when :begin # sequencing
       ai = a
       ti = nil

@@ -36,55 +36,55 @@ class TestTypecheck < Minitest::Test
     assert_equal 42, id_ff(42)
   end
 
-  def test_consts
+  def test_lits
     self.class.class_eval {
       type "() -> nil", typecheck_now: true
-      def const1() nil; end
+      def lit1() nil; end
     }
 
     self.class.class_eval {
       type "() -> TrueClass", typecheck_now: true
-      def const2() true; end
+      def lit2() true; end
     }
 
     self.class.class_eval {
       type "() -> FalseClass", typecheck_now: true
-      def const3() false; end
+      def lit3() false; end
     }
 
     self.class.class_eval {
       type "() -> Fixnum", typecheck_now: true
-      def const4() 42; end
+      def lit4() 42; end
     }
 
     self.class.class_eval {
       type "() -> Bignum", typecheck_now: true
-      def const5() 123456789123456789123456789; end
+      def lit5() 123456789123456789123456789; end
     }
 
     self.class.class_eval {
       type "() -> Float", typecheck_now: true
-      def const6() 3.14; end
+      def lit6() 3.14; end
     }
 
     self.class.class_eval {
       type "() -> Complex", typecheck_now: true
-      def const7() 1i; end
+      def lit7() 1i; end
     }
 
     self.class.class_eval {
       type "() -> Rational", typecheck_now: true
-      def const8() 2.0r; end
+      def lit8() 2.0r; end
     }
 
     self.class.class_eval {
       type "() -> String", typecheck_now: true
-      def const9() "foo"; end
+      def lit9() "foo"; end
     }
 
     self.class.class_eval {
       type "() -> String", typecheck_now: true
-      def const10() 'foo'; end
+      def lit10() 'foo'; end
     }
   end
 
@@ -195,6 +195,13 @@ class TestTypecheck < Minitest::Test
     self.class.class_eval {
       type "() -> String", typecheck_now: true
       def back_ref() $+; end
+    }
+  end
+
+  def test_const
+    self.class.class_eval {
+      type "() -> ${String}", typecheck_now: true
+      def const_class() String; end
     }
   end
 
