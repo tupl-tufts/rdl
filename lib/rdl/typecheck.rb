@@ -140,7 +140,9 @@ module RDL::Typecheck
     when :defined?
       # do not type check subexpression, since it may not be type correct, e.g., undefined variable
       [a, RDL::Type::NominalType.new(String)]
-    # when :lvasgn # TODO!
+    when :lvasgn
+      a1, t1 = tc(env, a, e.children[1])
+      [a1.merge(e.children[0]=>t1), t1]
     # when :ivasgn # TODO!
     # when :cvasgn # TODO!
     # when :gvasgn # TODO!

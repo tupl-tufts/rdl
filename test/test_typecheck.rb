@@ -118,7 +118,7 @@ class TestTypecheck < Minitest::Test
   def test_seq
     self.class.class_eval {
       type "() -> String", typecheck_now: true
-      def seq() 42; 43; "foo" end
+      def seq() _ = 42; _ = 43; "foo" end
     }
   end
 
@@ -229,7 +229,7 @@ class TestTypecheck < Minitest::Test
     }
   end
 
-  def test_lvar
+  def test_lvar_lvasgn
     self.class.class_eval {
       type "(Fixnum, String) -> Fixnum", typecheck_now: true
       def lvar1(x, y) x; end
@@ -240,6 +240,23 @@ class TestTypecheck < Minitest::Test
       def lvar2(x, y) y; end
     }
 
+    self.class.class_eval {
+      type "() -> Fixnum", typecheck_now: true
+      def lvar3() x = 42; x; end
+    }
+
+    self.class.class_eval {
+      type "() -> Fixnum", typecheck_now: true
+      def lvar4() x = 42; y = x; y; end
+    }
+
+    self.class.class_eval {
+      type "() -> Fixnum", typecheck_now: true
+      def lvar5() x = y = 42; _ = y; x; end
+    }
+  end
+
+  def test_send
     # self.class.class_eval {
     #   type "(Fixnum, String) -> String", typecheck_now: true
     #   def lvar3(x, y) z; end
