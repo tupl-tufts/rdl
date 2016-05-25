@@ -54,18 +54,23 @@ module RDL::Typecheck
     raise RuntimeError, "Method #{name} defined where method #{meth} expected" if name.to_sym != meth
     types.each { |type|
       # TODO will need fancier logic here for matching up more complex arg lists
+      self_type = RDL::Type::NominalType.new(klass)
+      inst = {self: self_type}
+      type = type.instantiate inst
       a = args.children.map { |arg| arg.children[0] }.zip(type.args).to_h
-      _, body_type = tc(a, body)
+      a[:self] = self_type
+      _, body_type = tc(Hash.new, a, body)
       error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body_type <= type.ret
     }
   end
 
   # The actual type checking logic.
+  # [+ env +] is the current environemnt excluding local variables
   # [+ a +] is the (local variable) type environment mapping variables (symbols) to types
   # [+ e +] is the expression to type check
   # Returns [a', t], where a' is the type environment at the end of the expression
   # and t is the type of the expression
-  def self.tc(a, e)
+  def self.tc(env, a, e)
     case e.type
     when :nil
       [a, RDL::Type::NilType.new]
@@ -80,35 +85,42 @@ module RDL::Typecheck
       [a, RDL::Type::SingletonType.new(e.children[0])]
     when :dstr, :xstr # string (or execute-string) with interpolation
       ai = a
-      e.children.each { |ei| ai, _ = tc(ai, ei) }
+      e.children.each { |ei| ai, _ = tc(env, ai, ei) }
       [ai, RDL::Type::NominalType.new(String)]
     when :dsym # symbol with interpolation
       ai = a
-      e.children.each { |ei| ai, _ = tc(ai, ei) }
+      e.children.each { |ei| ai, _ = tc(env, ai, ei) }
       [ai, RDL::Type::NominalType.new(Symbol)]
-    when :lvar  # local variable
-      [a, a[e.children[0]]]
 #    when :regexp # TODO! Options a bit complex
     when :array
       ai = a
       tis = []
-      e.children.each { |ei| ai, ti = tc(ai, ei); tis << ti }
+      e.children.each { |ei| ai, ti = tc(env, ai, ei); tis << ti }
       [a, RDL::Type::TupleType.new(*tis)]
 #    when :splat # TODO!
 #    when :hash # TODO!
 #    when :kwsplat # TODO!
     when :irange, :erange
-      a1, t1 = tc(a, e.children[0])
-      a2, t2 = tc(a1, e.children[1])
+      a1, t1 = tc(env, a, e.children[0])
+      a2, t2 = tc(env, a1, e.children[1])
       # promote singleton types to nominal types; safe since Ranges are immutable
       t1 = RDL::Type::NominalType.new(t1.val.class) if t1.is_a? RDL::Type::SingletonType
       t2 = RDL::Type::NominalType.new(t2.val.class) if t2.is_a? RDL::Type::SingletonType
       error :nonmatching_range_type, [t1, t2], e if t1 != t2
       [a2, RDL::Type::GenericType.new(RDL::Type::NominalType.new(Range), t1)]
+    when :self
+      [a, a[:self]]
+    when :lvar  # local variable
+      [a, a[e.children[0]]]
+    # when :ivar # TODO!
+    # when :cvar # TODO!
+    # when :gvar # TODO!
+    when :nth_ref
+      [a, RDL::Type::NominalType.new(String)]
     when :begin # sequencing
       ai = a
       ti = nil
-      e.children.each { |ei| ai, ti = tc(ai, ei) }
+      e.children.each { |ei| ai, ti = tc(env, ai, ei) }
       [ai, ti]
     else
       raise RuntimeError, "Expression kind #{e.type} unsupported"

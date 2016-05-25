@@ -39,52 +39,52 @@ class TestTypecheck < Minitest::Test
   def test_consts
     self.class.class_eval {
       type "() -> nil", typecheck_now: true
-      def c1() nil; end
+      def const1() nil; end
     }
 
     self.class.class_eval {
       type "() -> TrueClass", typecheck_now: true
-      def c2() true; end
+      def const2() true; end
     }
 
     self.class.class_eval {
       type "() -> FalseClass", typecheck_now: true
-      def c3() false; end
+      def const3() false; end
     }
 
     self.class.class_eval {
       type "() -> Fixnum", typecheck_now: true
-      def c4() 42; end
+      def const4() 42; end
     }
 
     self.class.class_eval {
       type "() -> Bignum", typecheck_now: true
-      def c5() 123456789123456789123456789; end
+      def const5() 123456789123456789123456789; end
     }
 
     self.class.class_eval {
       type "() -> Float", typecheck_now: true
-      def c6() 3.14; end
+      def const6() 3.14; end
     }
 
     self.class.class_eval {
       type "() -> Complex", typecheck_now: true
-      def c7() 1i; end
+      def const7() 1i; end
     }
 
     self.class.class_eval {
       type "() -> Rational", typecheck_now: true
-      def c8() 2.0r; end
+      def const8() 2.0r; end
     }
 
     self.class.class_eval {
       type "() -> String", typecheck_now: true
-      def c9() "foo"; end
+      def const9() "foo"; end
     }
 
     self.class.class_eval {
       type "() -> String", typecheck_now: true
-      def c10() 'foo'; end
+      def const10() 'foo'; end
     }
   end
 
@@ -101,17 +101,17 @@ class TestTypecheck < Minitest::Test
   def test_singleton
     self.class.class_eval {
       type "() -> 42", typecheck_now: true
-      def s1() 42; end
+      def sing1() 42; end
     }
 
     self.class.class_eval {
       type "() -> 3.14", typecheck_now: true
-      def s2() 3.14; end
+      def sing2() 3.14; end
     }
 
     self.class.class_eval {
       type "() -> :foo", typecheck_now: true
-      def s3() :foo; end
+      def sing3() :foo; end
     }
   end
 
@@ -164,7 +164,33 @@ class TestTypecheck < Minitest::Test
         def range3() 1.."foo"; end
       }
     }
+  end
 
+  def test_self
+    self.class.class_eval {
+      type "() -> self", typecheck_now: true
+      def self1() self; end
+    }
+
+    skip "not supported yet"
+    self.class.class_eval {
+      type "() -> self", typecheck_now: true
+      def self2() TestTypecheck.new; end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "() -> self", typecheck_now: true
+        def self3() Object.new; end
+      }
+    }
+  end
+
+  def test_nth
+    self.class.class_eval {
+      type "() -> String", typecheck_now: true
+      def nth() $4; end
+    }
   end
 
 end
