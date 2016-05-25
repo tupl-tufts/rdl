@@ -63,7 +63,7 @@ module RDL::Type
       until states.empty?
         formal, actual = states.pop
         if formal == @args.size && actual == args.size then # Matched all actuals, no formals left over
-	  check_arg_preds(bind, preds) if preds.size>0
+	        check_arg_preds(bind, preds) if preds.size>0
           @args.each_with_index {|a,i| args[i] = block_wrap(slf,inst,a,bind,&args[i]) if a.is_a?(RDL::Type::MethodType) }
           blk = block_wrap(slf,inst,@block,bind,&blk) if @block
           return [true, args, blk, bind]
@@ -71,8 +71,8 @@ module RDL::Type
         next if formal >= @args.size # Too many actuals to match
         t = @args[formal]
         if t.instance_of? AnnotatedArgType then
-	  bind.local_variable_set(t.name.to_sym,args[actual])
-	  t = t.type
+	        bind.local_variable_set(t.name.to_sym,args[actual])
+	        t = t.type
         end
         case t
         when OptionalType
@@ -97,7 +97,7 @@ module RDL::Type
             states << [formal+1, actual] # skip
           end
         when DependentArgType
-	  bind.local_variable_set(t.name.to_sym,args[actual])
+	        bind.local_variable_set(t.name.to_sym,args[actual])
           preds.push(t)
           t = t.type.instantiate(inst)
           the_actual = nil
