@@ -134,6 +134,9 @@ module RDL::Typecheck
       else
         [a, RDL::Type::NominalType.new(const_get(e.children[1]).class)]
       end
+    when :defined?
+      # do not type check subexpression, since it may not be type correct, e.g., undefined variable
+      [a, RDL::Type::NominalType.new(String)]
     when :begin # sequencing
       ai = a
       ti = nil

@@ -203,6 +203,18 @@ class TestTypecheck < Minitest::Test
       type "() -> ${String}", typecheck_now: true
       def const_class() String; end
     }
+
+    self.class.class_eval {
+      type "() -> nil", typecheck_now: true
+      def const_nil() NIL; end
+    }
+  end
+
+  def test_defined
+    self.class.class_eval {
+      type "() -> String", typecheck_now: true
+      def defined() defined?(x); end
+    }
   end
 
 end
