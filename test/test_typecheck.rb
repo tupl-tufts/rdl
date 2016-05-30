@@ -256,18 +256,79 @@ class TestTypecheck < Minitest::Test
     }
   end
 
-  def test_send
+  def test_send_basic
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "(Fixnum, String) -> String", typecheck_now: true
-        def send1(x, y) z; end
+        def send_basic1(x, y) z; end
       }
     }
 
     self.class.class_eval {
-      type :send2_helper, "() -> Fixnum"
+      type :send_basic2_helper, "() -> Fixnum"
       type "() -> Fixnum", typecheck_now: true
-      def send2() send2_helper; end
+      def send_basic2() send_basic2_helper; end
+    }
+
+    self.class.class_eval {
+      type :send_basic3_helper, "(Fixnum) -> Fixnum"
+      type "() -> Fixnum", typecheck_now: true
+      def send_basic3() send_basic3_helper(42); end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type :send_basic4_helper, "(Fixnum) -> Fixnum"
+        type "() -> Fixnum", typecheck_now: true
+        def send_basic4() send_basic4_helper("42"); end
+      }
+    }
+
+    self.class.class_eval {
+      type :send_basic5_helper, "(Fixnum, String) -> Fixnum"
+      type "() -> Fixnum", typecheck_now: true
+      def send_basic5() send_basic5_helper(42, "42"); end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type :send_basic6_helper, "(Fixnum, String) -> Fixnum"
+        type "() -> Fixnum", typecheck_now: true
+        def send_basic6() send_basic6_helper(42, 43); end
+      }
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type :send_basic7_helper, "(Fixnum, String) -> Fixnum"
+        type "() -> Fixnum", typecheck_now: true
+        def send_basic7() send_basic7_helper("42", "43"); end
+      }
+    }
+  end
+
+  def test_send_inter
+    self.class.class_eval {
+      type :send_inter1_helper, "(Fixnum) -> Fixnum"
+      type :send_inter1_helper, "(String) -> String"
+      type "() -> Fixnum", typecheck_now: true
+      def send_inter1() send_inter1_helper(42); end
+    }
+
+    self.class.class_eval {
+      type :send_inter2_helper, "(Fixnum) -> Fixnum"
+      type :send_inter2_helper, "(String) -> String"
+      type "() -> String", typecheck_now: true
+      def send_inter2() send_inter2_helper("42"); end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type :send_inter3_helper, "(Fixnum) -> Fixnum"
+        type :send_inter3_helper, "(String) -> String"
+        type "() -> Fixnum", typecheck_now: true
+        def send_inter3() send_inter3_helper(:forty_two); end
+      }
     }
   end
 

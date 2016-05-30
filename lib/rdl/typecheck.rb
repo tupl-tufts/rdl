@@ -179,16 +179,16 @@ module RDL::Typecheck
         if tmeth_inters.size == 1
           msg = <<RUBY
 Method type:
-#{ tmeth_inters[0].map { |t| "        " + t.to_s }.join("\n") }
+#{ tmeth_inters[0].map { |ti| "        " + ti.to_s }.join("\n") }
 Actual arg types#{tactuals.size > 1 ? "s" : ""}:
-        (#{tactuals.map { |t| t.to_s }.join(', ')})
+        (#{tactuals.map { |ti| ti.to_s }.join(', ')})
 RUBY
-        msg.chomp! # remove trailing newline
-        error :arg_type_single_receiver_error, [trecv.name, e.children[1], msg], e
+          msg.chomp! # remove trailing newline
+          error :arg_type_single_receiver_error, [trecv.name, e.children[1], msg], e
+        else
+          # TODO more complicated error message here
+          raise RuntimeError, "Not implemented yet #{tmeth_inters}"
         end
-      else
-        raise RuntimeError, "Not implemented yet"
-        # TODO more complicated error message here
       end
       # TODO: issue warning if trets.size > 1 ?
       [ai, RDL::Type::UnionType.new(*trets)]
@@ -207,6 +207,27 @@ RUBY
   # return true if actuals match method type, false otherwise
   # Very similar to MethodType#pre_cond?
   def self.check_arg_types_one(tmeth, tactuals)
+    states = [[0, 0]] # position in tmeth, position in tactuals
+    tformals = tmeth.args
+    until states.empty?
+      formal, actual = states.pop
+      if formal == tformals.size && actual == tactuals.size # Matched everything
+        return true
+      end
+      next if formal >= tformals.size # Too many actuals to match
+      t = tformals[formal]
+      case t
+      when RDL::Type::OptionalType
+        raise RuntimeError, "Not implemented yet"
+      else
+        if actual == tactuals.size
+          raise RuntimeError, "Not implemented yet"
+        elsif tactuals[actual] <= t
+          states << [formal+1, actual+1] # match!
+          # no else case; if there is no match, this is a dead end
+        end
+      end
+    end
     false
   end
 
