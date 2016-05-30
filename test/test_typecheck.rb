@@ -257,10 +257,19 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_send
-    # self.class.class_eval {
-    #   type "(Fixnum, String) -> String", typecheck_now: true
-    #   def lvar3(x, y) z; end
-    # }
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum, String) -> String", typecheck_now: true
+        def send1(x, y) z; end
+      }
+    }
+
+    skip "Not implemented"
+    self.class.class_eval {
+      type :send2_helper, "() -> Fixnum"
+      type "() -> Fixnum", typecheck_now: true
+      def send2() send2_helper; end
+    }
   end
 
 end

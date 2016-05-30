@@ -35,6 +35,7 @@ module RDL::Typecheck
   end
 
   def self.typecheck(klass, meth)
+    raise RuntimeError, "singleton method typechecking not supported yet" if RDL::Util.has_singleton_marker(klass)
     file, line = $__rdl_meths.get(klass, meth, :source_location)
     digest = Digest::MD5.file file
     cache_hit = (($__rdl_ruby_parser_cache.has_key? file) &&
@@ -114,7 +115,9 @@ module RDL::Typecheck
     when :self
       [a, a[:self]]
     when :lvar  # local variable
-      [a, a[e.children[0]]]
+      x = e.children[0] # the variable
+      error :undefined_local_or_method, x, e unless a.has_key? x
+      [a, a[x]]
 #    when :ivar # TODO!
 #    when :cvar # TODO!
 #    when :gvar # TODO!
@@ -146,6 +149,33 @@ module RDL::Typecheck
     # when :ivasgn # TODO!
     # when :cvasgn # TODO!
     # when :gvasgn # TODO!
+    when :send, :csend
+      # children[0] = receiver; if nil, receiver is self
+      # children[1] = method name, a symbol
+      # children [2..] = actual args
+      puts e
+      ai = a
+      tactuals = []
+      e.children[2..-1].each { |ei| ai, ti = tc(env, ai, ei); tactuals << ti }
+      ai, trecv = if e.children[0].nil? then [ai, ai[:self]] else tc(env, ai, e.children[0]) end # if no receiver, self is receiver
+      tmeth_inters = [] # Array<Array<MethodType>>, array of intersection types, since recv might not resolve to a single type
+      case trecv
+      when RDL::Type::NominalType
+        t = $__rdl_meths.get(trecv.name, e.children[1], :type)
+        error :no_instance_method_type, [trecv.name, e.children[1]], e unless t
+        tmeth_inters << t
+      else
+        raise RuntimeError, "receiver type #{trecv} not supported yet"
+      end
+      tmeth_inters.each { |tmeth_inter| # Array<MethodType>
+        # tmeth_inter is an intersection
+        matches = []
+        tmeth_inter.each_with_index { |tmeth, i| # [MethodType, Fixnum]
+          matches << i if check_arg_types_one(tmeth, tactuals)
+        }
+        raise RuntimeError, "??"
+      }
+      # TODO!
     when :begin # sequencing
       ai = a
       ti = nil
@@ -156,6 +186,14 @@ module RDL::Typecheck
     end
   end
 
+  # [+ tmeth +] is MethodType
+  # [+ actuals +] is Array<Type> containing the actual argument types
+  # return true if actuals match method type, false otherwise
+  # Very similar to MethodType#pre_cond?
+  def self.check_arg_types_one(tmeth, tactuals)
+    false
+  end
+
 end
 
 # Modify Parser::MESSAGES so can use the awesome parser diagnostics printing!
@@ -163,6 +201,7 @@ type_error_messages = {
   bad_return_type: "got type `%s' where return type `%s' expected",
   undefined_local_or_method: "undefined local variable or method `%s'",
   nonmatching_range_type: "attempt to construct range with non-matching types `%s' and `%s'",
+  no_instance_method_type: "no type information for instance method `%s#%s'",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

@@ -57,6 +57,7 @@ module RDL::Type
     end
 
     # TODO: Check blk
+    # Very similar to Typecheck.check_arg_types
     def pre_cond?(blk, slf, inst, bind, *args)
       states = [[0, 0]] # [position in @arg, position in args]
       preds = []
