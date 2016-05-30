@@ -264,7 +264,6 @@ class TestTypecheck < Minitest::Test
       }
     }
 
-    skip "Not implemented"
     self.class.class_eval {
       type :send2_helper, "() -> Fixnum"
       type "() -> Fixnum", typecheck_now: true

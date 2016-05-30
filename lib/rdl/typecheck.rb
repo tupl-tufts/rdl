@@ -153,7 +153,6 @@ module RDL::Typecheck
       # children[0] = receiver; if nil, receiver is self
       # children[1] = method name, a symbol
       # children [2..] = actual args
-      puts e
       ai = a
       tactuals = []
       e.children[2..-1].each { |ei| ai, ti = tc(env, ai, ei); tactuals << ti }
@@ -167,15 +166,32 @@ module RDL::Typecheck
       else
         raise RuntimeError, "receiver type #{trecv} not supported yet"
       end
-      tmeth_inters.each { |tmeth_inter| # Array<MethodType>
-        # tmeth_inter is an intersection
-        matches = []
-        tmeth_inter.each_with_index { |tmeth, i| # [MethodType, Fixnum]
-          matches << i if check_arg_types_one(tmeth, tactuals)
+      trets = [] # all possible return types
+      # there might be more than one return type because:
+      #   multiple cases of an intersection type might match
+      #   there might be multiple types in tmeth_inters
+      tmeth_inters.each { |tmeth_inter| # Array<MethodType>; tmeth_inter is an intersection
+        tmeth_inter.each { |tmeth| # MethodType
+          trets << tmeth.ret if check_arg_types_one(tmeth, tactuals)
         }
-        raise RuntimeError, "??"
       }
-      # TODO!
+      if trets.empty?
+        if tmeth_inters.size == 1
+          msg = <<RUBY
+Method type:
+#{ tmeth_inters[0].map { |t| "        " + t.to_s }.join("\n") }
+Actual arg types#{tactuals.size > 1 ? "s" : ""}:
+        (#{tactuals.map { |t| t.to_s }.join(', ')})
+RUBY
+        msg.chomp! # remove trailing newline
+        error :arg_type_single_receiver_error, [trecv.name, e.children[1], msg], e
+        end
+      else
+        raise RuntimeError, "Not implemented yet"
+        # TODO more complicated error message here
+      end
+      # TODO: issue warning if trets.size > 1 ?
+      [ai, RDL::Type::UnionType.new(*trets)]
     when :begin # sequencing
       ai = a
       ti = nil
@@ -202,6 +218,7 @@ type_error_messages = {
   undefined_local_or_method: "undefined local variable or method `%s'",
   nonmatching_range_type: "attempt to construct range with non-matching types `%s' and `%s'",
   no_instance_method_type: "no type information for instance method `%s#%s'",
+  arg_type_single_receiver_error: "argument type error for instance method `%s#%s'\n%s",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)
