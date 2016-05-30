@@ -218,10 +218,30 @@ RUBY
       t = tformals[formal]
       case t
       when RDL::Type::OptionalType
-        raise RuntimeError, "Not implemented yet"
+        t = t.type #TODO .instantiate(inst)
+        if actual == tactuals.size
+          states << [formal+1, actual] # skip over optinal formal
+        elsif tactuals[actual] <= t
+          states << [formal+1, actual+1] # match
+          states << [formal+1, actual] # skip
+        else
+          states << [formal+1, actual] # types don't match; must skip this formal
+        end
+      when RDL::Type::VarargType
+        t = t.type #TODO .instantiate(inst)
+        if actual == tactuals.size
+          states << [formal+1, actual] # skip to allow empty vararg at end
+        elsif tactuals[actual] <= t
+          states << [formal, actual+1] # match, more varargs coming
+          states << [formal+1, actual+1] # match, no more varargs
+          states << [formal+1, actual] # skip over even though matches
+        else
+          states << [formal+1, actual] # doesn't match, must skip
+        end
       else
         if actual == tactuals.size
-          raise RuntimeError, "Not implemented yet"
+          next
+          # TODO: finite hash
         elsif tactuals[actual] <= t
           states << [formal+1, actual+1] # match!
           # no else case; if there is no match, this is a dead end

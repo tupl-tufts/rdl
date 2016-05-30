@@ -84,7 +84,7 @@ module RDL::Type
             states << [formal+1, actual+1] # match
             states << [formal+1, actual] # skip
           else
-            states << [formal+1, actual]  # type doesn't match; must skip this formal
+            states << [formal+1, actual]  # types don't match; must skip this formal
           end
         when VarargType
           t = t.type.instantiate(inst)
@@ -93,9 +93,9 @@ module RDL::Type
           elsif t.member?(args[actual], vars_wild: true)
             states << [formal, actual+1] # match, more varargs coming
             states << [formal+1, actual+1] # match, no more varargs
-#            states << [formal+1, actual] # skip - can't happen, varargs have to be at end
+            states << [formal+1, actual] # skip over even though matches
           else
-            states << [formal+1, actual] # skip
+            states << [formal+1, actual] # doesn't match, must skip
           end
         when DependentArgType
 	        bind.local_variable_set(t.name.to_sym,args[actual])
