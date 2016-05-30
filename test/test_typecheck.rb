@@ -489,48 +489,48 @@ class TestTypecheck < Minitest::Test
      def send_opt_varargs5d() _send_opt_varargs5(42, 43, 44); end
    }
 
-  assert_raises(RDL::Typecheck::StaticTypeError) {
+   assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "() -> Fixnum", typecheck_now: true
         def send_opt_varargs5e() _send_opt_varargs5("42"); end
       }
-  }
+    }
 
-  assert_raises(RDL::Typecheck::StaticTypeError) {
+    assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "() -> Fixnum", typecheck_now: true
         def send_opt_varargs5f() _send_opt_varargs5(42, "43"); end
       }
-  }
+    }
 
-  assert_raises(RDL::Typecheck::StaticTypeError) {
+    assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "() -> Fixnum", typecheck_now: true
         def send_opt_varargs5g() _send_opt_varargs5(42, 43, "44"); end
       }
-  }
+    }
 
-  self.class.class_eval {
-    type :_send_opt_varargs6, "(?Fixnum, String) -> Fixnum"
-    type "() -> Fixnum", typecheck_now: true
-    def send_opt_varargs6a() _send_opt_varargs6("44"); end
-    type "() -> Fixnum", typecheck_now: true
-    def send_opt_varargs6b() _send_opt_varargs6(43, "44"); end
-  }
+    self.class.class_eval {
+      type :_send_opt_varargs6, "(?Fixnum, String) -> Fixnum"
+      type "() -> Fixnum", typecheck_now: true
+      def send_opt_varargs6a() _send_opt_varargs6("44"); end
+      type "() -> Fixnum", typecheck_now: true
+      def send_opt_varargs6b() _send_opt_varargs6(43, "44"); end
+    }
 
- assert_raises(RDL::Typecheck::StaticTypeError) {
+    assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "() -> Fixnum", typecheck_now: true
         def send_opt_varargs6c() _send_opt_varargs6(); end
       }
- }
+    }
 
- assert_raises(RDL::Typecheck::StaticTypeError) {
+    assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "() -> Fixnum", typecheck_now: true
         def send_opt_varargs6d() _send_opt_varargs6(43, "44", 45); end
       }
- }
+    }
 
   end
 
