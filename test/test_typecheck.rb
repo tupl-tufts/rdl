@@ -15,13 +15,15 @@ class TestTypecheck < Minitest::Test
     @tstring = $__rdl_parser.scan_str "#T String"
     @tsymbol = $__rdl_parser.scan_str "#T Symbol"
     @tregexp = $__rdl_parser.scan_str "#T Regexp"
+    @aself = {self: $__rdl_parser.scan_str("#T TestTypecheck")}
   end
 
+  # [+ a +] is the environment, a map from symbols to types; empty if omitted
   # [+ expr +] is a string containing the expression to typecheck
   # returns the type of the expression
-  def do_tc(expr)
+  def do_tc(a = {}, expr)
     ast = Parser::CurrentRuby.parse expr
-    _, t = RDL::Typecheck.tc Hash.new, Hash.new, ast
+    _, t = RDL::Typecheck.tc Hash.new, a, ast
     return t
   end
 
@@ -164,6 +166,14 @@ class TestTypecheck < Minitest::Test
       type "(Fixnum, String) -> String", typecheck_now: true
       def lvar2(x, y) y; end
     }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      # really a send
+      self.class.class_eval {
+        type "(Fixnum, String) -> String", typecheck_now: true
+        def lvar3(x, y) z; end
+      }
+    }
   end
 
   def test_lvasgn
@@ -173,320 +183,153 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_send_basic
-    do_tc("z()")
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "(Fixnum, String) -> String", typecheck_now: true
-        def send_basic1(x, y) z; end
-      }
-    }
-
     self.class.class_eval {
       type :_send_basic2, "() -> Fixnum"
-      type "() -> Fixnum", typecheck_now: true
-      def send_basic2() _send_basic2; end
-    }
-
-    self.class.class_eval {
       type :_send_basic3, "(Fixnum) -> Fixnum"
-      type "() -> Fixnum", typecheck_now: true
-      def send_basic3a() _send_basic3(42); end
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_basic3b() _send_basic3("42"); end
-      }
-    }
-
-    self.class.class_eval {
       type :_send_basic4, "(Fixnum, String) -> Fixnum"
-      type "() -> Fixnum", typecheck_now: true
-      def send_basic4a() _send_basic4(42, "42"); end
     }
 
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_basic4b() _send_basic4(42, 43); end
-      }
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_basic4c() _send_basic4("42", "43"); end
-      }
-    }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc(@aself, "z") }
+    assert do_tc(@aself, "_send_basic2") <= @tfixnum
+    assert do_tc(@aself, "_send_basic3(42)") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_basic3('42')") }
+    assert do_tc(@aself, "_send_basic4(42, '42')") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_basic4(42, 43)") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_basic4('42', '43')") }
   end
 
   def test_send_inter
     self.class.class_eval {
       type :_send_inter1, "(Fixnum) -> Fixnum"
       type :_send_inter1, "(String) -> String"
-      type "() -> Fixnum", typecheck_now: true
-      def send_inter1a() _send_inter1(42); end
-      type "() -> String", typecheck_now: true
-      def send_inter1b() _send_inter1("42"); end
     }
+    assert do_tc(@aself, "_send_inter1(42)") <= @tfixnum
+    assert do_tc(@aself, "_send_inter1('42')") <= @tstring
 
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_inter1c() _send_inter3(:forty_two); end
-      }
-    }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc(@aself, "_send_inter1(:forty_two)") }
   end
 
   def test_send_opt_varargs
+    # from test_type_contract.rb
     self.class.class_eval {
       type :_send_opt_varargs1, "(Fixnum, ?Fixnum) -> Fixnum"
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs1a() _send_opt_varargs1(42); end
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs1b() _send_opt_varargs1(42, 43); end
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs1c() _send_opt_varargs1; end
-      }
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs1d() _send_opt_varargs1(42, 43, 44); end
-      }
-    }
-
-    self.class.class_eval {
       type :_send_opt_varargs2, "(Fixnum, *Fixnum) -> Fixnum"
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs2a() _send_opt_varargs2(42); end
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs2b() _send_opt_varargs2(42, 43); end
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs2c() _send_opt_varargs2(42, 43, 44); end
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs2d() _send_opt_varargs2(42, 43, 44, 45); end
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs2e() _send_opt_varargs2; end
-      }
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs2f() _send_opt_varargs2("42"); end
-      }
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs2g() _send_opt_varargs2(42, "43"); end
-      }
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs2h() _send_opt_varargs2(42, 43, "44"); end
-      }
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs2i() _send_opt_varargs2(42, 43, 44, "45"); end
-      }
-    }
-
-    self.class.class_eval {
       type :_send_opt_varargs3, "(Fixnum, ?Fixnum, ?Fixnum, *Fixnum) -> Fixnum"
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs3a() _send_opt_varargs3(42); end
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs3b() _send_opt_varargs3(42, 43); end
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs3c() _send_opt_varargs3(42, 43, 44); end
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs3d() _send_opt_varargs3(42, 43, 44, 45); end
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs3e() _send_opt_varargs3(42, 43, 44, 45, 46); end
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs3f() _send_opt_varargs3(); end
-      }
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs3g() _send_opt_varargs3("42"); end
-      }
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs3h() _send_opt_varargs3(42, "43"); end
-      }
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs3i() _send_opt_varargs3(42, 43, "44"); end
-      }
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs3j() _send_opt_varargs3(42, 43, 44, "45"); end
-      }
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs3k() _send_opt_varargs3(42, 43, 44, 45, "46"); end
-      }
-    }
-
-    self.class.class_eval {
       type :_send_opt_varargs4, "(?Fixnum) -> Fixnum"
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs4a() _send_opt_varargs4(); end
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs4b() _send_opt_varargs4(42); end
-    }
-
-   assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs4c() _send_opt_varargs4("42"); end
-      }
-   }
-
-   assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs4d() _send_opt_varargs4(42, 43); end
-      }
-   }
-
-   assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs4e() _send_opt_varargs4(42, 43, 44); end
-      }
-   }
-
-   self.class.class_eval {
-     type :_send_opt_varargs5, "(*Fixnum) -> Fixnum"
-     type "() -> Fixnum", typecheck_now: true
-     def send_opt_varargs5a() _send_opt_varargs5(); end
-     type "() -> Fixnum", typecheck_now: true
-     def send_opt_varargs5b() _send_opt_varargs5(42); end
-     type "() -> Fixnum", typecheck_now: true
-     def send_opt_varargs5c() _send_opt_varargs5(42, 43); end
-     type "() -> Fixnum", typecheck_now: true
-     def send_opt_varargs5d() _send_opt_varargs5(42, 43, 44); end
-   }
-
-   assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs5e() _send_opt_varargs5("42"); end
-      }
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs5f() _send_opt_varargs5(42, "43"); end
-      }
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs5g() _send_opt_varargs5(42, 43, "44"); end
-      }
-    }
-
-    self.class.class_eval {
+      type :_send_opt_varargs5, "(*Fixnum) -> Fixnum"
       type :_send_opt_varargs6, "(?Fixnum, String) -> Fixnum"
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs6a() _send_opt_varargs6("44"); end
-      type "() -> Fixnum", typecheck_now: true
-      def send_opt_varargs6b() _send_opt_varargs6(43, "44"); end
     }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs6c() _send_opt_varargs6(); end
-      }
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Fixnum", typecheck_now: true
-        def send_opt_varargs6d() _send_opt_varargs6(43, "44", 45); end
-      }
-    }
+    assert do_tc(@aself, "_send_opt_varargs1(42)") <= @tfixnum
+    assert do_tc(@aself, "_send_opt_varargs1(42, 43)") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs1()") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs1(42, 43, 44)") }
+    assert do_tc(@aself, "_send_opt_varargs2(42)") <= @tfixnum
+    assert do_tc(@aself, "_send_opt_varargs2(42, 43)") <= @tfixnum
+    assert do_tc(@aself, "_send_opt_varargs2(42, 43, 44)") <= @tfixnum
+    assert do_tc(@aself, "_send_opt_varargs2(42, 43, 44, 45)") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs2()") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs2('42')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs2(42, '43')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs2(42, 43, '44')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs2(42, 43, 44, '45')") }
+    assert do_tc(@aself, "_send_opt_varargs3(42)") <= @tfixnum
+    assert do_tc(@aself, "_send_opt_varargs3(42, 43)") <= @tfixnum
+    assert do_tc(@aself, "_send_opt_varargs3(42, 43, 44)") <= @tfixnum
+    assert do_tc(@aself, "_send_opt_varargs3(42, 43, 45)") <= @tfixnum
+    assert do_tc(@aself, "_send_opt_varargs3(42, 43, 46)") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs3()") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs3('42')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs3(42, '43')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs3(42, 43, '44')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs3(42, 43, 44, '45')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs3(42, 43, 44, 45, '46')") }
+    assert do_tc(@aself, "_send_opt_varargs4()") <= @tfixnum
+    assert do_tc(@aself, "_send_opt_varargs4(42)") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs4('42')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs4(42, 43)") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs4(42, 43, 44)") }
+    assert do_tc(@aself, "_send_opt_varargs5()") <= @tfixnum
+    assert do_tc(@aself, "_send_opt_varargs5(42)") <= @tfixnum
+    assert do_tc(@aself, "_send_opt_varargs5(42, 43)") <= @tfixnum
+    assert do_tc(@aself, "_send_opt_varargs5(42, 43, 44)") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs5('42')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs5(42, '43')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs5(42, 43, '44')") }
+    assert do_tc(@aself, "_send_opt_varargs6('44')") <= @tfixnum
+    assert do_tc(@aself, "_send_opt_varargs6(43, '44')") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs6()") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_opt_varargs6(43, '44', 45)") }
   end
 
   def test_send_named_args
+    # from test_type_contract.rb
     skip "Not ready yet"
     self.class.class_eval {
       type :_send_named_args1, "(x: Fixnum) -> Fixnum"
-      type "() -> Fixnum", typecheck_now: true
-      def send_named_args1a() _send_named_args1(x: 42); end
+      type :_send_named_args2, "(x: Fixnum, y: String) -> Fixnum"
+      type :_send_named_args3, "(Fixnum, y: String) -> Fixnum"
+      type :_send_named_args4, "(Fixnum, x: Fixnum, y: String) -> Fixnum"
+      type :_send_named_args5, "(x: Fixnum, y: ?String) -> Fixnum"
+      type :_send_named_args6, "(x: ?Fixnum, y: String) -> Fixnum"
+      type :_send_named_args7, "(x: ?Fixnum, y: ?String) -> Fixnum"
+      type :_send_named_args7, "(?Fixnum x: ?Symbol, y: ?String) -> Fixnum"
     }
-
-    self.class.class_eval {
-      type "() -> Fixnum", typecheck_now: true
-      def send_named_args1b() _send_named_args1(x: "42"); end
-    }
-
-    self.class.class_eval {
-      type "() -> Fixnum", typecheck_now: true
-      def send_named_args1c() _send_named_args1; end
-    }
-
-    self.class.class_eval {
-      type "() -> Fixnum", typecheck_now: true
-      def send_named_args1d() _send_named_args1(x: 42, y: 42); end
-    }
-
-    self.class.class_eval {
-      type "() -> Fixnum", typecheck_now: true
-      def send_named_args1e() _send_named_args1(y: 42); end
-    }
-
-    self.class.class_eval {
-      type "() -> Fixnum", typecheck_now: true
-      def send_named_args1f() _send_named_args1(42); end
-    }
-
-    self.class.class_eval {
-      type "() -> Fixnum", typecheck_now: true
-      def send_named_args1g() _send_named_args1(42, x: "42"); end
-    }
+    assert do_tc(@aself, "_send_named_args1(x: 42)") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args1(x: '42')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args1()") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args1(x: 42, y: 42)") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args1(y: 42)") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args1(42)") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args1(42, x: '42')") }
+    assert do_tc(@aself, "_send_named_args2(x: 42, y: '43')") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args2()") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args2(x: 42)") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args2(x: '42', y: '43')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args2(42, '43')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args2(42, x: 42, y: '43')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args2(x: 42, y: '43', z: 44)") }
+    assert do_tc(@aself, "_send_named_args3(42, y: '43')") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args3(42, y: 43)") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args3()") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args3(42, 43, y: 44)") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args3(42, y: 43, z: 44)") }
+    assert do_tc(@aself, "_send_named_args4(42, x: 43, y: '44')") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args4(42, x: 43)") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args4(42, y: '43')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args4()") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args4(42, 43, x: 44, y: '45')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args4(42, x: 43, y: '44', z: 45)") }
+    assert do_tc(@aself, "_send_named_args5(x: 42, y: '43')") <= @tfixnum
+    assert do_tc(@aself, "_send_named_args5(x: 42)") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args5()") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args5(x: 42, y: 43)") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args5(x: 42, y: 43, z: 44)") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args5(3, x: 42, y: 43)") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args5(3, x: 42)") }
+    assert do_tc(@aself, "_send_named_args6(x: 43, y: '44')") <= @tfixnum
+    assert do_tc(@aself, "_send_named_args6(y: '44')") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args6()") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args6(x: '43', y: '44')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args6(42, x: 43, y: '44')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args6(x: 43, y: '44', z: 45)") }
+    assert do_tc(@aself, "_send_named_args7()") <= @tfixnum
+    assert do_tc(@aself, "_send_named_args7(x: 43)") <= @tfixnum
+    assert do_tc(@aself, "_send_named_args7(y: '44')") <= @tfixnum
+    assert do_tc(@aself, "_send_named_args7(x: 43, y: '44')") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args7(x: '43', y: '44')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args7(41, x: 43, y: '44')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args7(x: 43, y: '44', z: 45)") }
+    assert do_tc(@aself, "_send_named_args8()") <= @tfixnum
+    assert do_tc(@aself, "_send_named_args8(43)") <= @tfixnum
+    assert do_tc(@aself, "_send_named_args8(x: :foo)") <= @tfixnum
+    assert do_tc(@aself, "_send_named_args8(43, x: :foo)") <= @tfixnum
+    assert do_tc(@aself, "_send_named_args8(y: 'foo')") <= @tfixnum
+    assert do_tc(@aself, "_send_named_args8(43, y: 'foo')") <= @tfixnum
+    assert do_tc(@aself, "_send_named_args8(x: :foo, y: 'foo')") <= @tfixnum
+    assert do_tc(@aself, "_send_named_args8(43, x: :foo, y: 'foo')") <= @tfixnum
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args8(43, 44, x: :foo, y: 'foo')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args8(43, x: 'foo', y: 'foo')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args8(43, x: :foo, y: 'foo', z: 44)") }
   end
 
 end
