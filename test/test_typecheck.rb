@@ -3,7 +3,29 @@ require_relative '../lib/rdl.rb'
 
 class TestTypecheck < Minitest::Test
 
-  def test_fixnum_id
+  def setup
+    @tnil = $__rdl_parser.scan_str "#T nil"
+    @ttrue = $__rdl_parser.scan_str "#T TrueClass"
+    @tfalse = $__rdl_parser.scan_str "#T FalseClass"
+    @tfixnum = $__rdl_parser.scan_str "#T Fixnum"
+    @tbignum = $__rdl_parser.scan_str "#T Bignum"
+    @tfloat = $__rdl_parser.scan_str "#T Float"
+    @tcomplex = $__rdl_parser.scan_str "#T Complex"
+    @trational = $__rdl_parser.scan_str "#T Rational"
+    @tstring = $__rdl_parser.scan_str "#T String"
+    @tsymbol = $__rdl_parser.scan_str "#T Symbol"
+    @tregexp = $__rdl_parser.scan_str "#T Regexp"
+  end
+
+  # [+ expr +] is a string containing the expression to typecheck
+  # returns the type of the expression
+  def do_tc(expr)
+    ast = Parser::CurrentRuby.parse expr
+    _, t = RDL::Typecheck.tc Hash.new, Hash.new, ast
+    return t
+  end
+
+  def test_basics
     self.class.class_eval {
       type "(Fixnum) -> Fixnum", typecheck_now: true
       def id_ff(x) x; end
@@ -37,58 +59,21 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_lits
-    self.class.class_eval {
-      type "() -> nil", typecheck_now: true
-      def lit1() nil; end
-    }
-
-    self.class.class_eval {
-      type "() -> TrueClass", typecheck_now: true
-      def lit2() true; end
-    }
-
-    self.class.class_eval {
-      type "() -> FalseClass", typecheck_now: true
-      def lit3() false; end
-    }
-
-    self.class.class_eval {
-      type "() -> Fixnum", typecheck_now: true
-      def lit4() 42; end
-    }
-
-    self.class.class_eval {
-      type "() -> Bignum", typecheck_now: true
-      def lit5() 123456789123456789123456789; end
-    }
-
-    self.class.class_eval {
-      type "() -> Float", typecheck_now: true
-      def lit6() 3.14; end
-    }
-
-    self.class.class_eval {
-      type "() -> Complex", typecheck_now: true
-      def lit7() 1i; end
-    }
-
-    self.class.class_eval {
-      type "() -> Rational", typecheck_now: true
-      def lit8() 2.0r; end
-    }
-
-    self.class.class_eval {
-      type "() -> String", typecheck_now: true
-      def lit9() "foo"; end
-    }
-
-    self.class.class_eval {
-      type "() -> String", typecheck_now: true
-      def lit10() 'foo'; end
-    }
+    assert do_tc("nil") <= @tnil
+    assert do_tc("true") <= @ttrue
+    assert do_tc("false") <= @tfalse
+    assert do_tc("42") <= $__rdl_parser.scan_str("#T 42")
+    assert do_tc("123456789123456789123456789") <= @tbignum
+    assert do_tc("3.14") <= $__rdl_parser.scan_str("#T 3.14")
+    assert do_tc("1i") <= @tcomplex
+    assert do_tc("2.0r") <= @trational
+    assert do_tc("'42'") <= @tstring
+    assert do_tc("\"42\"") <= @tstring
+    assert do_tc(":foo") <= $__rdl_parser.scan_str("#T :foo")
   end
 
   def test_dstr_xstr
+    # Hard to read if these are inside of strings, so leave like this
     self.class.class_eval {
       type "() -> String", typecheck_now: true
       def dstr() "Foo #{42} Bar #{43}"; end
@@ -98,31 +83,12 @@ class TestTypecheck < Minitest::Test
     }
   end
 
-  def test_singleton
-    self.class.class_eval {
-      type "() -> 42", typecheck_now: true
-      def sing1() 42; end
-    }
-
-    self.class.class_eval {
-      type "() -> 3.14", typecheck_now: true
-      def sing2() 3.14; end
-    }
-
-    self.class.class_eval {
-      type "() -> :foo", typecheck_now: true
-      def sing3() :foo; end
-    }
-  end
-
   def test_seq
-    self.class.class_eval {
-      type "() -> String", typecheck_now: true
-      def seq() _ = 42; _ = 43; "foo" end
-    }
+    assert do_tc("_ = 42; _ = 43; 'foo'") <= @tstring
   end
 
   def test_dsym
+    # Hard to read if these are inside of strings, so leave like this
     self.class.class_eval {
       type "() -> Symbol", typecheck_now: true
       def dsym() :"foo#{42}"; end
@@ -130,55 +96,31 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_regexp
-    self.class.class_eval {
-      type "() -> Regexp", typecheck_now: true
-      def regexp1() /foo/; end
-    }
+    assert do_tc("/foo/") <= @tregexp
 
     self.class.class_eval {
+      # Hard to read if these are inside of strings, so leave like this
       type "() -> Regexp", typecheck_now: true
       def regexp2() /foo#{42}bar#{"baz"}/i; end
     }
   end
 
   def test_tuple
-    self.class.class_eval {
-      type "() -> [TrueClass, String]", typecheck_now: true
-      def tuple_ts() [true, "42"]; end
-    }
+    assert do_tc("[true, '42']") <= $__rdl_parser.scan_str("#T [TrueClass, String]")
 
     skip "not supported yet"
-    self.class.class_eval {
-      type "() -> Array<String>", typecheck_now: true
-      def tuple_ss() ["foo", "bar"]; end
-    }
-
-    self.class.class_eval {
-      type "() -> [Fixnum, String]", typecheck_now: true
-      def tuple_fs() [42, "42"]; end
-    }
+    assert do_tc("['foo', 'bar']") <= $__rdl_parser.scan_str("#T Array<String>")
+    assert do_tc("[42, '42']") <= $__rdl_parser.scan_str("#T [Fixnum, String]")
   end
 
   def test_range
-    self.class.class_eval {
-      type "() -> Range<Fixnum>", typecheck_now: true
-      def range1() 1..5; end
-    }
-
-    self.class.class_eval {
-      type "() -> Range<Fixnum>", typecheck_now: true
-      def range2() 1...5; end
-    }
-
-    assert_raises(RDL::Typecheck::StaticTypeError) {
-      self.class.class_eval {
-        type "() -> Range<Fixnum>", typecheck_now: true
-        def range3() 1.."foo"; end
-      }
-    }
+    assert do_tc("1..5") <= $__rdl_parser.scan_str("#T Range<Fixnum>")
+    assert do_tc("1...5") <= $__rdl_parser.scan_str("#T Range<Fixnum>")
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("1..'foo'") }
   end
 
   def test_self
+    # These need to be inside an actual class
     self.class.class_eval {
       type "() -> self", typecheck_now: true
       def self1() self; end
@@ -199,37 +141,20 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_nth_back
-    self.class.class_eval {
-      type "() -> String", typecheck_now: true
-      def nth_ref() $4; end
-    }
-
-    self.class.class_eval {
-      type "() -> String", typecheck_now: true
-      def back_ref() $+; end
-    }
+    assert do_tc("$4") <= @tstring
+    assert do_tc("$+") <= @tstring
   end
 
   def test_const
-    self.class.class_eval {
-      type "() -> ${String}", typecheck_now: true
-      def const_class() String; end
-    }
-
-    self.class.class_eval {
-      type "() -> nil", typecheck_now: true
-      def const_nil() NIL; end
-    }
+    assert do_tc("String") <= $__rdl_parser.scan_str("#T ${String}")
+    assert do_tc("NIL") <= @tnil
   end
 
   def test_defined
-    self.class.class_eval {
-      type "() -> String", typecheck_now: true
-      def defined() defined?(x); end
-    }
+    assert do_tc("defined?(x)") <= @tstring
   end
 
-  def test_lvar_lvasgn
+  def test_lvar
     self.class.class_eval {
       type "(Fixnum, String) -> Fixnum", typecheck_now: true
       def lvar1(x, y) x; end
@@ -239,21 +164,12 @@ class TestTypecheck < Minitest::Test
       type "(Fixnum, String) -> String", typecheck_now: true
       def lvar2(x, y) y; end
     }
+  end
 
-    self.class.class_eval {
-      type "() -> Fixnum", typecheck_now: true
-      def lvar3() x = 42; x; end
-    }
-
-    self.class.class_eval {
-      type "() -> Fixnum", typecheck_now: true
-      def lvar4() x = 42; y = x; y; end
-    }
-
-    self.class.class_eval {
-      type "() -> Fixnum", typecheck_now: true
-      def lvar5() x = y = 42; _ = y; x; end
-    }
+  def test_lvasgn
+    assert do_tc("x = 42; x") <= @tfixnum
+    assert do_tc("x = 42; y = x; y") <= @tfixnum
+    assert do_tc("x = y = 42; x") <= @tfixnum
   end
 
   def test_send_basic
@@ -531,7 +447,45 @@ class TestTypecheck < Minitest::Test
         def send_opt_varargs6d() _send_opt_varargs6(43, "44", 45); end
       }
     }
+  end
 
+  def test_send_named_args
+    skip "Not ready yet"
+    self.class.class_eval {
+      type :_send_named_args1, "(x: Fixnum) -> Fixnum"
+      type "() -> Fixnum", typecheck_now: true
+      def send_named_args1a() _send_named_args1(x: 42); end
+    }
+
+    self.class.class_eval {
+      type "() -> Fixnum", typecheck_now: true
+      def send_named_args1b() _send_named_args1(x: "42"); end
+    }
+
+    self.class.class_eval {
+      type "() -> Fixnum", typecheck_now: true
+      def send_named_args1c() _send_named_args1; end
+    }
+
+    self.class.class_eval {
+      type "() -> Fixnum", typecheck_now: true
+      def send_named_args1d() _send_named_args1(x: 42, y: 42); end
+    }
+
+    self.class.class_eval {
+      type "() -> Fixnum", typecheck_now: true
+      def send_named_args1e() _send_named_args1(y: 42); end
+    }
+
+    self.class.class_eval {
+      type "() -> Fixnum", typecheck_now: true
+      def send_named_args1f() _send_named_args1(42); end
+    }
+
+    self.class.class_eval {
+      type "() -> Fixnum", typecheck_now: true
+      def send_named_args1g() _send_named_args1(42, x: "42"); end
+    }
   end
 
 end
