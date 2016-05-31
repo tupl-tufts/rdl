@@ -173,6 +173,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_send_basic
+    do_tc("z()")
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "(Fixnum, String) -> String", typecheck_now: true
