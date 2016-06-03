@@ -115,6 +115,13 @@ class TestTypecheck < Minitest::Test
     assert do_tc("[42, '42']") <= $__rdl_parser.scan_str("#T [Fixnum, String]")
   end
 
+  def test_hash
+    assert do_tc("{x: true, y: false}") <= $__rdl_parser.scan_str("#T {x: TrueClass, y: FalseClass}")
+    assert do_tc("{'a' => 1, 'b' => 2}") <= $__rdl_parser.scan_str("#T Hash<String, 1 or 2>")
+    assert do_tc("{1 => 'a', 2 => 'b'}") <= $__rdl_parser.scan_str("#T Hash<1 or 2, String>")
+    assert do_tc("{}") <= $__rdl_parser.scan_str("#T {}")
+  end
+
   def test_range
     assert do_tc("1..5") <= $__rdl_parser.scan_str("#T Range<Fixnum>")
     assert do_tc("1...5") <= $__rdl_parser.scan_str("#T Range<Fixnum>")
@@ -262,8 +269,8 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_send_named_args
+    skip "Not implemented yet"
     # from test_type_contract.rb
-    skip "Not ready yet"
     self.class.class_eval {
       type :_send_named_args1, "(x: Fixnum) -> Fixnum"
       type :_send_named_args2, "(x: Fixnum, y: String) -> Fixnum"
@@ -272,7 +279,7 @@ class TestTypecheck < Minitest::Test
       type :_send_named_args5, "(x: Fixnum, y: ?String) -> Fixnum"
       type :_send_named_args6, "(x: ?Fixnum, y: String) -> Fixnum"
       type :_send_named_args7, "(x: ?Fixnum, y: ?String) -> Fixnum"
-      type :_send_named_args7, "(?Fixnum x: ?Symbol, y: ?String) -> Fixnum"
+      type :_send_named_args7, "(?Fixnum, x: ?Symbol, y: ?String) -> Fixnum"
     }
     assert do_tc(@aself, "_send_named_args1(x: 42)") <= @tfixnum
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args1(x: '42')") }

@@ -5,6 +5,7 @@ module RDL::Typecheck
   @@type_true = RDL::Type::NominalType.new TrueClass
   @@type_false = RDL::Type::NominalType.new FalseClass
   @@type_string = RDL::Type::NominalType.new String
+  @@type_hash = RDL::Type::NominalType.new Hash
 
   class ASTMapper < AST::Processor
     attr_accessor :line_defs
@@ -102,7 +103,29 @@ module RDL::Typecheck
       e.children.each { |ei| ai, ti = tc(env, ai, ei); tis << ti }
       [a, RDL::Type::TupleType.new(*tis)]
 #    when :splat # TODO!
-#    when :hash # TODO!
+    when :hash
+      ai = a
+      tlefts = []
+      trights = []
+      is_fh = true
+      e.children.each { |p|
+        # each child is a pair
+        ai, tleft = tc(env, ai, p.children[0])
+        tlefts << tleft
+        ai, tright = tc(env, ai, p.children[1])
+        trights << tright
+        is_fh = false unless tleft.is_a?(RDL::Type::SingletonType) && tleft.val.is_a?(Symbol)
+      }
+      if is_fh
+        # keys are all symbols
+        fh = tlefts.map { |t| t.val }.zip(trights).to_h
+        [ai, RDL::Type::FiniteHashType.new(fh)]
+      else
+        tleft = RDL::Type::UnionType.new(*tlefts)
+        tright = RDL::Type::UnionType.new(*trights)
+        [ai, RDL::Type::GenericType.new(@@type_hash, tleft, tright)]
+      end
+      #TODO test!
 #    when :kwsplat # TODO!
     when :irange, :erange
       a1, t1 = tc(env, a, e.children[0])
@@ -216,6 +239,9 @@ RUBY
       end
       next if formal >= tformals.size # Too many actuals to match
       t = tformals[formal]
+      if t.instance_of? RDL::Type::AnnotatedArgType
+        t = t.type
+      end
       case t
       when RDL::Type::OptionalType
         t = t.type #TODO .instantiate(inst)
