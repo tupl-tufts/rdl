@@ -94,24 +94,23 @@ class TestLe < Minitest::Test
     tarray = NominalType.new("Array")
     assert (t1 <= t1)
     assert (t2 <= t2)
-    skip "Not implemented below here"
+    assert (not (t2 <= t1))
+    assert (not (tarray <= t1))
     assert (t1 <= t2) # covariant subtyping since tuples are *immutable*
     t123 = $__rdl_parser.scan_str "#T [1, 2, 3]"
     tfff = $__rdl_parser.scan_str "#T [Fixnum, Fixnum, Fixnum]"
-    assert (t123 <= tfff)
-    assert (not (t2 <= t1))
-    assert (not (tarray <= t1))
+    assert (t123 <= tfff) # covariant subtyping with singletons
 
     # subtyping of tuples and arrays
-    t12 = $__rdl_parser.scan_str "#T [1, 'foo']"
+    t12 = $__rdl_parser.scan_str "#T [Fixnum, String]"
     taf = $__rdl_parser.scan_str "#T Array<Fixnum or String>"
     assert (t12 <= taf) # subtyping allowed by t12 promoted to array
     tff = $__rdl_parser.scan_str "#T [Fixnum, String]"
     assert (not (t12 <= tff)) # t12 has been promoted to array, no longer subtype
 
-    t12a = $__rdl_parser.scan_str "#T [1, 'foo']"
+    t12a = $__rdl_parser.scan_str "#T [Fixnum, String]"
     tffa = $__rdl_parser.scan_str "#T [Fixnum, String]"
-    assert (t12a <= tff) # this is allowed here because t12a is still a tuple
+    assert (t12a <= tffa) # this is allowed here because t12a is still a tuple
     tafa = $__rdl_parser.scan_str "#T Array<Fixnum or String>"
     assert (not (t12a <= tafa)) # subtyping not allowed because t12a <= tffa unsatisfiable after t12a promoted
   end

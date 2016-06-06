@@ -4,13 +4,18 @@ module RDL::Type
   # A specialized GenericType for tuples, i.e., fixed-sized arrays
   class TupleType < Type
     attr_reader :params
-    attr_reader :array
+    attr_reader :array  # either nil or array type if self has been promoted to array
+    attr_reader :ubounds # upper bounds this tuple has been compared with using <=
+
+    @@array_type = nil
 
     # no caching because array might be mutated
     def initialize(*params)
       raise RuntimeError, "Attempt to create tuple type with non-type param" unless params.all? { |p| p.is_a? Type }
       @params = params
       @array = nil # emphasize initially this is a tuple, not an array
+      @ubounds = []
+      @@array_type = NominalType.new(Array) unless @@array_type
       super()
     end
 
@@ -38,9 +43,21 @@ module RDL::Type
     def <=(other)
       return @array <= other if @array
       return true if other.instance_of? TopType
-      return self == other
-      # Subtyping with Array not allowed
-      # All positions of Tuple are invariant since tuples are mutable
+      if other.instance_of? TupleType
+        # Tuples are immutable, so covariant subtyping allowed
+        return false unless @params.length == other.params.length
+        return false unless @params.zip(other.params).all? { |left, right| left <= right }
+        # subyping check passed
+        ubounds << other # probably overkill to maintain this; currently only need to know some ubound exists
+        return true
+      end
+      return self == other if other.instance_of? TupleType
+      if (other.instance_of? GenericType) && (other.base == @@array_type)
+        return false unless ubounds.empty? # if there's any prior upper bound of a tuple, promotion to array will fail
+        @array = GenericType.new(@@array_type, UnionType.new(*@params))
+        return (self <= other)
+      end
+      return false
     end
 
     def member?(obj, *args)
@@ -60,5 +77,6 @@ module RDL::Type
       # note don't change hash value if @array becomes non-nil
       73 * @params.hash
     end
+
   end
 end
