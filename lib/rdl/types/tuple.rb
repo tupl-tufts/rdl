@@ -5,7 +5,8 @@ module RDL::Type
   class TupleType < Type
     attr_reader :params
     attr_reader :array  # either nil or array type if self has been promoted to array
-    attr_reader :ubounds # upper bounds this tuple has been compared with using <=
+    attr_accessor :ubounds # upper bounds this tuple has been compared with using <=
+    attr_accessor :lbounds # lower bounds...
 
     @@array_type = nil
 
@@ -15,6 +16,7 @@ module RDL::Type
       @params = params
       @array = nil # emphasize initially this is a tuple, not an array
       @ubounds = []
+      @lbounds = []
       @@array_type = NominalType.new(Array) unless @@array_type
       super()
     end
@@ -43,19 +45,20 @@ module RDL::Type
     def <=(other)
       return @array <= other if @array
       return true if other.instance_of? TopType
+      other = other.array if other.instance_of?(TupleType) && other.array
       if other.instance_of? TupleType
         # Tuples are immutable, so covariant subtyping allowed
         return false unless @params.length == other.params.length
         return false unless @params.zip(other.params).all? { |left, right| left <= right }
         # subyping check passed
-        ubounds << other # probably overkill to maintain this; currently only need to know some ubound exists
+        ubounds << other
+        other.lbounds << self
         return true
       end
       return self == other if other.instance_of? TupleType
       if (other.instance_of? GenericType) && (other.base == @@array_type)
-        return false unless ubounds.empty? # if there's any prior upper bound of a tuple, promotion to array will fail
         @array = GenericType.new(@@array_type, UnionType.new(*@params))
-        return (self <= other)
+        return (self <= other) && (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
       end
       return false
     end

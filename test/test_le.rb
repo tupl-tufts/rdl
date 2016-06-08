@@ -99,23 +99,53 @@ class TestLe < Minitest::Test
     assert (t1 <= t2) # covariant subtyping since tuples are *immutable*
     t123 = $__rdl_parser.scan_str "#T [1, 2, 3]"
     tfff = $__rdl_parser.scan_str "#T [Fixnum, Fixnum, Fixnum]"
+    tooo = $__rdl_parser.scan_str "#T [Object, Object, Object]"
     assert (t123 <= tfff) # covariant subtyping with singletons
+    assert (tfff <= tooo)
+    assert (t123 <= tooo)
 
     # subtyping of tuples and arrays
-    t12 = $__rdl_parser.scan_str "#T [Fixnum, String]"
-    taf = $__rdl_parser.scan_str "#T Array<Fixnum or String>"
-    assert (t12 <= taf) # subtyping allowed by t12 promoted to array
-    tff = $__rdl_parser.scan_str "#T [Fixnum, String]"
-    assert (not (t12 <= tff)) # t12 has been promoted to array, no longer subtype
+    tfs_1 = $__rdl_parser.scan_str "#T [Fixnum, String]"
+    tafs_1 = $__rdl_parser.scan_str "#T Array<Fixnum or String>"
+    assert (tfs_1 <= tafs_1) # subtyping allowed by t12 promoted to array
+    tfs2_1 = $__rdl_parser.scan_str "#T [Fixnum, String]"
+    assert (not (tfs_1 <= tfs2_1)) # t12 has been promoted to array, no longer subtype
 
-    t12a = $__rdl_parser.scan_str "#T [Fixnum, String]"
-    tffa = $__rdl_parser.scan_str "#T [Fixnum, String]"
-    assert (t12a <= tffa) # this is allowed here because t12a is still a tuple
-    tafa = $__rdl_parser.scan_str "#T Array<Fixnum or String>"
-    assert (not (t12a <= tafa)) # subtyping not allowed because t12a <= tffa unsatisfiable after t12a promoted
+    tfs_2 = $__rdl_parser.scan_str "#T [Fixnum, String]"
+    tfs2_2 = $__rdl_parser.scan_str "#T [Fixnum, String]"
+    assert (tfs_2 <= tfs2_2) # this is allowed here because tfs_2 is still a tuple
+    tafs_2 = $__rdl_parser.scan_str "#T Array<Fixnum or String>"
+    assert (not (tfs_2 <= tafs_2)) # subtyping not allowed because tfs_2 <= tfs2_2 unsatisfiable after tfs_2 promoted
+
+    tfs_3 = $__rdl_parser.scan_str "#T [Fixnum, String]"
+    tfs2_3 = $__rdl_parser.scan_str "#T [Object, Object]"
+    assert (tfs_3 <= tfs2_3) # this is allowed here because t12a is still a tuple
+    tafs_3 = $__rdl_parser.scan_str "#T Array<Object>"
+    assert (not (tfs2_3 <= tafs_3)) # subtyping not allowed because tfs_3 <= tfs2_3 unsatisfiable after tfs2_3 promoted
+
+    tfs_4 = $__rdl_parser.scan_str "#T [Fixnum, String]"
+    tfs2_4 = $__rdl_parser.scan_str "#T [Fixnum, String]"
+    assert (tfs_4 <= tfs2_4) # allowed, types are the same
+    tafs_4 = $__rdl_parser.scan_str "#T Array<Fixnum or String>"
+    assert (tfs2_4 <= tafs_4) # allowed, both tfs2_4 and tfs_4 promoted to array
+    tfs3_4 = $__rdl_parser.scan_str "#T [Fixnum, String]"
+    assert (not(tfs_4 <= tfs3_4)) # not allowed, tfs_4 has been promoted
   end
 
+  def test_finite_hash
+    # t12 = $__rdl_parser.scan_str "#T {a: 1, b: 2}"
+    # tfs = $__rdl_parser.scan_str "#T {a: Fixnum, b: Fixnum}"
+    # too = $__rdl_parser.scan_str "#T {a: Object, b: Object}"
+    # assert (t12 <= tfs)
+    # assert (t12 <= too)
+    # assert (tfs <= too)
+    # assert (not (tfs <= t12))
+    # assert (not (too <= tfs))
+    # assert (not (too <= t12))
 
+    # subtyping of finite hashes and hashes
+
+  end
 
   def test_method
     tss = MethodType.new([@tstring], nil, @tstring)

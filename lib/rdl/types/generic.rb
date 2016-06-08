@@ -48,6 +48,7 @@ module RDL::Type
     end
 
     def <=(other)
+      other = other.array if other.instance_of?(TupleType) && other.array
       formals, variance, _ = $__rdl_type_params[base.name]
       # do check here to avoid hiding errors if generic type written
       # with wrong number of parameters but never checked against
@@ -77,7 +78,7 @@ module RDL::Type
         other.methods.each_pair { |m, t|
           return false unless k.method_defined? m
           types = $__rdl_meths.get(k, m, :type)
-          if types            
+          if types
             return false unless types.all? { |t_self| t_self.instantiate(inst) <= t }
           end
         }
