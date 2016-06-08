@@ -4,9 +4,9 @@ module RDL::Type
   # A specialized GenericType for tuples, i.e., fixed-sized arrays
   class TupleType < Type
     attr_reader :params
-    attr_reader :array  # either nil or array type if self has been promoted to array
-    attr_accessor :ubounds # upper bounds this tuple has been compared with using <=
-    attr_accessor :lbounds # lower bounds...
+    attr_reader :array   # either nil or array type if self has been promoted to array
+    attr_reader :ubounds # upper bounds this tuple has been compared with using <=
+    attr_reader :lbounds # lower bounds...
 
     @@array_type = nil
 
@@ -55,9 +55,10 @@ module RDL::Type
         other.lbounds << self
         return true
       end
-      return self == other if other.instance_of? TupleType
       if (other.instance_of? GenericType) && (other.base == @@array_type)
         @array = GenericType.new(@@array_type, UnionType.new(*@params))
+        # note since we promoted this, lbounds and ubounds will be ignored in future constraints, which
+        # is good because otherwise we'd get infinite loops
         return (self <= other) && (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
       end
       return false

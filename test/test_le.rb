@@ -133,17 +133,17 @@ class TestLe < Minitest::Test
   end
 
   def test_finite_hash
-    # t12 = $__rdl_parser.scan_str "#T {a: 1, b: 2}"
-    # tfs = $__rdl_parser.scan_str "#T {a: Fixnum, b: Fixnum}"
-    # too = $__rdl_parser.scan_str "#T {a: Object, b: Object}"
-    # assert (t12 <= tfs)
-    # assert (t12 <= too)
-    # assert (tfs <= too)
-    # assert (not (tfs <= t12))
-    # assert (not (too <= tfs))
-    # assert (not (too <= t12))
+    t12 = $__rdl_parser.scan_str "#T {a: 1, b: 2}"
+    tfs = $__rdl_parser.scan_str "#T {a: Fixnum, b: Fixnum}"
+    too = $__rdl_parser.scan_str "#T {a: Object, b: Object}"
+    assert (t12 <= tfs)
+    assert (t12 <= too)
+    assert (tfs <= too)
+    assert (not (tfs <= t12))
+    assert (not (too <= tfs))
+    assert (not (too <= t12))
 
-    # subtyping of finite hashes and hashes
+    # subtyping of finite hashes and hashes; same pattern as tuples
 
   end
 
