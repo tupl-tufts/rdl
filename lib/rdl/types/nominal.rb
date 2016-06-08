@@ -1,10 +1,11 @@
 require_relative 'type'
+require_relative 'nil'
 
 module RDL::Type
   class NominalType < Type
     attr_reader :name # string
 
-    @@cache = {}
+    @@cache = { "NilClass" => NilType.new }
 
     class << self
       alias :__new__ :new
@@ -12,7 +13,7 @@ module RDL::Type
 
     def self.new(name)
       name = name.to_s
-      return NilType.new if name == "NilClass"
+#      return NilType.new if name == "NilClass" # now it's in the cache
       t = @@cache[name]
       return t if t
       t = self.__new__ name

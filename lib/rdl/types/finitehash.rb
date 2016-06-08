@@ -67,6 +67,8 @@ module RDL::Type
         rest.each_pair { |k, tright|
           return false unless tright.instance_of? OptionalType
         }
+        ubounds << other
+        other.lbounds << self
         return true
       end
       if (other.instance_of? GenericType) && (other.base == @@hash_type)
