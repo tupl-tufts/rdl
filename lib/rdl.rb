@@ -13,13 +13,16 @@ def RDL.config
 end
 require_relative 'rdl/info.rb'
 
-# Method info table with kinds:
-# :pre to array of precondition contracts
-# :post to array of postcondition contracts
-# :type to array of types
-# :source_location to [filename, linenumber] location of most recent definition
-# :typecheck - boolean that is true if method should be statically type checked
-$__rdl_meths = RDL::Info.new
+# Method/variable info table with kinds:
+# For methods
+#   :pre to array of precondition contracts
+#   :post to array of postcondition contracts
+#   :type to array of types
+#   :source_location to [filename, linenumber] location of most recent definition
+#   :typecheck - boolean that is true if method should be statically type checked
+# For variables
+#   :type to type
+$__rdl_info = RDL::Info.new
 
 # Map from full_method_name to number of times called when wrapped
 $__rdl_wrapped_calls = Hash.new 0
@@ -75,6 +78,7 @@ $__rdl_special_types = {'%any' => RDL::Type::TopType.new,
 $__rdl_nil_type = RDL::Type::NilType.new
 $__rdl_true_type = RDL::Type::NominalType.new TrueClass
 $__rdl_false_type = RDL::Type::NominalType.new FalseClass
+$__rdl_fixnum_type = RDL::Type::NominalType.new Fixnum
 $__rdl_string_type = RDL::Type::NominalType.new String
 $__rdl_array_type = RDL::Type::NominalType.new Array
 $__rdl_hash_type = RDL::Type::NominalType.new Hash

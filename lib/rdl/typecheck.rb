@@ -34,7 +34,7 @@ module RDL::Typecheck
 
   def self.typecheck(klass, meth)
     raise RuntimeError, "singleton method typechecking not supported yet" if RDL::Util.has_singleton_marker(klass)
-    file, line = $__rdl_meths.get(klass, meth, :source_location)
+    file, line = $__rdl_info.get(klass, meth, :source_location)
     digest = Digest::MD5.file file
     cache_hit = (($__rdl_ruby_parser_cache.has_key? file) &&
                  ($__rdl_ruby_parser_cache[file][0] == digest))
@@ -46,7 +46,7 @@ module RDL::Typecheck
       $__rdl_ruby_parser_cache[file] = [digest, cache]
     end
     ast = $__rdl_ruby_parser_cache[file][1][:line_defs][line]
-    types = $__rdl_meths.get(klass, meth, :type)
+    types = $__rdl_info.get(klass, meth, :type)
     raise RuntimeError, "Can't typecheck method with no types?!" if types.nil? or types == []
 
     name, args, body = *ast
@@ -180,7 +180,7 @@ module RDL::Typecheck
       tmeth_inters = [] # Array<Array<MethodType>>, array of intersection types, since recv might not resolve to a single type
       case trecv
       when RDL::Type::NominalType
-        t = $__rdl_meths.get(trecv.name, e.children[1], :type)
+        t = $__rdl_info.get(trecv.name, e.children[1], :type)
         error :no_instance_method_type, [trecv.name, e.children[1]], e unless t
         tmeth_inters << t
       else

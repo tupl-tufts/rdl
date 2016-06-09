@@ -60,7 +60,7 @@ module RDL::Type
         # similar logic in GenericType
         other.methods.each_pair { |m, t|
           return false unless k.method_defined? m
-          types = $__rdl_meths.get(k, m, :type)
+          types = $__rdl_info.get(k, m, :type)
           if types
             return false unless types.all? { |t_self| t_self <= t }
           end

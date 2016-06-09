@@ -332,4 +332,21 @@ RUBY
     assert(not(RDL::Wrap.wrapped?(TestRDL, :nwrap8)))
   end
 
+  def test_var_type
+    self.class.class_eval {
+      var_type :@foo, "Fixnum"
+      var_type :@@foo, "String"
+      var_type :$foo, "Symbol"
+    }
+    assert_equal $__rdl_fixnum_type, $__rdl_info.get(TestRDL, :@foo, :type)
+    assert_equal $__rdl_string_type, $__rdl_info.get(TestRDL, :@@foo, :type)
+    assert_equal $__rdl_symbol_type, $__rdl_info.get(TestRDL, :$foo, :type)
+    assert_raises(RuntimeError) {
+      self.class.class_eval { var_type :@foo, "String" }
+    }
+    assert_raises(RuntimeError) {
+      self.class.class_eval { var_type :foo, "String" }
+    }
+  end
+
 end

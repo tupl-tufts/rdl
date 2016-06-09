@@ -7,7 +7,7 @@ class RDL::Wrap
     klass = klass.to_s
     meth = meth.to_sym
     while $__rdl_aliases[klass] && $__rdl_aliases[klass][meth]
-      if $__rdl_meths.has_any?(klass, meth, [:pre, :post, :type])
+      if $__rdl_info.has_any?(klass, meth, [:pre, :post, :type])
         raise RuntimeError, "Alias #{klass}\##{meth} has contracts. Contracts are only allowed on methods, not aliases."
       end
       meth = $__rdl_aliases[klass][meth]
@@ -32,7 +32,7 @@ class RDL::Wrap
       return if wrapped? klass, meth
       return if RDL::Config.instance.nowrap.member? klass
       raise ArgumentError, "Attempt to wrap #{klass.to_s}\##{meth.to_s}" if klass.to_s =~ /^RDL::/
-      $__rdl_meths.set(klass_str, meth, :source_location, klass.instance_method(meth).source_location)
+      $__rdl_info.set(klass_str, meth, :source_location, klass.instance_method(meth).source_location)
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
       # return if (klass.method_defined? meth_old) # now checked above by wrapped? call
       is_singleton_method = RDL::Util.has_singleton_marker(klass_str)
@@ -55,17 +55,17 @@ class RDL::Wrap
             #{if not(is_singleton_method) then "inst[:self] = RDL::Type::NominalType.new(self.class)" end}
 #            puts "Intercepted #{full_method_name}(\#{args.join(", ")}) { \#{blk} }, inst = \#{inst.inspect}"
             meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
-            RDL::Typecheck.typecheck(klass, meth) if $__rdl_meths.get(klass, meth, :typecheck)
-            pres = $__rdl_meths.get(klass, meth, :pre)
+            RDL::Typecheck.typecheck(klass, meth) if $__rdl_info.get(klass, meth, :typecheck)
+            pres = $__rdl_info.get(klass, meth, :pre)
             RDL::Contract::AndContract.check_array(pres, self, *args, &blk) if pres
-            types = $__rdl_meths.get(klass, meth, :type)
+            types = $__rdl_info.get(klass, meth, :type)
             if types
               matches,args,blk,bind = RDL::Type::MethodType.check_arg_types("#{full_method_name}", self, bind, types, inst, *args, &blk)
             end
           }
 	  ret = send(#{meth_old.inspect}, *args, &blk)
           $__rdl_wrap_switch.off {
-            posts = $__rdl_meths.get(klass, meth, :post)
+            posts = $__rdl_info.get(klass, meth, :post)
             RDL::Contract::AndContract.check_array(posts, self, ret, *args, &blk) if posts
             if matches
               ret = RDL::Type::MethodType.check_ret_types(self, "#{full_method_name}", types, inst, matches, ret, bind, *args, &blk)
@@ -196,7 +196,7 @@ class Object
     $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
       klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Precondition", *args, &blk)
       if meth
-        $__rdl_meths.add(klass, meth, :pre, contract)
+        $__rdl_info.add(klass, meth, :pre, contract)
         if wrap
           if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
             RDL::Wrap.wrap(klass, meth)
@@ -215,7 +215,7 @@ class Object
     $__rdl_contract_switch.off {
       klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Postcondition", *args, &blk)
       if meth
-        $__rdl_meths.add(klass, meth, :post, contract)
+        $__rdl_info.add(klass, meth, :post, contract)
         if wrap
           if RDL::Util.method_defined?(klass, meth) || meth == :initialize
             RDL::Wrap.wrap(klass, meth)
@@ -258,8 +258,8 @@ class Object
 #        if (meth.to_s[-1] == "?") && (type.ret != $__rdl_type_bool)
 #          warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
 #        end
-        $__rdl_meths.add(klass, meth, :type, type)
-        unless $__rdl_meths.set(klass, meth, :typecheck, typecheck)
+        $__rdl_info.add(klass, meth, :type, type)
+        unless $__rdl_info.set(klass, meth, :typecheck, typecheck)
           raise RuntimeError, "Inconsistent typecheck flag on #{klass}##{meth}"
         end
         if wrap
@@ -279,6 +279,13 @@ class Object
     }
   end
 
+  def var_type(klass=self, var, typ)
+    raise RuntimeError, "Variable must begin with @, @@, or $" unless var.to_s =~ /^(@|\$)/
+    unless $__rdl_info.set(klass, var, :type, $__rdl_parser.scan_str("#T #{typ}"))
+      raise RuntimeError, "Type already declared for #{var}"
+    end
+  end
+
   def self.method_added(meth)
     $__rdl_contract_switch.off {
       klass = self.to_s
@@ -290,10 +297,10 @@ class Object
         $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
         a.each { |prev_klass, kind, contract, h|
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
-          $__rdl_meths.add(klass, meth, kind, contract)
+          $__rdl_info.add(klass, meth, kind, contract)
           RDL::Wrap.wrap(klass, meth) if h[:wrap]
           RDL::Typecheck.typecheck(klass, meth) if h[:typecheck_now]
-          unless $__rdl_meths.set(klass, meth, :typecheck, h[:typecheck])
+          unless $__rdl_info.set(klass, meth, :typecheck, h[:typecheck])
             raise RuntimeError, "Inconsistent typecheck flag on #{klass}##{meth}"
           end
 
@@ -330,10 +337,10 @@ class Object
         $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
         a.each { |prev_klass, kind, contract, h|
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
-          $__rdl_meths.add(sklass, meth, kind, contract)
+          $__rdl_info.add(sklass, meth, kind, contract)
           RDL::Wrap.wrap(sklass, meth) if h[:wrap]
           RDL::Typecheck.typecheck(sklass, meth) if h[:typecheck_now]
-          unless $__rdl_meths.set(klass, meth, :typecheck, h[:typecheck])
+          unless $__rdl_info.set(klass, meth, :typecheck, h[:typecheck])
             raise RuntimeError, "Inconsistent typecheck flag on #{klass}##{meth}"
           end
         }
