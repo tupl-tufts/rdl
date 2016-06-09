@@ -72,11 +72,11 @@ module RDL::Typecheck
   def self.tc(env, a, e)
     case e.type
     when :nil
-      [a, RDL::Type::NilType.new]
+      [a, $__rdl_nil_type]
     when :true
-      [a, RDL::Type::NominalType.new(TrueClass)]
+      [a, $__rdl_true_type]
     when :false
-      [a, RDL::Type::NominalType.new(FalseClass)]
+      [a, $__rdl_false_type]
     when :complex, :rational, :str, :string # constants
       puts "True!" if e.type == :true
       [a, RDL::Type::NominalType.new(e.children[0].class)]
@@ -85,15 +85,15 @@ module RDL::Typecheck
     when :dstr, :xstr # string (or execute-string) with interpolation
       ai = a
       e.children.each { |ei| ai, _ = tc(env, ai, ei) }
-      [ai, RDL::Type::NominalType.new(String)]
+      [ai, $__rdl_string_type]
     when :dsym # symbol with interpolation
       ai = a
       e.children.each { |ei| ai, _ = tc(env, ai, ei) }
-      [ai, RDL::Type::NominalType.new(Symbol)]
+      [ai, $__rdl_symbol_type]
     when :regexp
       ai = a
       e.children.each { |ei| ai, _ = tc(env, ai, ei) unless ei.type == :regopt }
-      [ai, RDL::Type::NominalType.new(Regexp)]
+      [ai, $__rdl_regexp_type]
     when :array
       ai = a
       tis = []
@@ -131,7 +131,7 @@ module RDL::Typecheck
       t1 = RDL::Type::NominalType.new(t1.val.class) if t1.is_a? RDL::Type::SingletonType
       t2 = RDL::Type::NominalType.new(t2.val.class) if t2.is_a? RDL::Type::SingletonType
       error :nonmatching_range_type, [t1, t2], e if t1 != t2
-      [a2, RDL::Type::GenericType.new(RDL::Type::NominalType.new(Range), t1)]
+      [a2, RDL::Type::GenericType.new($__rdl_range_type, t1)]
     when :self
       [a, a[:self]]
     when :lvar  # local variable
@@ -142,7 +142,7 @@ module RDL::Typecheck
 #    when :cvar # TODO!
 #    when :gvar # TODO!
     when :nth_ref, :back_ref
-      [a, RDL::Type::NominalType.new(String)]
+      [a, $__rdl_string_type]
     when :const
       c = nil
       if e.children[0].nil?
@@ -162,7 +162,7 @@ module RDL::Typecheck
       end
     when :defined?
       # do not type check subexpression, since it may not be type correct, e.g., undefined variable
-      [a, RDL::Type::NominalType.new(String)]
+      [a, $__rdl_string_type]
     when :lvasgn
       a1, t1 = tc(env, a, e.children[1])
       [a1.merge(e.children[0]=>t1), t1]
