@@ -107,7 +107,7 @@ class TestLe < Minitest::Test
     # subtyping of tuples and arrays
     tfs_1 = $__rdl_parser.scan_str "#T [Fixnum, String]"
     tafs_1 = $__rdl_parser.scan_str "#T Array<Fixnum or String>"
-    assert (tfs_1 <= tafs_1) # subtyping allowed by t12 promoted to array
+    assert (tfs_1 <= tafs_1) # subtyping allowed by tfs_1 promoted to array
     tfs2_1 = $__rdl_parser.scan_str "#T [Fixnum, String]"
     assert (not (tfs_1 <= tfs2_1)) # t12 has been promoted to array, no longer subtype
 
@@ -144,7 +144,32 @@ class TestLe < Minitest::Test
     assert (not (too <= t12))
 
     # subtyping of finite hashes and hashes; same pattern as tuples
+    # subtyping of tuples and arrays
+    tfs_1 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
+    thfs_1 = $__rdl_parser.scan_str "#T Hash<Symbol, Fixnum or String>"
+    assert (tfs_1 <= thfs_1) # subtyping allowed because tfs_1 promoted to hash
+    tfs2_1 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
+    assert (not (tfs_1 <= tfs2_1)) # t12 has been promoted to hash, no longer subtype
 
+    tfs_2 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
+    tfs2_2 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
+    assert (tfs_2 <= tfs2_2) # this is allowed here because tfs_2 is still finite
+    thfs_2 = $__rdl_parser.scan_str "#T Hash<Symbol, Fixnum or String>"
+    assert (not (tfs_2 <= thfs_2)) # subtyping not allowed because tfs_2 <= tfs2_2 unsatisfiable after tfs_2 promoted
+
+    tfs_3 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
+    tfs2_3 = $__rdl_parser.scan_str "#T {x: Object, y: Object}"
+    assert (tfs_3 <= tfs2_3) # this is allowed here because t12a is still finite
+    thfs_3 = $__rdl_parser.scan_str "#T Hash<Symbol, Object>"
+    assert (not (tfs2_3 <= thfs_3)) # subtyping not allowed because tfs_3 <= tfs2_3 unsatisfiable after tfs2_3 promoted
+
+    tfs_4 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
+    tfs2_4 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
+    assert (tfs_4 <= tfs2_4) # allowed, types are the same
+    thfs_4 = $__rdl_parser.scan_str "#T Hash<Symbol, Fixnum or String>"
+    assert (tfs2_4 <= thfs_4) # allowed, both tfs2_4 and tfs_4 promoted to hash
+    tfs3_4 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
+    assert (not(tfs_4 <= tfs3_4)) # not allowed, tfs_4 has been promoted
   end
 
   def test_method

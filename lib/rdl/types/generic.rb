@@ -49,6 +49,7 @@ module RDL::Type
 
     def <=(other)
       other = other.array if other.instance_of?(TupleType) && other.array
+      other = other.the_hash if other.instance_of?(FiniteHashType) && other.the_hash
       formals, variance, _ = $__rdl_type_params[base.name]
       # do check here to avoid hiding errors if generic type written
       # with wrong number of parameters but never checked against

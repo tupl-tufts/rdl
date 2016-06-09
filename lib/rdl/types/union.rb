@@ -26,7 +26,7 @@ module RDL::Type
         end
       }
 
-      ts.sort! { |a,b| a.object_id <=> b.object_id }
+      ts.sort! { |a, b| a.object_id <=> b.object_id }
       ts.uniq!
 
       return NilType.new if ts.size == 0

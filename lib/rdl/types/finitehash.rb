@@ -10,8 +10,6 @@ module RDL::Type
     attr_reader :ubounds  # upper bounds this tuple has been compared with using <=
     attr_reader :lbounds  # lower bounds...
 
-    @@hash_type = nil
-
     # [+elts+] is a map from keys to types
     def initialize(elts)
       elts.each { |k, t|
@@ -22,7 +20,6 @@ module RDL::Type
       @the_hash = nil
       @ubounds = []
       @lbounds = []
-      @@hash_type = NominalType.new(Hash) unless @@hash_type
       super()
     end
 
@@ -70,9 +67,8 @@ module RDL::Type
         ubounds << other
         other.lbounds << self
         return true
-      end
-      if (other.instance_of? GenericType) && (other.base == @@hash_type)
-        @@the_hash = GenericType.new(@@hash_type, a, b)
+      elsif (other.instance_of? GenericType) && (other.base == $__rdl_hash_type)
+        @the_hash = GenericType.new($__rdl_hash_type, $__rdl_symbol_type, UnionType.new(*@elts.values))
         # same logic as Tuple
         return (self <= other) && (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
       end

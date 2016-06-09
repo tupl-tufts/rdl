@@ -69,3 +69,9 @@ $__rdl_ruby_parser_cache = Hash.new
 $__rdl_special_types = {'%any' => RDL::Type::TopType.new,
                         '%bool' => RDL::Type::UnionType.new(RDL::Type::NominalType.new(TrueClass),
                                                             RDL::Type::NominalType.new(FalseClass)) }
+
+# Some generally useful types; not really a big deal to do this since
+# NominalTypes are cached, but these names are shorter to type
+$__rdl_array_type = RDL::Type::NominalType.new Array
+$__rdl_hash_type = RDL::Type::NominalType.new Hash
+$__rdl_symbol_type = RDL::Type::NominalType.new Symbol

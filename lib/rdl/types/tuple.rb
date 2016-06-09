@@ -8,8 +8,6 @@ module RDL::Type
     attr_reader :ubounds # upper bounds this tuple has been compared with using <=
     attr_reader :lbounds # lower bounds...
 
-    @@array_type = nil
-
     # no caching because array might be mutated
     def initialize(*params)
       raise RuntimeError, "Attempt to create tuple type with non-type param" unless params.all? { |p| p.is_a? Type }
@@ -17,7 +15,6 @@ module RDL::Type
       @array = nil # emphasize initially this is a tuple, not an array
       @ubounds = []
       @lbounds = []
-      @@array_type = NominalType.new(Array) unless @@array_type
       super()
     end
 
@@ -54,9 +51,8 @@ module RDL::Type
         ubounds << other
         other.lbounds << self
         return true
-      end
-      if (other.instance_of? GenericType) && (other.base == @@array_type)
-        @array = GenericType.new(@@array_type, UnionType.new(*@params))
+      elsif (other.instance_of? GenericType) && (other.base == $__rdl_array_type)
+        @array = GenericType.new($__rdl_array_type, UnionType.new(*@params))
         # note since we promoted this, lbounds and ubounds will be ignored in future constraints, which
         # is good because otherwise we'd get infinite loops
         return (self <= other) && (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
