@@ -269,7 +269,6 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_send_named_args
-    skip "Not implemented yet"
     # from test_type_contract.rb
     self.class.class_eval {
       type :_send_named_args1, "(x: Fixnum) -> Fixnum"
@@ -279,7 +278,7 @@ class TestTypecheck < Minitest::Test
       type :_send_named_args5, "(x: Fixnum, y: ?String) -> Fixnum"
       type :_send_named_args6, "(x: ?Fixnum, y: String) -> Fixnum"
       type :_send_named_args7, "(x: ?Fixnum, y: ?String) -> Fixnum"
-      type :_send_named_args7, "(?Fixnum, x: ?Symbol, y: ?String) -> Fixnum"
+      type :_send_named_args8, "(?Fixnum, x: ?Symbol, y: ?String) -> Fixnum"
     }
     assert do_tc(@aself, "_send_named_args1(x: 42)") <= @tfixnum
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args1(x: '42')") }

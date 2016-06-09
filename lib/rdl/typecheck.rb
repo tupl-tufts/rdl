@@ -2,10 +2,7 @@ module RDL::Typecheck
 
   class StaticTypeError < StandardError; end
 
-  @@type_true = RDL::Type::NominalType.new TrueClass
-  @@type_false = RDL::Type::NominalType.new FalseClass
-  @@type_string = RDL::Type::NominalType.new String
-  @@type_hash = RDL::Type::NominalType.new Hash
+  @@empty_hash_type = RDL::Type::FiniteHashType.new(Hash.new)
 
   class ASTMapper < AST::Processor
     attr_accessor :line_defs
@@ -123,7 +120,7 @@ module RDL::Typecheck
       else
         tleft = RDL::Type::UnionType.new(*tlefts)
         tright = RDL::Type::UnionType.new(*trights)
-        [ai, RDL::Type::GenericType.new(@@type_hash, tleft, tright)]
+        [ai, RDL::Type::GenericType.new($__rdl_hash_type, tleft, tright)]
       end
       #TODO test!
 #    when :kwsplat # TODO!
@@ -266,7 +263,10 @@ RUBY
         end
       else
         if actual == tactuals.size
-          next
+          next unless t.instance_of? RDL::Type::FiniteHashType
+          if @@empty_hash_type <= t
+            states << [formal+1, actual]
+          end
           # TODO: finite hash
         elsif tactuals[actual] <= t
           states << [formal+1, actual+1] # match!
