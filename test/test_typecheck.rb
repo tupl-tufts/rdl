@@ -74,6 +74,13 @@ class TestTypecheck < Minitest::Test
     assert do_tc(":foo") <= $__rdl_parser.scan_str("#T :foo")
   end
 
+  def test_empty
+    self.class.class_eval {
+      type "() -> nil", typecheck_now: true
+      def empty() end
+    }
+  end
+
   def test_dstr_xstr
     # Hard to read if these are inside of strings, so leave like this
     self.class.class_eval {

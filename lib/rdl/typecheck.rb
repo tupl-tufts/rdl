@@ -58,7 +58,7 @@ module RDL::Typecheck
       type = type.instantiate inst
       a = args.children.map { |arg| arg.children[0] }.zip(type.args).to_h
       a[:self] = self_type
-      _, body_type = tc(Hash.new, a, body)
+      _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(Hash.new, a, body) end
       error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body_type <= type.ret
     }
   end
