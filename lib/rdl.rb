@@ -68,11 +68,6 @@ $__rdl_parser = RDL::Type::Parser.new
 #  :line_defs maps linenumber to AST for def at that line
 $__rdl_ruby_parser_cache = Hash.new
 
-# Hash from special type names to their values
-$__rdl_special_types = {'%any' => RDL::Type::TopType.new,
-                        '%bool' => RDL::Type::UnionType.new(RDL::Type::NominalType.new(TrueClass),
-                                                            RDL::Type::NominalType.new(FalseClass)) }
-
 # Some generally useful types; not really a big deal to do this since
 # NominalTypes are cached, but these names are shorter to type
 $__rdl_nil_type = RDL::Type::NilType.new
@@ -80,6 +75,7 @@ $__rdl_top_type = RDL::Type::TopType.new
 $__rdl_object_type = RDL::Type::NominalType.new Object
 $__rdl_true_type = RDL::Type::NominalType.new TrueClass # actually creates singleton type
 $__rdl_false_type = RDL::Type::NominalType.new FalseClass # also singleton type
+$__rdl_bool_type = RDL::Type::UnionType.new($__rdl_true_type, $__rdl_false_type)
 $__rdl_fixnum_type = RDL::Type::NominalType.new Fixnum
 $__rdl_bignum_type = $__rdl_parser.scan_str "#T Bignum"
 $__rdl_float_type = $__rdl_parser.scan_str "#T Float"
@@ -91,3 +87,7 @@ $__rdl_hash_type = RDL::Type::NominalType.new Hash
 $__rdl_symbol_type = RDL::Type::NominalType.new Symbol
 $__rdl_range_type = RDL::Type::NominalType.new Range
 $__rdl_regexp_type = RDL::Type::NominalType.new Regexp
+
+# Hash from special type names to their values
+$__rdl_special_types = {'%any' => $__rdl_top_type,
+                        '%bool' => $__rdl_bool_type}

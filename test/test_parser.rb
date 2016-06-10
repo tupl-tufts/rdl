@@ -9,7 +9,6 @@ class TestParser < Minitest::Test
     @tfixnumvararg = VarargType.new $__rdl_fixnum_type
     @tstringopt = OptionalType.new $__rdl_string_type
     @tenum = NominalType.new :Enumerator
-    @tbool = UnionType.new $__rdl_true_type, $__rdl_false_type
     @ta = NominalType.new :A
     @tb = NominalType.new :B
     @tc = NominalType.new :C
@@ -32,7 +31,7 @@ class TestParser < Minitest::Test
     t4 = $__rdl_parser.scan_str "(%any) -> nil"
     assert_equal (MethodType.new [$__rdl_top_type], nil, $__rdl_nil_type), t4
     t5 = $__rdl_parser.scan_str "(%bool) -> Fixnum"
-    assert_equal (MethodType.new [@tbool], nil, $__rdl_fixnum_type), t5
+    assert_equal (MethodType.new [$__rdl_bool_type], nil, $__rdl_fixnum_type), t5
     assert_raises(RuntimeError) { $__rdl_parser.scan_str "(%foo) -> nil" }
     t6 = $__rdl_parser.scan_str "(A) -> nil"
     assert_equal (MethodType.new [@ta], nil, $__rdl_nil_type), t6
