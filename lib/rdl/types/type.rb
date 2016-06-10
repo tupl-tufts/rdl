@@ -20,5 +20,9 @@ module RDL::Type
       return (@@contract_cache[self] = c)  # assignment evaluates to c
     end
 
+    def nil_type?
+      is_a?(SingletonType) && @val.nil?
+    end
+
   end
 end

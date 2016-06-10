@@ -13,7 +13,7 @@ module RDL
       if current_types.size == 1
         current_types.to_a[0]
       elsif current_types.size == 0
-        RDL::Type::NilType.new
+        $__rdl_nil_type
       else
         RDL::Type::UnionType.new(*self.unify_param_types(current_types))
       end

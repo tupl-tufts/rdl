@@ -14,63 +14,57 @@ class TestLe < Minitest::Test
   end
 
   def setup
-    @tnil = NilType.new
-    @ttop = TopType.new
-    @tstring = NominalType.new "String"
-    @tobject = NominalType.new "Object"
     @tbasicobject = NominalType.new "BasicObject"
     @tsymfoo = SingletonType.new :foo
-    @tsym = NominalType.new Symbol
     @ta = NominalType.new A
     @tb = NominalType.new B
     @tc = NominalType.new C
-    @tfixnum = NominalType.new "Fixnum"
   end
 
   def test_nil
-    assert (@tnil <= @ttop)
-    assert (@tnil <= @tstring)
-    assert (@tnil <= @tobject)
-    assert (@tnil <= @tbasicobject)
-    assert (@tnil <= @tsymfoo)
-    assert (not (@ttop <= @tnil))
-    assert (not (@tstring <= @tnil))
-    assert (not (@tobject <= @tnil))
-    assert (not (@tbasicobject <= @tnil))
-    assert (not (@tsymfoo <= @tnil))
+    assert ($__rdl_nil_type <= $__rdl_top_type)
+    assert ($__rdl_nil_type <= $__rdl_string_type)
+    assert ($__rdl_nil_type <= $__rdl_object_type)
+    assert ($__rdl_nil_type <= @tbasicobject)
+    assert (not ($__rdl_nil_type <= @tsymfoo)) # nil no longer <= other singleton types
+    assert (not ($__rdl_top_type <= $__rdl_nil_type))
+    assert (not ($__rdl_string_type <= $__rdl_nil_type))
+    assert (not ($__rdl_object_type <= $__rdl_nil_type))
+    assert (not (@tbasicobject <= $__rdl_nil_type))
+    assert (not (@tsymfoo <= $__rdl_nil_type))
   end
 
   def test_top
-    assert (not (@ttop <= @tnil))
-    assert (not (@ttop <= @tstring))
-    assert (not (@ttop <= @tobject))
-    assert (not (@ttop <= @tbasicobject))
-    assert (not (@ttop <= @tsymfoo))
-    assert (@ttop <= @ttop)
-    assert (@tstring <= @ttop)
-    assert (@tobject <= @ttop)
-    assert (@tbasicobject <= @ttop)
-    assert (@tsymfoo <= @ttop)
+    assert (not ($__rdl_top_type <= $__rdl_nil_type))
+    assert (not ($__rdl_top_type <= $__rdl_string_type))
+    assert (not ($__rdl_top_type <= $__rdl_object_type))
+    assert (not ($__rdl_top_type <= @tbasicobject))
+    assert (not ($__rdl_top_type <= @tsymfoo))
+    assert ($__rdl_top_type <= $__rdl_top_type)
+    assert ($__rdl_string_type <= $__rdl_top_type)
+    assert ($__rdl_object_type <= $__rdl_top_type)
+    assert (@tbasicobject <= $__rdl_top_type)
+    assert (@tsymfoo <= $__rdl_top_type)
   end
 
   def test_sym
-    assert (@tsym <= @tsym)
+    assert ($__rdl_symbol_type <= $__rdl_symbol_type)
     assert (@tsymfoo <= @tsymfoo)
-    assert (@tsymfoo <= @tsym)
-    assert (not (@tsym <= @tsymfoo))
+    assert (@tsymfoo <= $__rdl_symbol_type)
+    assert (not ($__rdl_symbol_type <= @tsymfoo))
   end
 
   def test_nominal
-    assert (@tstring <= @tstring)
-    assert (@tsym <= @tsym)
-    assert (not (@tstring <= @tsym))
-    assert (not (@tsym <= @tstring))
-    assert (@tstring <= @tobject)
-    assert (@tstring <= @tbasicobject)
-    assert (@tobject <= @tbasicobject)
-    assert (not (@tobject <= @tstring))
-    assert (not (@tbasicobject <= @tstring))
-    assert (not (@tbasicobject <= @tobject))
+    assert ($__rdl_string_type <= $__rdl_string_type)
+    assert ($__rdl_symbol_type <= $__rdl_symbol_type)
+    assert (not ($__rdl_string_type <= $__rdl_symbol_type))
+    assert (not ($__rdl_symbol_type <= $__rdl_string_type))
+    assert ($__rdl_string_type <= $__rdl_object_type)
+    assert ($__rdl_string_type <= @tbasicobject)
+    assert ($__rdl_object_type <= @tbasicobject)
+    assert (not ($__rdl_object_type <= $__rdl_string_type))
+    assert (not (@tbasicobject <= $__rdl_string_type))
+    assert (not (@tbasicobject <= $__rdl_object_type))
     assert (@ta <= @ta)
     assert (@tb <= @ta)
     assert (@tc <= @ta)
@@ -83,14 +77,14 @@ class TestLe < Minitest::Test
   end
 
   def test_union
-    tstring_or_sym = UnionType.new(@tstring, @tsym)
-    assert (tstring_or_sym <= @tobject)
-    assert (not (@tobject <= tstring_or_sym))
+    tstring_or_sym = UnionType.new($__rdl_string_type, $__rdl_symbol_type)
+    assert (tstring_or_sym <= $__rdl_object_type)
+    assert (not ($__rdl_object_type <= tstring_or_sym))
   end
 
   def test_tuple
-    t1 = TupleType.new(@tsym, @tstring)
-    t2 = TupleType.new(@tobject, @tobject)
+    t1 = TupleType.new($__rdl_symbol_type, $__rdl_string_type)
+    t2 = TupleType.new($__rdl_object_type, $__rdl_object_type)
     tarray = NominalType.new("Array")
     assert (t1 <= t1)
     assert (t2 <= t2)
@@ -173,10 +167,10 @@ class TestLe < Minitest::Test
   end
 
   def test_method
-    tss = MethodType.new([@tstring], nil, @tstring)
-    tso = MethodType.new([@tstring], nil, @tobject)
-    tos = MethodType.new([@tobject], nil, @tstring)
-    too = MethodType.new([@tobject], nil, @tobject)
+    tss = MethodType.new([$__rdl_string_type], nil, $__rdl_string_type)
+    tso = MethodType.new([$__rdl_string_type], nil, $__rdl_object_type)
+    tos = MethodType.new([$__rdl_object_type], nil, $__rdl_string_type)
+    too = MethodType.new([$__rdl_object_type], nil, $__rdl_object_type)
     assert (tss <= tss)
     assert (tss <= tso)
     assert (not (tss <= tos))
@@ -193,8 +187,8 @@ class TestLe < Minitest::Test
     assert (too <= tso)
     assert (not (too <= tos))
     assert (too <= too)
-    tbos = MethodType.new([], tos, @tobject)
-    tbso = MethodType.new([], tso, @tobject)
+    tbos = MethodType.new([], tos, $__rdl_object_type)
+    tbso = MethodType.new([], tso, $__rdl_object_type)
     assert (tbos <= tbos)
     assert (not (tbos <= tbso))
     assert (tbso <= tbso)
@@ -202,11 +196,11 @@ class TestLe < Minitest::Test
   end
 
   def test_structural
-    tso = MethodType.new([@tstring], nil, @tobject)
-    tos = MethodType.new([@tobject], nil, @tstring)
+    tso = MethodType.new([$__rdl_string_type], nil, $__rdl_object_type)
+    tos = MethodType.new([$__rdl_object_type], nil, $__rdl_string_type)
     ts1 = StructuralType.new(m1: tso)
     ts2 = StructuralType.new(m1: tos)
-    assert (ts1 <= @ttop)
+    assert (ts1 <= $__rdl_top_type)
     assert (ts1 <= ts1)
     assert (ts2 <= ts2)
     assert (ts2 <= ts1)
@@ -239,8 +233,8 @@ class TestLe < Minitest::Test
   def test_nominal_structural
     tnom = NominalType.new(Nom)
     tnomt = NominalType.new(NomT)
-    tma = MethodType.new([], nil, @tnil)
-    tmb = MethodType.new([@tfixnum], nil, @tnil)
+    tma = MethodType.new([], nil, $__rdl_nil_type)
+    tmb = MethodType.new([$__rdl_fixnum_type], nil, $__rdl_nil_type)
     ts1 = StructuralType.new(m1: tma)
     assert (tnom <= ts1)
     assert (tnomt <= ts1)
@@ -257,9 +251,9 @@ class TestLe < Minitest::Test
 
   # def test_intersection
   #   skip "<= not defined on intersection"
-  #   tobject_and_basicobject = IntersectionType.new(@tobject, @tbasicobject)
-  #   assert (not (tobject_and_basicobject <= @tobject))
-  #   assert (@tobject <= tobject_and_basicobject)
+  #   tobject_and_basicobject = IntersectionType.new($__rdl_object_type, @tbasicobject)
+  #   assert (not (tobject_and_basicobject <= $__rdl_object_type))
+  #   assert ($__rdl_object_type <= tobject_and_basicobject)
   # end
 
 end

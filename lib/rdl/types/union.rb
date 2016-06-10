@@ -13,7 +13,7 @@ module RDL::Type
     def self.new(*types)
       ts = []
       types.each { |t|
-        if t.instance_of? NilType
+        if t.nil_type?
           next
         elsif t.instance_of? TopType
           ts = [t]
@@ -29,7 +29,7 @@ module RDL::Type
       ts.sort! { |a, b| a.object_id <=> b.object_id }
       ts.uniq!
 
-      return NilType.new if ts.size == 0
+      return $__rdl_nil_type if ts.size == 0
       return ts[0] if ts.size == 1
 
       t = @@cache[ts]

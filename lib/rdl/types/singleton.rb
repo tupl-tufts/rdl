@@ -51,6 +51,7 @@ module RDL::Type
 
     def <=(other)
       other.instance_of?(TopType) ||
+        (@val.nil? && (not (other.instance_of?(SingletonType)))) ||
         (other.instance_of?(SingletonType) && other.val == @val) ||
         (other.instance_of?(NominalType) && @val.class == other.klass) ||
         (other.instance_of?(NominalType) && @val.is_a?(other.klass)) ||
@@ -60,7 +61,7 @@ module RDL::Type
     def member?(obj, *args)
       t = RDL::Util.rdl_type obj
       return t <= self if t
-      obj.nil? || obj.equal?(@val)
+      obj.equal?(@val)
     end
 
     def instantiate(inst)

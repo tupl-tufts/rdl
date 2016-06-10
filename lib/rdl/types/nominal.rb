@@ -1,12 +1,11 @@
 require_relative 'type'
-require_relative 'nil'
 require_relative 'singleton'
 
 module RDL::Type
   class NominalType < Type
     attr_reader :name # string
 
-    @@cache = { "NilClass" => NilType.new,
+    @@cache = { "NilClass" => SingletonType.new(nil),
                 "TrueClass" => SingletonType.new(true),
                 "FalseClass" => SingletonType.new(false),
               }
@@ -17,7 +16,6 @@ module RDL::Type
 
     def self.new(name)
       name = name.to_s
-#      return NilType.new if name == "NilClass" # now it's in the cache
       t = @@cache[name]
       return t if t
       t = self.__new__ name

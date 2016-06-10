@@ -8,10 +8,9 @@ class TestTypeContract < Minitest::Test
   def setup
     @p = Parser.new
   end
-  
+
   def test_flat
-    tnil = NilType.new
-    cnil = tnil.to_contract
+    cnil = $__rdl_nil_type.to_contract
     assert (cnil.check self, nil)
     assert_raises(TypeError) { cnil.check self, true }
     tfixnum = NominalType.new :Fixnum
@@ -42,7 +41,7 @@ class TestTypeContract < Minitest::Test
     p3 = t3.to_contract.wrap(self) { nil }
     assert_nil p3.call
     assert_raises(TypeError) { p3.call(42) }
-    
+
     t4 = @p.scan_str "(Fixnum, ?Fixnum) -> Fixnum"
     p4 = t4.to_contract.wrap(self) { |x| x }
     assert_equal 42, p4.call(42)
@@ -125,11 +124,11 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p12b.call(9, 10) }
 
     t13 = @p.scan_str "(Fixnum, {(Fixnum x {{x>10}}) -> Fixnum}) -> Float"
-    p13 = t13.to_higher_contract(self) { |x,y| x+y.call(11)+0.5 } 
+    p13 = t13.to_higher_contract(self) { |x,y| x+y.call(11)+0.5 }
     assert_equal 53.5, p13.call(42, Proc.new { |x| x })
     assert_raises(TypeError) { p13.call(42.5, Proc.new { |x| x} ) }
     assert_raises(TypeError) { p13.call(42, Proc.new { |x| 0.5 } ) }
-    p13b = t13.to_higher_contract(self) { |x,y| x+y.call(10)+0.5 } 
+    p13b = t13.to_higher_contract(self) { |x,y| x+y.call(10)+0.5 }
     assert_raises(TypeError) { p13b.call(42, Proc.new { |x| x } ) }
     p13c = t13.to_higher_contract(self) { |x,y| x+y.call(11.5)+0.5 }
     assert_raises(TypeError) { p13c.call(42, Proc.new { |x| x } ) }
@@ -147,25 +146,25 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p14d.call(42) }
 
     assert_equal 47, block_contract_test1(42) {|z| z}
-    assert_raises(TypeError) { block_contract_test1(42) {|z| 0.5} } 
+    assert_raises(TypeError) { block_contract_test1(42) {|z| 0.5} }
     assert_raises(TypeError) { block_contract_test2(42) {|z| z} }
 
 
     t15 = @p.scan_str "(Fixnum x {{x>y}}, Fixnum y) -> Fixnum"
-    p15 = t15.to_contract.wrap(self) { |x, y| x+y } 
+    p15 = t15.to_contract.wrap(self) { |x, y| x+y }
     assert_equal 21, p15.call(11, 10)
     assert_raises(TypeError) { p15.call(10, 11) }
 
     t16 = @p.scan_str "(Fixnum x {{x > undefvar}}, Fixnum) -> Fixnum"
     p16 = t16.to_contract.wrap(self) { |x,y| x }
-    assert_raises(NameError) { p16.call(10,10) } 
+    assert_raises(NameError) { p16.call(10,10) }
   end
 
   type '(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum'
   def block_contract_test1(x)
     x+yield(5)
   end
-  
+
   type '(Fixnum) { (Fixnum) -> Fixnum } -> Float'
   def block_contract_test2(x)
     x+yield(4.5)

@@ -239,8 +239,8 @@ RUBY
         if tguard.val then [aleft, tleft] else [aright, tright] end
 #      elsif tguard == $__rdl_true_type # true/false cases covered by SingletonType
 #        [aleft, tleft]
-      elsif (tguard.is_a? RDL::Type::NilType)
-        [aright, tright]
+#      elsif (tguard.is_a? RDL::Type::NilType) # nil also covered by SingletonType
+#        [aright, tright]
       else
         [ajoin(aleft, aright), RDL::Type::UnionType.new(tleft, tright)]
       end

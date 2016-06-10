@@ -70,7 +70,7 @@ $__rdl_ruby_parser_cache = Hash.new
 
 # Some generally useful types; not really a big deal to do this since
 # NominalTypes are cached, but these names are shorter to type
-$__rdl_nil_type = RDL::Type::NilType.new
+$__rdl_nil_type = RDL::Type::NominalType.new NilClass # actually creates singleton type
 $__rdl_top_type = RDL::Type::TopType.new
 $__rdl_object_type = RDL::Type::NominalType.new Object
 $__rdl_true_type = RDL::Type::NominalType.new TrueClass # actually creates singleton type

@@ -282,11 +282,10 @@ RUBY
   end
 
   def test_cast
-    ntyp = RDL::Type::NilType.new
-    obj1 = 3.type_cast(ntyp)
-    assert (ntyp.member? obj1)
+    obj1 = 3.type_cast($__rdl_nil_type)
+    assert ($__rdl_nil_type.member? obj1)
     obj2 = 3.type_cast('nil')
-    assert (ntyp.member? obj2)
+    assert ($__rdl_nil_type.member? obj2)
   end
 
   def test_pre_post_self

@@ -5,15 +5,14 @@ class TestTypes < Minitest::Test
   include RDL::Type
 
   def test_nil_top
-    tnil = NilType.new
-    tnil2 = NilType.new
-    assert(tnil.equal? tnil2)
-    tnil3 = NominalType.new :NilClass
-    assert(tnil.equal? tnil3)
+    tnil = NominalType.new :NilClass
+    assert_same $__rdl_nil_type, tnil
+    tnil2 = SingletonType.new nil
+    assert_same $__rdl_nil_type, tnil2
     ttop = TopType.new
     ttop2 = TopType.new
     assert_same ttop, ttop2
-    assert (tnil != ttop)
+    assert ($__rdl_nil_type != ttop)
   end
 
   def test_nominal
@@ -52,8 +51,6 @@ class TestTypes < Minitest::Test
   end
 
   def u_or_i(c)
-    tnil = NilType.new
-    ttop = TopType.new
     ta = NominalType.new :A
     tb = NominalType.new :B
     tc = NominalType.new :C
@@ -61,19 +58,19 @@ class TestTypes < Minitest::Test
     assert_equal 2, t1.types.length
     t2 = c.new tb, ta
     assert_same t1, t2
-    t3 = c.new ttop, ttop
-    assert_same t3, ttop
-    t4 = c.new ttop, tnil, ttop, tnil
-    assert_same t4, ttop
-    t5 = c.new tnil, tnil
-    assert_same t5, tnil
+    t3 = c.new $__rdl_top_type, $__rdl_top_type
+    assert_same t3, $__rdl_top_type
+    t4 = c.new $__rdl_top_type, $__rdl_nil_type, $__rdl_top_type, $__rdl_nil_type
+    assert_same t4, $__rdl_top_type
+    t5 = c.new $__rdl_nil_type, $__rdl_nil_type
+    assert_same t5, $__rdl_nil_type
     t6 = c.new ta, tb, tc
     assert_equal 3, t6.types.length
     t7 = c.new ta, (c.new tb, tc)
     assert_same t6, t7
     t8 = c.new (c.new tc, tb), (c.new ta)
     assert_same t6, t8
-    assert (t1 != tnil)
+    assert (t1 != $__rdl_nil_type)
   end
 
   def test_union_intersection
@@ -82,37 +79,34 @@ class TestTypes < Minitest::Test
   end
 
   def test_optional
-    tnil = NilType.new
     ta = NominalType.new :A
-    t1 = OptionalType.new tnil
-    assert_equal tnil, t1.type
-    t2 = OptionalType.new tnil
+    t1 = OptionalType.new $__rdl_nil_type
+    assert_equal $__rdl_nil_type, t1.type
+    t2 = OptionalType.new $__rdl_nil_type
     assert_same t1, t2
     t3 = OptionalType.new ta
     assert (t1 != t3)
   end
 
   def test_vararg
-    tnil = NilType.new
     ta = NominalType.new :A
-    t1 = VarargType.new tnil
-    assert_equal tnil, t1.type
-    t2 = VarargType.new tnil
+    t1 = VarargType.new $__rdl_nil_type
+    assert_equal $__rdl_nil_type, t1.type
+    t2 = VarargType.new $__rdl_nil_type
     assert_same t1, t2
     t3 = VarargType.new ta
     assert (t1 != t3)
   end
 
   def test_method
-    tnil = NilType.new
     ta = NominalType.new :A
     tb = NominalType.new :B
     tc = NominalType.new :C
-    t1 = MethodType.new [ta, tb, tc], nil, tnil
+    t1 = MethodType.new [ta, tb, tc], nil, $__rdl_nil_type
     assert_equal [ta, tb, tc], t1.args
     assert_nil t1.block
-    assert_equal tnil, t1.ret
-    t2 = MethodType.new [tnil], t1, tnil
+    assert_equal $__rdl_nil_type, t1.ret
+    t2 = MethodType.new [$__rdl_nil_type], t1, $__rdl_nil_type
     assert_equal t1, t2.block
   end
 
@@ -134,11 +128,10 @@ class TestTypes < Minitest::Test
   end
 
   def test_structural
-    tnil = NilType.new
     ta = NominalType.new :A
     tb = NominalType.new :B
     tc = NominalType.new :C
-    tm1 = MethodType.new [ta, tb, tc], nil, tnil
+    tm1 = MethodType.new [ta, tb, tc], nil, $__rdl_nil_type
     tm2 = MethodType.new [ta], tm1, tb
     t1 = StructuralType.new(m1: tm1, m2: tm2)
     assert_equal tm1, t1.methods[:m1]
@@ -158,8 +151,6 @@ class TestTypes < Minitest::Test
   end
 
   def test_instantiate
-    tnil = NilType.new
-    ttop = TopType.new
     tA = NominalType.new :A
     tB = NominalType.new :B
     toptionalA = OptionalType.new tA
@@ -188,15 +179,15 @@ class TestTypes < Minitest::Test
     tmethAAB = MethodType.new([tA, tA], nil, tB)
     tmethaab = MethodType.new([ta, ta], nil, tb)
     tmethstringstringfixnum = MethodType.new([tstring, tstring], nil, tfixnum)
-    tmethbAABn = MethodType.new([], tmethAAB, tnil)
-    tmethbaabn = MethodType.new([], tmethaab, tnil)
-    tmethbssfn = MethodType.new([], tmethstringstringfixnum, tnil)
+    tmethbAABn = MethodType.new([], tmethAAB, $__rdl_nil_type)
+    tmethbaabn = MethodType.new([], tmethaab, $__rdl_nil_type)
+    tmethbssfn = MethodType.new([], tmethstringstringfixnum, $__rdl_nil_type)
     tstructorig = StructuralType.new(m1: tmethAAB, m2: tmethaab,
                                      m3: tmethbAABn, m4: tmethbaabn)
     tstructinst = StructuralType.new(m1: tmethAAB, m2: tmethstringstringfixnum,
                                      m3: tmethbAABn, m4: tmethbssfn)
-    assert_equal tnil, tnil.instantiate(inst)
-    assert_equal ttop, ttop.instantiate(inst)
+    assert_equal $__rdl_nil_type, $__rdl_nil_type.instantiate(inst)
+    assert_equal $__rdl_top_type, $__rdl_top_type.instantiate(inst)
     assert_equal tA, tA.instantiate(inst)
     assert_equal toptionalA, toptionalA.instantiate(inst)
     assert_equal tvarargA, tvarargA.instantiate(inst)
