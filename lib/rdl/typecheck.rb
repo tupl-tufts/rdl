@@ -138,9 +138,16 @@ module RDL::Typecheck
       x = e.children[0] # the variable
       error :undefined_local_or_method, x, e unless a.has_key? x
       [a, a[x]]
-#    when :ivar # TODO!
-#    when :cvar # TODO!
-#    when :gvar # TODO!
+    when :ivar, :cvar, :gvar
+      x = e.children[0] # the variable
+      klass = (if e.type == :gvar then RDL::Util::GLOBAL_NAME else a[:self] end)
+      unless $__rdl_info.has?(klass, x, :type)
+        kind = (if e.type == :ivar then "instance"
+                elsif e.type == :cvar then "class"
+                else "global" end)
+        error :untyped_var, [kind, x], e
+      end
+      [a, $__rdl_info.get(klass, x, :type)]
     when :nth_ref, :back_ref
       [a, $__rdl_string_type]
     when :const
@@ -164,11 +171,22 @@ module RDL::Typecheck
       # do not type check subexpression, since it may not be type correct, e.g., undefined variable
       [a, $__rdl_string_type]
     when :lvasgn
+      x = e.children[0] # the variable
       a1, t1 = tc(env, a, e.children[1])
-      [a1.merge(e.children[0]=>t1), t1]
-    # when :ivasgn # TODO!
-    # when :cvasgn # TODO!
-    # when :gvasgn # TODO!
+      [a1.merge(x => t1), t1]
+    when :ivasgn, :cvasgn, :gvasgn
+      x = e.children[0] # the variable
+      aright, tright = tc(env, a, e.children[1])
+      klass = (if e.type == :gvasgn then RDL::Util::GLOBAL_NAME else a[:self] end)
+      unless $__rdl_info.has?(klass, x, :type)
+        kind = (if e.type == :ivasgn then "instance"
+                elsif e.type == :cvasgn then "class"
+                else "global" end)
+        error :untyped_var, [kind, x], e
+      end
+      tleft = $__rdl_info.get(klass, x, :type)
+      error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless tright <= tleft
+      [aright, tright]
     when :send, :csend
       # children[0] = receiver; if nil, receiver is self
       # children[1] = method name, a symbol
@@ -286,6 +304,8 @@ type_error_messages = {
   nonmatching_range_type: "attempt to construct range with non-matching types `%s' and `%s'",
   no_instance_method_type: "no type information for instance method `%s#%s'",
   arg_type_single_receiver_error: "argument type error for instance method `%s#%s'\n%s",
+  untyped_var: "no type for %s variable `%s'",
+  vasgn_incompat: "incompatible types: `%s' can't be assigned to `%s'"
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

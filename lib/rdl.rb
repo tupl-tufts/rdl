@@ -76,9 +76,14 @@ $__rdl_special_types = {'%any' => RDL::Type::TopType.new,
 # Some generally useful types; not really a big deal to do this since
 # NominalTypes are cached, but these names are shorter to type
 $__rdl_nil_type = RDL::Type::NilType.new
+$__rdl_object_type = RDL::Type::NominalType.new Object
 $__rdl_true_type = RDL::Type::NominalType.new TrueClass
 $__rdl_false_type = RDL::Type::NominalType.new FalseClass
 $__rdl_fixnum_type = RDL::Type::NominalType.new Fixnum
+$__rdl_bignum_type = $__rdl_parser.scan_str "#T Bignum"
+$__rdl_float_type = $__rdl_parser.scan_str "#T Float"
+$__rdl_complex_type = $__rdl_parser.scan_str "#T Complex"
+$__rdl_rational_type = $__rdl_parser.scan_str "#T Rational"
 $__rdl_string_type = RDL::Type::NominalType.new String
 $__rdl_array_type = RDL::Type::NominalType.new Array
 $__rdl_hash_type = RDL::Type::NominalType.new Hash

@@ -2,6 +2,7 @@ class RDL::Util
 
   SINGLETON_MARKER = "[s]"
   SINGLETON_MARKER_REGEXP = Regexp.escape(SINGLETON_MARKER)
+  GLOBAL_NAME = "_Globals" # something that's not a valid class name
 
   def self.to_class(klass)
     return klass if klass.class == Class

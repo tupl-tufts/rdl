@@ -340,12 +340,18 @@ RUBY
     }
     assert_equal $__rdl_fixnum_type, $__rdl_info.get(TestRDL, :@foo, :type)
     assert_equal $__rdl_string_type, $__rdl_info.get(TestRDL, :@@foo, :type)
-    assert_equal $__rdl_symbol_type, $__rdl_info.get(TestRDL, :$foo, :type)
+    assert_equal $__rdl_symbol_type, $__rdl_info.get(RDL::Util::GLOBAL_NAME, :$foo, :type)
     assert_raises(RuntimeError) {
       self.class.class_eval { var_type :@foo, "String" }
     }
     assert_raises(RuntimeError) {
+      self.class.class_eval { var_type :@@foo, "Fixnum" }
+    }
+    assert_raises(RuntimeError) {
       self.class.class_eval { var_type :foo, "String" }
+    }
+    assert_raises(RuntimeError) {
+      self.class.class_eval { var_type :$foo, "String" }
     }
   end
 
