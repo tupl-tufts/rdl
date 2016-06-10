@@ -189,7 +189,7 @@ class Bignum < Integer
   type :quo, '(Complex) -> Complex'
   pre(:quo) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end && if (x.real.is_a?(Rational) && x.imaginary.is_a?(Float)) then !x.imaginary.nan? else true end}
 
-  type :rationalize, '() -> Rational' 
+  type :rationalize, '() -> Rational'
 
   type :rationalize, '(Numeric) -> Rational'
 
@@ -210,7 +210,7 @@ class Bignum < Integer
   type :arg, '() -> Numeric'
   post(:arg) { |r,x| r == 0 || r == Math::PI}
 
-  type :equal?, '(Object) -> %bool' 
+  type :equal?, '(Object) -> %bool'
   type :eql?, '(Object) -> %bool'
 
   type :hash, '() -> Integer'
@@ -230,7 +230,7 @@ class Bignum < Integer
 
   type :real, '() -> Bignum'
 
-  type :real?, '() -> TrueClass'
+  type :real?, '() -> true'
 
   type :to_c, '() -> Complex'
   post(:to_c) { |r,x| r.imaginary == 0 }

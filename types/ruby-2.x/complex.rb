@@ -1,7 +1,7 @@
 class Complex < Numeric
   rdl_nowrap
 
-  type :*, '(Integer) -> Complex' 
+  type :*, '(Integer) -> Complex'
   type :*, '(Float) -> Complex'
   pre(:*) { |x| if x.infinite?||x.nan? then !self.imaginary.is_a?(BigDecimal)&&!self.real.is_a?(BigDecimal) else true end}
   type :*, '(Rational) -> Complex'
@@ -18,7 +18,7 @@ class Complex < Numeric
   type :**, '(Complex) -> Complex'
   pre(:**) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end}
 
-  type :+, '(Integer) -> Complex' 
+  type :+, '(Integer) -> Complex'
   type :+, '(Float) -> Complex'
   pre(:+) { |x| if x.infinite?||x.nan? then !self.real.is_a?(BigDecimal) else true end}
   type :+, '(Rational) -> Complex'
@@ -26,8 +26,8 @@ class Complex < Numeric
   pre(:+) {if x.real.is_a?(Float) then !x.real.infinite? && !x.real.nan? else true end}
   type :+, '(Complex) -> Complex'
   pre(:+) { |x| if (x.real.is_a?(BigDecimal) && self.real.is_a?(Float)) then !(self.real.infinite?||self.real.nan?) elsif x.real.is_a?(Float)&&self.real.is_a?(BigDecimal) then !(x.real.infinite?||x.real.nan?) elsif (x.imaginary.is_a?(BigDecimal) && self.imaginary.is_a?(Float)) then !(self.imaginary.infinite?||self.imaginary.nan?) elsif x.imaginary.is_a?(Float)&&self.imaginary.is_a?(BigDecimal) then !(x.imaginary.infinite?||x.imaginary.nan?) else true end}
-  
-  type :-, '(Integer) -> Complex' 
+
+  type :-, '(Integer) -> Complex'
   type :-, '(Float) -> Complex'
   pre(:-) { |x| if x.infinite?||x.nan? then !self.real.is_a?(BigDecimal) else true end}
   type :-, '(Rational) -> Complex'
@@ -73,7 +73,7 @@ class Complex < Numeric
   pre(:fdiv) { |x| if (self.real.is_a?(Float) && (self.real.infinite? || self.real.nan?))||(self.imaginary.is_a?(Float) && (self.imaginary.infinite? || self.imaginary.nan?)) then !x.is_a?(BigDecimal) && (if x.is_a?(Complex) then !x.real.is_a?(BigDecimal) && !x.imaginary.is_a?(BigDecimal) else true end) else true end}
 
   type :hash, '() -> Integer'
-  
+
   type :imag, '() -> %real'
   type :imaginary, '() -> %real'
 
@@ -85,7 +85,7 @@ class Complex < Numeric
 
   type :phase, '() -> Float'
 
-  type :polar, '() -> [%real, %real]' 
+  type :polar, '() -> [%real, %real]'
 
 
   type :quo, '(Integer) -> Complex'
@@ -107,7 +107,7 @@ class Complex < Numeric
 
   type :real, '() -> %real'
 
-  type :real?, '() -> FalseClass'
+  type :real?, '() -> false'
 
   type :rect, '() -> [%real, %real]'
   type :rectangular, '() -> [%real, %real]'

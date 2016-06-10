@@ -56,7 +56,7 @@ class Float < Numeric
   type :/, '(Complex) -> Complex'
   pre(:/) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) && self!=Float::INFINITY && !(self.nan?) else true end && if (x.real.is_a?(Rational) && x.imaginary.is_a?(Float)) then !x.imaginary.nan? else true end}
 
-  type :<, '(Integer) -> %bool' 
+  type :<, '(Integer) -> %bool'
   type :<, '(Float) -> %bool'
   type :<, '(Rational) -> %bool'
   type :<, '(BigDecimal) -> %bool'
@@ -132,7 +132,7 @@ class Float < Numeric
 
   type :equal?, '(Object) -> %bool'
 
-  type :eql?, '(Object) -> %bool' 
+  type :eql?, '(Object) -> %bool'
 
   type :fdiv, '(Integer) -> Float'
   type :fdiv, '(Float) -> Float'
@@ -226,7 +226,7 @@ class Float < Numeric
 
   type :real, '() -> Float'
 
-  type :real?, '() -> TrueClass'
+  type :real?, '() -> true'
 
   type :to_c, '() -> Complex'
   post(:to_c) { |r,x| r.imaginary == 0 }

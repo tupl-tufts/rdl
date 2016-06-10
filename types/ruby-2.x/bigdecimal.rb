@@ -178,9 +178,9 @@ class BigDecimal < Numeric
 
   type :real, '() -> BigDecimal'
 
-  type :real?, '() -> TrueClass'
+  type :real?, '() -> true'
 
-  type :round, '() -> Integer' 
+  type :round, '() -> Integer'
   pre(:round) { !self.infinite? && !self.nan?}
 
   type :round, '(Fixnum) -> BigDecimal' #Also, x must be in range [-2**31, 2**31].
@@ -188,7 +188,7 @@ class BigDecimal < Numeric
   type :to_f, '() -> Float'
   pre(:to_f) { self<=Float::MAX}
 
-  type :to_i, '() -> Integer' 
+  type :to_i, '() -> Integer'
   pre(:to_i) { !self.infinite? && !self.nan?}
   type :to_int, '() -> Integer'
   pre(:to_int) { !self.infinite? && !self.nan?}
@@ -237,13 +237,13 @@ class BigDecimal < Numeric
 
   type :add, '(%real, Fixnum) -> BigDecimal'
   pre(:add) { |x,y| if x.is_a?(Float) then !x.infinite? && !x.nan? else true end}
-  
+
   type :sub, '(%real, Fixnum) -> BigDecimal'
   pre(:sub) { |x,y| if x.is_a?(Float) then !x.infinite? && !x.nan? else true end}
 
   type :mult, '(%real, Fixnum) -> BigDecimal'
   pre(:mult) { |x,y| if x.is_a?(Float) then !x.infinite? && !x.nan? else true end}
-  
+
   type :coerce, '(%real) -> [BigDecimal, BigDecimal]'
   pre(:coerce) { |x| if x.is_a?(Float) then !x.nan? && !x.finite? else true end}
 end

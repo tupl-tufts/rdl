@@ -53,7 +53,7 @@ class Fixnum < Integer
   type :/, '(BigDecimal) -> BigDecimal'
   pre(:/) { |x| x!=0}
   type :/, '(Complex) -> Complex'
-  pre(:/) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end && if (x.real.is_a?(Rational) && x.imaginary.is_a?(Float)) then !x.imaginary.nan? else true end} 
+  pre(:/) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end && if (x.real.is_a?(Rational) && x.imaginary.is_a?(Float)) then !x.imaginary.nan? else true end}
 
   type :<, '(Integer) -> %bool'
   type :<, '(Float) -> %bool'
@@ -173,7 +173,7 @@ class Fixnum < Integer
   type :denominator, '() -> Fixnum'
   post(:denominator) { |r,x| r == 1 }
 
-  type :floor, '() -> Integer' 
+  type :floor, '() -> Integer'
   type :numerator, '() -> Fixnum'
 
   type :quo, '(Integer) -> Rational'
@@ -228,12 +228,12 @@ class Fixnum < Integer
 
   type :real, '() -> Fixnum'
 
-  type :real?, '() -> TrueClass'
+  type :real?, '() -> true'
 
   type :to_c, '() -> Complex'
   post(:to_c) { |r,x| r.imaginary == 0 }
 
-  type :remainder, '(Fixnum) -> Fixnum' 
+  type :remainder, '(Fixnum) -> Fixnum'
   pre(:remainder) { |x| x!=0}
   post(:remainder) { |r,x| r>0}
   type :remainder, '(Bignum) -> Fixnum'

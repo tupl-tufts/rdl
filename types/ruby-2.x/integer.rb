@@ -11,7 +11,7 @@ class Integer < Numeric
   type :gcd, '(Integer) -> Integer'
   type :gcdlcm, '(Integer) -> [Integer, Integer]'
   type :floor, '() -> Integer'
-  type :integer?, '() -> TrueClass'
+  type :integer?, '() -> true'
   type :lcm, '(Integer) -> Integer'
   type :next, '() -> Integer'
   type :numerator, '() -> Integer'

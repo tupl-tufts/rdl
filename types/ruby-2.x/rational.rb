@@ -197,7 +197,7 @@ class Rational < Numeric
 
   type :real, '() -> Rational'
 
-  type :real?, '() -> TrueClass'
+  type :real?, '() -> true'
 
   type :to_c, '() -> Complex'
   post(:to_c) { |r,x| r.imaginary == 0 }
