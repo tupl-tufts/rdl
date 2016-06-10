@@ -230,6 +230,11 @@ RUBY
       end
       # TODO: issue warning if trets.size > 1 ?
       [ai, RDL::Type::UnionType.new(*trets)]
+    when :if
+      ai, _ = tc(env, a, e.children[0]) # guard; any type allowed
+      aleft, tleft = if e.children[1].nil? then [ai, $__rdl_nil_type] else tc(env, ai, e.children[1]) end # then
+      aright, tright = if e.children[2].nil? then [ai, $__rdl_nil_type] else tc(env, ai, e.children[2]) end # else
+      [ajoin(aleft, aright), RDL::Type::UnionType.new(tleft, tright)]
     when :begin # sequencing
       ai = a
       ti = nil
@@ -293,6 +298,14 @@ RUBY
       end
     end
     false
+  end
+
+  # [+ a1 +] and [+ a2 +] are local variable type envrionments
+  # returns join of evironments
+  def self.ajoin(a1, a2)
+    a = Hash.new
+    a1.each_pair { |k, t| a[k] = RDL::Type::UnionType.new(t, a2[k]) if a2.has_key? k }
+    return a
   end
 
 end

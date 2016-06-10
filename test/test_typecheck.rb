@@ -362,4 +362,18 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args8(43, x: :foo, y: 'foo', z: 44)") }
   end
 
+  def test_if
+    self.class.class_eval {
+      type :_any_object, "() -> Object" # a method that could return true or false
+    }
+    assert do_tc(@aself, "if _any_object then 3 end") <= $__rdl_fixnum_type
+    assert do_tc(@aself, "unless _any_object then 3 end") <= $__rdl_fixnum_type
+    assert do_tc(@aself, "if _any_object then 3 else 4 end") <= $__rdl_fixnum_type
+    assert do_tc(@aself, "unless _any_object then 3 else 4 end") <= $__rdl_fixnum_type
+    assert do_tc(@aself, "if _any_object then 3 else 'three' end") <= RDL::Type::UnionType.new($__rdl_fixnum_type, $__rdl_string_type)
+    assert do_tc(@aself, "unless _any_object then 3 else 'three' end") <= RDL::Type::UnionType.new($__rdl_fixnum_type, $__rdl_string_type)
+    assert do_tc(@aself, "3 if _any_object") <= $__rdl_fixnum_type
+    assert do_tc(@aself, "3 unless _any_object") <= $__rdl_fixnum_type
+  end
+
 end
