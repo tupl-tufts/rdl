@@ -326,6 +326,7 @@ type Float, :angle, '() -> 0 or ${Math::PI}'
 
 RDL checks if a value matches a singleton type using `equal?`. As a consequence, singleton string types aren't currently possible.
 
+Note that the type `nil` behaves specially with singleton types. While `nil` can in general be used anywhere any type is expected, it *cannot* be used where a singleton type is expected. For example, `nil` could not be a return value of `Dir#mkdir` or `Float#angle`.
 
 ### Self Type
 
