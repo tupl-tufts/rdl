@@ -105,7 +105,11 @@ rule
       SYMBOL { result = RDL::Type::SingletonType.new(val[0].to_sym) }
     | ID {
       if val[0] == 'nil' then
-        result = RDL::Type::NilType.new
+        result = $__rdl_nil_type
+      elsif val[0] == 'true' then
+        result = $__rdl_true_type
+      elsif val[0] == 'false'
+        result = $__rdl_false_type
       elsif val[0] =~ /^[a-z_]+\w*\'?/ then
         result = RDL::Type::VarType.new(val[0].to_sym)
       else

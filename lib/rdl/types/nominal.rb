@@ -1,11 +1,15 @@
 require_relative 'type'
 require_relative 'nil'
+require_relative 'singleton'
 
 module RDL::Type
   class NominalType < Type
     attr_reader :name # string
 
-    @@cache = { "NilClass" => NilType.new }
+    @@cache = { "NilClass" => NilType.new,
+                "TrueClass" => SingletonType.new(true),
+                "FalseClass" => SingletonType.new(false),
+              }
 
     class << self
       alias :__new__ :new
