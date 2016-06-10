@@ -231,10 +231,19 @@ RUBY
       # TODO: issue warning if trets.size > 1 ?
       [ai, RDL::Type::UnionType.new(*trets)]
     when :if
-      ai, _ = tc(env, a, e.children[0]) # guard; any type allowed
+      ai, tguard = tc(env, a, e.children[0]) # guard; any type allowed
+      # always type check both sides
       aleft, tleft = if e.children[1].nil? then [ai, $__rdl_nil_type] else tc(env, ai, e.children[1]) end # then
       aright, tright = if e.children[2].nil? then [ai, $__rdl_nil_type] else tc(env, ai, e.children[2]) end # else
-      [ajoin(aleft, aright), RDL::Type::UnionType.new(tleft, tright)]
+      if tguard.is_a? RDL::Type::SingletonType
+        if tguard.val then [aleft, tleft] else [aright, tright] end
+      elsif tguard == $__rdl_true_type
+        [aleft, tleft]
+      elsif (tguard.is_a? RDL::Type::NilType) || (tguard == $__rdl_false_type)
+        [aright, tright]
+      else
+        [ajoin(aleft, aright), RDL::Type::UnionType.new(tleft, tright)]
+      end
     when :begin # sequencing
       ai = a
       ti = nil

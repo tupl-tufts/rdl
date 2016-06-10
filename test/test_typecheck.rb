@@ -374,6 +374,10 @@ class TestTypecheck < Minitest::Test
     assert do_tc(@aself, "unless _any_object then 3 else 'three' end") <= RDL::Type::UnionType.new($__rdl_fixnum_type, $__rdl_string_type)
     assert do_tc(@aself, "3 if _any_object") <= $__rdl_fixnum_type
     assert do_tc(@aself, "3 unless _any_object") <= $__rdl_fixnum_type
+    assert do_tc(@aself, "if true then 3 else 'three' end") <= $__rdl_fixnum_type
+    assert do_tc(@aself, "if :foo then 3 else 'three' end") <= $__rdl_fixnum_type
+    assert do_tc(@aself, "if false then 3 else 'three' end") <= $__rdl_string_type
+    assert do_tc(@aself, "if nil then 3 else 'three' end") <= $__rdl_string_type
   end
 
 end
