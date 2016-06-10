@@ -237,9 +237,9 @@ RUBY
       aright, tright = if e.children[2].nil? then [ai, $__rdl_nil_type] else tc(env, ai, e.children[2]) end # else
       if tguard.is_a? RDL::Type::SingletonType
         if tguard.val then [aleft, tleft] else [aright, tright] end
-      elsif tguard == $__rdl_true_type
-        [aleft, tleft]
-      elsif (tguard.is_a? RDL::Type::NilType) || (tguard == $__rdl_false_type)
+#      elsif tguard == $__rdl_true_type # true/false cases covered by SingletonType
+#        [aleft, tleft]
+      elsif (tguard.is_a? RDL::Type::NilType)
         [aright, tright]
       else
         [ajoin(aleft, aright), RDL::Type::UnionType.new(tleft, tright)]
