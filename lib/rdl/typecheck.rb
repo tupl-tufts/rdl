@@ -136,7 +136,7 @@ module RDL::Typecheck
       [a, a[:self]]
     when :lvar  # local variable
       x = e.children[0] # the variable
-      error :undefined_local_or_method, x, e unless a.has_key? x
+      error :undefined_local_or_method, x.to_s, e unless a.has_key? x
       [a, a[x]]
     when :ivar, :cvar, :gvar
       x = e.children[0] # the variable
@@ -237,10 +237,6 @@ RUBY
       aright, tright = if e.children[2].nil? then [ai, $__rdl_nil_type] else tc(env, ai, e.children[2]) end # else
       if tguard.is_a? RDL::Type::SingletonType
         if tguard.val then [aleft, tleft] else [aright, tright] end
-#      elsif tguard == $__rdl_true_type # true/false cases covered by SingletonType
-#        [aleft, tleft]
-#      elsif (tguard.is_a? RDL::Type::NilType) # nil also covered by SingletonType
-#        [aright, tright]
       else
         [ajoin(aleft, aright), RDL::Type::UnionType.new(tleft, tright)]
       end

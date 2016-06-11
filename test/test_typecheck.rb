@@ -366,18 +366,26 @@ class TestTypecheck < Minitest::Test
     self.class.class_eval {
       type :_any_object, "() -> Object" # a method that could return true or false
     }
+    tfs = RDL::Type::UnionType.new($__rdl_fixnum_type, $__rdl_string_type)
     assert do_tc(@aself, "if _any_object then 3 end") <= $__rdl_fixnum_type
     assert do_tc(@aself, "unless _any_object then 3 end") <= $__rdl_fixnum_type
     assert do_tc(@aself, "if _any_object then 3 else 4 end") <= $__rdl_fixnum_type
     assert do_tc(@aself, "unless _any_object then 3 else 4 end") <= $__rdl_fixnum_type
-    assert do_tc(@aself, "if _any_object then 3 else 'three' end") <= RDL::Type::UnionType.new($__rdl_fixnum_type, $__rdl_string_type)
-    assert do_tc(@aself, "unless _any_object then 3 else 'three' end") <= RDL::Type::UnionType.new($__rdl_fixnum_type, $__rdl_string_type)
+    assert do_tc(@aself, "if _any_object then 3 else 'three' end") <= tfs
+    assert do_tc(@aself, "unless _any_object then 3 else 'three' end") <= tfs
     assert do_tc(@aself, "3 if _any_object") <= $__rdl_fixnum_type
     assert do_tc(@aself, "3 unless _any_object") <= $__rdl_fixnum_type
     assert do_tc(@aself, "if true then 3 else 'three' end") <= $__rdl_fixnum_type
     assert do_tc(@aself, "if :foo then 3 else 'three' end") <= $__rdl_fixnum_type
     assert do_tc(@aself, "if false then 3 else 'three' end") <= $__rdl_string_type
     assert do_tc(@aself, "if nil then 3 else 'three' end") <= $__rdl_string_type
+
+    assert do_tc(@aself, "x = 'three'; if _any_object then x = 4 else x = 5 end; x") <= $__rdl_fixnum_type
+    assert do_tc(@aself, "x = 'three'; if _any_object then x = 4 end; x") <= tfs
+    assert do_tc(@aself, "x = 'three'; unless _any_object then x = 4 end; x") <= tfs
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc(@aself, "if _any_object then y = 4 end; y") }
+    assert do_tc(@aself, "if _any_object then x = 3; y = 4 else x = 5 end; x") <= $__rdl_fixnum_type
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc(@aself, "if _any_object then x = 3; y = 4 else x = 5 end; y") }
   end
 
 end
