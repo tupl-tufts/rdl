@@ -3,7 +3,11 @@ require_relative '../lib/rdl.rb'
 
 class TestTypecheck < Minitest::Test
 
+  type :_any_object, "() -> Object" # a method that could return true or false
+
   def setup
+    @t3 = RDL::Type::SingletonType.new 3
+    @ts3 = RDL::Type::UnionType.new($__rdl_string_type, @t3)
     @aself = {self: $__rdl_parser.scan_str("#T TestTypecheck")}
   end
 
@@ -151,8 +155,8 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_const
-    assert do_tc("String") <= $__rdl_parser.scan_str("#T ${String}")
-    assert do_tc("NIL") <= $__rdl_nil_type
+    assert do_tc(@aself, "String") <= $__rdl_parser.scan_str("#T ${String}")
+    assert do_tc(@aself, "NIL") <= $__rdl_nil_type
   end
 
   def test_defined
@@ -227,6 +231,16 @@ class TestTypecheck < Minitest::Test
     assert do_tc(@aself, "_send_basic4(42, '42')") <= $__rdl_fixnum_type
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_basic4(42, 43)") }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_basic4('42', '43')") }
+  end
+
+  class A
+    type :_send_inherit1, "() -> Fixnum"
+  end
+  class B < A
+  end
+
+  def test_send_inherit
+    assert do_tc(@aself, "B.new._send_inherit1") <= $__rdl_fixnum_type
   end
 
   def test_send_inter
@@ -362,17 +376,24 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc(@aself, "_send_named_args8(43, x: :foo, y: 'foo', z: 44)") }
   end
 
+  def test_send_singleton
+    type Fixnum, :_send_singleton, "() -> String"
+    assert do_tc(@aself, "3._send_singleton") <= $__rdl_string_type
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc(@aself, "3._send_singleton_nexists") }
+  end
+
+  def test_new
+    assert do_tc(@aself, "B.new") <= RDL::Type::NominalType.new(B)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc(@aself, "B.new(3)") }
+  end
+
   def test_if
-    self.class.class_eval {
-      type :_any_object, "() -> Object" # a method that could return true or false
-    }
-    tfs = RDL::Type::UnionType.new($__rdl_fixnum_type, $__rdl_string_type)
     assert do_tc(@aself, "if _any_object then 3 end") <= $__rdl_fixnum_type
     assert do_tc(@aself, "unless _any_object then 3 end") <= $__rdl_fixnum_type
     assert do_tc(@aself, "if _any_object then 3 else 4 end") <= $__rdl_fixnum_type
     assert do_tc(@aself, "unless _any_object then 3 else 4 end") <= $__rdl_fixnum_type
-    assert do_tc(@aself, "if _any_object then 3 else 'three' end") <= tfs
-    assert do_tc(@aself, "unless _any_object then 3 else 'three' end") <= tfs
+    assert_equal @ts3, do_tc(@aself, "if _any_object then 3 else 'three' end")
+    assert_equal @ts3, do_tc(@aself, "unless _any_object then 3 else 'three' end")
     assert do_tc(@aself, "3 if _any_object") <= $__rdl_fixnum_type
     assert do_tc(@aself, "3 unless _any_object") <= $__rdl_fixnum_type
     assert do_tc(@aself, "if true then 3 else 'three' end") <= $__rdl_fixnum_type
@@ -381,11 +402,33 @@ class TestTypecheck < Minitest::Test
     assert do_tc(@aself, "if nil then 3 else 'three' end") <= $__rdl_string_type
 
     assert do_tc(@aself, "x = 'three'; if _any_object then x = 4 else x = 5 end; x") <= $__rdl_fixnum_type
-    assert do_tc(@aself, "x = 'three'; if _any_object then x = 4 end; x") <= tfs
-    assert do_tc(@aself, "x = 'three'; unless _any_object then x = 4 end; x") <= tfs
+    assert_equal @ts3, do_tc(@aself, "x = 'three'; if _any_object then x = 3 end; x")
+    assert_equal @ts3, do_tc(@aself, "x = 'three'; unless _any_object then x = 3 end; x")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc(@aself, "if _any_object then y = 4 end; y") }
     assert do_tc(@aself, "if _any_object then x = 3; y = 4 else x = 5 end; x") <= $__rdl_fixnum_type
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc(@aself, "if _any_object then x = 3; y = 4 else x = 5 end; y") }
+  end
+
+  def test_and_or
+    assert_equal @ts3, do_tc("'foo' and 3")
+    assert_equal @ts3, do_tc("'foo' && 3")
+    assert do_tc("3 and 'foo'") <= $__rdl_string_type
+    assert do_tc("nil and 'foo'") <= $__rdl_nil_type
+    assert do_tc("false and 'foo'") <= $__rdl_false_type
+    assert_equal @ts3, do_tc("(x = 'foo') and (x = 3); x")
+    assert do_tc("(x = 3) and (x = 'foo'); x") <= $__rdl_string_type
+    assert do_tc("(x = nil) and (x = 'foo'); x") <= $__rdl_nil_type
+    assert do_tc("(x = false) and (x = 'foo'); x") <= $__rdl_false_type
+
+    assert_equal @ts3, do_tc("'foo' or 3")
+    assert_equal @ts3, do_tc("'foo' || 3")
+    assert do_tc("3 or 'foo'") <= $__rdl_fixnum_type
+    assert do_tc("nil or 3") <= @t3
+    assert do_tc("false or 3") <= @t3
+    assert_equal @ts3, do_tc("(x = 'foo') or (x = 3); x")
+    assert do_tc("(x = 3) or (x = 'foo'); x") <= $__rdl_fixnum_type
+    assert do_tc("(x = nil) or (x = 3); x") <= @t3
+    assert do_tc("(x = false) or (x = 3); x") <= @t3
   end
 
 end

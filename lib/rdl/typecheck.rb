@@ -153,7 +153,7 @@ module RDL::Typecheck
     when :const
       c = nil
       if e.children[0].nil?
-        c = const_get(e.children[1])
+        c = a[:self].klass.const_get(e.children[1])
       elsif e.children[0].type == :cbase
         raise "const cbase not implemented yet" # TODO!
       elsif e.children[0].type == :lvar
@@ -195,15 +195,26 @@ module RDL::Typecheck
       tactuals = []
       e.children[2..-1].each { |ei| ai, ti = tc(env, ai, ei); tactuals << ti }
       ai, trecv = if e.children[0].nil? then [ai, ai[:self]] else tc(env, ai, e.children[0]) end # if no receiver, self is receiver
+
       tmeth_inters = [] # Array<Array<MethodType>>, array of intersection types, since recv might not resolve to a single type
-      case trecv
-      when RDL::Type::NominalType
-        t = $__rdl_info.get(trecv.name, e.children[1], :type)
+
+      if (trecv.is_a? RDL::Type::SingletonType) && (trecv.val.is_a? Class) && (e.children[1] == :new)
+        t = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), :initialize)
+        t = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] unless t # there's always a nullary new if initialize is undefined
+        tmeth_inters << t
+      elsif trecv.is_a? RDL::Type::SingletonType
+        klass = trecv.val.class.to_s
+        t = lookup(klass, e.children[1])
+        error :no_instance_method_type, [klass, e.children[1]], e unless t
+        tmeth_inters << t
+      elsif trecv.is_a? RDL::Type::NominalType
+        t = lookup(trecv.name, e.children[1])
         error :no_instance_method_type, [trecv.name, e.children[1]], e unless t
         tmeth_inters << t
       else
         raise RuntimeError, "receiver type #{trecv} not supported yet"
       end
+
       trets = [] # all possible return types
       # there might be more than one return type because:
       #   multiple cases of an intersection type might match
@@ -222,7 +233,16 @@ Actual arg types#{tactuals.size > 1 ? "s" : ""}:
         (#{tactuals.map { |ti| ti.to_s }.join(', ')})
 RUBY
           msg.chomp! # remove trailing newline
-          error :arg_type_single_receiver_error, [trecv.name, e.children[1], msg], e
+          name = if (trecv.is_a? RDL::Type::SingletonType) && (trecv.val.is_a? Class) && (e.children[1] == :new) then
+            :initialize
+          elsif trecv.is_a? RDL::Type::SingletonType
+            trecv.val.class.to_s
+          elsif trecv.is_a? RDL::Type::NominalType
+            trecv.name
+          else
+            raise RutimeError, "impossible"
+          end
+          error :arg_type_single_receiver_error, [name, e.children[1], msg], e
         else
           # TODO more complicated error message here
           raise RuntimeError, "Not implemented yet #{tmeth_inters}"
@@ -230,6 +250,29 @@ RUBY
       end
       # TODO: issue warning if trets.size > 1 ?
       [ai, RDL::Type::UnionType.new(*trets)]
+    when :and
+      aleft, tleft = tc(env, a, e.children[0])
+      aright, tright = tc(env, aleft, e.children[1])
+      if tleft.is_a? RDL::Type::SingletonType
+        if tleft.val then [aright, tright] else [aleft, tleft] end
+      else
+        [ajoin(aleft, aright), RDL::Type::UnionType.new(tleft, tright)]
+      end
+    when :or
+      aleft, tleft = tc(env, a, e.children[0])
+      aright, tright = tc(env, aleft, e.children[1])
+      if tleft.is_a? RDL::Type::SingletonType
+        if tleft.val then [aleft, tleft] else [aright, tright] end
+      else
+        [ajoin(aleft, aright), RDL::Type::UnionType.new(tleft, tright)]
+      end
+    # when :not # in latest Ruby, not is a method call that could be redefined, so can't count on its behavior
+    #   a1, t1 = tc(env, a, e.children[0])
+    #   if t1.is_a? RDL::Type::SingletonType
+    #     if t1.val then [a1, $__rdl_false_type] else [a1, $__rdl_true_type] end
+    #   else
+    #     [a1, $__rdl_bool_type]
+    #   end
     when :if
       ai, tguard = tc(env, a, e.children[0]) # guard; any type allowed
       # always type check both sides
@@ -303,6 +346,22 @@ RUBY
       end
     end
     false
+  end
+
+
+  # [+ klass +] is a string containing the class name
+  # [+ name +] is a symbol naming the thing to look up (either a method or field)
+  # returns klass#name's type, walking up the inheritance hierarchy if appropriate
+  # returns nil if no type found
+  def self.lookup(klass, name)
+    t = $__rdl_info.get(klass, name, :type)
+    return t if t # simplest case, no need to walk inheritance hierarchy
+    RDL::Util.to_class(klass).ancestors.each { |ancestor|
+      # assumes ancestors is proper order to walk hierarchy
+      tancestor = $__rdl_info.get(ancestor.to_s, name, :type)
+      return tancestor if tancestor
+    }
+    return nil
   end
 
   # [+ a1 +] and [+ a2 +] are local variable type envrionments
