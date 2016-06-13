@@ -78,7 +78,6 @@ module RDL::Typecheck
     when :false
       [a, $__rdl_false_type]
     when :complex, :rational, :str, :string # constants
-      puts "True!" if e.type == :true
       [a, RDL::Type::NominalType.new(e.children[0].class)]
     when :int, :float, :sym # singletons
       [a, RDL::Type::SingletonType.new(e.children[0])]
@@ -195,61 +194,7 @@ module RDL::Typecheck
       tactuals = []
       e.children[2..-1].each { |ei| ai, ti = tc(env, ai, ei); tactuals << ti }
       ai, trecv = if e.children[0].nil? then [ai, ai[:self]] else tc(env, ai, e.children[0]) end # if no receiver, self is receiver
-
-      tmeth_inters = [] # Array<Array<MethodType>>, array of intersection types, since recv might not resolve to a single type
-
-      if (trecv.is_a? RDL::Type::SingletonType) && (trecv.val.is_a? Class) && (e.children[1] == :new)
-        t = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), :initialize)
-        t = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] unless t # there's always a nullary new if initialize is undefined
-        tmeth_inters << t
-      elsif trecv.is_a? RDL::Type::SingletonType
-        klass = trecv.val.class.to_s
-        t = lookup(klass, e.children[1])
-        error :no_instance_method_type, [klass, e.children[1]], e unless t
-        tmeth_inters << t
-      elsif trecv.is_a? RDL::Type::NominalType
-        t = lookup(trecv.name, e.children[1])
-        error :no_instance_method_type, [trecv.name, e.children[1]], e unless t
-        tmeth_inters << t
-      else
-        raise RuntimeError, "receiver type #{trecv} not supported yet"
-      end
-
-      trets = [] # all possible return types
-      # there might be more than one return type because:
-      #   multiple cases of an intersection type might match
-      #   there might be multiple types in tmeth_inters
-      tmeth_inters.each { |tmeth_inter| # Array<MethodType>; tmeth_inter is an intersection
-        tmeth_inter.each { |tmeth| # MethodType
-          trets << tmeth.ret if check_arg_types_one(tmeth, tactuals)
-        }
-      }
-      if trets.empty?
-        if tmeth_inters.size == 1
-          msg = <<RUBY
-Method type:
-#{ tmeth_inters[0].map { |ti| "        " + ti.to_s }.join("\n") }
-Actual arg types#{tactuals.size > 1 ? "s" : ""}:
-        (#{tactuals.map { |ti| ti.to_s }.join(', ')})
-RUBY
-          msg.chomp! # remove trailing newline
-          name = if (trecv.is_a? RDL::Type::SingletonType) && (trecv.val.is_a? Class) && (e.children[1] == :new) then
-            :initialize
-          elsif trecv.is_a? RDL::Type::SingletonType
-            trecv.val.class.to_s
-          elsif trecv.is_a? RDL::Type::NominalType
-            trecv.name
-          else
-            raise RutimeError, "impossible"
-          end
-          error :arg_type_single_receiver_error, [name, e.children[1], msg], e
-        else
-          # TODO more complicated error message here
-          raise RuntimeError, "Not implemented yet #{tmeth_inters}"
-        end
-      end
-      # TODO: issue warning if trets.size > 1 ?
-      [ai, RDL::Type::UnionType.new(*trets)]
+      [ai, tc_send(trecv, e.children[1], tactuals, e)]
     when :and
       aleft, tleft = tc(env, a, e.children[0])
       aright, tright = tc(env, aleft, e.children[1])
@@ -283,6 +228,34 @@ RUBY
       else
         [ajoin(aleft, aright), RDL::Type::UnionType.new(tleft, tright)]
       end
+    when :case
+      ai = a
+      ai, tcontrol = tc(env, ai, e.children[0]) unless e.children[0].nil? # the control expression, which make be nil
+      # for each guard, invoke guard === control expr, then possibly do body, possibly short-circuiting arbitrary later stuff
+      tbodies = []
+      abodies = []
+      e.children[1..-2].each { |wclause|
+        raise RuntimeError, "Don't know what to do with case clause #{wclause.type}" unless wclause.type == :when
+        aguards = []
+        wclause.children[0..-2].each { |guard| # first wclause.length-1 children are the guards
+          ai, tguard = tc(env, ai, guard) # guard type can be anything
+          tc_send(tguard, :===, [tcontrol], guard) unless tcontrol.nil?
+          aguards << ai
+        }
+        abody, tbody = tc(env, ajoin(*aguards), wclause.children[-1]) # last wclause child is body
+        tbodies << tbody
+        abodies << abody
+      }
+      if e.children[-1].nil?
+        # no else clause, might fall through having missed all cases
+        abodies << ai
+      else
+        # there is an else clause
+        aelse, telse = tc(env, ai, e.children[-1])
+        tbodies << telse
+        abodies << aelse
+      end
+      return [ajoin(*abodies), RDL::Type::UnionType.new(*tbodies)]
     when :begin # sequencing
       ai = a
       ti = nil
@@ -291,6 +264,68 @@ RUBY
     else
       raise RuntimeError, "Expression kind #{e.type} unsupported"
     end
+  end
+
+  # Type check a send
+  # [+ trecv +] is the type of the recevier
+  # [+ meth +] is a symbol with the method name
+  # [+ tactuals +] are the actual arguments
+  # [+ e +] is the expression at which location to report an error
+  def self.tc_send(trecv, meth, tactuals, e)
+    tmeth_inters = [] # Array<Array<MethodType>>, array of intersection types, since recv might not resolve to a single type
+
+    if (trecv.is_a? RDL::Type::SingletonType) && (trecv.val.is_a? Class) && (meth == :new)
+      t = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), :initialize)
+      t = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] unless t # there's always a nullary new if initialize is undefined
+      tmeth_inters << t
+    elsif trecv.is_a? RDL::Type::SingletonType
+      klass = trecv.val.class.to_s
+      t = lookup(klass, meth)
+      error :no_instance_method_type, [klass, meth], e unless t
+      tmeth_inters << t
+    elsif trecv.is_a? RDL::Type::NominalType
+      t = lookup(trecv.name, meth)
+      error :no_instance_method_type, [trecv.name, meth], e unless t
+      tmeth_inters << t
+    else
+      raise RuntimeError, "receiver type #{trecv} not supported yet"
+    end
+
+    trets = [] # all possible return types
+    # there might be more than one return type because:
+    #   multiple cases of an intersection type might match
+    #   there might be multiple types in tmeth_inters
+    tmeth_inters.each { |tmeth_inter| # Array<MethodType>; tmeth_inter is an intersection
+      tmeth_inter.each { |tmeth| # MethodType
+        trets << tmeth.ret if check_arg_types_one(tmeth, tactuals)
+      }
+    }
+    if trets.empty?
+      if tmeth_inters.size == 1
+        msg = <<RUBY
+Method type:
+#{ tmeth_inters[0].map { |ti| "        " + ti.to_s }.join("\n") }
+Actual arg types#{tactuals.size > 1 ? "s" : ""}:
+      (#{tactuals.map { |ti| ti.to_s }.join(', ')})
+RUBY
+        msg.chomp! # remove trailing newline
+        name = if (trecv.is_a? RDL::Type::SingletonType) && (trecv.val.is_a? Class) && (meth == :new) then
+          :initialize
+        elsif trecv.is_a? RDL::Type::SingletonType
+          trecv.val.class.to_s
+        elsif trecv.is_a? RDL::Type::NominalType
+          trecv.name
+        else
+          raise RutimeError, "impossible"
+        end
+        error :arg_type_single_receiver_error, [name, meth, msg], e
+      else
+        # TODO more complicated error message here
+        raise RuntimeError, "Not implemented yet #{tmeth_inters}"
+      end
+    end
+    # TODO: issue warning if trets.size > 1 ?
+    return RDL::Type::UnionType.new(*trets)
   end
 
   # [+ tmeth +] is MethodType
@@ -364,11 +399,19 @@ RUBY
     return nil
   end
 
-  # [+ a1 +] and [+ a2 +] are local variable type envrionments
+  # [+ as +] is an array of local variable type environments
   # returns join of evironments
-  def self.ajoin(a1, a2)
+  def self.ajoin(*as)
     a = Hash.new
-    a1.each_pair { |k, t| a[k] = RDL::Type::UnionType.new(t, a2[k]) if a2.has_key? k }
+    return a if as.empty?
+    return as[0] if as.size == 1
+    first = as[0]
+    rest = as[1..-1]
+    first.each_pair { |k, t|
+      if rest.all? { |h| h.has_key? k}
+        a[k] = RDL::Type::UnionType.new(t, *rest.map { |h| h[k] })
+      end
+    }
     return a
   end
 

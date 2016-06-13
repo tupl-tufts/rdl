@@ -7,7 +7,12 @@ class TestTypecheck < Minitest::Test
 
   def setup
     @t3 = RDL::Type::SingletonType.new 3
+    @t4 = RDL::Type::SingletonType.new 4
+    @t5 = RDL::Type::SingletonType.new 5
+    @t34 = RDL::Type::UnionType.new(@t3, @t4)
+    @t345 = RDL::Type::UnionType.new(@t34, @t5)
     @ts3 = RDL::Type::UnionType.new($__rdl_string_type, @t3)
+    @ts34 = RDL::Type::UnionType.new(@ts3, @t4)
     @aself = {self: $__rdl_parser.scan_str("#T TestTypecheck")}
   end
 
@@ -429,6 +434,36 @@ class TestTypecheck < Minitest::Test
     assert do_tc("(x = 3) or (x = 'foo'); x") <= $__rdl_fixnum_type
     assert do_tc("(x = nil) or (x = 3); x") <= @t3
     assert do_tc("(x = false) or (x = 3); x") <= @t3
+  end
+
+  class C
+    type :===, "(Object) -> %bool"
+  end
+
+  class D
+    type :===, "(String) -> %bool"
+  end
+
+  def test_when
+    assert_equal @t3, do_tc(@aself, "case when C.new then 3 end")
+    assert_equal @t34, do_tc(@aself, "x = 4; case when _any_object then x = 3 end; x")
+    assert_equal @ts3, do_tc(@aself, "case when _any_object then 3 else 'foo' end")
+    assert_equal @ts3, do_tc(@aself, "x = 4; case when _any_object then x = 3 else x = 'foo' end; x")
+
+    assert_equal $__rdl_string_type, do_tc(@aself, "case _any_object when C.new then 'foo' end")
+    assert_equal @ts3, do_tc(@aself, "x = 3; case _any_object when C.new then x = 'foo' end; x")
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc(@aself, "case _any_object when D.new then 'foo' end") }
+    assert_equal @ts3, do_tc(@aself, "case _any_object when C.new then 'foo' else 3 end")
+    assert_equal @ts3, do_tc(@aself, "x = 4; case _any_object when C.new then x = 'foo' else x = 3 end; x")
+    assert_equal @ts34, do_tc(@aself, "case _any_object when C.new then 'foo' when C.new then 4 else 3 end")
+    assert_equal @ts34, do_tc(@aself, "x = 5; case _any_object when C.new then x = 'foo' when C.new then x = 4 else x = 3 end; x")
+
+    assert_equal @t3, do_tc(@aself, "case when (x = 3) then 'foo' end; x")
+    assert_equal @t34, do_tc(@aself, "case when (x = 3), (x = 4) then 'foo' end; x")
+    assert_equal @t34, do_tc(@aself, "case when (x = 3), (x = 4) then 'foo' end; x")
+    assert_equal @t34, do_tc(@aself, "case when (x = 4) then x = 3 end; x")
+    assert_equal @t34, do_tc(@aself, "x = 5; case when (x = 3) then 'foo' when (x = 4) then 'foo' end; x") # first guard always executed!
+    assert_equal @t345, do_tc(@aself, "x = 6; case when (x = 3) then 'foo' when (x = 4) then 'foo' else x = 5 end; x")
   end
 
 end
