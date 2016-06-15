@@ -35,6 +35,7 @@ module RDL::Typecheck
   def self.typecheck(klass, meth)
     raise RuntimeError, "singleton method typechecking not supported yet" if RDL::Util.has_singleton_marker(klass)
     file, line = $__rdl_info.get(klass, meth, :source_location)
+    raise RuntimeError, "static type checking in irb not supported" if file == "(irb)"
     digest = Digest::MD5.file file
     cache_hit = (($__rdl_ruby_parser_cache.has_key? file) &&
                  ($__rdl_ruby_parser_cache[file][0] == digest))
