@@ -13,9 +13,7 @@ module RDL::Type
     def self.new(*types)
       ts = []
       types.each { |t|
-        if t.nil_type?
-          next
-        elsif t.instance_of? TopType
+        if t.instance_of? TopType
           ts = [t]
           break
         elsif t.instance_of? UnionType
@@ -28,6 +26,12 @@ module RDL::Type
 
       ts.sort! { |a, b| a.object_id <=> b.object_id }
       ts.uniq!
+
+      if ts.member? $__rdl_nil_type
+        # nil shouldn't be in union *unless* there are only otherwise singleton types, since
+        # nil is not a subtype of singleton types
+        ts.delete $__rdl_nil_type unless ts.all? { |t| t.is_a? SingletonType }
+      end
 
       return $__rdl_nil_type if ts.size == 0
       return ts[0] if ts.size == 1
