@@ -31,6 +31,8 @@
   * [Finite Hash Types](#finite-hash-types)
   * [Type Casts](#type-casts)
 * [Static Type Checking](#static-type-checking)
+  * [Variable Types](#variable-types)
+  * [Tuples, Finite Hashes, and Subtyping](#tuples-finite-hashes-and-subtyping)
 * [Other RDL Methods](#other-rdl-methods)
 * [Queries](#queries)
 * [Bibliography](#bibliography)
@@ -538,6 +540,53 @@ Often method bodies cannot be type checked as soon as they are loaded because th
 
 To perform type checking, RDL needs source code, which it gets by parsing the file containing the to-be-typechecked method. Hence, static type checking does not work in `irb` since RDL has no way of finding the file. RDL currently uses the [parser Gem](https://github.com/whitequark/parser). RDL also uses the parser gem's amazing diagnostic output facility to print type error messages.
 
+By their nature, static type checkers are conservative: They may reject some programs as type-incorrect even though those programs would have no type errors at run time. RDL's static type checker has several unusual features to help it be less conservative than standard type checkers, as discussed next.
+
+## Variable Types
+
+In a standard type system, local variables have one type throughout a method or function body. For example, in C and Java, declaring `int x` means `x` can only be used as an integer. However, in Ruby, variables need not be declared before they are used. Thus, by default, RDL treats local variables *flow-sensitively*, meaning at each assignment to a local variable, the variable's type is replaced by the type of the right hand side. For example:
+
+```ruby
+x = 3       # Here `x` is a `Fixnum`
+x = "three" # Now `x` is a `String`
+```
+(Note this is a slight fib, since after the first line, `x` will actually have the singleton type `3`. But we'll ignore this just to keep the discussion a bit simpler, especially since `3` is a subtype of `Fixnum`.)
+
+After conditionals, variables have the union of the types they have along both branches:
+
+```ruby
+if (some condition) then x = 3 else x = "three" end
+# x has type `Fixnum or String`
+```
+
+RDL also provides a method `var_type` that can be used to force a local variable to have a single type through a method body, i.e., to treat it *flow-insensitively* like a standard type system:
+
+```ruby
+var_type :x, 'Fixnum'
+x = 3       # okay
+x = "three" # type error
+```
+
+The first argument to `var_type` is a symbol with the local variable name, and the second argument is a string containing the variable's type. Note that var_type is most useful at the beginning of method or code block. Using it elsewhere may result in surprising error mesages, since RDL requires variables with fixed types to have the same type along all paths. Method parameters are treated as if `var_type` was called on them at the beginning of the method, fixing them to their declared type. This design choice may be revisited in the future.
+
+RDL always treats instance, class, and global variables flow-insensitively, hence their types must be defined with `var_type`:
+
+```ruby
+class A
+  var_type :@f, 'Fixnum'
+  def m
+    @f = 3       # type safe
+    @f = "three" # type error, incompatible type in assignment
+    @g = 42      # type error, no var_type for @g
+  end
+end
+```
+
+The `var_type` method may also be called as `var_type klass, :name, typ` to assign a type to an instance or class variable of class `klass`.
+
+## Tuples, Finite Hashes, and Subtyping
+
+*to be filled in*
 
 
 # Other RDL Methods
