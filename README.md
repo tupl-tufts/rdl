@@ -567,7 +567,7 @@ x = 3       # okay
 x = "three" # type error
 ```
 
-The first argument to `var_type` is a symbol with the local variable name, and the second argument is a string containing the variable's type. Note that var_type is most useful at the beginning of method or code block. Using it elsewhere may result in surprising error mesages, since RDL requires variables with fixed types to have the same type along all paths. Method parameters are treated as if `var_type` was called on them at the beginning of the method, fixing them to their declared type. This design choice may be revisited in the future.
+The first argument to `var_type` is a symbol with the local variable name, and the second argument is a string containing the variable's type. Note that `var_type` is most useful at the beginning of method or code block. Using it elsewhere may result in surprising error mesages, since RDL requires variables with fixed types to have the same type along all paths. Method parameters are treated as if `var_type` was called on them at the beginning of the method, fixing them to their declared type. This design choice may be revisited in the future.
 
 RDL always treats instance, class, and global variables flow-insensitively, hence their types must be defined with `var_type`:
 
