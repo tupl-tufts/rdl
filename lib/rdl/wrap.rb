@@ -280,7 +280,9 @@ class Object
   end
 
   def var_type(klass=self, var, typ)
-    raise RuntimeError, "Variable must begin with @, @@, or $" unless var.to_s =~ /^(@|\$)/
+    raise RuntimeError, "Variable cannot begin with capital" if var.to_s =~ /^[A-Z]/
+    return if var.to_s =~ /^[a-z]/ # local variables handled specially, inside type checker
+    raise Runtimeerror, "Global variables can't be typed in a class" unless klass = self
     klass = RDL::Util::GLOBAL_NAME if var.to_s =~ /^\$/
     unless $__rdl_info.set(klass, var, :type, $__rdl_parser.scan_str("#T #{typ}"))
       raise RuntimeError, "Type already declared for #{var}"

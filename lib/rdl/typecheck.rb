@@ -27,6 +27,79 @@ module RDL::Typecheck
     end
   end
 
+  # Local variable environment
+  # tracks the types of local variables, and whether they're "fixed," i.e.,
+  # whether they should be treated flow-insensitively
+  class Env
+    attr_accessor :env
+
+    # [+ params +] is a map from Symbols to Types. This initial variable mapping
+    # is added to the Env, and these initial mappings are fixed. If params
+    # is nil, initial Env is empty.
+    def initialize(params = nil)
+      @env = Hash.new
+      unless params.nil?
+        params.each_pair { |var, typ|
+          @env[var] = {type: typ, fixed: true}
+        }
+      end
+    end
+
+    # [+ var +] is a Symbol
+    def [](var)
+      return @env[var][:type]
+    end
+
+    def bind(var, typ)
+      raise RuntimeError, "Can't update variable with fixed type" if @env[var] && @env[var][:fixed]
+      result = Env.new
+      result.env = @env.merge(var => {type: typ, fixed: false})
+      return result
+    end
+
+    def has_key?(var)
+      return @env.has_key?(var)
+    end
+
+    def fix(var, typ)
+      raise RuntimeError, "Can't fix type of already-bound variable" if @env[var]
+      result = Env.new
+      result.env = @env.merge(var => {type: typ, fixed: true})
+      return result
+    end
+
+    def fixed?(var)
+      return @env[var] && @env[var][:fixed]
+    end
+
+    # [+ envs +] is Array<Env>
+    def self.join(e, *envs)
+      raise RuntimeError, "Expecting AST, got #{e.class}" unless e.is_a? AST::Node
+      env = Env.new
+      return env if envs.empty?
+      return envs[0] if envs.size == 1
+      first = envs[0]
+      rest = envs[1..-1]
+      first.env.each_pair { |var, h|
+        first_typ = h[:type]
+        if h[:fixed]
+          error :inconsistent_var_type, [var.to_s], e unless rest.all? { |other| other.fixed? var }
+          neq = []
+          rest.each { |other|
+            other_typ = other[var]
+            neq << other_typ unless first_typ == other_typ
+          }
+          error :inconsistent_var_type_type, [var.to_s, (first_typ + neq).map { |t| t.to_s }.join(' and ')], e unless neq.empty?
+          env.env[var] = {type: h[:type], fixed: true}
+        else
+          typ =  RDL::Type::UnionType.new(first_typ, *rest.map { |other| ((other.has_key? var) && other[var]) || $__rdl_nil_type })
+          env.env[var] = {type: typ, fixed: false}
+        end
+      }
+      return env
+    end
+  end
+
   # report msg at ast's loc
   def self.error(reason, args, ast)
     raise StaticTypeError, ("\n" + (Parser::Diagnostic.new :error, reason, args, ast.loc.expression).render.join("\n"))
@@ -59,101 +132,101 @@ module RDL::Typecheck
       type = type.instantiate inst
       a = args.children.map { |arg| arg.children[0] }.zip(type.args).to_h
       a[:self] = self_type
-      _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(Hash.new, a, body) end
+      _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(Hash.new, Env.new(a), body) end
       error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body_type <= type.ret
     }
   end
 
   # The actual type checking logic.
-  # [+ env +] is the current environemnt excluding local variables
-  # [+ a +] is the (local variable) type environment mapping variables (symbols) to types
+  # [+ scope +] tracks flow-insensitive information about the current scope, excluding local variables
+  # [+ env +] is the (local variable) Env
   # [+ e +] is the expression to type check
-  # Returns [a', t], where a' is the type environment at the end of the expression
+  # Returns [env', t], where env' is the type environment at the end of the expression
   # and t is the type of the expression
-  def self.tc(env, a, e)
+  def self.tc(scope, env, e)
     case e.type
     when :nil
-      [a, $__rdl_nil_type]
+      [env, $__rdl_nil_type]
     when :true
-      [a, $__rdl_true_type]
+      [env, $__rdl_true_type]
     when :false
-      [a, $__rdl_false_type]
+      [env, $__rdl_false_type]
     when :complex, :rational, :str, :string # constants
-      [a, RDL::Type::NominalType.new(e.children[0].class)]
+      [env, RDL::Type::NominalType.new(e.children[0].class)]
     when :int, :float, :sym # singletons
-      [a, RDL::Type::SingletonType.new(e.children[0])]
+      [env, RDL::Type::SingletonType.new(e.children[0])]
     when :dstr, :xstr # string (or execute-string) with interpolation
-      ai = a
-      e.children.each { |ei| ai, _ = tc(env, ai, ei) }
-      [ai, $__rdl_string_type]
+      envi = env
+      e.children.each { |ei| envi, _ = tc(scope, envi, ei) }
+      [envi, $__rdl_string_type]
     when :dsym # symbol with interpolation
-      ai = a
-      e.children.each { |ei| ai, _ = tc(env, ai, ei) }
-      [ai, $__rdl_symbol_type]
+      envi = env
+      e.children.each { |ei| envi, _ = tc(scope, envi, ei) }
+      [envi, $__rdl_symbol_type]
     when :regexp
-      ai = a
-      e.children.each { |ei| ai, _ = tc(env, ai, ei) unless ei.type == :regopt }
-      [ai, $__rdl_regexp_type]
+      envi = env
+      e.children.each { |ei| envi, _ = tc(scope, envi, ei) unless ei.type == :regopt }
+      [envi, $__rdl_regexp_type]
     when :array
-      ai = a
+      envi = env
       tis = []
-      e.children.each { |ei| ai, ti = tc(env, ai, ei); tis << ti }
-      [a, RDL::Type::TupleType.new(*tis)]
+      e.children.each { |ei| envi, ti = tc(scope, envi, ei); tis << ti }
+      [envi, RDL::Type::TupleType.new(*tis)]
 #    when :splat # TODO!
     when :hash
-      ai = a
+      envi = env
       tlefts = []
       trights = []
       is_fh = true
       e.children.each { |p|
         # each child is a pair
-        ai, tleft = tc(env, ai, p.children[0])
+        envi, tleft = tc(scope, envi, p.children[0])
         tlefts << tleft
-        ai, tright = tc(env, ai, p.children[1])
+        envi, tright = tc(scope, envi, p.children[1])
         trights << tright
         is_fh = false unless tleft.is_a?(RDL::Type::SingletonType) && tleft.val.is_a?(Symbol)
       }
       if is_fh
         # keys are all symbols
         fh = tlefts.map { |t| t.val }.zip(trights).to_h
-        [ai, RDL::Type::FiniteHashType.new(fh)]
+        [envi, RDL::Type::FiniteHashType.new(fh)]
       else
         tleft = RDL::Type::UnionType.new(*tlefts)
         tright = RDL::Type::UnionType.new(*trights)
-        [ai, RDL::Type::GenericType.new($__rdl_hash_type, tleft, tright)]
+        [envi, RDL::Type::GenericType.new($__rdl_hash_type, tleft, tright)]
       end
       #TODO test!
 #    when :kwsplat # TODO!
     when :irange, :erange
-      a1, t1 = tc(env, a, e.children[0])
-      a2, t2 = tc(env, a1, e.children[1])
+      env1, t1 = tc(scope, env, e.children[0])
+      env2, t2 = tc(scope, env1, e.children[1])
       # promote singleton types to nominal types; safe since Ranges are immutable
       t1 = RDL::Type::NominalType.new(t1.val.class) if t1.is_a? RDL::Type::SingletonType
       t2 = RDL::Type::NominalType.new(t2.val.class) if t2.is_a? RDL::Type::SingletonType
       error :nonmatching_range_type, [t1, t2], e if t1 != t2
-      [a2, RDL::Type::GenericType.new($__rdl_range_type, t1)]
+      [env2, RDL::Type::GenericType.new($__rdl_range_type, t1)]
     when :self
-      [a, a[:self]]
+      [env, env[:self]]
     when :lvar  # local variable
       x = e.children[0] # the variable
-      error :undefined_local_or_method, x.to_s, e unless a.has_key? x
-      [a, a[x]]
+      error :undefined_local_or_method, x.to_s, e unless env.has_key? x
+      [env, env[x]]
     when :ivar, :cvar, :gvar
       x = e.children[0] # the variable
-      klass = (if e.type == :gvar then RDL::Util::GLOBAL_NAME else a[:self] end)
+      klass = (if e.type == :gvar then RDL::Util::GLOBAL_NAME else env[:self] end)
       unless $__rdl_info.has?(klass, x, :type)
         kind = (if e.type == :ivar then "instance"
                 elsif e.type == :cvar then "class"
                 else "global" end)
         error :untyped_var, [kind, x], e
       end
-      [a, $__rdl_info.get(klass, x, :type)]
+      [env, $__rdl_info.get(klass, x, :type)]
     when :nth_ref, :back_ref
-      [a, $__rdl_string_type]
+      [env, $__rdl_string_type]
     when :const
       c = nil
       if e.children[0].nil?
-        c = a[:self].klass.const_get(e.children[1])
+        c = env[:self].klass.const_get(e.children[1])
       elsif e.children[0].type == :cbase
         raise "const cbase not implemented yet" # TODO!
       elsif e.children[0].type == :lvar
@@ -163,21 +236,26 @@ module RDL::Typecheck
       end
       case c
       when TrueClass, FalseClass, Complex, Rational, Fixnum, Bignum, Float, Symbol, Class
-        [a, RDL::Type::SingletonType.new(c)]
+        [env, RDL::Type::SingletonType.new(c)]
       else
-        [a, RDL::Type::NominalType.new(const_get(e.children[1]).class)]
+        [env, RDL::Type::NominalType.new(const_get(e.children[1]).class)]
       end
     when :defined?
       # do not type check subexpression, since it may not be type correct, e.g., undefined variable
-      [a, $__rdl_string_type]
+      [env, $__rdl_string_type]
     when :lvasgn
       x = e.children[0] # the variable
-      a1, t1 = tc(env, a, e.children[1])
-      [a1.merge(x => t1), t1]
+      env1, t1 = tc(scope, env, e.children[1])
+      if env1.fixed? x
+        error :vasgn_incompat, [t1, env1[x]], e unless t1 <= env1[x]
+        [env1, t1]
+      else
+        [env1.bind(x, t1), t1]
+      end
     when :ivasgn, :cvasgn, :gvasgn
       x = e.children[0] # the variable
-      aright, tright = tc(env, a, e.children[1])
-      klass = (if e.type == :gvasgn then RDL::Util::GLOBAL_NAME else a[:self] end)
+      envright, tright = tc(scope, env, e.children[1])
+      klass = (if e.type == :gvasgn then RDL::Util::GLOBAL_NAME else env[:self] end)
       unless $__rdl_info.has?(klass, x, :type)
         kind = (if e.type == :ivasgn then "instance"
                 elsif e.type == :cvasgn then "class"
@@ -186,85 +264,97 @@ module RDL::Typecheck
       end
       tleft = $__rdl_info.get(klass, x, :type)
       error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless tright <= tleft
-      [aright, tright]
+      [envright, tright]
     when :send, :csend
       # children[0] = receiver; if nil, receiver is self
       # children[1] = method name, a symbol
       # children [2..] = actual args
-      ai = a
+      return tc_var_type(scope, env, e) if e.children[0].nil? && e.children[1] == :var_type
+      envi = env
       tactuals = []
-      e.children[2..-1].each { |ei| ai, ti = tc(env, ai, ei); tactuals << ti }
-      ai, trecv = if e.children[0].nil? then [ai, ai[:self]] else tc(env, ai, e.children[0]) end # if no receiver, self is receiver
-      [ai, tc_send(trecv, e.children[1], tactuals, e)]
+      e.children[2..-1].each { |ei| envi, ti = tc(scope, envi, ei); tactuals << ti }
+      envi, trecv = if e.children[0].nil? then [envi, envi[:self]] else tc(scope, envi, e.children[0]) end # if no receiver, self is receiver
+      [envi, tc_send(trecv, e.children[1], tactuals, e)]
     when :and
-      aleft, tleft = tc(env, a, e.children[0])
-      aright, tright = tc(env, aleft, e.children[1])
+      envleft, tleft = tc(scope, env, e.children[0])
+      envright, tright = tc(scope, envleft, e.children[1])
       if tleft.is_a? RDL::Type::SingletonType
-        if tleft.val then [aright, tright] else [aleft, tleft] end
+        if tleft.val then [envright, tright] else [envleft, tleft] end
       else
-        [ajoin(aleft, aright), RDL::Type::UnionType.new(tleft, tright)]
+        [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright)]
       end
     when :or
-      aleft, tleft = tc(env, a, e.children[0])
-      aright, tright = tc(env, aleft, e.children[1])
+      envleft, tleft = tc(scope, env, e.children[0])
+      envright, tright = tc(scope, envleft, e.children[1])
       if tleft.is_a? RDL::Type::SingletonType
-        if tleft.val then [aleft, tleft] else [aright, tright] end
+        if tleft.val then [envleft, tleft] else [envright, tright] end
       else
-        [ajoin(aleft, aright), RDL::Type::UnionType.new(tleft, tright)]
+        [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright)]
       end
     # when :not # in latest Ruby, not is a method call that could be redefined, so can't count on its behavior
-    #   a1, t1 = tc(env, a, e.children[0])
+    #   a1, t1 = tc(scope, a, e.children[0])
     #   if t1.is_a? RDL::Type::SingletonType
     #     if t1.val then [a1, $__rdl_false_type] else [a1, $__rdl_true_type] end
     #   else
     #     [a1, $__rdl_bool_type]
     #   end
     when :if
-      ai, tguard = tc(env, a, e.children[0]) # guard; any type allowed
+      envi, tguard = tc(scope, env, e.children[0]) # guard; any type allowed
       # always type check both sides
-      aleft, tleft = if e.children[1].nil? then [ai, $__rdl_nil_type] else tc(env, ai, e.children[1]) end # then
-      aright, tright = if e.children[2].nil? then [ai, $__rdl_nil_type] else tc(env, ai, e.children[2]) end # else
+      envleft, tleft = if e.children[1].nil? then [envi, $__rdl_nil_type] else tc(scope, envi, e.children[1]) end # then
+      envright, tright = if e.children[2].nil? then [envi, $__rdl_nil_type] else tc(scope, envi, e.children[2]) end # else
       if tguard.is_a? RDL::Type::SingletonType
-        if tguard.val then [aleft, tleft] else [aright, tright] end
+        if tguard.val then [envleft, tleft] else [envright, tright] end
       else
-        [ajoin(aleft, aright), RDL::Type::UnionType.new(tleft, tright)]
+        [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright)]
       end
     when :case
-      ai = a
-      ai, tcontrol = tc(env, ai, e.children[0]) unless e.children[0].nil? # the control expression, which make be nil
+      envi = env
+      envi, tcontrol = tc(scope, envi, e.children[0]) unless e.children[0].nil? # the control expression, which make be nil
       # for each guard, invoke guard === control expr, then possibly do body, possibly short-circuiting arbitrary later stuff
       tbodies = []
-      abodies = []
+      envbodies = []
       e.children[1..-2].each { |wclause|
         raise RuntimeError, "Don't know what to do with case clause #{wclause.type}" unless wclause.type == :when
-        aguards = []
+        envguards = []
         wclause.children[0..-2].each { |guard| # first wclause.length-1 children are the guards
-          ai, tguard = tc(env, ai, guard) # guard type can be anything
+          envi, tguard = tc(scope, envi, guard) # guard type can be anything
           tc_send(tguard, :===, [tcontrol], guard) unless tcontrol.nil?
-          aguards << ai
+          envguards << envi
         }
-        abody, tbody = tc(env, ajoin(*aguards), wclause.children[-1]) # last wclause child is body
+        envbody, tbody = tc(scope, Env.join(e, *envguards), wclause.children[-1]) # last wclause child is body
         tbodies << tbody
-        abodies << abody
+        envbodies << envbody
       }
       if e.children[-1].nil?
         # no else clause, might fall through having missed all cases
-        abodies << ai
+        envbodies << envi
       else
         # there is an else clause
-        aelse, telse = tc(env, ai, e.children[-1])
+        envelse, telse = tc(scope, envi, e.children[-1])
         tbodies << telse
-        abodies << aelse
+        envbodies << envelse
       end
-      return [ajoin(*abodies), RDL::Type::UnionType.new(*tbodies)]
+      return [Env.join(e, *envbodies), RDL::Type::UnionType.new(*tbodies)]
     when :begin # sequencing
-      ai = a
+      envi = env
       ti = nil
-      e.children.each { |ei| ai, ti = tc(env, ai, ei) }
-      [ai, ti]
+      e.children.each { |ei| envi, ti = tc(scope, envi, ei) }
+      [envi, ti]
     else
       raise RuntimeError, "Expression kind #{e.type} unsupported"
     end
+  end
+
+  # [+ e +] is the method call
+  def self.tc_var_type(scope, env, e)
+    error :var_type_num_args, [e.children.length - 2], e unless e.children.length == 4
+    var = e.children[2].children[0] if e.children[2].type == :sym
+    error :var_type_var, [], e.children[2] if var.nil? || (not (var =~ /^[a-z]/))
+    typ_str = e.children[3].children[0] if (e.children[3].type == :str) || (e.children[3].type == :string)
+    error :var_type_type, [], e.children[3] if typ_str.nil?
+    typ = $__rdl_parser.scan_str("#T " + typ_str)
+    [env.fix(var, typ), $__rdl_nil_type]
   end
 
   # Type check a send
@@ -402,19 +492,19 @@ RUBY
 
   # [+ as +] is an array of local variable type environments
   # returns join of evironments
-  def self.ajoin(*as)
-    a = Hash.new
-    return a if as.empty?
-    return as[0] if as.size == 1
-    first = as[0]
-    rest = as[1..-1]
-    first.each_pair { |k, t|
-      if rest.all? { |h| h.has_key? k}
-        a[k] = RDL::Type::UnionType.new(t, *rest.map { |h| h[k] })
-      end
-    }
-    return a
-  end
+  # def self.ajoin(*as)
+  #   a = Hash.new
+  #   return a if as.empty?
+  #   return as[0] if as.size == 1
+  #   first = as[0]
+  #   rest = as[1..-1]
+  #   first.each_pair { |k, t|
+  #     if rest.all? { |h| h.has_key? k}
+  #       a[k] = RDL::Type::UnionType.new(t, *rest.map { |h| h[k] })
+  #     end
+  #   }
+  #   return a
+  # end
 
 end
 
@@ -426,7 +516,12 @@ type_error_messages = {
   no_instance_method_type: "no type information for instance method `%s#%s'",
   arg_type_single_receiver_error: "argument type error for instance method `%s#%s'\n%s",
   untyped_var: "no type for %s variable `%s'",
-  vasgn_incompat: "incompatible types: `%s' can't be assigned to `%s'"
+  vasgn_incompat: "incompatible types: `%s' can't be assigned to variable of type `%s'",
+  var_type_num_args: "var_type expects 2 arguments but got %d arguments",
+  var_type_var: "var_type expects first argument to be a symbol with a local variable name",
+  var_type_type: "var_type expects second argument to be a constant string describing a type",
+  inconsistent_var_type: "local variable `%s' has declared type on some paths but not all",
+  inconsistent_var_type_type: "local variable `%s' declared with inconsistent types %s",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

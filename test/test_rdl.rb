@@ -347,7 +347,7 @@ RUBY
       self.class.class_eval { var_type :@@foo, "Fixnum" }
     }
     assert_raises(RuntimeError) {
-      self.class.class_eval { var_type :foo, "String" }
+      self.class.class_eval { var_type :Foo, "String" }
     }
     assert_raises(RuntimeError) {
       self.class.class_eval { var_type :$foo, "String" }
