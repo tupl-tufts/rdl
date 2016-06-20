@@ -474,7 +474,6 @@ RUBY
     false
   end
 
-
   # [+ klass +] is a string containing the class name
   # [+ name +] is a symbol naming the thing to look up (either a method or field)
   # returns klass#name's type, walking up the inheritance hierarchy if appropriate
@@ -489,23 +488,6 @@ RUBY
     }
     return nil
   end
-
-  # [+ as +] is an array of local variable type environments
-  # returns join of evironments
-  # def self.ajoin(*as)
-  #   a = Hash.new
-  #   return a if as.empty?
-  #   return as[0] if as.size == 1
-  #   first = as[0]
-  #   rest = as[1..-1]
-  #   first.each_pair { |k, t|
-  #     if rest.all? { |h| h.has_key? k}
-  #       a[k] = RDL::Type::UnionType.new(t, *rest.map { |h| h[k] })
-  #     end
-  #   }
-  #   return a
-  # end
-
 end
 
 # Modify Parser::MESSAGES so can use the awesome parser diagnostics printing!
