@@ -50,10 +50,6 @@ module RDL::Type
       super()
     end
 
-    def le(other, h={})
-      raise RuntimeError, "should not be called"
-    end
-
     # TODO: Check blk
     # Very similar to Typecheck.check_arg_types
     def pre_cond?(blk, slf, inst, bind, *args)
@@ -283,10 +279,6 @@ RUBY
                             @ret.instantiate(inst))
     end
 
-    def eql?(other)
-      self == other
-    end
-
     # Return +true+ if +other+ is the same type
     def ==(other)
       return (other.instance_of? MethodType) &&
@@ -294,6 +286,8 @@ RUBY
         (other.block == @block) &&
         (other.ret == @ret)
     end
+
+    alias eql? ==
 
     # other may not be a query
     def match(other)

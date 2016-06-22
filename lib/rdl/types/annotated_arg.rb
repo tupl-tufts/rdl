@@ -16,16 +16,16 @@ module RDL::Type
     end
 
     def to_s
-      "#{@type.to_s} #{@name}"
-    end
-
-    def eql?(other)
-      self == other
+      return "#{@type.to_s} #{@name}"
     end
 
     def ==(other) # :nodoc:
+      return false if other.nil?
+      other = other.canonical
       return (other.instance_of? AnnotatedArgType) && (other.name == @name) && (other.type == @type)
     end
+
+    alias eql? ==
 
     # doesn't have a match method - queries shouldn't have annotations in them
 

@@ -19,21 +19,23 @@ module RDL::Type
       "%any"
     end
 
-    def eql?(other)
-      self == other
-    end
-
     def ==(other)
+      return false if other.nil?
+      other = other.canonical
       other.instance_of? TopType
     end
 
+    alias eql? ==
+
     def match(other)
+      other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return self == other
     end
 
     def <=(other)
+      other = other.canonical
       other.instance_of? TopType
     end
 

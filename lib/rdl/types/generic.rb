@@ -19,23 +19,23 @@ module RDL::Type
       "#{@base}<#{@params.map { |t| t.to_s }.join(', ')}>"
     end
 
-    def eql?(other)
-      self == other
-    end
-
     def ==(other) # :nodoc:
+      return false if other.nil?
+      other = other.canonical
       return (other.instance_of? GenericType) && (other.base == @base) && (other.params == @params)
     end
 
+    alias eql? ==
+
     def match(other)
+      other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return @params.length == other.params.length && @params.zip(other.params).all? { |t,o| t.match(o) }
     end
 
     def <=(other)
-      other = other.array if other.instance_of?(TupleType) && other.array
-      other = other.the_hash if other.instance_of?(FiniteHashType) && other.the_hash
+      other = other.canonical
       formals, variance, _ = $__rdl_type_params[base.name]
       # do check here to avoid hiding errors if generic type written
       # with wrong number of parameters but never checked against

@@ -40,18 +40,19 @@ module RDL::Type
     end
 
     def to_s  # :nodoc:
-      "(#{@types.map { |t| t.to_s }.join(' and ')})"
-    end
-
-    def eql?(other)
-      self == other
+      return "(#{@types.map { |t| t.to_s }.join(' and ')})"
     end
 
     def ==(other)  # :nodoc:
+      return false if other.nil?
+      other = other.canonical
       return (other.instance_of? IntersectionType) && (other.types == @types)
     end
 
+    alias eql? ==
+
     def match(other)
+      other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return false if @types.length != other.types.length
@@ -67,7 +68,7 @@ module RDL::Type
     end
 
     def hash  # :nodoc:
-      47 + @types.hash
+      return 47 + @types.hash
     end
   end
 end

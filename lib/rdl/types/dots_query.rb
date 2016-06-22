@@ -18,6 +18,8 @@ module RDL::Type
     end
 
     def ==(other)
+      return false if other.nil?
+      other = other.canonical
       return (other.instance_of? DotsQuery)
     end
 

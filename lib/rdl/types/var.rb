@@ -24,15 +24,16 @@ module RDL::Type
       return @name.to_s
     end
 
-    def eql?(other)
-      self == other
-    end
-
     def ==(other)
+      return false if other.nil?
+      other = other.canonical
       return (other.instance_of? self.class) && (other.name.to_s == @name.to_s)
     end
 
+    alias eql? ==
+
     def match(other)
+      other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return self == other

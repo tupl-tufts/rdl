@@ -24,5 +24,10 @@ module RDL::Type
       is_a?(SingletonType) && @val.nil?
     end
 
+    # default behavior, override in appropriate subclasses
+    def canonical
+      return self
+    end
+
   end
 end

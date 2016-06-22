@@ -23,22 +23,28 @@ module RDL::Type
       super()
     end
 
+    def canonical
+      return @the_hash if @the_hash
+      return self
+    end
+
     def to_s
-      return @the_hash.to_s if the_hash
+      return @the_hash.to_s if @the_hash
       "{" + @elts.map { |k, t| k.to_s + ": " + t.to_s }.join(', ') + "}"
     end
 
-    def eql?(other)
-      self == other
-    end
-
     def ==(other) # :nodoc:
+      return false if other.nil?
       return (@the_hash == other) if @the_hash
+      other = other.canonical
       return (other.instance_of? FiniteHashType) && (other.elts == @elts)
     end
 
+    alias eql? ==
+
     def match(other)
       return @the_hash.match(other) if @the_hash
+      other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return (@elts.length == other.elts.length &&
@@ -47,6 +53,7 @@ module RDL::Type
 
     def <=(other)
       return @the_hash <= other if @the_hash
+      other = other.canonical
       return true if other.instance_of? TopType
       other = other.the_hash if other.instance_of?(FiniteHashType) && other.the_hash
       if other.instance_of? FiniteHashType
@@ -107,7 +114,7 @@ module RDL::Type
 
     def hash
       # note don't change hash value if @the_hash becomes non-nil
-      229 * @elts.hash
+      return 229 * @elts.hash
     end
   end
 end

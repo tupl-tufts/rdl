@@ -34,6 +34,7 @@ module RDL::Type
     end
 
     def <=(other)
+      other = other.canonical
       return true if other.instance_of? TopType
       # in theory a StructuralType could contain all the methods of a NominalType or GenericType,
       # but it seems unlikely in practice, so disallow this case.
@@ -55,15 +56,16 @@ module RDL::Type
       StructuralType.new(Hash[*@methods.each_pair.map { |m, t| [m, t.instantiate(inst)] }.flatten])
     end
 
-    def eql?(other)
-      self == other
-    end
-
     def ==(other)  # :nodoc:
+      return false if other.nil?
+      other = other.canonical
       return (other.instance_of? StructuralType) && (other.methods == @methods)
     end
 
+    alias eql? ==
+
     def match(other)
+      other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return (@methods.length == other.methods.length &&

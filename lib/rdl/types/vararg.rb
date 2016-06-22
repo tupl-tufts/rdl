@@ -31,15 +31,16 @@ module RDL::Type
       end
     end
 
-    def eql?(other)
-      self == other
-    end
-
     def ==(other) # :nodoc:
+      return false if other.nil?
+      other = other.canonical
       return (other.instance_of? VarargType) && (other.type == @type)
     end
 
+    alias eql? ==
+
     def match(other)
+      other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return (other.instance_of? VarargType) && (@type.match(other.type))

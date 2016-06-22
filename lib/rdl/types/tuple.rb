@@ -16,22 +16,28 @@ module RDL::Type
       super()
     end
 
+    def canonical
+      return @array if @array
+      return self
+    end
+
     def to_s
       return @array.to_s if @array
       return "[#{@params.map { |t| t.to_s }.join(', ')}]"
     end
 
-    def eql?(other)
-      self == other
-    end
-
     def ==(other) # :nodoc:
+      return false if other.nil?
       return (@array == other) if @array
+      other = other.canonical
       return (other.instance_of? TupleType) && (other.params == @params)
     end
 
+    alias eql? ==
+
     def match(other)
       return @array.match(other) if @array
+      other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return @params.length == other.params.length && @params.zip(other.params).all? { |t,o| t.match(o) }
@@ -39,6 +45,7 @@ module RDL::Type
 
     def <=(other)
       return @array <= other if @array
+      other = other.canonical
       return true if other.instance_of? TopType
       other = other.array if other.instance_of?(TupleType) && other.array
       if other.instance_of? TupleType

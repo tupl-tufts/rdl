@@ -16,10 +16,15 @@ module RDL::Type
     end
 
     def ==(other)
+      return false if other.nil?
+      other = other.canonical
       return (other.instance_of? WildQuery)
     end
 
+    alias eql? ==
+
     def <=(other)
+      other = other.canonical
       return self == other
     end
 

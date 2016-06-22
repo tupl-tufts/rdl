@@ -1,5 +1,3 @@
-require_relative 'type'
-
 module RDL::Type
   class SingletonType < Type
     attr_reader :val
@@ -22,15 +20,16 @@ module RDL::Type
       @val = val
     end
 
-    def eql?(other)
-      self == other
-    end
-
     def ==(other)
+      return false if other.nil?
+      other = other.canonical
       return (other.instance_of? self.class) && (other.val.equal? @val)
     end
 
+    alias eql? ==
+
     def match(other)
+      other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return self == other
@@ -52,6 +51,7 @@ module RDL::Type
     end
 
     def <=(other)
+      other = other.canonical
       other.instance_of?(TopType) ||
         (@val.nil? && (not (other.instance_of?(SingletonType)))) ||
         (other.instance_of?(SingletonType) && other.val == @val) ||
