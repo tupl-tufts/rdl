@@ -7,23 +7,9 @@ module RDL::Type
     attr_reader :base
     attr_reader :params
 
-    @@cache = {}
-
-    class << self
-      alias :__new__ :new
-    end
-
-    def self.new(base, *params)
-      t = @@cache[[base, params]]
-      return t if t
+    def initialize(base, *params)
       raise RuntimeError, "Attempt to create generic type with non-type param" unless params.all? { |p| p.is_a? Type }
-      t = GenericType.__new__(base, params)
-      return (@@cache[[base, params]] = t) # assignment evaluates to t
-    end
-
-    def initialize(base, params)
       raise "base must be NominalType" unless base.instance_of? NominalType
-
       @base = base
       @params = params
       super()
