@@ -1,5 +1,6 @@
 require 'minitest/autorun'
-require_relative '../lib/rdl.rb'
+$LOAD_PATH << '../lib'
+require 'rdl'
 
 class TestContract < Minitest::Test
   include RDL::Contract
@@ -26,7 +27,7 @@ class TestContract < Minitest::Test
     assert (posfivegt.check self, 5)
     assert_raises(ContractError) { posfivegt.check self, 4 }
   end
-  
+
   def test_or
     pos = FlatContract.new("Positive") { |x| x > 0 }
     zero = FlatContract.new("Zero") { |x| x == 0 }
@@ -58,7 +59,7 @@ class TestContract < Minitest::Test
     proc = pc.wrap(self) { |x, &blk| blk.call(x) }
     assert_equal 42, (proc.call(42) { |y| y })
   end
-  
+
   def test_turn_off
     foo = FlatContract.new("Foo") {
       pos = FlatContract.new("Positive") { |x| x > 0 }

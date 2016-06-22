@@ -8,8 +8,9 @@ require 'coverage.so'
 require 'uri'
 
 require 'minitest/autorun'
-require_relative '../lib/rdl.rb'
-require_relative '../lib/rdl_types.rb'
+$LOAD_PATH << '../lib'
+require 'rdl'
+require 'rdl_types.rb'
 
 class Dummy
   def self.each

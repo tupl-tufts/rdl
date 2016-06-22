@@ -1,5 +1,6 @@
 require 'minitest/autorun'
-require_relative '../lib/rdl.rb'
+$LOAD_PATH << '../lib'
+require 'rdl'
 
 class TestIntersection < Minitest::Test
   include RDL::Type
@@ -14,7 +15,7 @@ class TestIntersection < Minitest::Test
     @true_n = NominalType.new(TrueClass)
 
     @tparam_t = VarType.new(:t)
-    
+
     @f_or_s = UnionType.new(@fixnum, @string)
     @string_or_true = UnionType.new(@string, @true_n)
 
@@ -38,4 +39,3 @@ class TestIntersection < Minitest::Test
     assert_equal(t1, i)
   end
 end
-
