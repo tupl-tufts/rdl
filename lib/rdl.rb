@@ -107,6 +107,7 @@ $__rdl_float_type = RDL::Type::NominalType.new Float
 $__rdl_complex_type = RDL::Type::NominalType.new Complex
 $__rdl_rational_type = RDL::Type::NominalType.new Rational
 $__rdl_integer_type = RDL::Type::NominalType.new Integer
+$__rdl_numeric_type = RDL::Type::NominalType.new Numeric
 $__rdl_string_type = RDL::Type::NominalType.new String
 $__rdl_array_type = RDL::Type::NominalType.new Array
 $__rdl_hash_type = RDL::Type::NominalType.new Hash

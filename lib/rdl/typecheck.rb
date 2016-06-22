@@ -97,7 +97,8 @@ module RDL::Typecheck
           error :inconsistent_var_type_type, [var.to_s, (first_typ + neq).map { |t| t.to_s }.join(' and ')], e unless neq.empty?
           env.env[var] = {type: h[:type], fixed: true}
         else
-          typ =  RDL::Type::UnionType.new(first_typ, *rest.map { |other| ((other.has_key? var) && other[var]) || $__rdl_nil_type })
+          typ = RDL::Type::UnionType.new(first_typ, *rest.map { |other| ((other.has_key? var) && other[var]) || $__rdl_nil_type })
+          typ = typ.canonical
           env.env[var] = {type: typ, fixed: false}
         end
       }
@@ -147,7 +148,7 @@ module RDL::Typecheck
   # [+ env +] is the (local variable) Env
   # [+ e +] is the expression to type check
   # Returns [env', t], where env' is the type environment at the end of the expression
-  # and t is the type of the expression
+  # and t is the type of the expression. t is always canonical.
   def self.tc(scope, env, e)
     case e.type
     when :nil
@@ -215,7 +216,7 @@ module RDL::Typecheck
     when :lvar  # local variable
       x = e.children[0] # the variable
       error :undefined_local_or_method, x.to_s, e unless env.has_key? x
-      [env, env[x]]
+      [env, env[x].canonical]
     when :ivar, :cvar, :gvar
       x = e.children[0] # the variable
       klass = (if e.type == :gvar then RDL::Util::GLOBAL_NAME else env[:self] end)
@@ -225,7 +226,7 @@ module RDL::Typecheck
                 else "global" end)
         error :untyped_var, [kind, x], e
       end
-      [env, $__rdl_info.get(klass, x, :type)]
+      [env, $__rdl_info.get(klass, x, :type).canonical]
     when :nth_ref, :back_ref
       [env, $__rdl_string_type]
     when :const
@@ -279,14 +280,14 @@ module RDL::Typecheck
       tactuals = []
       e.children[2..-1].each { |ei| envi, ti = tc(scope, envi, ei); tactuals << ti }
       envi, trecv = if e.children[0].nil? then [envi, envi[:self]] else tc(scope, envi, e.children[0]) end # if no receiver, self is receiver
-      [envi, tc_send(trecv, e.children[1], tactuals, e)]
+      [envi, tc_send(trecv, e.children[1], tactuals, e).canonical]
     when :and
       envleft, tleft = tc(scope, env, e.children[0])
       envright, tright = tc(scope, envleft, e.children[1])
       if tleft.is_a? RDL::Type::SingletonType
         if tleft.val then [envright, tright] else [envleft, tleft] end
       else
-        [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright)]
+        [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright).canonical]
       end
     when :or
       envleft, tleft = tc(scope, env, e.children[0])
@@ -294,7 +295,7 @@ module RDL::Typecheck
       if tleft.is_a? RDL::Type::SingletonType
         if tleft.val then [envleft, tleft] else [envright, tright] end
       else
-        [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright)]
+        [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright).canonical]
       end
     # when :not # in latest Ruby, not is a method call that could be redefined, so can't count on its behavior
     #   a1, t1 = tc(scope, a, e.children[0])
@@ -311,7 +312,7 @@ module RDL::Typecheck
       if tguard.is_a? RDL::Type::SingletonType
         if tguard.val then [envleft, tleft] else [envright, tright] end
       else
-        [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright)]
+        [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright).canonical]
       end
     when :case
       envi = env
@@ -340,7 +341,7 @@ module RDL::Typecheck
         tbodies << telse
         envbodies << envelse
       end
-      return [Env.join(e, *envbodies), RDL::Type::UnionType.new(*tbodies)]
+      return [Env.join(e, *envbodies), RDL::Type::UnionType.new(*tbodies).canonical]
     when :while
       envi, _ = tc(scope, env, e.children[0]) # guard can have any type
       envold = nil

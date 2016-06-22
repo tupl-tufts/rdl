@@ -492,6 +492,7 @@ class TestTypecheck < Minitest::Test
 
   def test_while
     assert_equal $__rdl_integer_type, do_tc(@env, "i = 0; while i < 5 do i = 1 + i end; i")
+    assert_equal $__rdl_numeric_type, do_tc(@env, "i = 0; while i < 5 do i = i + 1 end; i")
   end
 
 end
