@@ -1,8 +1,13 @@
 require 'minitest/autorun'
-require_relative '../lib/rdl.rb'
+$LOAD_PATH << '../lib'
+require 'rdl'
 
 class TestTypes < Minitest::Test
   include RDL::Type
+
+  class A; end
+  class B; end
+  class C; end
 
   def test_nil_top
     tnil = NominalType.new :NilClass
@@ -51,9 +56,9 @@ class TestTypes < Minitest::Test
   end
 
   def u_or_i(c)
-    ta = NominalType.new :A
-    tb = NominalType.new :B
-    tc = NominalType.new :C
+    ta = NominalType.new A
+    tb = NominalType.new B
+    tc = NominalType.new C
     t1 = c.new ta, tb
     assert_equal 2, t1.types.length
     t2 = c.new tb, ta
@@ -151,8 +156,8 @@ class TestTypes < Minitest::Test
   end
 
   def test_instantiate
-    tA = NominalType.new :A
-    tB = NominalType.new :B
+    tA = NominalType.new A
+    tB = NominalType.new B
     toptionalA = OptionalType.new tA
     tvarargA = VarargType.new tA
     tannotatedA = AnnotatedArgType.new("arg", tA)
