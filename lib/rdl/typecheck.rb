@@ -72,6 +72,11 @@ module RDL::Typecheck
       return @env[var] && @env[var][:fixed]
     end
 
+    def ==(other)
+      return false unless other.is_a? Env
+      return @env == other.env
+    end
+
     # [+ envs +] is Array<Env>
     def self.join(e, *envs)
       raise RuntimeError, "Expecting AST, got #{e.class}" unless e.is_a? AST::Node
@@ -83,7 +88,7 @@ module RDL::Typecheck
       first.env.each_pair { |var, h|
         first_typ = h[:type]
         if h[:fixed]
-          error :inconsistent_var_type, [var.to_s], e unless rest.all? { |other| other.fixed? var }
+          error :inconsistent_var_type, [var.to_s], e unless rest.all? { |other| (other.fixed? var) || (not (other.has_key? var)) }
           neq = []
           rest.each { |other|
             other_typ = other[var]
@@ -336,6 +341,15 @@ module RDL::Typecheck
         envbodies << envelse
       end
       return [Env.join(e, *envbodies), RDL::Type::UnionType.new(*tbodies)]
+    when :while
+      envi, _ = tc(scope, env, e.children[0]) # guard can have any type
+      envold = nil
+      until envi == envold do
+        envold = envi
+        envi, _ = tc(scope, envi, e.children[1]) # body can have any type
+        envi = Env.join(e, envi, envold)
+      end
+      [envi, $__rdl_nil_type]
     when :begin # sequencing
       envi = env
       ti = nil
