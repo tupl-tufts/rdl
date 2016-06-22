@@ -1,26 +1,11 @@
-require_relative 'type'
-
 module RDL::Type
   class OptionalType < Type
     attr_reader :type
 
-    @@cache = {}
-
-    class << self
-      alias :__new__ :new
-    end
-
-    def self.new(type)
-      t = @@cache[type]
-      return t if t
-      raise RuntimeError, "Attempt to create optional type with non-type" unless type.is_a? Type
-      t = OptionalType.__new__ type
-      return (@@cache[type] = t) # assignment evaluates to t
-    end
-
     def initialize(type)
-      raise "Can't have optional optional type" if type.class == OptionalType
-      raise "Can't have optional vararg type" if type.class == VarargType
+      raise RuntimeError, "Attempt to create optional type with non-type" unless type.is_a? Type
+      raise "Can't have optional optional type" if type.is_a? OptionalType
+      raise "Can't have optional vararg type" if type.is_a? VarargType
       @type = type
       super()
     end
