@@ -1,3 +1,5 @@
+require_relative 'range.rb'
+
 class Random
   rdl_nowrap
 
