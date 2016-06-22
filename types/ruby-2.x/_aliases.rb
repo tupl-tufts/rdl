@@ -1,4 +1,12 @@
-type_alias '%real', 'Integer or Float or Rational or BigDecimal'
+if defined? BigDecimal
+  type_alias '%real', 'Integer or Float or Rational or BigDecimal'
+else
+  type_alias '%real', 'Integer or Float or Rational'
+end
 type_alias '%string', '[to_str: () -> String]'
-type_alias '%path', '%string or Pathname'
+if defined? Pathname
+  type_alias '%path', '%string or Pathname'
+else
+  type_alias '%path', '%string'
+end
 type_alias '%open_args', '{external_encoding: ?String, internal_encoding: ?String, encoding: ?String, textmode: ?%any, binmode: ?%any, autoclose: ?%any, mode: ?String}'
