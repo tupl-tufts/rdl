@@ -490,8 +490,8 @@ class TestTypecheck < Minitest::Test
     assert_equal @t345, do_tc(@env, "x = 6; case when (x = 3) then 'foo' when (x = 4) then 'foo' else x = 5 end; x")
   end
 
-  # def test_while
-  #   assert_equal $__rdl_fixnum_type, do_tc(@env, "i = 0; while i < 5 do i = 1 + i end; i")
-  # end
+  def test_while
+    assert_equal $__rdl_integer_type, do_tc(@env, "i = 0; while i < 5 do i = 1 + i end; i")
+  end
 
 end
