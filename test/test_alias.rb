@@ -1,5 +1,6 @@
 require 'minitest/autorun'
-require_relative '../lib/rdl.rb'
+$LOAD_PATH << '../lib'
+require 'rdl'
 
 class TestAlias < Minitest::Test
 
@@ -62,5 +63,5 @@ class TestAlias < Minitest::Test
     assert_equal 3, m10(3)
     assert_raises(RDL::Contract::ContractError) { m10(-1) }
   end
-  
+
 end
