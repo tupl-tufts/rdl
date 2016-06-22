@@ -1,5 +1,3 @@
-require_relative 'type_query'
-
 module RDL::Type
   class WildQuery < TypeQuery
     @@cache = nil
@@ -19,6 +17,10 @@ module RDL::Type
 
     def ==(other)
       return (other.instance_of? WildQuery)
+    end
+
+    def <=(other)
+      return self == other
     end
 
     def match(other)
