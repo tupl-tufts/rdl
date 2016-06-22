@@ -1,5 +1,3 @@
-require_relative 'type'
-
 module RDL::Type
 
   # A type representing some method or block. MethodType has subcomponent

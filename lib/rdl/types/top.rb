@@ -1,5 +1,3 @@
-require_relative 'type'
-
 module RDL::Type
   class TopType < Type
     @@cache = nil

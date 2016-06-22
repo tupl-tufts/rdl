@@ -148,8 +148,6 @@ rule
 
 ---- header ----
 
-require_relative 'lexer.rex'
-
 module RDL::Type
 
 ---- inner ----

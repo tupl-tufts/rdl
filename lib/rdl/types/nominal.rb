@@ -1,6 +1,3 @@
-require_relative 'type'
-require_relative 'singleton'
-
 module RDL::Type
   class NominalType < Type
     attr_reader :name # string

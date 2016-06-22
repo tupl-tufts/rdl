@@ -1,5 +1,3 @@
-require_relative 'type'
-
 module RDL::Type
   class VarargType < Type
     attr_reader :type

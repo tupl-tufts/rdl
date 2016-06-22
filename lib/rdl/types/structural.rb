@@ -1,5 +1,3 @@
-require_relative 'type'
-
 module RDL::Type
   class StructuralType < Type
     attr_reader :methods

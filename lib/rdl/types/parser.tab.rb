@@ -7,13 +7,11 @@
 require 'racc/parser.rb'
 
 
-require_relative 'lexer.rex'
-
 module RDL::Type
 
 class Parser < Racc::Parser
 
-module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 156)
+module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 154)
 
 def initialize()
   @yydebug = true

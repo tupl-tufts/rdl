@@ -1,5 +1,3 @@
-require_relative 'type'
-
 module RDL::Type
   # A specialized GenericType for tuples, i.e., fixed-sized arrays
   class TupleType < Type
