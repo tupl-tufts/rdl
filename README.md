@@ -742,6 +742,3 @@ Copyright (c) 2014-2016, University of Maryland, College Park. All rights reserv
 * Queries, include more regexp operators aside from . and ...
 
 * Queries, allow regexp in class and method names; suggested by Andreas Adamcik, Vienna
-
-* Unions, to prevent calling <= and requiring classes to exist when unions are constructed,
-  defer parsing type arg strings until types are used?
