@@ -1,8 +1,13 @@
 require 'minitest/autorun'
-require_relative '../lib/rdl.rb'
+$LOAD_PATH << '../lib'
+require 'rdl'
 
 class TestParser < Minitest::Test
   include RDL::Type
+
+  class A; end
+  class B; end
+  class C; end
 
   def setup
     @tfixnumopt = OptionalType.new $__rdl_fixnum_type
@@ -57,12 +62,12 @@ class TestParser < Minitest::Test
   end
 
   def test_union
-    t1 = $__rdl_parser.scan_str "(A or B) -> nil"
-    assert_equal (MethodType.new [UnionType.new(@ta, @tb)], nil, $__rdl_nil_type), t1
-    t2 = $__rdl_parser.scan_str "(A or B or C) -> nil"
-    assert_equal (MethodType.new [UnionType.new(@ta, @tb, @tc)], nil, $__rdl_nil_type), t2
-    t3 = $__rdl_parser.scan_str "() -> A or B or C"
-    assert_equal (MethodType.new [], nil, UnionType.new(@ta, @tb, @tc)), t3
+    t1 = $__rdl_parser.scan_str "(Fixnum or String) -> nil"
+    assert_equal (MethodType.new [UnionType.new($__rdl_fixnum_type, $__rdl_string_type)], nil, $__rdl_nil_type), t1
+    t2 = $__rdl_parser.scan_str "(Fixnum or String or Symbol) -> nil"
+    assert_equal (MethodType.new [UnionType.new($__rdl_fixnum_type, $__rdl_string_type, $__rdl_symbol_type)], nil, $__rdl_nil_type), t2
+    t3 = $__rdl_parser.scan_str "() -> Fixnum or String or Symbol"
+    assert_equal (MethodType.new [], nil, UnionType.new($__rdl_fixnum_type, $__rdl_string_type, $__rdl_symbol_type)), t3
   end
 
   def test_bare
