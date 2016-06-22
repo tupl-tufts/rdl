@@ -1,17 +1,16 @@
 require 'delegate'
 require 'digest'
 require 'set'
-require 'require_all'
 require 'parser/current'
 
 module RDL
 end
 
-require_relative 'rdl/config.rb'
+require 'rdl/config.rb'
 def RDL.config
   yield(RDL::Config.instance)
 end
-require_relative 'rdl/info.rb'
+require 'rdl/info.rb'
 
 # Method/variable info table with kinds:
 # For methods
@@ -49,17 +48,43 @@ $__rdl_deferred = []
 # Create switches to control whether wrapping happens and whether
 # contracts are checked. These need to be created before rdl/wrap.rb
 # is loaded.
-require_rel 'rdl/switch.rb'
+require 'rdl/switch.rb'
 $__rdl_wrap_switch = RDL::Switch.new
 $__rdl_contract_switch = RDL::Switch.new
 
-require_rel 'rdl/types/*.rb'
-require_rel 'rdl/contracts/*.rb'
-require_rel 'rdl/util.rb'
-require_rel 'rdl/wrap.rb'
-require_rel 'rdl/query.rb'
-require_rel 'rdl/typecheck.rb'
-#require_rel 'rdl/stats.rb'
+require 'rdl/types/type.rb'
+require 'rdl/types/annotated_arg.rb'
+require 'rdl/types/dependent_arg.rb'
+require 'rdl/types/dots_query.rb'
+require 'rdl/types/finitehash.rb'
+require 'rdl/types/generic.rb'
+require 'rdl/types/intersection.rb'
+require 'rdl/types/lexer.rex.rb'
+require	'rdl/types/method.rb'
+require 'rdl/types/singleton.rb'
+require 'rdl/types/nominal.rb'
+require 'rdl/types/optional.rb'
+require 'rdl/types/parser.tab.rb'
+require 'rdl/types/structural.rb'
+require 'rdl/types/top.rb'
+require 'rdl/types/tuple.rb'
+require 'rdl/types/type_query.rb'
+require 'rdl/types/union.rb'
+require 'rdl/types/var.rb'
+require	'rdl/types/vararg.rb'
+require 'rdl/types/wild_query.rb'
+
+require 'rdl/contracts/contract.rb'
+require 'rdl/contracts/and.rb'
+require 'rdl/contracts/flat.rb'
+require 'rdl/contracts/or.rb'
+require 'rdl/contracts/proc.rb'
+
+require 'rdl/util.rb'
+require 'rdl/wrap.rb'
+require 'rdl/query.rb'
+require 'rdl/typecheck.rb'
+#require_relative 'rdl/stats.rb'
 
 $__rdl_parser = RDL::Type::Parser.new
 
