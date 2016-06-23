@@ -90,5 +90,9 @@ module RDL::Type
     def hash
       (61 + @base.hash) * @params.hash
     end
+
+    def to_inst
+      return $__rdl_type_params[base.name].zip(@params).to_h
+    end
   end
 end
