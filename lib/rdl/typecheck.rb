@@ -347,21 +347,62 @@ module RDL::Typecheck
       envold = nil
       until envi == envold do
         envold = envi
-        envi, _ = tc(scope, envi, e.children[1]) # body can have any type
+        envi, _ = tc(scope, envi, e.children[1]) if e.children[1] # body can have any type, may be nil
         envi, _ = tc(scope, envi, e.children[0]) # guard checked again
         envi = Env.join(e, envi, envold)
       end
       [envi, $__rdl_nil_type]
     when :while_post, :until_post
-      envi, _ = tc(scope, env, e.children[1]) # loop runs once
+      envi = env
+      envi, _ = tc(scope, envi, e.children[1]) if e.children[1] # loop runs once, may be nil
       envi, _ = tc(scope, envi, e.children[0]) # guard checked once
       begin
         envold = envi
-        envi, _ = tc(scope, envi, e.children[1]) # loop runs once
-        envi, _ = tc(scope, envi, e.children[0]) # guard checked once
+        envi, _ = tc(scope, envi, e.children[1]) if e.children[1] # loop runs
+        envi, _ = tc(scope, envi, e.children[0]) # guard checked again
         envi = Env.join(e, envi, envold)
       end until envi == envold
       [envi, $__rdl_nil_type]
+    when :for
+      raise RuntimeError, "Loop variable #{e.children[0]} in for unsupported" unless e.children[0].type == :lvasgn
+      x  = e.children[0].children[0] # loop variable
+      envi, tcollect = tc(scope, env, e.children[1]) # collection to iterate through
+      teaches = nil
+      tcollect = tcollect.canonical
+      case tcollect
+      when RDL::Type::NominalType
+        teaches = lookup(tcollect.name, :each)
+      when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
+        unless tcollect.is_a? RDL::Type::GenericType
+          error :tuple_array, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e.children[1] unless tcollect.promote!
+          tcollect = tcollect.canonical
+        end
+        teaches = lookup(tcollect.base.name, :each)
+        inst = tcollect.to_inst
+        teaches = teaches.map { |t| t.instantiate(inst) }
+      else
+        raise RuntimeError, "Collection of type #{tcollect.to_s} in for unsupported"
+      end
+      teach = nil
+      teaches.each { |t|
+        # find `each` method with right type signature:
+        #    () { (t1) -> t2 } -> t3
+        next unless t.args.empty?
+        next if t.block.nil?
+        next unless t.block.args.size == 1
+        next unless t.block.block.nil?
+        teach = t
+        break
+      }
+      error :no_each_type, [tcollect.name], e.children[1] if teach.nil?
+      envi = envi.bind(x, teach.block.args[0])
+      envold = nil
+      until envold == envi
+        envold = envi
+        envi, _ = tc(scope, envi, e.children[2]) if e.children[2] # may be nil
+        envi = Env.join(e, envold, envi)
+      end
+      [envi, teach.ret]
     when :begin, :kwbegin # sequencing
       envi = env
       ti = nil
@@ -530,6 +571,8 @@ type_error_messages = {
   var_type_type: "var_type expects second argument to be a constant string describing a type",
   inconsistent_var_type: "local variable `%s' has declared type on some paths but not all",
   inconsistent_var_type_type: "local variable `%s' declared with inconsistent types %s",
+  no_each_type: "can't find `each' method with signature `() { (t1) -> t2 } -> t3' in class `%s'",
+  tuple_array: "can't promote %s to %s in for",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

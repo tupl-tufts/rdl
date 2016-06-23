@@ -1,5 +1,5 @@
 require 'minitest/autorun'
-$LOAD_PATH << '../lib'
+$LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
 require 'rdl_types'
 
@@ -491,6 +491,10 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_while_until
+    assert do_tc(@env, "while true do end") <= $__rdl_nil_type
+    assert do_tc(@env, "until false do end") <= $__rdl_nil_type
+    assert do_tc(@env, "begin end while true") <= $__rdl_nil_type
+    assert do_tc(@env, "begin end until false") <= $__rdl_nil_type
     skip "not working yet"
     assert do_tc(@env, "i = 0; while i < 5 do i = 1 + i end; i") <= $__rdl_numeric_type
     assert do_tc(@env, "i = 0; while i < 5 do i = i + 1 end; i") <= $__rdl_numeric_type
@@ -500,6 +504,11 @@ class TestTypecheck < Minitest::Test
     assert do_tc(@env, "i = 0; begin i = i + 1 end while i < 5; i") <= $__rdl_numeric_type
     assert do_tc(@env, "i = 0; begin i = 1 + i end until i >= 5; i") <= $__rdl_numeric_type
     assert do_tc(@env, "i = 0; begin i = i + 1 end until i >= 5; i") <= $__rdl_numeric_type
+  end
+
+  def test_for
+    assert do_tc(@env, "for i in 1..5 do end; i") <= $__rdl_numeric_type
+    assert do_tc(@env, "for i in [1,2,3,4,5] do end; i") <= $__rdl_numeric_type
   end
 
 end
