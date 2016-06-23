@@ -20,6 +20,5 @@ EOF
   s.executables << 'rdl_query'
   s.homepage    = 'https://github.com/plum-umd/rdl'
   s.license     = 'BSD-3-Clause'
-  s.add_runtime_dependency 'require_all', '~> 1.3', '>= 1.3.3'
   s.add_runtime_dependency 'parser', '>= 2.3.1.0'
 end
