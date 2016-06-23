@@ -414,6 +414,8 @@ class TestTypecheck < Minitest::Test
   def test_send_generic
     assert do_tc(@env, "[1,2,3].length") <= $__rdl_fixnum_type
     assert do_tc(@env, "{a:1, b:2}.length") <= $__rdl_fixnum_type
+    assert do_tc(@env, "String.new.clone") <= $__rdl_string_type
+    # TODO test case with self type, other generic
   end
 
   def test_new

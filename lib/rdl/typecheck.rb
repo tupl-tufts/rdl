@@ -438,17 +438,20 @@ module RDL::Typecheck
       if (trecv.val.is_a? Class) && (meth == :new)
         ts = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), :initialize)
         ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] unless ts # there's always a nullary new if initialize is undefined
-        tmeth_inters << ts
+        inst = {self: trecv}
+        tmeth_inters << (ts.map { |t| t.instantiate(inst) })
       else
         klass = trecv.val.class.to_s
         ts = lookup(klass, meth)
         error :no_instance_method_type, [klass, meth], e unless ts
-        tmeth_inters << ts
+        inst = {self: trecv}
+        tmeth_inters << (ts.map { |t| t.instantiate(inst) })
       end
     when RDL::Type::NominalType
       ts = lookup(trecv.name, meth)
       error :no_instance_method_type, [trecv.name, meth], e unless ts
-      tmeth_inters << ts
+      inst = {self: trecv}
+      tmeth_inters << (ts.map { |t| t.instantiate(inst) })
     when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
       unless trecv.is_a? RDL::Type::GenericType
         error :tuple_finite_hash_promote, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e unless trecv.promote!
@@ -456,9 +459,8 @@ module RDL::Typecheck
       end
       ts = lookup(trecv.base.name, meth)
       error :no_instance_method_type, [trecv.base.name, meth], e unless ts
-      inst = trecv.to_inst
-      ts = ts.map { |t| t.instantiate(inst) }
-      tmeth_inters << ts
+      inst = trecv.to_inst.merge(self: trecv)
+      tmeth_inters << (ts.map { |t| t.instantiate(inst) })
     else
       raise RuntimeError, "receiver type #{trecv} not supported yet"
     end
