@@ -374,7 +374,7 @@ module RDL::Typecheck
         teaches = lookup(tcollect.name, :each)
       when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
         unless tcollect.is_a? RDL::Type::GenericType
-          error :tuple_array, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e.children[1] unless tcollect.promote!
+          error :tuple_finite_hash_promote, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e.children[1] unless tcollect.promote!
           tcollect = tcollect.canonical
         end
         teaches = lookup(tcollect.base.name, :each)
@@ -432,19 +432,33 @@ module RDL::Typecheck
   def self.tc_send(trecv, meth, tactuals, e)
     tmeth_inters = [] # Array<Array<MethodType>>, array of intersection types, since recv might not resolve to a single type
 
-    if (trecv.is_a? RDL::Type::SingletonType) && (trecv.val.is_a? Class) && (meth == :new)
-      t = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), :initialize)
-      t = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] unless t # there's always a nullary new if initialize is undefined
-      tmeth_inters << t
-    elsif trecv.is_a? RDL::Type::SingletonType
-      klass = trecv.val.class.to_s
-      t = lookup(klass, meth)
-      error :no_instance_method_type, [klass, meth], e unless t
-      tmeth_inters << t
-    elsif trecv.is_a? RDL::Type::NominalType
-      t = lookup(trecv.name, meth)
-      error :no_instance_method_type, [trecv.name, meth], e unless t
-      tmeth_inters << t
+    trecv = trecv.canonical
+    case trecv
+    when RDL::Type::SingletonType
+      if (trecv.val.is_a? Class) && (meth == :new)
+        ts = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), :initialize)
+        ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] unless ts # there's always a nullary new if initialize is undefined
+        tmeth_inters << ts
+      else
+        klass = trecv.val.class.to_s
+        ts = lookup(klass, meth)
+        error :no_instance_method_type, [klass, meth], e unless ts
+        tmeth_inters << ts
+      end
+    when RDL::Type::NominalType
+      ts = lookup(trecv.name, meth)
+      error :no_instance_method_type, [trecv.name, meth], e unless ts
+      tmeth_inters << ts
+    when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
+      unless trecv.is_a? RDL::Type::GenericType
+        error :tuple_finite_hash_promote, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e unless trecv.promote!
+        trecv = trecv.canonical
+      end
+      ts = lookup(trecv.base.name, meth)
+      error :no_instance_method_type, [trecv.base.name, meth], e unless ts
+      inst = trecv.to_inst
+      ts = ts.map { |t| t.instantiate(inst) }
+      tmeth_inters << ts
     else
       raise RuntimeError, "receiver type #{trecv} not supported yet"
     end
@@ -572,7 +586,7 @@ type_error_messages = {
   inconsistent_var_type: "local variable `%s' has declared type on some paths but not all",
   inconsistent_var_type_type: "local variable `%s' declared with inconsistent types %s",
   no_each_type: "can't find `each' method with signature `() { (t1) -> t2 } -> t3' in class `%s'",
-  tuple_array: "can't promote %s to %s in for",
+  tuple_finite_hash_promote: "can't promote %s to %s",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

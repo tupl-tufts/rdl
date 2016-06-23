@@ -411,6 +411,11 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc(@env, "3._send_singleton_nexists") }
   end
 
+  def test_send_generic
+    assert do_tc(@env, "[1,2,3].length") <= $__rdl_fixnum_type
+    assert do_tc(@env, "{a:1, b:2}.length") <= $__rdl_fixnum_type
+  end
+
   def test_new
     assert do_tc(@env, "B.new") <= RDL::Type::NominalType.new(B)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc(@env, "B.new(3)") }
