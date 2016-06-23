@@ -342,16 +342,27 @@ module RDL::Typecheck
         envbodies << envelse
       end
       return [Env.join(e, *envbodies), RDL::Type::UnionType.new(*tbodies).canonical]
-    when :while
+    when :while, :until
       envi, _ = tc(scope, env, e.children[0]) # guard can have any type
       envold = nil
       until envi == envold do
         envold = envi
         envi, _ = tc(scope, envi, e.children[1]) # body can have any type
+        envi, _ = tc(scope, envi, e.children[0]) # guard checked again
         envi = Env.join(e, envi, envold)
       end
       [envi, $__rdl_nil_type]
-    when :begin # sequencing
+    when :while_post, :until_post
+      envi, _ = tc(scope, env, e.children[1]) # loop runs once
+      envi, _ = tc(scope, envi, e.children[0]) # guard checked once
+      begin
+        envold = envi
+        envi, _ = tc(scope, envi, e.children[1]) # loop runs once
+        envi, _ = tc(scope, envi, e.children[0]) # guard checked once
+        envi = Env.join(e, envi, envold)
+      end until envi == envold
+      [envi, $__rdl_nil_type]
+    when :begin, :kwbegin # sequencing
       envi = env
       ti = nil
       e.children.each { |ei| envi, ti = tc(scope, envi, ei) }

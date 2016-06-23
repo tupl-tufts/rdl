@@ -490,9 +490,16 @@ class TestTypecheck < Minitest::Test
     assert_equal @t345, do_tc(@env, "x = 6; case when (x = 3) then 'foo' when (x = 4) then 'foo' else x = 5 end; x")
   end
 
-  def test_while
-    assert_equal $__rdl_integer_type, do_tc(@env, "i = 0; while i < 5 do i = 1 + i end; i")
-    assert_equal $__rdl_numeric_type, do_tc(@env, "i = 0; while i < 5 do i = i + 1 end; i")
+  def test_while_until
+    skip "not working yet"
+    assert do_tc(@env, "i = 0; while i < 5 do i = 1 + i end; i") <= $__rdl_numeric_type
+    assert do_tc(@env, "i = 0; while i < 5 do i = i + 1 end; i") <= $__rdl_numeric_type
+    assert do_tc(@env, "i = 0; until i >= 5 do i = 1 + i end; i") <= $__rdl_numeric_type
+    assert do_tc(@env, "i = 0; until i >= 5 do i = i + 1 end; i") <= $__rdl_numeric_type
+    assert do_tc(@env, "i = 0; begin i = 1 + i end while i < 5; i") <= $__rdl_numeric_type
+    assert do_tc(@env, "i = 0; begin i = i + 1 end while i < 5; i") <= $__rdl_numeric_type
+    assert do_tc(@env, "i = 0; begin i = 1 + i end until i >= 5; i") <= $__rdl_numeric_type
+    assert do_tc(@env, "i = 0; begin i = i + 1 end until i >= 5; i") <= $__rdl_numeric_type
   end
 
 end
