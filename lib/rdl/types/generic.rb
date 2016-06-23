@@ -92,7 +92,7 @@ module RDL::Type
     end
 
     def to_inst
-      return $__rdl_type_params[base.name].zip(@params).to_h
+      return $__rdl_type_params[base.name][0].zip(@params).to_h
     end
   end
 end
