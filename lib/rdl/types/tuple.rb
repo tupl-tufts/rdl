@@ -43,6 +43,13 @@ module RDL::Type
       return @params.length == other.params.length && @params.zip(other.params).all? { |t,o| t.match(o) }
     end
 
+    def promote!
+      @array = GenericType.new($__rdl_array_type, UnionType.new(*@params))
+      # note since we promoted this, lbounds and ubounds will be ignored in future constraints, which
+      # is good because otherwise we'd get infinite loops
+      return (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
+    end
+
     def <=(other)
       return @array <= other if @array
       other = other.canonical
@@ -57,10 +64,8 @@ module RDL::Type
         other.lbounds << self
         return true
       elsif (other.instance_of? GenericType) && (other.base == $__rdl_array_type)
-        @array = GenericType.new($__rdl_array_type, UnionType.new(*@params))
-        # note since we promoted this, lbounds and ubounds will be ignored in future constraints, which
-        # is good because otherwise we'd get infinite loops
-        return (self <= other) && (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
+        r = promote!
+        return (self <= other) && r
       end
       return false
     end

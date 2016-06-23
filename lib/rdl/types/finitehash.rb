@@ -51,6 +51,12 @@ module RDL::Type
               @elts.all? { |k, v| (other.elts.has_key? k) && (v.match(other.elts[k]))})
     end
 
+    def promote!
+      @the_hash = GenericType.new($__rdl_hash_type, $__rdl_symbol_type, UnionType.new(*@elts.values))
+      # same logic as Tuple
+      return (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
+    end
+
     def <=(other)
       return @the_hash <= other if @the_hash
       other = other.canonical
@@ -75,9 +81,8 @@ module RDL::Type
         other.lbounds << self
         return true
       elsif (other.instance_of? GenericType) && (other.base == $__rdl_hash_type)
-        @the_hash = GenericType.new($__rdl_hash_type, $__rdl_symbol_type, UnionType.new(*@elts.values))
-        # same logic as Tuple
-        return (self <= other) && (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
+        r = promote!
+        return (self <= other) && r
       end
       return false
     end
