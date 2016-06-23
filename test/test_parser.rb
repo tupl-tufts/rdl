@@ -1,5 +1,5 @@
 require 'minitest/autorun'
-$LOAD_PATH << '../lib'
+$LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
 
 class TestParser < Minitest::Test
