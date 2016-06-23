@@ -562,6 +562,7 @@ RUBY
   # returns klass#name's type, walking up the inheritance hierarchy if appropriate
   # returns nil if no type found
   def self.lookup(klass, name)
+    name = $__rdl_aliases[klass][name] if $__rdl_aliases[klass] && $__rdl_aliases[klass][name]
     t = $__rdl_info.get(klass, name, :type)
     return t if t # simplest case, no need to walk inheritance hierarchy
     RDL::Util.to_class(klass).ancestors.each { |ancestor|

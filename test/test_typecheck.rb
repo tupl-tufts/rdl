@@ -418,6 +418,10 @@ class TestTypecheck < Minitest::Test
     # TODO test case with self type, other generic
   end
 
+  def test_send_alias
+    assert do_tc(@env, "[1,2,3].size") <= $__rdl_fixnum_type
+  end
+
   def test_new
     assert do_tc(@env, "B.new") <= RDL::Type::NominalType.new(B)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc(@env, "B.new(3)") }
