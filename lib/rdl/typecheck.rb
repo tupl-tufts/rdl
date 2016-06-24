@@ -138,8 +138,9 @@ module RDL::Typecheck
       type = type.instantiate inst
       a = args.children.map { |arg| arg.children[0] }.zip(type.args).to_h
       a[:self] = self_type
-      _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(Hash.new, Env.new(a), body) end
-      error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body_type <= type.ret
+      scope = {tret: type.ret, tblock: type.block }
+      _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(scope, Env.new(a), body) end
+      error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body_type.nil? || body_type <= type.ret
     }
   end
 
@@ -403,6 +404,11 @@ module RDL::Typecheck
         envi = Env.join(e, envold, envi)
       end
       [envi, teach.ret]
+    when :return
+      # TODO return in lambda returns from lambda and not outer scope
+      env1, t1 = tc(scope, env, e.children[0])
+      error :bad_return_type, [t1.to_s, scope[:tret]], e unless t1 <= scope[:tret]
+      [env1, $__rdl_bot_type] # return is a void value expression
     when :begin, :kwbegin # sequencing
       envi = env
       ti = nil

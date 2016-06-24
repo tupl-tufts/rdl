@@ -524,4 +524,28 @@ class TestTypecheck < Minitest::Test
     assert do_tc("for i in [1,2,3,4,5] do end; i") <= $__rdl_numeric_type
   end
 
+  def test_return
+    self.class.class_eval {
+      type "(Fixnum) -> Fixnum", typecheck_now: true
+      def return_ff(x)
+        return 42
+      end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum) -> Fixnum", typecheck_now: true
+        def return_ff2(x)
+          return "forty-two"
+        end
+      }
+    }
+
+    do_tc("return 42", scope: @scopefs)
+    do_tc("if _any_object then return 42 else return 'forty-two' end", env: @env, scope: @scopefs)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("if _any_object then return 42 else return 'forty-two' end", env: @env, scope: @scopef) }
+    assert do_tc("return 42 if _any_object; 'forty-two'", env: @env, scope: @scopef) <= $__rdl_string_type
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("return 'forty-two' if _any_object; 42", env: @env, scope: @scopef) }
+  end
+
 end
