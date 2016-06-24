@@ -30,6 +30,7 @@
   * [Tuple Types](#tuple-types)
   * [Finite Hash Types](#finite-hash-types)
   * [Type Casts](#type-casts)
+  * [Bottom Type (%bot)](#bottom-type-bot)
 * [Static Type Checking](#static-type-checking)
   * [Variable Types](#variable-types)
   * [Tuples, Finite Hashes, and Subtyping](#tuples-finite-hashes-and-subtyping)
@@ -396,7 +397,7 @@ type Float, :angle, '() -> 0 or ${Math::PI}'
 
 RDL checks if a value matches a singleton type using `equal?`. As a consequence, singleton string types aren't currently possible.
 
-Note that the type `nil` behaves specially with singleton types. While `nil` can in general be used anywhere any type is expected, it *cannot* be used where a singleton type is expected. For example, `nil` could not be a return value of `Dir#mkdir` or `Float#angle`.
+Note that the type `nil` is actually implemented as a singleton type with the special behavior that `nil` is a treated as a member of any class. However, while `nil` can in general be used anywhere any type is expected, it *cannot* be used where a different singleton type is expected. For example, `nil` could not be a return value of `Dir#mkdir` or `Float#angle`.
 
 ## Self Type
 
@@ -531,6 +532,10 @@ Here `foo`, takes a hash where key `:a` is mapped to a `Fixnum` and key `:b` is 
 ## Type Casts
 
 Sometimes RDL does not have precise information about an object's type. For these cases, RDL supports type casts of the form `o.type_cast(t)`. This call returns a new object that delegates all methods to `o` but that will be treated by RDL as if it had type `t`. For example, `x = "a".type_cast('nil')` will make RDL treat `x` as if it had type `nil`, even though it's a `String`.
+
+## Bottom Type (%bot)
+
+RDL also includes a special *bottom* type `%bot` that is a subtype of any type, including any class and any singleton types. In static type checking, the type `%bot` is given to so-called *void value expressions*, which are `return`, `break`, `next`, `redo`, and `retry` (notice that these expressions perform jumps rather than producing a value, hence they can be treated as having an arbitrary type). No Ruby objects have type `%bot`.
 
 # Static Type Checking
 

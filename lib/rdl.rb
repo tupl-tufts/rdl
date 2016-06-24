@@ -54,6 +54,7 @@ $__rdl_contract_switch = RDL::Switch.new
 
 require 'rdl/types/type.rb'
 require 'rdl/types/annotated_arg.rb'
+require 'rdl/types/bot.rb'
 require 'rdl/types/dependent_arg.rb'
 require 'rdl/types/dots_query.rb'
 require 'rdl/types/finitehash.rb'
@@ -97,6 +98,7 @@ $__rdl_ruby_parser_cache = Hash.new
 # NominalTypes are cached, but these names are shorter to type
 $__rdl_nil_type = RDL::Type::NominalType.new NilClass # actually creates singleton type
 $__rdl_top_type = RDL::Type::TopType.new
+$__rdl_bot_type = RDL::Type::BotType.new
 $__rdl_object_type = RDL::Type::NominalType.new Object
 $__rdl_true_type = RDL::Type::NominalType.new TrueClass # actually creates singleton type
 $__rdl_false_type = RDL::Type::NominalType.new FalseClass # also singleton type
@@ -117,4 +119,5 @@ $__rdl_regexp_type = RDL::Type::NominalType.new Regexp
 
 # Hash from special type names to their values
 $__rdl_special_types = {'%any' => $__rdl_top_type,
+                        '%bot' => $__rdl_bot_type,
                         '%bool' => $__rdl_bool_type}
