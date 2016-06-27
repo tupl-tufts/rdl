@@ -176,7 +176,7 @@ class Integer < Numeric
   type :remainder, '(Fixnum x {{ x!=0 }}) -> Fixnum r {{ r>=0 }}'
   type :remainder, '(Bignum x {{ x!=0 }}) -> Fixnum r {{ r>=0 }}'
   type :remainder, '(Float x {{ x!=0 }}) -> Float'
-  type :remainder, '(Rational x {{ x!=0 }}) -> Rational {{ r>=0 }}'
+  type :remainder, '(Rational x {{ x!=0 }}) -> Rational r {{ r>=0 }}'
   type :remainder, '(BigDecimal x {{ x!=0 }}) -> BigDecimal'
   type :round, '() -> %integer'
   type :round, '(%numeric) -> %numeric'
