@@ -117,9 +117,7 @@ class Bignum < Integer
   type :bit_length, '() -> Integer'
   post(:bit_length) { |r,x| r >= 0 }
 
-  type :div, '(Fixnum) -> Integer'
-  pre(:div) { |x| x!=0}
-  type :div, '(Bignum) -> Integer'
+  type :div, '(Integer) -> Integer'
   pre(:div) { |x| x!=0}
   type :div, '(Float) -> Integer'
   pre(:div) { |x| x!=0 && !x.nan?}

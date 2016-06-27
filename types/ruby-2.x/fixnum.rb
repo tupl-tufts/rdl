@@ -60,7 +60,7 @@ class Fixnum < Integer
   type :<, '(Rational) -> %bool'
   type :<, '(BigDecimal) -> %bool'
 
-  type :<<, '(Fixnum) -> Integer' #must be below a certain amount, not exactly sure what amount
+  type :<<, '(Fixnum) -> Integer'
 
   type :<=, '(Integer) -> %bool'
   type :<=, '(Float) -> %bool'
