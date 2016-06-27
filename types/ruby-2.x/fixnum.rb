@@ -1,16 +1,11 @@
 class Fixnum < Integer
   rdl_nowrap
 
-  type :%, '(Fixnum) -> Fixnum'
-  pre(:%) { |x| x!=0}
-  type :%, '(Bignum) -> %integer'
-  pre(:%) { |x| x!=0}
-  type :%, '(Float) -> Float'
-  pre(:%) { |x| x!=0}
-  type :%, '(Rational) -> Rational'
-  pre(:%) { |x| x!=0}
-  type :%, '(BigDecimal) -> BigDecimal'
-  pre(:%) { |x| x!=0}
+  type :%, '(Fixnum x {{ x!=0 }}) -> Fixnum'
+  type :%, '(Bignum x {{ x!=0 }}) -> %integer'
+  type :%, '(Float x {{ x!=0 }}) -> Float'
+  type :%, '(Rational x {{ x!=0}}) -> Rational'
+  type :%, '(BigDecimal x {{ x!=0}}) -> BigDecimal'
 
   type :&, '(%integer) -> Fixnum'
 
@@ -44,16 +39,12 @@ class Fixnum < Integer
 
   type :-, '() -> Fixnum'
 
-  type :/, '(%integer) -> %integer'
-  pre(:/) { |x| x!=0}
-  type :/, '(Float) -> Float'
-  pre(:/) { |x| x!=0}
-  type :/, '(Rational) -> Rational'
-  pre(:/) { |x| x!=0}
-  type :/, '(BigDecimal) -> BigDecimal'
-  pre(:/) { |x| x!=0}
-  type :/, '(Complex) -> Complex'
-  pre(:/) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end && if (x.real.is_a?(Rational) && x.imaginary.is_a?(Float)) then !x.imaginary.nan? else true end}
+  type :/, '(%integer x {{ x!=0 }}) -> %integer'
+  type :/, '(Float x {{ x!=0 }}) -> Float'
+  type :/, '(Rational x {{ x!=0 }}) -> Rational'
+  type :/, '(BigDecimal x {{ x!=0 }}) -> BigDecimal'
+  type :/, '(Complex x {{ x!=0 }}) -> Complex'
+  pre(:/) { if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end && if (x.real.is_a?(Rational) && x.imaginary.is_a?(Float)) then !x.imaginary.nan? else true end}
 
   type :<, '(%integer) -> %bool'
   type :<, '(Float) -> %bool'
@@ -110,25 +101,18 @@ class Fixnum < Integer
 
   type :~, '() -> Fixnum'
 
-  type :abs, '() -> %integer'
-  post(:abs) { |r,x| r >= 0 }
+  type :abs, '() -> %integer r {{ r>=0 }}'
 
-  type :bit_length, '() -> Fixnum'
-  post(:bit_length) { |r,x| r >= 0 }
+  type :bit_length, '() -> Fixnum r {{ r>=0 }}'
 
-  type :div, '(Fixnum) -> %integer'
-  pre(:div) { |x| x!=0}
-  type :div, '(Bignum) -> Fixnum'
-  pre(:div) { |x| x!=0}
-  type :div, '(Float) -> %integer'
-  pre(:div) { |x| x!=0 && !x.nan?}
-  type :div, '(Rational) -> %integer'
-  pre(:div) { |x| x!=0}
-  type :div, '(BigDecimal) -> %integer'
-  pre(:div) { |x| x!=0 && !x.nan?}
+  type :div, '(Fixnum x {{ x!=0 }}) -> %integer'
+  type :div, '(Bignum x {{ x!=0 }}) -> Fixnum'
+  type :div, '(Float x {{ x!=0 && !x.nan? }}) -> %integer'
+  type :div, '(Rational x {{ x!=0 }}) -> %integer'
+  type :div, '(BigDecimal x {{ x!=0 && !x.nan? }}) -> %integer'
 
-  type :divmod, '(%real) -> [%real, %real]'
-  pre(:divmod) { |x| x!=0 && if x.is_a?(Float) then !x.nan? else true end}
+  type :divmod, '(%real x {{ x!=0 }}) -> [%real, %real]'
+  pre(:divmod) { |x| if x.is_a?(Float) then !x.nan? else true end}
 
   type :even?, '() -> %bool'
 
@@ -137,24 +121,18 @@ class Fixnum < Integer
   type :fdiv, '(Rational) -> Float'
   type :fdiv, '(BigDecimal) -> BigDecimal'
   type :fdiv, '(Complex) -> Complex'
-  pre(:fdiv) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end && if (x.real.is_a?(Rational) && x.imaginary.is_a?(Float)) then !x.imaginary.nan? else true end}
+  pre(:fdiv) { |x| if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end && if (x.real.is_a?(Rational) && x.imaginary.is_a?(Float)) then !x.imaginary.nan? else true end}
 
   type :to_s, '() -> String'
   type :inspect, '() -> String'
 
-  type :magnitude, '() -> %integer'
-  post(:magnitude) { |r,x| r >= 0 }
+  type :magnitude, '() -> %integer r {{ r>=0 }}'
 
-  type :modulo, '(Fixnum) -> Fixnum'
-  pre(:modulo) { |x| x!=0}
-  type :modulo, '(Bignum) -> %integer'
-  pre(:modulo) { |x| x!=0}
-  type :modulo, '(Float) -> Float'
-  pre(:modulo) { |x| x!=0}
-  type :modulo, '(Rational) -> Rational'
-  pre(:modulo) { |x| x!=0}
-  type :modulo, '(BigDecimal) -> BigDecimal'
-  pre(:modulo) { |x| x!=0}
+  type :modulo, '(Fixnum x {{ x!=0 }}) -> Fixnum'
+  type :modulo, '(Bignum x {{ x!=0 }}) -> %integer'
+  type :modulo, '(Float x {{ x!=0 }}) -> Float'
+  type :modulo, '(Rational x {{ x!=0 }}) -> Rational'
+  type :modulo, '(BigDecimal x {{ x!=0 }}) -> BigDecimal'
 
   type :next, '() -> %integer'
 
@@ -170,22 +148,17 @@ class Fixnum < Integer
 
   type :ceil, '() -> %integer'
 
-  type :denominator, '() -> Fixnum'
-  post(:denominator) { |r,x| r == 1 }
+  type :denominator, '() -> Fixnum r {{ r==1 }}'
 
   type :floor, '() -> %integer'
   type :numerator, '() -> Fixnum'
 
-  type :quo, '(%integer) -> Rational'
-  pre(:quo) { |x| x!=0}
-  type :quo, '(Float) -> Float'
-  pre(:quo) { |x| x!=0}
-  type :quo, '(Rational) -> Rational'
-  pre(:quo) { |x| x!=0}
-  type :quo, '(BigDecimal) -> BigDecimal'
-  pre(:quo) { |x| x!=0}
-  type :quo, '(Complex) -> Complex'
-  pre(:quo) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end && if (x.real.is_a?(Rational) && x.imaginary.is_a?(Float)) then !x.imaginary.nan? else true end}
+  type :quo, '(%integer x {{ x!=0 }}) -> Rational'
+  type :quo, '(Float x {{ x!=0 }}) -> Float'
+  type :quo, '(Rational x {{ x!=0 }}) -> Rational'
+  type :quo, '(BigDecimal x {{ x!=0 }}) -> BigDecimal'
+  type :quo, '(Complex x {{ x!=0 }}) -> Complex'
+  pre(:quo) { |x| if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end && if (x.real.is_a?(Rational) && x.imaginary.is_a?(Float)) then !x.imaginary.nan? else true end}
 
   type :rationalize, '() -> Rational'
 
@@ -215,37 +188,25 @@ class Fixnum < Integer
 
   type :phase, '() -> %numeric'
 
-  type :abs2, '() -> %integer'
-  post(:abs2) { |r,x| r >= 0 }
+  type :abs2, '() -> %integer r {{ r>=0}}'
 
   type :conj, '() -> Fixnum'
   type :conjugate, '() -> Fixnum'
 
-  type :imag, '() -> Fixnum'
-  post(:imag) { |r,x| r == 0 }
-  type :imaginary, '() -> Fixnum'
-  post(:imaginary) { |r,x| r == 0 }
+  type :imag, '() -> Fixnum r {{ r==0 }}'
+  type :imaginary, '() -> Fixnum r {{ r==0 }}'
 
   type :real, '() -> Fixnum'
 
   type :real?, '() -> true'
 
-  type :to_c, '() -> Complex'
-  post(:to_c) { |r,x| r.imaginary == 0 }
+  type :to_c, '() -> Complex r {{ r.imaginary == 0 }}'
 
-  type :remainder, '(Fixnum) -> Fixnum'
-  pre(:remainder) { |x| x!=0}
-  post(:remainder) { |r,x| r>0}
-  type :remainder, '(Bignum) -> Fixnum'
-  pre(:remainder) { |x| x!=0}
-  post(:remainder) { |r,x| r>0}
-  type :remainder, '(Float) -> Float'
-  pre(:remainder) { |x| x!=0}
-  type :remainder, '(Rational) -> Rational'
-  pre(:remainder) { |x| x!=0}
-  post(:remainder) { |r,x| r>0}
-  type :remainder, '(BigDecimal) -> BigDecimal'
-  pre(:remainder) { |x| x!=0}
+  type :remainder, '(Fixnum x {{ x!=0 }}) -> Fixnum r {{ r>0 }}'
+  type :remainder, '(Bignum x {{ x!=0 }}) -> Fixnum r {{ r>0 }}'
+  type :remainder, '(Float x {{ x!=0 }}) -> Float'
+  type :remainder, '(Rational x {{ x!=0 }}) -> Rational r {{ r>0 }}'
+  type :remainder, '(BigDecimal x {{ x=0 }}) -> BigDecimal'
 
   type :coerce, '(%numeric) -> [%real, %real]'
   pre(:coerce) { |x| if x.is_a?(Complex) then x.imaginary==0 else true end}
