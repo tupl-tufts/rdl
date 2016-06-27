@@ -1,7 +1,7 @@
 class Rational < Numeric
   rdl_nowrap
 
-  type :%, '(Integer) -> Rational'
+  type :%, '(%integer) -> Rational'
   pre(:%) { |x| x!=0}
   type :%, '(Float) -> Float'
   pre(:%) { |x| x!=0&&!x.nan?}
@@ -10,20 +10,20 @@ class Rational < Numeric
   type :%, '(BigDecimal) -> BigDecimal'
   pre(:%) { |x| x!=0&&!x.nan?}
 
-  type :*, '(Integer) -> Rational'
+  type :*, '(%integer) -> Rational'
   type :*, '(Float) -> Float'
   type :*, '(Rational) -> Rational'
   type :*, '(BigDecimal) -> BigDecimal'
   type :*, '(Complex) -> Complex'
   pre(:*) { |x| if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end} #can't have a complex with part BigDecimal, other part infinity/NAN
 
-  type :+, '(Integer) -> Rational'
+  type :+, '(%integer) -> Rational'
   type :+, '(Float) -> Float'
   type :+, '(Rational) -> Rational'
   type :+, '(BigDecimal) -> BigDecimal'
   type :+, '(Complex) -> Complex'
 
-  type :-, '(Integer) -> Rational'
+  type :-, '(%integer) -> Rational'
   type :-, '(Float) -> Float'
   type :-, '(Rational) -> Rational'
   type :-, '(BigDecimal) -> BigDecimal'
@@ -31,16 +31,16 @@ class Rational < Numeric
 
   type :-, '() -> Rational'
 
-  type :**, '(Integer) -> Numeric'
-  type :**, '(Float) -> Numeric'
-  type :**, '(Rational) -> Numeric'
+  type :**, '(%integer) -> %numeric'
+  type :**, '(Float) -> %numeric'
+  type :**, '(Rational) -> %numeric'
   type :**, '(BigDecimal) -> BigDecimal'
   pre(:**) { |x| x!=BigDecimal::INFINITY && if self<0 then x<=-1||x>=0 else true end}
   post(:**) { |r,x| r.real?}
   type :**, '(Complex) -> Complex'
   pre(:**) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end}
 
-  type :/, '(Integer) -> Rational'
+  type :/, '(%integer) -> Rational'
   pre(:/) { |x| x!=0}
   type :/, '(Float) -> Float'
   pre(:/) { |x| x!=0}
@@ -51,35 +51,35 @@ class Rational < Numeric
   type :/, '(Complex) -> Complex'
   pre(:/) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end && if (x.real.is_a?(Rational) && x.imaginary.is_a?(Float)) then !x.imaginary.nan? else true end}
 
-  type :<, '(Integer) -> %bool'
+  type :<, '(%integer) -> %bool'
   type :<, '(Float) -> %bool'
   pre(:<) { |x| !x.nan?}
   type :<, '(Rational) -> %bool'
   type :<, '(BigDecimal) -> %bool'
   pre(:<) { |x| !x.nan?}
 
-  type :<=, '(Integer) -> %bool'
+  type :<=, '(%integer) -> %bool'
   type :<=, '(Float) -> %bool'
   pre(:<=) { |x| !x.nan?}
   type :<=, '(Rational) -> %bool'
   type :<=, '(BigDecimal) -> %bool'
   pre(:<=) { |x| !x.nan?}
 
-  type :>, '(Integer) -> %bool'
+  type :>, '(%integer) -> %bool'
   type :>, '(Float) -> %bool'
   pre(:>) { |x| !x.nan?}
   type :>, '(Rational) -> %bool'
   type :>, '(BigDecimal) -> %bool'
   pre(:>) { |x| !x.nan?}
 
-  type :>=, '(Integer) -> %bool'
+  type :>=, '(%integer) -> %bool'
   type :>=, '(Float) -> %bool'
   pre(:>=) { |x| !x.nan?}
   type :>=, '(Rational) -> %bool'
   type :>=, '(BigDecimal) -> %bool'
   pre(:>=) { |x| !x.nan?}
 
-  type :<=>, '(Integer) -> Object'
+  type :<=>, '(%integer) -> Object'
   post(:<=>) { |r,x| r == -1 || r==0 || r==1}
   type :<=>, '(Float) -> Object'
   post(:<=>) { |r,x| r == -1 || r==0 || r==1}
@@ -96,24 +96,24 @@ class Rational < Numeric
   type :abs2, '() -> Rational'
   post(:abs2) { |r,x| r >= 0 }
 
-  type :angle, '() -> Numeric'
+  type :angle, '() -> %numeric'
   post(:angle) { |r,x| r == 0 || r == Math::PI}
 
-  type :arg, '() -> Numeric'
+  type :arg, '() -> %numeric'
   post(:arg) { |r,x| r == 0 || r == Math::PI}
 
-  type :div, '(Fixnum) -> Integer'
+  type :div, '(Fixnum) -> %integer'
   pre(:div) { |x| x!=0}
-  type :div, '(Bignum) -> Integer'
+  type :div, '(Bignum) -> %integer'
   pre(:div) { |x| x!=0}
-  type :div, '(Float) -> Integer'
+  type :div, '(Float) -> %integer'
   pre(:div) { |x| x!=0 && !x.nan?}
-  type :div, '(Rational) -> Integer'
+  type :div, '(Rational) -> %integer'
   pre(:div) { |x| x!=0}
-  type :div, '(BigDecimal) -> Integer'
+  type :div, '(BigDecimal) -> %integer'
   pre(:div) { |x| x!=0 && !x.nan?}
 
-  type :modulo, '(Integer) -> Rational'
+  type :modulo, '(%integer) -> Rational'
   pre(:modulo) { |x| x!=0}
   type :modulo, '(Float) -> Float'
   pre(:modulo) { |x| x!=0&&!x.nan?}
@@ -122,10 +122,10 @@ class Rational < Numeric
   type :modulo, '(BigDecimal) -> BigDecimal'
   pre(:modulo) { |x| x!=0&&!x.nan?}
 
-  type :ceil, '() -> Integer'
-  type :ceil, '(Integer) -> Numeric'
+  type :ceil, '() -> %integer'
+  type :ceil, '(%integer) -> %numeric'
 
-  type :denominator, '() -> Integer'
+  type :denominator, '() -> %integer'
   post(:denominator) { |r,x| r > 0 }
 
   type :divmod, '(%real) -> [%real, %real]'
@@ -133,26 +133,26 @@ class Rational < Numeric
 
   type :equal?, '(Object) -> %bool'
 
-  type :fdiv, '(Integer) -> Float'
+  type :fdiv, '(%integer) -> Float'
   type :fdiv, '(Float) -> Float'
   type :fdiv, '(Rational) -> Float'
   type :fdiv, '(BigDecimal) -> Float'
   type :fdiv, '(Complex) -> Float'
   pre(:fdiv) { |x| x.imaginary==0 && x.real.class != Float}
 
-  type :floor, '() -> Integer'
+  type :floor, '() -> %integer'
 
-  type :floor, '(Integer) -> Numeric'
+  type :floor, '(%integer) -> %numeric'
 
-  type :hash, '() -> Integer'
+  type :hash, '() -> %integer'
 
   type :inspect, '() -> String'
 
-  type :numerator, '() -> Integer'
+  type :numerator, '() -> %integer'
 
-  type :phase, '() -> Numeric'
+  type :phase, '() -> %numeric'
 
-  type :quo, '(Integer) -> Rational'
+  type :quo, '(%integer) -> Rational'
   pre(:quo) { |x| x!=0}
   type :quo, '(Float) -> Float'
   pre(:quo) { |x| x!=0}
@@ -165,25 +165,25 @@ class Rational < Numeric
 
   type :rationalize, '() -> Rational'
 
-  type :rationalize, '(Numeric) -> Rational'
+  type :rationalize, '(%numeric) -> Rational'
   pre(:quo) { |x| if x.is_a?(Float) then x!=Float::INFINITY && !x.nan? else true end}
 
-  type :round, '() -> Integer'
+  type :round, '() -> %integer'
 
-  type :round, '(Integer) -> Numeric'
+  type :round, '(%integer) -> %numeric'
 
   type :to_f, '() -> Float'
   pre(:to_f) { self<=Float::MAX}
 
-  type :to_i, '() -> Integer'
+  type :to_i, '() -> %integer'
 
   type :to_r, '() -> Rational'
 
   type :to_s, '() -> String'
 
-  type :truncate, '() -> Integer'
+  type :truncate, '() -> %integer'
 
-  type :truncate, '(Integer) -> Rational'
+  type :truncate, '(%integer) -> Rational'
 
   type :zero?, '() -> %bool'
 
@@ -202,8 +202,8 @@ class Rational < Numeric
   type :to_c, '() -> Complex'
   post(:to_c) { |r,x| r.imaginary == 0 }
 
-  type :coerce, '(Integer) -> [Rational, Rational]'
+  type :coerce, '(%integer) -> [Rational, Rational]'
   type :coerce, '(Float) -> [Float, Float]'
   type :coerce, '(Rational) -> [Rational, Rational]'
-  type :coerce, '(Complex) -> [Numeric, Numeric]'
+  type :coerce, '(Complex) -> [%numeric, %numeric]'
 end
