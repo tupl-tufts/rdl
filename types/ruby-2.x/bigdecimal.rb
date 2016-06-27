@@ -1,10 +1,10 @@
 class BigDecimal < Numeric
   rdl_nowrap
 
-  type :%, '(Numeric) -> BigDecimal'
+  type :%, '(%numeric) -> BigDecimal'
   pre(:%) { |x| x!=0&&(if x.is_a?(Float) then x!=Float::INFINITY && !x.nan? else true end)}
 
-  type :+, '(Integer) -> BigDecimal'
+  type :+, '(%integer) -> BigDecimal'
   type :+, '(Float) -> BigDecimal'
   pre(:+) { |x| x!=Float::INFINITY && !(x.nan?)}
   type :+, '(Rational) -> BigDecimal'
@@ -12,7 +12,7 @@ class BigDecimal < Numeric
   type :+, '(Complex) -> Complex'
   pre(:+) { |x| if x.real.is_a?(Float) then x.real!=Float::INFINITY && !(x.real.nan?) else true end}
 
-  type :-, '(Integer) -> BigDecimal'
+  type :-, '(%integer) -> BigDecimal'
   type :-, '(Float) -> BigDecimal'
   pre(:-) { |x| x!=Float::INFINITY && !(x.nan?)}
   type :-, '(Rational) -> BigDecimal'
@@ -22,7 +22,7 @@ class BigDecimal < Numeric
 
   type :-, '() -> BigDecimal'
 
-  type :*, '(Integer) -> BigDecimal'
+  type :*, '(%integer) -> BigDecimal'
   type :*, '(Float) -> BigDecimal'
   pre(:*) { |x| x!=Float::INFINITY && !(x.nan?)}
   type :*, '(Rational) -> BigDecimal'
@@ -30,7 +30,7 @@ class BigDecimal < Numeric
   type :*, '(Complex) -> Complex'
   pre(:*) { |x| if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end}
 
-  type :**, '(Integer) -> BigDecimal'
+  type :**, '(%integer) -> BigDecimal'
   type :**, '(Float) -> BigDecimal'
   pre(:**) { |x| x!=Float::INFINITY && !x.nan? && if(self<0) then x<=-1||x>=0 else true end}
   type :**, '(Rational) -> BigDecimal'
@@ -38,7 +38,7 @@ class BigDecimal < Numeric
   type :**, '(BigDecimal) -> BigDecimal'
   pre(:**) { |x| x!=BigDecimal::INFINITY && if(self<0) then x<=-1||x>=0 else true end}
 
-  type :/, '(Integer) -> BigDecimal'
+  type :/, '(%integer) -> BigDecimal'
   pre(:/) { |x| x!=0}
   type :/, '(Float) -> BigDecimal'
   pre(:/) { |x| x!=0 && x!=Float::INFINITY && !(x.nan?)}
@@ -49,25 +49,25 @@ class BigDecimal < Numeric
   type :/, '(Complex) -> Complex'
   pre(:/) { |x| x!=0 && if x.real.is_a?(Float) then x.real!=Float::INFINITY && !(x.real.nan?) else true end && if x.imaginary.is_a?(Float) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end && if (x.real.is_a?(Rational)) then !x.imaginary.nan? else true end}
 
-  type :<, '(Integer) -> %bool'
+  type :<, '(%integer) -> %bool'
   type :<, '(Float) -> %bool'
   pre(:<) { |x| !x.nan? && x!=Float::INFINITY}
   type :<, '(Rational) -> %bool'
   type :<, '(BigDecimal) -> %bool'
 
-  type :<=, '(Integer) -> %bool'
+  type :<=, '(%integer) -> %bool'
   type :<=, '(Float) -> %bool'
   pre(:<=) { |x| !x.nan? && x!=Float::INFINITY}
   type :<=, '(Rational) -> %bool'
   type :<=, '(BigDecimal) -> %bool'
 
-  type :>, '(Integer) -> %bool'
+  type :>, '(%integer) -> %bool'
   type :>, '(Float) -> %bool'
   pre(:>) { |x| !x.nan? && x!=Float::INFINITY}
   type :>, '(Rational) -> %bool'
   type :>, '(BigDecimal) -> %bool'
 
-  type :>=, '(Integer) -> %bool'
+  type :>=, '(%integer) -> %bool'
   type :>=, '(Float) -> %bool'
   pre(:>=) { |x| !x.nan? && x!=Float::INFINITY}
   type :>=, '(Rational) -> %bool'
@@ -79,7 +79,7 @@ class BigDecimal < Numeric
   type :===, '(Object) -> %bool'
   pre(:===) { |x| if (x.is_a?(Float)) then (!x.nan? && x!=Float::INFINITY) else true end}
 
-  type :<=>, '(Integer) -> Object'
+  type :<=>, '(%integer) -> Object'
   post(:<=>) { |r,x| r == -1 || r==0 || r==1}
   type :<=>, '(Float) -> Object'
   pre(:<=>) { |x| !x.nan? && x!=Float::INFINITY}
@@ -95,31 +95,31 @@ class BigDecimal < Numeric
   type :abs2, '() -> BigDecimal'
   post(:abs2) { |r,x| r >= 0 }
 
-  type :angle, '() -> Numeric'
+  type :angle, '() -> %numeric'
   post(:angle) { |r,x| r == 0 || r == Math::PI}
 
-  type :arg, '() -> Numeric'
+  type :arg, '() -> %numeric'
   post(:arg) { |r,x| r == 0 || r == Math::PI}
 
-  type :ceil, '() -> Integer'
+  type :ceil, '() -> %integer'
   pre(:ceil) { !self.ininite? && !self.nan?}
 
   type :conj, '() -> BigDecimal'
   type :conjugate, '() -> BigDecimal'
 
-  type :denominator, '() -> Integer'
+  type :denominator, '() -> %integer'
   pre(:denominator) { !self.ininite? && !self.nan?}
   post(:denominator) { |r,x| r>0}
 
-  type :div, '(Fixnum) -> Integer'
+  type :div, '(Fixnum) -> %integer'
   pre(:div) { |x| x!=0 && !self.infinite? && !self.nan?}
-  type :div, '(Bignum) -> Integer'
+  type :div, '(Bignum) -> %integer'
   pre(:div) { |x| x!=0 && !self.infinite? && !self.nan?}
-  type :div, '(Float) -> Integer'
+  type :div, '(Float) -> %integer'
   pre(:div) { |x| x!=0 && !x.nan? && x!=Float::INFINITY && !self.infinite? && !self.nan?}
-  type :div, '(Rational) -> Integer'
+  type :div, '(Rational) -> %integer'
   pre(:div) { |x| x!=0 && !self.infinite? && !self.nan?}
-  type :div, '(BigDecimal) -> Integer'
+  type :div, '(BigDecimal) -> %integer'
   pre(:div) { |x| x!=0 && !x.nan? && !self.infinite? && !self.nan?}
 
   type :divmod, '(%real) -> [%real, %real]'
@@ -128,7 +128,7 @@ class BigDecimal < Numeric
   type :equal?, '(Object) -> %bool'
   type :eql?, '(Object) -> %bool'
 
-  type :fdiv, '(Integer) -> Float'
+  type :fdiv, '(%integer) -> Float'
   type :fdiv, '(Float) -> Float'
   type :fdiv, '(Rational) -> Float'
   type :fdiv, '(BigDecimal) -> BigDecimal'
@@ -137,10 +137,10 @@ class BigDecimal < Numeric
 
   type :finite?, '() -> %bool'
 
-  type :floor, '() -> Integer'
+  type :floor, '() -> %integer'
   pre(:floor) { !self.infinite? && !self.nan?}
 
-  type :hash, '() -> Integer'
+  type :hash, '() -> %integer'
 
   type :imag, '() -> Fixnum'
   post(:imag) { |r,x| r == 0 }
@@ -155,17 +155,17 @@ class BigDecimal < Numeric
   type :magnitude, '() -> BigDecimal'
   post(:magnitude) { |r,x| r>0}
 
-  type :modulo, '(Numeric) -> BigDecimal'
+  type :modulo, '(%numeric) -> BigDecimal'
   pre(:modulo) { |x| x!=0&&(if x.is_a?(Float) then x!=Float::INFINITY && !x.nan? else true end)}
 
   type :nan?, '() -> %bool'
 
-  type :numerator, '() -> Integer'
+  type :numerator, '() -> %integer'
   pre(:numerator) { !self.infinite? && !self.nan?}
 
-  type :phase, '() -> Numeric'
+  type :phase, '() -> %numeric'
 
-  type :quo, '(Integer) -> BigDecimal'
+  type :quo, '(%integer) -> BigDecimal'
   pre(:quo) { |x| x!=0}
   type :quo, '(Float) -> BigDecimal'
   pre(:quo) { |x| x!=0 && x!=Float::INFINITY && !x.nan?}
@@ -180,7 +180,7 @@ class BigDecimal < Numeric
 
   type :real?, '() -> true'
 
-  type :round, '() -> Integer'
+  type :round, '() -> %integer'
   pre(:round) { !self.infinite? && !self.nan?}
 
   type :round, '(Fixnum) -> BigDecimal' #Also, x must be in range [-2**31, 2**31].
@@ -188,9 +188,9 @@ class BigDecimal < Numeric
   type :to_f, '() -> Float'
   pre(:to_f) { self<=Float::MAX}
 
-  type :to_i, '() -> Integer'
+  type :to_i, '() -> %integer'
   pre(:to_i) { !self.infinite? && !self.nan?}
-  type :to_int, '() -> Integer'
+  type :to_int, '() -> %integer'
   pre(:to_int) { !self.infinite? && !self.nan?}
 
   type :to_r, '() -> Rational'
@@ -199,15 +199,15 @@ class BigDecimal < Numeric
   type :to_c, '() -> Complex'
   post(:to_c) { |r,x| r.imaginary == 0 }
 
-  type :truncate, '() -> Integer'
+  type :truncate, '() -> %integer'
 
   type :truncate, '(Fixnum) -> Rational' #Also, x must be in range [-2**31, 2**31].
 
   type :zero?, '() -> %bool'
 
-  type :precs, '() -> [Integer, Integer]'
+  type :precs, '() -> [%integer, %integer]'
 
-  type :split, '() -> [Fixnum, String, Integer, Integer]'
+  type :split, '() -> [Fixnum, String, %integer, %integer]'
 
   type :remainder, '(%real) -> BigDecimal'
   pre(:remainder) { |x| if x.is_a?(Float) then !x.infinite? && !x.nan? else true end}
@@ -216,7 +216,7 @@ class BigDecimal < Numeric
 
   type :frac, '() -> BigDecimal'
 
-  type :power, '(Integer) -> BigDecimal'
+  type :power, '(%integer) -> BigDecimal'
   type :power, '(Float) -> BigDecimal'
   pre(:power) { |x| x!=Float::INFINITY && !x.nan? && if(self<0) then x<=-1||x>=0 else true end}
   type :power, '(Rational) -> BigDecimal'
@@ -226,7 +226,7 @@ class BigDecimal < Numeric
 
   type :nonzero?, '() -> Object'
 
-  type :exponent, '() -> Integer'
+  type :exponent, '() -> %integer'
 
   type :sign, '() -> Fixnum'
 
