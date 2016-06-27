@@ -508,7 +508,6 @@ class TestTypecheck < Minitest::Test
     assert do_tc("until false do end") <= $__rdl_nil_type
     assert do_tc("begin end while true") <= $__rdl_nil_type
     assert do_tc("begin end until false") <= $__rdl_nil_type
-    skip "not working yet"
     assert do_tc("i = 0; while i < 5 do i = 1 + i end; i") <= $__rdl_numeric_type
     assert do_tc("i = 0; while i < 5 do i = i + 1 end; i") <= $__rdl_numeric_type
     assert do_tc("i = 0; until i >= 5 do i = 1 + i end; i") <= $__rdl_numeric_type
