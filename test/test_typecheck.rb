@@ -12,9 +12,12 @@ class TestTypecheck < Minitest::Test
     @t4 = RDL::Type::SingletonType.new 4
     @t5 = RDL::Type::SingletonType.new 5
     @t34 = RDL::Type::UnionType.new(@t3, @t4)
+    @t45 = RDL::Type::UnionType.new(@t4, @t5)
+    @t35 = RDL::Type::UnionType.new(@t3, @t5)
     @t345 = RDL::Type::UnionType.new(@t34, @t5)
     @ts3 = RDL::Type::UnionType.new($__rdl_string_type, @t3)
     @ts34 = RDL::Type::UnionType.new(@ts3, @t4)
+    @t3n = RDL::Type::UnionType.new(@t3, $__rdl_nil_type)
     @t4n = RDL::Type::UnionType.new(@t4, $__rdl_nil_type)
     @env = RDL::Typecheck::Env.new(self: $__rdl_parser.scan_str("#T TestTypecheck"))
     @scopef = { tret: $__rdl_fixnum_type }
@@ -71,11 +74,11 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_parser.scan_str("#T 42"), do_tc("42")
     assert do_tc("123456789123456789123456789") <= $__rdl_bignum_type
     assert_equal $__rdl_parser.scan_str("#T 3.14"), do_tc("3.14")
-    assert do_tc("1i") <= $__rdl_complex_type
-    assert do_tc("2.0r") <= $__rdl_rational_type
-    assert do_tc("'42'") <= $__rdl_string_type
-    assert do_tc("\"42\"") <= $__rdl_string_type
-    assert do_tc(":foo") <= $__rdl_parser.scan_str("#T :foo")
+    assert_equal $__rdl_complex_type, do_tc("1i")
+    assert_equal $__rdl_rational_type, do_tc("2.0r")
+    assert_equal $__rdl_string_type, do_tc("'42'")
+    assert_equal $__rdl_string_type, do_tc("\"42\"")
+    assert_equal $__rdl_parser.scan_str("#T :foo"), do_tc(":foo")
   end
 
   def test_empty
@@ -97,7 +100,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_seq
-    assert do_tc("_ = 42; _ = 43; 'foo'") <= $__rdl_string_type
+    assert_equal $__rdl_string_type, do_tc("_ = 42; _ = 43; 'foo'")
   end
 
   def test_dsym
@@ -109,7 +112,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_regexp
-    assert do_tc("/foo/") <= $__rdl_regexp_type
+    assert_equal $__rdl_regexp_type, do_tc("/foo/")
 
     self.class.class_eval {
       # Hard to read if these are inside of strings, so leave like this
@@ -119,18 +122,16 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_tuple
-    assert do_tc("[true, '42']") <= $__rdl_parser.scan_str("#T [TrueClass, String]")
-
-    skip "not supported yet"
+    assert_equal $__rdl_parser.scan_str("#T [TrueClass, String]"), do_tc("[true, '42']")
     assert do_tc("['foo', 'bar']") <= $__rdl_parser.scan_str("#T Array<String>")
     assert do_tc("[42, '42']") <= $__rdl_parser.scan_str("#T [Fixnum, String]")
   end
 
   def test_hash
-    assert do_tc("{x: true, y: false}") <= $__rdl_parser.scan_str("#T {x: TrueClass, y: FalseClass}")
+    assert_equal $__rdl_parser.scan_str("#T {x: TrueClass, y: FalseClass}"), do_tc("{x: true, y: false}")
     assert do_tc("{'a' => 1, 'b' => 2}") <= $__rdl_parser.scan_str("#T Hash<String, 1 or 2>")
     assert do_tc("{1 => 'a', 2 => 'b'}") <= $__rdl_parser.scan_str("#T Hash<1 or 2, String>")
-    assert do_tc("{}") <= $__rdl_parser.scan_str("#T {}")
+    assert_equal $__rdl_parser.scan_str("#T {}"), do_tc("{}")
   end
 
   def test_range
@@ -161,17 +162,17 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_nth_back
-    assert do_tc("$4") <= $__rdl_string_type
-    assert do_tc("$+") <= $__rdl_string_type
+    assert_equal $__rdl_string_type, do_tc("$4")
+    assert_equal $__rdl_string_type, do_tc("$+")
   end
 
   def test_const
-    assert do_tc("String", env: @env) <= $__rdl_parser.scan_str("#T ${String}")
-    assert do_tc("NIL", env: @env) <= $__rdl_nil_type
+    assert_equal $__rdl_parser.scan_str("#T ${String}"), do_tc("String", env: @env)
+    assert_equal $__rdl_nil_type, do_tc("NIL", env: @env)
   end
 
   def test_defined
-    assert do_tc("defined?(x)") <= $__rdl_string_type
+    assert_equal $__rdl_string_type, do_tc("defined?(x)")
   end
 
   def test_lvar
@@ -195,9 +196,9 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_lvasgn
-    assert do_tc("x = 42; x") <= $__rdl_fixnum_type
-    assert do_tc("x = 42; y = x; y") <= $__rdl_fixnum_type
-    assert do_tc("x = y = 42; x") <= $__rdl_fixnum_type
+    assert_equal $__rdl_parser.scan_str("#T 42"), do_tc("x = 42; x")
+    assert_equal $__rdl_parser.scan_str("#T 42"), do_tc("x = 42; y = x; y")
+    assert_equal $__rdl_parser.scan_str("#T 42"), do_tc("x = y = 42; x")
   end
 
   def test_lvar_type
@@ -207,7 +208,7 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type 'x', 'Fixnum'", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :@x, 'Fixnum'", env: @env) }
 
-    assert do_tc("var_type :x, 'Fixnum'; x = 3; x", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("var_type :x, 'Fixnum'; x = 3; x", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :x, 'Fixnum'; x = 'three'", env: @env) }
     self.class.class_eval {
       type "(Fixnum) -> nil", typecheck_now: true
@@ -257,10 +258,10 @@ class TestTypecheck < Minitest::Test
     }
 
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("z", env: @env) }
-    assert do_tc("_send_basic2", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_basic3(42)", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_basic2", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_basic3(42)", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_basic3('42')", env: @env) }
-    assert do_tc("_send_basic4(42, '42')", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_basic4(42, '42')", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_basic4(42, 43)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_basic4('42', '43')", env: @env) }
   end
@@ -272,7 +273,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_send_inherit
-    assert do_tc("B.new._send_inherit1", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("B.new._send_inherit1", env: @env)
   end
 
   def test_send_inter
@@ -280,8 +281,8 @@ class TestTypecheck < Minitest::Test
       type :_send_inter1, "(Fixnum) -> Fixnum"
       type :_send_inter1, "(String) -> String"
     }
-    assert do_tc("_send_inter1(42)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_inter1('42')", env: @env) <= $__rdl_string_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_inter1(42)", env: @env)
+    assert_equal $__rdl_string_type, do_tc("_send_inter1('42')", env: @env)
 
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_inter1(:forty_two)", env: @env) }
   end
@@ -296,44 +297,44 @@ class TestTypecheck < Minitest::Test
       type :_send_opt_varargs5, "(*Fixnum) -> Fixnum"
       type :_send_opt_varargs6, "(?Fixnum, String) -> Fixnum"
     }
-    assert do_tc("_send_opt_varargs1(42)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_opt_varargs1(42, 43)", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs1(42)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs1(42, 43)", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs1()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs1(42, 43, 44)", env: @env) }
-    assert do_tc("_send_opt_varargs2(42)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_opt_varargs2(42, 43)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_opt_varargs2(42, 43, 44)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_opt_varargs2(42, 43, 44, 45)", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs2(42)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs2(42, 43)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs2(42, 43, 44)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs2(42, 43, 44, 45)", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs2()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs2('42')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs2(42, '43')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs2(42, 43, '44')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs2(42, 43, 44, '45')", env: @env) }
-    assert do_tc("_send_opt_varargs3(42)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_opt_varargs3(42, 43)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_opt_varargs3(42, 43, 44)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_opt_varargs3(42, 43, 45)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_opt_varargs3(42, 43, 46)", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs3(42)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs3(42, 43)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs3(42, 43, 44)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs3(42, 43, 45)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs3(42, 43, 46)", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs3()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs3('42')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs3(42, '43')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs3(42, 43, '44')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs3(42, 43, 44, '45')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs3(42, 43, 44, 45, '46')", env: @env) }
-    assert do_tc("_send_opt_varargs4()", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_opt_varargs4(42)", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs4()", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs4(42)", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs4('42')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs4(42, 43)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs4(42, 43, 44)", env: @env) }
-    assert do_tc("_send_opt_varargs5()", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_opt_varargs5(42)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_opt_varargs5(42, 43)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_opt_varargs5(42, 43, 44)", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs5()", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs5(42)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs5(42, 43)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs5(42, 43, 44)", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs5('42')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs5(42, '43')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs5(42, 43, '44')", env: @env) }
-    assert do_tc("_send_opt_varargs6('44')", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_opt_varargs6(43, '44')", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs6('44')", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_opt_varargs6(43, '44')", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs6()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs6(43, '44', 45)", env: @env) }
   end
@@ -350,59 +351,59 @@ class TestTypecheck < Minitest::Test
       type :_send_named_args7, "(x: ?Fixnum, y: ?String) -> Fixnum"
       type :_send_named_args8, "(?Fixnum, x: ?Symbol, y: ?String) -> Fixnum"
     }
-    assert do_tc("_send_named_args1(x: 42)", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args1(x: 42)", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args1(x: '42')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args1()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args1(x: 42, y: 42)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args1(y: 42)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args1(42)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args1(42, x: '42')", env: @env) }
-    assert do_tc("_send_named_args2(x: 42, y: '43')", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args2(x: 42, y: '43')", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args2()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args2(x: 42)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args2(x: '42', y: '43')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args2(42, '43')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args2(42, x: 42, y: '43')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args2(x: 42, y: '43', z: 44)", env: @env) }
-    assert do_tc("_send_named_args3(42, y: '43')", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args3(42, y: '43')", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args3(42, y: 43)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args3()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args3(42, 43, y: 44)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args3(42, y: 43, z: 44)", env: @env) }
-    assert do_tc("_send_named_args4(42, x: 43, y: '44')", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args4(42, x: 43, y: '44')", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args4(42, x: 43)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args4(42, y: '43')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args4()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args4(42, 43, x: 44, y: '45')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args4(42, x: 43, y: '44', z: 45)", env: @env) }
-    assert do_tc("_send_named_args5(x: 42, y: '43')", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_named_args5(x: 42)", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args5(x: 42, y: '43')", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args5(x: 42)", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args5()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args5(x: 42, y: 43)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args5(x: 42, y: 43, z: 44)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args5(3, x: 42, y: 43)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args5(3, x: 42)", env: @env) }
-    assert do_tc("_send_named_args6(x: 43, y: '44')", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_named_args6(y: '44')", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args6(x: 43, y: '44')", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args6(y: '44')", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args6()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args6(x: '43', y: '44')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args6(42, x: 43, y: '44')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args6(x: 43, y: '44', z: 45)", env: @env) }
-    assert do_tc("_send_named_args7()", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_named_args7(x: 43)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_named_args7(y: '44')", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_named_args7(x: 43, y: '44')", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args7()", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args7(x: 43)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args7(y: '44')", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args7(x: 43, y: '44')", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args7(x: '43', y: '44')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args7(41, x: 43, y: '44')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args7(x: 43, y: '44', z: 45)", env: @env) }
-    assert do_tc("_send_named_args8()", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_named_args8(43)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_named_args8(x: :foo)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_named_args8(43, x: :foo)", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_named_args8(y: 'foo')", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_named_args8(43, y: 'foo')", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_named_args8(x: :foo, y: 'foo')", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("_send_named_args8(43, x: :foo, y: 'foo')", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args8()", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args8(43)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args8(x: :foo)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args8(43, x: :foo)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args8(y: 'foo')", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args8(43, y: 'foo')", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args8(x: :foo, y: 'foo')", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args8(43, x: :foo, y: 'foo')", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args8(43, 44, x: :foo, y: 'foo')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args8(43, x: 'foo', y: 'foo')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args8(43, x: :foo, y: 'foo', z: 44)", env: @env) }
@@ -410,19 +411,19 @@ class TestTypecheck < Minitest::Test
 
   def test_send_singleton
     type Fixnum, :_send_singleton, "() -> String"
-    assert do_tc("3._send_singleton", env: @env) <= $__rdl_string_type
+    assert_equal $__rdl_string_type, do_tc("3._send_singleton", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("3._send_singleton_nexists", env: @env) }
   end
 
   def test_send_generic
-    assert do_tc("[1,2,3].length", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("{a:1, b:2}.length", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("String.new.clone", env: @env) <= $__rdl_string_type
+    assert_equal $__rdl_fixnum_type, do_tc("[1,2,3].length", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("{a:1, b:2}.length", env: @env)
+    assert_equal $__rdl_string_type, do_tc("String.new.clone", env: @env)
     # TODO test case with other generic
   end
 
   def test_send_alias
-    assert do_tc("[1,2,3].size", env: @env) <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("[1,2,3].size", env: @env)
   end
 
   def test_send_union
@@ -431,52 +432,52 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_new
-    assert do_tc("B.new", env: @env) <= RDL::Type::NominalType.new(B)
+    assert_equal RDL::Type::NominalType.new(B), do_tc("B.new", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("B.new(3)", env: @env) }
   end
 
   def test_if
-    assert do_tc("if _any_object then 3 end", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("unless _any_object then 3 end", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("if _any_object then 3 else 4 end", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("unless _any_object then 3 else 4 end", env: @env) <= $__rdl_fixnum_type
+    assert_equal @t3n, do_tc("if _any_object then 3 end", env: @env)
+    assert_equal @t3n, do_tc("unless _any_object then 3 end", env: @env)
+    assert_equal @t34, do_tc("if _any_object then 3 else 4 end", env: @env)
+    assert_equal @t34, do_tc("unless _any_object then 3 else 4 end", env: @env)
     assert_equal @ts3, do_tc("if _any_object then 3 else 'three' end", env: @env)
     assert_equal @ts3, do_tc("unless _any_object then 3 else 'three' end", env: @env)
-    assert do_tc("3 if _any_object", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("3 unless _any_object", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("if true then 3 else 'three' end", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("if :foo then 3 else 'three' end", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("if false then 3 else 'three' end", env: @env) <= $__rdl_string_type
-    assert do_tc("if nil then 3 else 'three' end", env: @env) <= $__rdl_string_type
+    assert_equal @t3n, do_tc("3 if _any_object", env: @env)
+    assert_equal @t3n, do_tc("3 unless _any_object", env: @env)
+    assert_equal @t3, do_tc("if true then 3 else 'three' end", env: @env)
+    assert_equal @t3, do_tc("if :foo then 3 else 'three' end", env: @env)
+    assert_equal $__rdl_string_type, do_tc("if false then 3 else 'three' end", env: @env)
+    assert_equal $__rdl_string_type, do_tc("if nil then 3 else 'three' end", env: @env)
 
-    assert do_tc("x = 'three'; if _any_object then x = 4 else x = 5 end; x", env: @env) <= $__rdl_fixnum_type
+    assert_equal @t45, do_tc("x = 'three'; if _any_object then x = 4 else x = 5 end; x", env: @env)
     assert_equal @ts3, do_tc("x = 'three'; if _any_object then x = 3 end; x", env: @env)
     assert_equal @ts3, do_tc("x = 'three'; unless _any_object then x = 3 end; x", env: @env)
     assert_equal @t4n, do_tc("if _any_object then y = 4 end; y", env: @env) # vars are nil if not defined on branch
-    assert do_tc("if _any_object then x = 3; y = 4 else x = 5 end; x", env: @env) <= $__rdl_fixnum_type
+    assert_equal @t35, do_tc("if _any_object then x = 3; y = 4 else x = 5 end; x", env: @env)
     assert_equal @t4n, do_tc("if _any_object then x = 3; y = 4 else x = 5 end; y", env: @env)
   end
 
   def test_and_or
     assert_equal @ts3, do_tc("'foo' and 3")
     assert_equal @ts3, do_tc("'foo' && 3")
-    assert do_tc("3 and 'foo'") <= $__rdl_string_type
-    assert do_tc("nil and 'foo'") <= $__rdl_nil_type
-    assert do_tc("false and 'foo'") <= $__rdl_false_type
+    assert_equal $__rdl_string_type, do_tc("3 and 'foo'")
+    assert_equal $__rdl_nil_type, do_tc("nil and 'foo'")
+    assert_equal $__rdl_false_type, do_tc("false and 'foo'")
     assert_equal @ts3, do_tc("(x = 'foo') and (x = 3); x")
-    assert do_tc("(x = 3) and (x = 'foo'); x") <= $__rdl_string_type
-    assert do_tc("(x = nil) and (x = 'foo'); x") <= $__rdl_nil_type
-    assert do_tc("(x = false) and (x = 'foo'); x") <= $__rdl_false_type
+    assert_equal $__rdl_string_type, do_tc("(x = 3) and (x = 'foo'); x")
+    assert_equal $__rdl_nil_type, do_tc("(x = nil) and (x = 'foo'); x")
+    assert_equal $__rdl_false_type, do_tc("(x = false) and (x = 'foo'); x")
 
     assert_equal @ts3, do_tc("'foo' or 3")
     assert_equal @ts3, do_tc("'foo' || 3")
-    assert do_tc("3 or 'foo'") <= $__rdl_fixnum_type
-    assert do_tc("nil or 3") <= @t3
-    assert do_tc("false or 3") <= @t3
+    assert_equal @t3, do_tc("3 or 'foo'")
+    assert_equal @t3, do_tc("nil or 3")
+    assert_equal @t3, do_tc("false or 3")
     assert_equal @ts3, do_tc("(x = 'foo') or (x = 3); x")
-    assert do_tc("(x = 3) or (x = 'foo'); x") <= $__rdl_fixnum_type
-    assert do_tc("(x = nil) or (x = 3); x") <= @t3
-    assert do_tc("(x = false) or (x = 3); x") <= @t3
+    assert_equal @t3, do_tc("(x = 3) or (x = 'foo'); x")
+    assert_equal @t3, do_tc("(x = nil) or (x = 3); x")
+    assert_equal @t3, do_tc("(x = false) or (x = 3); x")
   end
 
   class C
@@ -510,10 +511,10 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_while_until
-    assert do_tc("while true do end") <= $__rdl_nil_type
-    assert do_tc("until false do end") <= $__rdl_nil_type
-    assert do_tc("begin end while true") <= $__rdl_nil_type
-    assert do_tc("begin end until false") <= $__rdl_nil_type
+    assert_equal $__rdl_nil_type, do_tc("while true do end")
+    assert_equal $__rdl_nil_type, do_tc("until false do end")
+    assert_equal $__rdl_nil_type, do_tc("begin end while true")
+    assert_equal $__rdl_nil_type, do_tc("begin end until false")
     assert do_tc("i = 0; while i < 5 do i = 1 + i end; i") <= $__rdl_numeric_type
     assert do_tc("i = 0; while i < 5 do i = i + 1 end; i") <= $__rdl_numeric_type
     assert do_tc("i = 0; until i >= 5 do i = 1 + i end; i") <= $__rdl_numeric_type
@@ -546,8 +547,8 @@ class TestTypecheck < Minitest::Test
       }
     }
 
-    assert do_tc("return 42", scope: @scopefs) <= $__rdl_bot_type
-    assert do_tc("if _any_object then return 42 else return 'forty-two' end", env: @env, scope: @scopefs) <= $__rdl_bot_type
+    assert_equal $__rdl_bot_type, do_tc("return 42", scope: @scopefs)
+    assert_equal $__rdl_bot_type, do_tc("if _any_object then return 42 else return 'forty-two' end", env: @env, scope: @scopefs)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("if _any_object then return 42 else return 'forty-two' end", env: @env, scope: @scopef) }
     assert_equal $__rdl_string_type, do_tc("return 42 if _any_object; 'forty-two'", env: @env, scope: @scopef)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("return 'forty-two' if _any_object; 42", env: @env, scope: @scopef) }
