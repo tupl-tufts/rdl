@@ -524,7 +524,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_return
-    self.class.class_eval {
+    assert self.class.class_eval {
       type "(Fixnum) -> Fixnum", typecheck_now: true
       def return_ff(x)
         return 42
@@ -540,11 +540,17 @@ class TestTypecheck < Minitest::Test
       }
     }
 
-    do_tc("return 42", scope: @scopefs)
-    do_tc("if _any_object then return 42 else return 'forty-two' end", env: @env, scope: @scopefs)
+    assert do_tc("return 42", scope: @scopefs) <= $__rdl_bot_type
+    assert do_tc("if _any_object then return 42 else return 'forty-two' end", env: @env, scope: @scopefs) <= $__rdl_bot_type
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("if _any_object then return 42 else return 'forty-two' end", env: @env, scope: @scopef) }
     assert do_tc("return 42 if _any_object; 'forty-two'", env: @env, scope: @scopef) <= $__rdl_string_type
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("return 'forty-two' if _any_object; 42", env: @env, scope: @scopef) }
+  end
+
+  def test_op_asgn
+    assert do_tc("x = 0; x += 1") <= $__rdl_numeric_type
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x += 1") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = Object.new; x += 1", env: @env) }
   end
 
 end

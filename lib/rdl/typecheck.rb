@@ -3,6 +3,7 @@ module RDL::Typecheck
   class StaticTypeError < StandardError; end
 
   @@empty_hash_type = RDL::Type::FiniteHashType.new(Hash.new)
+  @@asgn_to_var = { lvasgn: :lvar, ivasgn: :ivar, cvasgn: :cvar, gvasgn: :gvar }
 
   class ASTMapper < AST::Processor
     attr_accessor :line_defs
@@ -216,6 +217,21 @@ module RDL::Typecheck
       [env, env[:self]]
     when :lvar, :ivar, :cvar, :gvar
       tc_var(scope, env, e.type, e.children[0], e)
+    when :lvasgn, :ivasgn, :cvasgn, :gvasgn
+      envright, tright = tc(scope, env, e.children[1])
+      tc_vasgn(scope, envright, e.type, e.children[0], tright, e)
+    when :op_asgn
+      if e.children[0].type == :send
+        raise RuntimeError, "Not implemented"
+        # method assignment
+      else
+        #      (op-asgn (Xvasgn var-name) :op operand)
+        x = e.children[0].children[0]
+        envi, toperand = tc(scope, env, e.children[2]) # type right-hand side
+        envi, trecv = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
+        tright = tc_send(trecv, e.children[1], [toperand], e)
+        tc_vasgn(scope, env, e.children[0].type, x, tright, e)
+      end
     when :nth_ref, :back_ref
       [env, $__rdl_string_type]
     when :const
@@ -238,9 +254,6 @@ module RDL::Typecheck
     when :defined?
       # do not type check subexpression, since it may not be type correct, e.g., undefined variable
       [env, $__rdl_string_type]
-    when :lvasgn, :ivasgn, :cvasgn, :gvasgn
-      envright, tright = tc(scope, env, e.children[1])
-      tc_vasgn(scope, envright, e.type, e.children[0], tright, e)
     when :send, :csend
       # children[0] = receiver; if nil, receiver is self
       # children[1] = method name, a symbol
