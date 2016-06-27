@@ -214,20 +214,8 @@ module RDL::Typecheck
       [env2, RDL::Type::GenericType.new($__rdl_range_type, t1)]
     when :self
       [env, env[:self]]
-    when :lvar  # local variable
-      x = e.children[0] # the variable
-      error :undefined_local_or_method, x.to_s, e unless env.has_key? x
-      [env, env[x].canonical]
-    when :ivar, :cvar, :gvar
-      x = e.children[0] # the variable
-      klass = (if e.type == :gvar then RDL::Util::GLOBAL_NAME else env[:self] end)
-      unless $__rdl_info.has?(klass, x, :type)
-        kind = (if e.type == :ivar then "instance"
-                elsif e.type == :cvar then "class"
-                else "global" end)
-        error :untyped_var, [kind, x], e
-      end
-      [env, $__rdl_info.get(klass, x, :type).canonical]
+    when :lvar, :ivar, :cvar, :gvar
+      tc_var(scope, env, e.type, e.children[0], e)
     when :nth_ref, :back_ref
       [env, $__rdl_string_type]
     when :const
@@ -250,28 +238,9 @@ module RDL::Typecheck
     when :defined?
       # do not type check subexpression, since it may not be type correct, e.g., undefined variable
       [env, $__rdl_string_type]
-    when :lvasgn
-      x = e.children[0] # the variable
-      env1, t1 = tc(scope, env, e.children[1])
-      if env1.fixed? x
-        error :vasgn_incompat, [t1, env1[x]], e unless t1 <= env1[x]
-        [env1, t1]
-      else
-        [env1.bind(x, t1), t1]
-      end
-    when :ivasgn, :cvasgn, :gvasgn
-      x = e.children[0] # the variable
+    when :lvasgn, :ivasgn, :cvasgn, :gvasgn
       envright, tright = tc(scope, env, e.children[1])
-      klass = (if e.type == :gvasgn then RDL::Util::GLOBAL_NAME else env[:self] end)
-      unless $__rdl_info.has?(klass, x, :type)
-        kind = (if e.type == :ivasgn then "instance"
-                elsif e.type == :cvasgn then "class"
-                else "global" end)
-        error :untyped_var, [kind, x], e
-      end
-      tleft = $__rdl_info.get(klass, x, :type)
-      error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless tright <= tleft
-      [envright, tright]
+      tc_vasgn(scope, envright, e.type, e.children[0], tright, e)
     when :send, :csend
       # children[0] = receiver; if nil, receiver is self
       # children[1] = method name, a symbol
@@ -416,6 +385,55 @@ module RDL::Typecheck
       [envi, ti]
     else
       raise RuntimeError, "Expression kind #{e.type} unsupported"
+    end
+  end
+
+  # [+ kind +] is :lvar, :ivar, :cvar, or :gvar
+  # [+ name +] is the variable name, which should be a symbol
+  # [+ e +] is the expression for which errors should be reported
+  def self.tc_var(scope, env, kind, name, e)
+    case kind
+    when :lvar  # local variable
+      error :undefined_local_or_method, name.to_s, e unless env.has_key? name
+      [env, env[name].canonical]
+    when :ivar, :cvar, :gvar
+      klass = (if kind == :gvar then RDL::Util::GLOBAL_NAME else env[:self] end)
+      unless $__rdl_info.has?(klass, name, :type)
+        kind_text = (if kind == :ivar then "instance"
+                     elsif kind == :cvar then "class"
+                     else "global" end)
+        error :untyped_var, [kind_text, name], e
+      end
+      [env, $__rdl_info.get(klass, name, :type).canonical]
+    else
+      raise RuntimeError, "unknown kind #{kind}"
+    end
+  end
+
+  # Same arguments as tc_var except
+  # [+ tright +] is type of right-hand side
+  def self.tc_vasgn(scope, env, kind, name, tright, e)
+    case kind
+    when :lvasgn
+      if env.fixed? name
+        error :vasgn_incompat, [tright, env[name]], e unless tright <= env[name]
+        [env, tright]
+      else
+        [env.bind(name, tright), tright]
+      end
+    when :ivasgn, :cvasgn, :gvasgn
+      klass = (if kind == :gvasgn then RDL::Util::GLOBAL_NAME else env[:self] end)
+      unless $__rdl_info.has?(klass, name, :type)
+        kind_text = (if kind == :ivasgn then "instance"
+                    elsif kind == :cvasgn then "class"
+                    else "global" end)
+        error :untyped_var, [kind_text, name], e
+      end
+      tleft = $__rdl_info.get(klass, name, :type)
+      error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless tright <= tleft
+      [env, tright]
+    else
+      raise RuntimeError, "unknown kind #{kind}"
     end
   end
 
