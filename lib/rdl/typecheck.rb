@@ -271,19 +271,15 @@ module RDL::Typecheck
       e.children[2..-1].each { |ei| envi, ti = tc(scope, envi, ei); tactuals << ti }
       envi, trecv = if e.children[0].nil? then [envi, envi[:self]] else tc(scope, envi, e.children[0]) end # if no receiver, self is receiver
       [envi, tc_send(trecv, e.children[1], tactuals, e).canonical]
-    when :and
+    when :and, :or
       envleft, tleft = tc(scope, env, e.children[0])
       envright, tright = tc(scope, envleft, e.children[1])
       if tleft.is_a? RDL::Type::SingletonType
-        if tleft.val then [envright, tright] else [envleft, tleft] end
-      else
-        [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright).canonical]
-      end
-    when :or
-      envleft, tleft = tc(scope, env, e.children[0])
-      envright, tright = tc(scope, envleft, e.children[1])
-      if tleft.is_a? RDL::Type::SingletonType
-        if tleft.val then [envleft, tleft] else [envright, tright] end
+        if e.type == :and
+          if tleft.val then [envright, tright] else [envleft, tleft] end
+        else # e.type == :or
+          if tleft.val then [envleft, tleft] else [envright, tright] end
+        end
       else
         [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright).canonical]
       end
