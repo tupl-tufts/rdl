@@ -224,8 +224,8 @@ module RDL::Typecheck
       if e.children[0].type == :send
         # (op-asgn (send recv meth) :op operand)
         meth = e.children[0].children[1]
-        envi, troperand = tc(scope, env, e.children[2]) # right-hand side
         envi, trecv = tc(scope, env, e.children[0].children[0]) # receiver object
+        envi, troperand = tc(scope, envi, e.children[2]) # right-hand side
         tloperand = tc_send(trecv, e.children[0].children[1], [], e.children[0]) # call recv.meth()
         tright = tc_send(tloperand, e.children[1], [troperand], e) # computer recv.meth().op(operand)
         mutation_meth = (meth.to_s + '=').to_sym
@@ -234,10 +234,33 @@ module RDL::Typecheck
       else
         # (op-asgn (Xvasgn var-name) :op operand)
         x = e.children[0].children[0]
-        envi, toperand = tc(scope, env, e.children[2]) # right-hand side
         envi, trecv = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
+        envi, toperand = tc(scope, envi, e.children[2]) # right-hand side
         tright = tc_send(trecv, e.children[1], [toperand], e)
         tc_vasgn(scope, env, e.children[0].type, x, tright, e)
+      end
+    when :and_asgn, :or_asgn
+      # very similar logic to op_asgn
+      if e.children[0].type == :send
+        raise RuntimeError, "unimplemented"
+      else
+        x = e.children[0].children[0]
+        if e.children[0].type == :lvasgn
+          # special case: add x to env if it's not there
+          env = env.bind(x, $__rdl_nil_type) unless env.has_key? x
+        end
+        envleft, tleft = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
+        envright, tright = tc(scope, envleft, e.children[1])
+        envi, trhs = (if tleft.is_a? RDL::Type::SingletonType
+                        if e.type == :and_asgn
+                          if tleft.val then [envright, tright] else [envleft, tleft] end
+                        else # e.type == :or_asgn
+                          if tleft.val then [envleft, tleft] else [envright, tright] end
+                        end
+                      else
+                        [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright).canonical]
+                      end)
+        tc_vasgn(scope, envi, e.children[0].type, x, trhs, e)
       end
     when :nth_ref, :back_ref
       [env, $__rdl_string_type]

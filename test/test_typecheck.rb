@@ -65,12 +65,12 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_lits
-    assert do_tc("nil") <= $__rdl_nil_type
-    assert do_tc("true") <= $__rdl_true_type
-    assert do_tc("false") <= $__rdl_false_type
-    assert do_tc("42") <= $__rdl_parser.scan_str("#T 42")
+    assert_equal $__rdl_nil_type, do_tc("nil")
+    assert_equal $__rdl_true_type, do_tc("true")
+    assert_equal $__rdl_false_type, do_tc("false")
+    assert_equal $__rdl_parser.scan_str("#T 42"), do_tc("42")
     assert do_tc("123456789123456789123456789") <= $__rdl_bignum_type
-    assert do_tc("3.14") <= $__rdl_parser.scan_str("#T 3.14")
+    assert_equal $__rdl_parser.scan_str("#T 3.14"), do_tc("3.14")
     assert do_tc("1i") <= $__rdl_complex_type
     assert do_tc("2.0r") <= $__rdl_rational_type
     assert do_tc("'42'") <= $__rdl_string_type
@@ -229,24 +229,24 @@ class TestTypecheck < Minitest::Test
       var_type :@object, "Object"
     }
 
-    assert do_tc("@foo", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("@@foo", env: @env) <= $__rdl_fixnum_type
-    assert do_tc("$test_ivar_ivasgn_global") <= $__rdl_fixnum_type
+    assert_equal $__rdl_fixnum_type, do_tc("@foo", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("@@foo", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("$test_ivar_ivasgn_global")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@bar", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@bar", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@@bar", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("$_test_ivar_ivasgn_global_2") }
 
-    assert do_tc("@foo = 3", env: @env) <= $__rdl_fixnum_type
+    assert_equal @t3, do_tc("@foo = 3", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@foo = 'three'", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@bar = 'three'", env: @env) }
-    assert do_tc("@@foo = 3", env: @env) <= $__rdl_fixnum_type
+    assert_equal @t3, do_tc("@@foo = 3", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@@foo = 'three'", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@@bar = 'three'", env: @env) }
-    assert do_tc("$test_ivar_ivasgn_global = 3") <= $__rdl_fixnum_type
+    assert_equal @t3, do_tc("$test_ivar_ivasgn_global = 3")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("$test_ivar_ivasgn_global = 'three'") }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("$test_ivar_ivasgn_global_2 = 'three'") }
-    assert do_tc("@object = 3", env: @env) <= $__rdl_fixnum_type  # type of assignment is type of rhs
+    assert_equal @t3, do_tc("@object = 3", env: @env)  # type of assignment is type of rhs
   end
 
   def test_send_basic
@@ -426,7 +426,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_send_union
-    assert do_tc("(if _any_object then Fixnum.new else String.new end) * 2", env: @env) <= RDL::Type::UnionType.new(@tfs, $__rdl_bignum_type)
+    assert_equal RDL::Type::UnionType.new(@tfs, $__rdl_bignum_type), do_tc("(if _any_object then Fixnum.new else String.new end) * 2", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(if _any_object then Object.new else Fixnum.new end) + 2", env: @env) }
   end
 
@@ -549,7 +549,7 @@ class TestTypecheck < Minitest::Test
     assert do_tc("return 42", scope: @scopefs) <= $__rdl_bot_type
     assert do_tc("if _any_object then return 42 else return 'forty-two' end", env: @env, scope: @scopefs) <= $__rdl_bot_type
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("if _any_object then return 42 else return 'forty-two' end", env: @env, scope: @scopef) }
-    assert do_tc("return 42 if _any_object; 'forty-two'", env: @env, scope: @scopef) <= $__rdl_string_type
+    assert_equal $__rdl_string_type, do_tc("return 42 if _any_object; 'forty-two'", env: @env, scope: @scopef)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("return 'forty-two' if _any_object; 42", env: @env, scope: @scopef) }
   end
 
@@ -563,6 +563,17 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x += 1") }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = Object.new; x += 1", env: @env) }
     assert do_tc("e = E.new; e.f += 1", env: @env) <= $__rdl_numeric_type
+  end
+
+  def test_and_or_asgn
+    self.class.class_eval {
+      var_type :@f_and_or_asgn, "Fixnum"
+    }
+    assert_equal @t3, do_tc("x ||= 3")
+    assert_equal $__rdl_fixnum_type, do_tc("@f_and_or_asgn &&= 4", env: @env)
+    assert_equal @t3, do_tc("x = 3; x ||= 'three'")
+    assert_equal @ts3, do_tc("x = 'three'; x ||= 3")
+
   end
 
 end
