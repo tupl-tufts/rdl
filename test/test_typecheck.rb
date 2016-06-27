@@ -18,7 +18,8 @@ class TestTypecheck < Minitest::Test
     @t4n = RDL::Type::UnionType.new(@t4, $__rdl_nil_type)
     @env = RDL::Typecheck::Env.new(self: $__rdl_parser.scan_str("#T TestTypecheck"))
     @scopef = { tret: $__rdl_fixnum_type }
-    @scopefs = { tret: RDL::Type::UnionType.new($__rdl_fixnum_type, $__rdl_string_type) }
+    @tfs = RDL::Type::UnionType.new($__rdl_fixnum_type, $__rdl_string_type)
+    @scopefs = { tret: @tfs }
   end
 
   # [+ a +] is the environment, a map from symbols to types; empty if omitted
@@ -422,6 +423,10 @@ class TestTypecheck < Minitest::Test
 
   def test_send_alias
     assert do_tc("[1,2,3].size", env: @env) <= $__rdl_fixnum_type
+  end
+
+  def test_send_union
+    assert do_tc("(if _any_object then Fixnum.new else String.new end) * 2", env: @env) <= RDL::Type::UnionType.new(@tfs, $__rdl_bignum_type)
   end
 
   def test_new

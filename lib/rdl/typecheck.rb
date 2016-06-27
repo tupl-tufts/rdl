@@ -470,37 +470,45 @@ module RDL::Typecheck
     tmeth_inters = [] # Array<Array<MethodType>>, array of intersection types, since recv might not resolve to a single type
 
     trecv = trecv.canonical
-    case trecv
-    when RDL::Type::SingletonType
-      if (trecv.val.is_a? Class) && (meth == :new)
-        ts = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), :initialize)
-        ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] unless ts # there's always a nullary new if initialize is undefined
-        inst = {self: trecv}
+    trecvs = []
+    if trecv.is_a? RDL::Type::UnionType
+      trecvs = trecv.types
+    else
+      trecvs = [trecv]
+    end
+    trecvs.each { |t|
+      case t
+      when RDL::Type::SingletonType
+        if (t.val.is_a? Class) && (meth == :new)
+          ts = lookup(RDL::Util.add_singleton_marker(t.val.to_s), :initialize)
+          ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(t.val))] unless ts # there's always a nullary new if initialize is undefined
+          inst = {self: t}
+          tmeth_inters << (ts.map { |t| t.instantiate(inst) })
+        else
+          klass = t.val.class.to_s
+          ts = lookup(klass, meth)
+          error :no_instance_method_type, [klass, meth], e unless ts
+          inst = {self: t}
+          tmeth_inters << (ts.map { |t| t.instantiate(inst) })
+        end
+      when RDL::Type::NominalType
+        ts = lookup(t.name, meth)
+        error :no_instance_method_type, [t.name, meth], e unless ts
+        inst = {self: t}
+        tmeth_inters << (ts.map { |t| t.instantiate(inst) })
+      when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
+        unless t.is_a? RDL::Type::GenericType
+          error :tuple_finite_hash_promote, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e unless t.promote!
+          t = t.canonical
+        end
+        ts = lookup(t.base.name, meth)
+        error :no_instance_method_type, [t.base.name, meth], e unless ts
+        inst = t.to_inst.merge(self: t)
         tmeth_inters << (ts.map { |t| t.instantiate(inst) })
       else
-        klass = trecv.val.class.to_s
-        ts = lookup(klass, meth)
-        error :no_instance_method_type, [klass, meth], e unless ts
-        inst = {self: trecv}
-        tmeth_inters << (ts.map { |t| t.instantiate(inst) })
+        raise RuntimeError, "receiver type #{t} not supported yet"
       end
-    when RDL::Type::NominalType
-      ts = lookup(trecv.name, meth)
-      error :no_instance_method_type, [trecv.name, meth], e unless ts
-      inst = {self: trecv}
-      tmeth_inters << (ts.map { |t| t.instantiate(inst) })
-    when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
-      unless trecv.is_a? RDL::Type::GenericType
-        error :tuple_finite_hash_promote, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e unless trecv.promote!
-        trecv = trecv.canonical
-      end
-      ts = lookup(trecv.base.name, meth)
-      error :no_instance_method_type, [trecv.base.name, meth], e unless ts
-      inst = trecv.to_inst.merge(self: trecv)
-      tmeth_inters << (ts.map { |t| t.instantiate(inst) })
-    else
-      raise RuntimeError, "receiver type #{trecv} not supported yet"
-    end
+    }
 
     trets = [] # all possible return types
     # there might be more than one return type because:
