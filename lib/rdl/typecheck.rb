@@ -222,12 +222,19 @@ module RDL::Typecheck
       tc_vasgn(scope, envright, e.type, e.children[0], tright, e)
     when :op_asgn
       if e.children[0].type == :send
-        raise RuntimeError, "Not implemented"
-        # method assignment
+        # (op-asgn (send recv meth) :op operand)
+        meth = e.children[0].children[1]
+        envi, troperand = tc(scope, env, e.children[2]) # right-hand side
+        envi, trecv = tc(scope, env, e.children[0].children[0]) # receiver object
+        tloperand = tc_send(trecv, e.children[0].children[1], [], e.children[0]) # call recv.meth()
+        tright = tc_send(tloperand, e.children[1], [troperand], e) # computer recv.meth().op(operand)
+        mutation_meth = (meth.to_s + '=').to_sym
+        tres = tc_send(trecv, mutation_meth, [tright], e) # call recv.meth=(recv.meth().op(operand))
+        [envi, tres]
       else
-        #      (op-asgn (Xvasgn var-name) :op operand)
+        # (op-asgn (Xvasgn var-name) :op operand)
         x = e.children[0].children[0]
-        envi, toperand = tc(scope, env, e.children[2]) # type right-hand side
+        envi, toperand = tc(scope, env, e.children[2]) # right-hand side
         envi, trecv = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
         tright = tc_send(trecv, e.children[1], [toperand], e)
         tc_vasgn(scope, env, e.children[0].type, x, tright, e)
@@ -462,89 +469,84 @@ module RDL::Typecheck
   end
 
   # Type check a send
-  # [+ trecv +] is the type of the recevier
+  # [+ trecvs +] is the type of the recevier
   # [+ meth +] is a symbol with the method name
   # [+ tactuals +] are the actual arguments
   # [+ e +] is the expression at which location to report an error
-  def self.tc_send(trecv, meth, tactuals, e)
-    tmeth_inters = [] # Array<Array<MethodType>>, array of intersection types, since recv might not resolve to a single type
+  def self.tc_send(trecvs, meth, tactuals, e)
+    # convert trecvs to array containing all receiver types
+    trecvs = trecvs.canonical
+    trecvs = if trecvs.is_a? RDL::Type::UnionType then trecvs.types else [trecvs] end
 
-    trecv = trecv.canonical
-    trecvs = []
-    if trecv.is_a? RDL::Type::UnionType
-      trecvs = trecv.types
-    else
-      trecvs = [trecv]
-    end
-    trecvs.each { |t|
-      case t
-      when RDL::Type::SingletonType
-        if (t.val.is_a? Class) && (meth == :new)
-          ts = lookup(RDL::Util.add_singleton_marker(t.val.to_s), :initialize)
-          ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(t.val))] unless ts # there's always a nullary new if initialize is undefined
-          inst = {self: t}
-          tmeth_inters << (ts.map { |t| t.instantiate(inst) })
-        else
-          klass = t.val.class.to_s
-          ts = lookup(klass, meth)
-          error :no_instance_method_type, [klass, meth], e unless ts
-          inst = {self: t}
-          tmeth_inters << (ts.map { |t| t.instantiate(inst) })
-        end
-      when RDL::Type::NominalType
-        ts = lookup(t.name, meth)
-        error :no_instance_method_type, [t.name, meth], e unless ts
-        inst = {self: t}
-        tmeth_inters << (ts.map { |t| t.instantiate(inst) })
-      when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
-        unless t.is_a? RDL::Type::GenericType
-          error :tuple_finite_hash_promote, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e unless t.promote!
-          t = t.canonical
-        end
-        ts = lookup(t.base.name, meth)
-        error :no_instance_method_type, [t.base.name, meth], e unless ts
-        inst = t.to_inst.merge(self: t)
-        tmeth_inters << (ts.map { |t| t.instantiate(inst) })
-      else
-        raise RuntimeError, "receiver type #{t} not supported yet"
-      end
+    trets = []
+    trecvs.each { |trecv|
+      trets.concat(tc_send_one_recv(trecv, meth, tactuals, e))
     }
+    return RDL::Type::UnionType.new(*trets)
+  end
+
+  # Like tc_send but trecv should never be a union type
+  # Returns array of possible return types, or throws exception if there are none
+  def self.tc_send_one_recv(trecv, meth, tactuals, e)
+    tmeth_inter = [] # Array<MethodType>, i.e., an intersection types
+    case trecv
+    when RDL::Type::SingletonType
+      if (trecv.val.is_a? Class) && (meth == :new)
+        ts = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), :initialize)
+        ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] unless ts # there's always a nullary new if initialize is undefined
+        inst = {self: trecv}
+        tmeth_inter = ts.map { |t| t.instantiate(inst) }
+      else
+        klass = trecv.val.class.to_s
+        ts = lookup(klass, meth)
+        error :no_instance_method_type, [klass, meth], e unless ts
+        inst = {self: trecv}
+        tmeth_inter = ts.map { |t| t.instantiate(inst) }
+      end
+    when RDL::Type::NominalType
+      ts = lookup(trecv.name, meth)
+      error :no_instance_method_type, [trecv.name, meth], e unless ts
+      inst = {self: trecv}
+      tmeth_inter = ts.map { |t| t.instantiate(inst) }
+    when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
+      unless trecv.is_a? RDL::Type::GenericType
+        error :tuple_finite_hash_promote, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e unless trecv.promote!
+        trecv = trecv.canonical
+      end
+      ts = lookup(trecv.base.name, meth)
+      error :no_instance_method_type, [trecv.base.name, meth], e unless ts
+      inst = trecv.to_inst.merge(self: trecv)
+      tmeth_inter = ts.map { |t| t.instantiate(inst) }
+    else
+      raise RuntimeError, "receiver type #{t} not supported yet"
+    end
 
     trets = [] # all possible return types
-    # there might be more than one return type because:
-    #   multiple cases of an intersection type might match
-    #   there might be multiple types in tmeth_inters
-    tmeth_inters.each { |tmeth_inter| # Array<MethodType>; tmeth_inter is an intersection
-      tmeth_inter.each { |tmeth| # MethodType
-        trets << tmeth.ret if check_arg_types_one(tmeth, tactuals)
-      }
+    # there might be more than one return type because multiple cases of an intersection type might match
+    tmeth_inter.each { |tmeth| # MethodType
+      trets << tmeth.ret if check_arg_types_one(tmeth, tactuals)
     }
-    if trets.empty?
-      if tmeth_inters.size == 1
-        msg = <<RUBY
+    if trets.empty? # no possible matching call
+      msg = <<RUBY
 Method type:
-#{ tmeth_inters[0].map { |ti| "        " + ti.to_s }.join("\n") }
+#{ tmeth_inter.map { |ti| "        " + ti.to_s }.join("\n") }
 Actual arg types#{tactuals.size > 1 ? "s" : ""}:
       (#{tactuals.map { |ti| ti.to_s }.join(', ')})
 RUBY
-        msg.chomp! # remove trailing newline
-        name = if (trecv.is_a? RDL::Type::SingletonType) && (trecv.val.is_a? Class) && (meth == :new) then
-          :initialize
-        elsif trecv.is_a? RDL::Type::SingletonType
-          trecv.val.class.to_s
-        elsif trecv.is_a? RDL::Type::NominalType
-          trecv.name
-        else
-          raise RutimeError, "impossible"
-        end
-        error :arg_type_single_receiver_error, [name, meth, msg], e
+      msg.chomp! # remove trailing newline
+      name = if (trecv.is_a? RDL::Type::SingletonType) && (trecv.val.is_a? Class) && (meth == :new) then
+        :initialize
+      elsif trecv.is_a? RDL::Type::SingletonType
+        trecv.val.class.to_s
+      elsif trecv.is_a? RDL::Type::NominalType
+        trecv.name
       else
-        # TODO more complicated error message here
-        raise RuntimeError, "Not implemented yet #{tmeth_inters}"
+        raise RutimeError, "impossible"
       end
+      error :arg_type_single_receiver_error, [name, meth, msg], e
     end
     # TODO: issue warning if trets.size > 1 ?
-    return RDL::Type::UnionType.new(*trets)
+    return trets
   end
 
   # [+ tmeth +] is MethodType

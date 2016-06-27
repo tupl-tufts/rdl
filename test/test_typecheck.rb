@@ -427,6 +427,7 @@ class TestTypecheck < Minitest::Test
 
   def test_send_union
     assert do_tc("(if _any_object then Fixnum.new else String.new end) * 2", env: @env) <= RDL::Type::UnionType.new(@tfs, $__rdl_bignum_type)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(if _any_object then Object.new else Fixnum.new end) + 2", env: @env) }
   end
 
   def test_new
@@ -552,10 +553,16 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("return 'forty-two' if _any_object; 42", env: @env, scope: @scopef) }
   end
 
+  class E
+    type :f, '() -> %integer'
+    type :f=, '(%integer) -> nil'
+  end
+
   def test_op_asgn
     assert do_tc("x = 0; x += 1") <= $__rdl_numeric_type
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x += 1") }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = Object.new; x += 1", env: @env) }
+    assert do_tc("e = E.new; e.f += 1", env: @env) <= $__rdl_numeric_type
   end
 
 end
