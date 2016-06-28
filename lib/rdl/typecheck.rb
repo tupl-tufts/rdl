@@ -218,8 +218,11 @@ module RDL::Typecheck
     when :lvar, :ivar, :cvar, :gvar
       tc_var(scope, env, e.type, e.children[0], e)
     when :lvasgn, :ivasgn, :cvasgn, :gvasgn
+      x = e.children[0]
+      # if local var, lhs is bound to nil before assignment is executed! only matters in type checking for locals
+      env = env.bind(x, $__rdl_nil_type) if ((e.type == :lvasgn) && (not (env.has_key? x)))
       envright, tright = tc(scope, env, e.children[1])
-      tc_vasgn(scope, envright, e.type, e.children[0], tright, e)
+      tc_vasgn(scope, envright, e.type, x, tright, e)
     when :op_asgn
       if e.children[0].type == :send
         # (op-asgn (send recv meth) :op operand)
@@ -234,6 +237,7 @@ module RDL::Typecheck
       else
         # (op-asgn (Xvasgn var-name) :op operand)
         x = e.children[0].children[0]
+        env = env.bind(x, $__rdl_nil_type) if ((e.children[0].type == :lvasgn) && (not (env.has_key? x))) # see :lvasgn
         envi, trecv = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
         envi, toperand = tc(scope, envi, e.children[2]) # right-hand side
         tright = tc_send(trecv, e.children[1], [toperand], e)
@@ -245,10 +249,7 @@ module RDL::Typecheck
         raise RuntimeError, "unimplemented"
       else
         x = e.children[0].children[0]
-        if e.children[0].type == :lvasgn
-          # special case: add x to env if it's not there
-          env = env.bind(x, $__rdl_nil_type) unless env.has_key? x
-        end
+        env = env.bind(x, $__rdl_nil_type) if ((e.children[0].type == :lvasgn) && (not (env.has_key? x))) # see :lvasgn
         envleft, tleft = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
         envright, tright = tc(scope, envleft, e.children[1])
         envi, trhs = (if tleft.is_a? RDL::Type::SingletonType

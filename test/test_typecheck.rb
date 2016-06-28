@@ -199,6 +199,7 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_parser.scan_str("#T 42"), do_tc("x = 42; x")
     assert_equal $__rdl_parser.scan_str("#T 42"), do_tc("x = 42; y = x; y")
     assert_equal $__rdl_parser.scan_str("#T 42"), do_tc("x = y = 42; x")
+    assert_equal $__rdl_nil_type, do_tc("x = x") # weird behavior - lhs bound to nil always before assignment!
   end
 
   def test_lvar_type
@@ -564,13 +565,15 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x += 1") }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = Object.new; x += 1", env: @env) }
     assert do_tc("e = E.new; e.f += 1", env: @env) <= $__rdl_numeric_type
+    assert_equal $__rdl_false_type, do_tc("x &= false") # weird
   end
 
   def test_and_or_asgn
     self.class.class_eval {
       var_type :@f_and_or_asgn, "Fixnum"
     }
-    assert_equal @t3, do_tc("x ||= 3")
+    assert_equal @t3, do_tc("x ||= 3") # weird
+    assert_equal $__rdl_nil_type, do_tc("x &&= 3") # weirder
     assert_equal $__rdl_fixnum_type, do_tc("@f_and_or_asgn &&= 4", env: @env)
     assert_equal @t3, do_tc("x = 3; x ||= 'three'")
     assert_equal @ts3, do_tc("x = 'three'; x ||= 3")
