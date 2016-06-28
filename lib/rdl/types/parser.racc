@@ -134,6 +134,9 @@ rule
     | LBRACKET method_sig_list RBRACKET {
       result = RDL::Type::StructuralType.new(Hash[*val[1]])
     }
+    | LBRACKET RBRACKET {
+      result = RDL::Type::TupleType.new
+    }
     | LBRACE hash_expr_comma_list RBRACE {
       result = RDL::Type::FiniteHashType.new(Hash[*val[1]])
     }
