@@ -232,8 +232,14 @@ module RDL::Typecheck
       }
       envi, tright = tc(scope, env, e.children[1])
       if tright.is_a? RDL::Type::TupleType
-        raise "Unimplemented"
-        # difficulties with promote!
+        tright.cant_promote! # must always remain a tuple because of the way type checking currently works
+        lhs = e.children[0].children
+        rhs = tright.params
+        error :masgn_num, [rhs.length, lhs.length], e unless lhs.length == rhs.length
+        lhs.zip(rhs).each { |left, right|
+          envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], right, left)
+        }
+        [envi, tright]
       elsif (tright.is_a? RDL::Type::GenericType) && (tright.base == $__rdl_array_type)
         tasgn = tright.params[0]
         e.children[0].children.each { |asgn|
@@ -559,7 +565,7 @@ module RDL::Typecheck
       tmeth_inter = ts.map { |t| t.instantiate(inst) }
     when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
       unless trecv.is_a? RDL::Type::GenericType
-        error :tuple_finite_hash_promote, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e unless trecv.promote!
+        error :tuple_finite_hash_promote, (if trecv.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e unless trecv.promote!
         trecv = trecv.canonical
       end
       ts = lookup(trecv.base.name, meth)
@@ -686,7 +692,8 @@ type_error_messages = {
   inconsistent_var_type_type: "local variable `%s' declared with inconsistent types %s",
   no_each_type: "can't find `each' method with signature `() { (t1) -> t2 } -> t3' in class `%s'",
   tuple_finite_hash_promote: "can't promote %s to %s",
-  masgn_bad_rhs: "can't type multiple assignment with right-hand side of type `%s'",
+  masgn_bad_rhs: "multiple assignment has right-hand side of type `%s' where tuple or array expected",
+  masgn_num: "can't multiple-assign %d values to %d variables",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

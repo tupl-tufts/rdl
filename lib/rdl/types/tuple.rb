@@ -11,6 +11,7 @@ module RDL::Type
       raise RuntimeError, "Attempt to create tuple type with non-type param" unless params.all? { |p| p.is_a? Type }
       @params = params
       @array = nil # emphasize initially this is a tuple, not an array
+      @cant_promote = false
       @ubounds = []
       @lbounds = []
       super()
@@ -44,10 +45,16 @@ module RDL::Type
     end
 
     def promote!
+      return false if @cant_promote
       @array = GenericType.new($__rdl_array_type, UnionType.new(*@params))
       # note since we promoted this, lbounds and ubounds will be ignored in future constraints, which
       # is good because otherwise we'd get infinite loops
       return (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
+    end
+
+    def cant_promote!
+      raise RuntimeError, "already promoted!" if @array
+      @cant_promote = true
     end
 
     def <=(other)

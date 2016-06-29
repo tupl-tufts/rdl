@@ -590,6 +590,12 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_fixnum_type, do_tc("a, b = @f_masgn; a", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("a, b = @f_masgn; b", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :a, 'String'; a, b = @f_masgn", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("a, b = 1, 2, 3") }
+    assert_equal @t3, do_tc("a, b = 3, 'two'; a")
+    assert_equal $__rdl_string_type, do_tc("a, b = 3, 'two'; b")
+    assert_equal @t3, do_tc("a = [3, 'two']; x, y = a; x")
+    assert_equal $__rdl_string_type, do_tc("a = [3, 'two']; x, y = a; y")
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("a = [3, 'two']; x, y = a; a.length", env: @env) }
   end
 
 end
