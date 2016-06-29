@@ -223,6 +223,26 @@ module RDL::Typecheck
       env = env.bind(x, $__rdl_nil_type) if ((e.type == :lvasgn) && (not (env.has_key? x)))
       envright, tright = tc(scope, env, e.children[1])
       tc_vasgn(scope, envright, e.type, x, tright, e)
+    when :masgn
+      # (masgn (mlhs (Xvasgn var-name) ... (Xvasgn var-name)) rhs)
+      e.children[0].children.each { |asgn|
+        next unless asgn.type == :lvasgn
+        x = e.children[0]
+        env = env.bind(x, $__rdl_nil_type) if (not (env.has_key? x)) # see lvasgn
+      }
+      envi, tright = tc(scope, env, e.children[1])
+      if tright.is_a? RDL::Type::TupleType
+        raise "Unimplemented"
+        # difficulties with promote!
+      elsif (tright.is_a? RDL::Type::GenericType) && (tright.base == $__rdl_array_type)
+        tasgn = tright.params[0]
+        e.children[0].children.each { |asgn|
+          envi, _ = tc_vasgn(scope, envi, asgn.type, asgn.children[0], tasgn, asgn)
+        }
+        [envi, tright]
+      else
+        error :masgn_bad_rhs, [tright], e.children[1]
+      end
     when :op_asgn
       if e.children[0].type == :send
         # (op-asgn (send recv meth) :op operand)
@@ -666,6 +686,7 @@ type_error_messages = {
   inconsistent_var_type_type: "local variable `%s' declared with inconsistent types %s",
   no_each_type: "can't find `each' method with signature `() { (t1) -> t2 } -> t3' in class `%s'",
   tuple_finite_hash_promote: "can't promote %s to %s",
+  masgn_bad_rhs: "can't type multiple assignment with right-hand side of type `%s'",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

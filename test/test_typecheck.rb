@@ -581,4 +581,15 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_nil_type, do_tc("e = E.new; e.f &&= 3", env: @env) # return type of f=
   end
 
+  def test_masgn
+    self.class.class_eval {
+      var_type :@f_masgn, "Array<Fixnum>"
+    }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x, y = 3") } # allowed in Ruby but probably has surprising behavior
+    assert_equal $__rdl_parser.scan_str("#T Array<Fixnum>"), do_tc("a, b = @f_masgn", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("a, b = @f_masgn; a", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("a, b = @f_masgn; b", env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :a, 'String'; a, b = @f_masgn", env: @env) }
+  end
+
 end
