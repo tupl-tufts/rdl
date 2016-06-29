@@ -564,7 +564,7 @@ class TestTypecheck < Minitest::Test
     assert do_tc("x = 0; x += 1") <= $__rdl_numeric_type
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x += 1") }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = Object.new; x += 1", env: @env) }
-    assert do_tc("e = E.new; e.f += 1", env: @env) <= $__rdl_numeric_type
+    assert_equal $__rdl_nil_type, do_tc("e = E.new; e.f += 1", env: @env) # return type of f=
     assert_equal $__rdl_false_type, do_tc("x &= false") # weird
   end
 
@@ -577,7 +577,8 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_fixnum_type, do_tc("@f_and_or_asgn &&= 4", env: @env)
     assert_equal @t3, do_tc("x = 3; x ||= 'three'")
     assert_equal @ts3, do_tc("x = 'three'; x ||= 3")
-
+    assert_equal $__rdl_nil_type, do_tc("e = E.new; e.f ||= 3", env: @env) # return type of f=
+    assert_equal $__rdl_nil_type, do_tc("e = E.new; e.f &&= 3", env: @env) # return type of f=
   end
 
 end

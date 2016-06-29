@@ -227,40 +227,49 @@ module RDL::Typecheck
       if e.children[0].type == :send
         # (op-asgn (send recv meth) :op operand)
         meth = e.children[0].children[1]
-        envi, trecv = tc(scope, env, e.children[0].children[0]) # receiver object
-        envi, troperand = tc(scope, envi, e.children[2]) # right-hand side
-        tloperand = tc_send(trecv, e.children[0].children[1], [], e.children[0]) # call recv.meth()
+        envleft, trecv = tc(scope, env, e.children[0].children[0]) # recv
+        tloperand = tc_send(trecv, meth, [], e.children[0]) # call recv.meth()
+        envoperand, troperand = tc(scope, envleft, e.children[2]) # operand
         tright = tc_send(tloperand, e.children[1], [troperand], e) # computer recv.meth().op(operand)
         mutation_meth = (meth.to_s + '=').to_sym
         tres = tc_send(trecv, mutation_meth, [tright], e) # call recv.meth=(recv.meth().op(operand))
-        [envi, tres]
+        [envoperand, tres]
       else
         # (op-asgn (Xvasgn var-name) :op operand)
         x = e.children[0].children[0]
         env = env.bind(x, $__rdl_nil_type) if ((e.children[0].type == :lvasgn) && (not (env.has_key? x))) # see :lvasgn
         envi, trecv = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
-        envi, toperand = tc(scope, envi, e.children[2]) # right-hand side
-        tright = tc_send(trecv, e.children[1], [toperand], e)
-        tc_vasgn(scope, env, e.children[0].type, x, tright, e)
+        envright, tright = tc(scope, envi, e.children[2]) # operand
+        trhs = tc_send(trecv, e.children[1], [tright], e)
+        tc_vasgn(scope, envright, e.children[0].type, x, trhs, e)
       end
     when :and_asgn, :or_asgn
       # very similar logic to op_asgn
       if e.children[0].type == :send
-        raise RuntimeError, "unimplemented"
+        meth = e.children[0].children[1]
+        envleft, trecv = tc(scope, env, e.children[0].children[0]) # recv
+        tleft = tc_send(trecv, meth, [], e.children[0]) # call recv.meth()
+        envright, tright = tc(scope, envleft, e.children[1]) # operand
       else
         x = e.children[0].children[0]
         env = env.bind(x, $__rdl_nil_type) if ((e.children[0].type == :lvasgn) && (not (env.has_key? x))) # see :lvasgn
         envleft, tleft = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
         envright, tright = tc(scope, envleft, e.children[1])
-        envi, trhs = (if tleft.is_a? RDL::Type::SingletonType
-                        if e.type == :and_asgn
-                          if tleft.val then [envright, tright] else [envleft, tleft] end
-                        else # e.type == :or_asgn
-                          if tleft.val then [envleft, tleft] else [envright, tright] end
-                        end
-                      else
-                        [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright).canonical]
-                      end)
+      end
+      envi, trhs = (if tleft.is_a? RDL::Type::SingletonType
+                      if e.type == :and_asgn
+                        if tleft.val then [envright, tright] else [envleft, tleft] end
+                      else # e.type == :or_asgn
+                        if tleft.val then [envleft, tleft] else [envright, tright] end
+                      end
+                    else
+                      [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright).canonical]
+                    end)
+      if e.children[0].type == :send
+        mutation_meth = (meth.to_s + '=').to_sym
+        tres = tc_send(trecv, mutation_meth, [trhs], e)
+        [envi, tres]
+      else
         tc_vasgn(scope, envi, e.children[0].type, x, trhs, e)
       end
     when :nth_ref, :back_ref
