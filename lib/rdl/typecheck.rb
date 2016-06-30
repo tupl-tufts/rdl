@@ -412,15 +412,23 @@ module RDL::Typecheck
       end
       return [Env.join(e, *envbodies), RDL::Type::UnionType.new(*tbodies).canonical]
     when :while, :until
-      envi, _ = tc(scope, env, e.children[0]) # guard can have any type
-      envold = nil
-      until envi == envold do
-        envold = envi
-        envi, _ = tc(scope, envi, e.children[1]) if e.children[1] # body can have any type, may be nil
-        envi, _ = tc(scope, envi, e.children[0]) # guard checked again
-        envi = Env.join(e, envi, envold)
-      end
-      [envi, $__rdl_nil_type]
+      # break: loop exit
+      # next: before loop header
+      # retry: before loop initialization, which here is same as next
+      # redo: after loop header, which is same as break
+      env_break, _ = tc(scope, env, e.children[0]) # guard can have any type, may exit after checking guard
+      scope = scope.merge(break: env_break, next: env)
+      begin
+        old_break = scope[:break]
+        old_next = scope[:next]
+        if e.children[1]
+          env_body, _ = tc(scope, scope[:break], e.children[1]) # loop runs
+          scope[:next] = Env.join(e, scope[:next], env_body)
+        end
+        env_guard, _ = tc(scope, scope[:next], e.children[0]) # then guard runs
+        scope[:break] = Env.join(e, scope[:break], env_guard)
+      end until old_break == scope[:break] && old_next == scope[:next]
+      [scope[:break], $__rdl_nil_type]
     when :while_post, :until_post
       envi = env
       envi, _ = tc(scope, envi, e.children[1]) if e.children[1] # loop runs once, may be nil
@@ -472,6 +480,14 @@ module RDL::Typecheck
         envi = Env.join(e, envold, envi)
       end
       [envi, teach.ret]
+    when :break, :redo
+      raise RuntimeError, "#{e.type} arguments not supported" unless e.children[0].nil?
+      scope[:break] = Env.join(e, scope[:break], env)
+      [env, $__rdl_bot_type]
+    when :next, :retry
+      raise RuntimeError, "#{e.type} arguments not supported" unless e.children[0].nil?
+      scope[:next] = Env.join(e, scope[:next], env)
+      [env, $__rdl_bot_type]
     when :return
       # TODO return in lambda returns from lambda and not outer scope
       env1, t1 = tc(scope, env, e.children[0])
