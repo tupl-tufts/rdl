@@ -414,22 +414,26 @@ module RDL::Typecheck
     when :while, :until
       # break: loop exit
       # next: before loop guard
-      # retry: before loop initialization, which here is same as next
+      # retry: not allowed
       # redo: after loop header, which is same as break
       env_break, _ = tc(scope, env, e.children[0]) # guard can have any type, may exit after checking guard
-      scope = scope.merge(break: env_break, next: env, retry: env, redo: env_break)
+      scope = scope.merge(break: env_break, next: env, redo: env_break)
       begin
         old_break = scope[:break]
         old_next = scope[:next]
         if e.children[1]
           env_body, _ = tc(scope, scope[:break], e.children[1]) # loop runs
-          scope[:next] = scope[:retry] = Env.join(e, scope[:next], scope[:retry], env_body)
+          scope[:next] = Env.join(e, scope[:next], env_body)
         end
         env_guard, _ = tc(scope, scope[:next], e.children[0]) # then guard runs
         scope[:break] = scope[:redo] = Env.join(e, scope[:break], scope[:redo], env_guard)
       end until old_break == scope[:break] && old_next == scope[:next]
       [scope[:break], $__rdl_nil_type]
     when :while_post, :until_post
+      # break: loop exit; note may exit loop before hitting guard
+      # next: before loop guard
+      # retry: same as next
+      # redo: jumps to beginning of body
       envi = env
       envi, _ = tc(scope, envi, e.children[1]) if e.children[1] # loop runs once, may be nil
       envi, _ = tc(scope, envi, e.children[0]) # guard checked once
@@ -482,6 +486,7 @@ module RDL::Typecheck
       [envi, teach.ret]
     when :break, :redo, :next, :retry
       raise RuntimeError, "#{e.type} arguments not supported" unless e.children[0].nil?
+      error :kw_not_allowed, [e.type.to_s], e unless scope.has_key? e.type
       scope[e.type] = Env.join(e, scope[e.type], env)
       [env, $__rdl_bot_type]
     when :return
@@ -733,6 +738,7 @@ type_error_messages = {
   tuple_finite_hash_promote: "can't promote %s to %s",
   masgn_bad_rhs: "multiple assignment has right-hand side of type `%s' where tuple or array expected",
   masgn_num: "can't multiple-assign %d values to %d variables",
+  kw_not_allowed: "can't use %s in current scope",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

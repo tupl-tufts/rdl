@@ -549,7 +549,7 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_parser.scan_str("#T 0"), do_tc("i = 0; while i < 5 do break end; i")
     assert_equal $__rdl_parser.scan_str("#T 0"), do_tc("i = 0; while i < 5 do redo end; i") # infinite loops...
     assert_equal $__rdl_parser.scan_str("#T 0"), do_tc("i = 0; while i < 5 do next end; i")
-    assert_equal $__rdl_parser.scan_str("#T 0"), do_tc("i = 0; while i < 5 do retry end; i")
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("i = 0; while i < 5 do retry end; i") }
   end
 
   def test_return
