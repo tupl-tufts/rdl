@@ -135,20 +135,19 @@ class TestTypecheck < Minitest::Test
 
   def test_tuple
     assert_equal $__rdl_parser.scan_str("#T [TrueClass, String]"), do_tc("[true, '42']")
-    assert do_tc("['foo', 'bar']") <= $__rdl_parser.scan_str("#T Array<String>")
-    assert do_tc("[42, '42']") <= $__rdl_parser.scan_str("#T [Fixnum, String]")
+    assert_equal $__rdl_parser.scan_str("#T [42, String]"), do_tc("[42, '42']")
   end
 
   def test_hash
     assert_equal $__rdl_parser.scan_str("#T {x: TrueClass, y: FalseClass}"), do_tc("{x: true, y: false}")
-    assert do_tc("{'a' => 1, 'b' => 2}") <= $__rdl_parser.scan_str("#T Hash<String, 1 or 2>")
-    assert do_tc("{1 => 'a', 2 => 'b'}") <= $__rdl_parser.scan_str("#T Hash<1 or 2, String>")
+    assert_equal $__rdl_parser.scan_str("#T Hash<String, 1 or 2>"), do_tc("{'a' => 1, 'b' => 2}")
+    assert_equal $__rdl_parser.scan_str("#T Hash<1 or 2, String>"), do_tc("{1 => 'a', 2 => 'b'}")
     assert_equal $__rdl_parser.scan_str("#T {}"), do_tc("{}")
   end
 
   def test_range
-    assert do_tc("1..5") <= $__rdl_parser.scan_str("#T Range<Fixnum>")
-    assert do_tc("1...5") <= $__rdl_parser.scan_str("#T Range<Fixnum>")
+    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("1..5")
+    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("1...5")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("1..'foo'") }
   end
 
@@ -530,19 +529,19 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_nil_type, do_tc("until false do end")
     assert_equal $__rdl_nil_type, do_tc("begin end while true")
     assert_equal $__rdl_nil_type, do_tc("begin end until false")
-    assert do_tc("i = 0; while i < 5 do i = 1 + i end; i") <= $__rdl_numeric_type
-    assert do_tc("i = 0; while i < 5 do i = i + 1 end; i") <= $__rdl_numeric_type
-    assert do_tc("i = 0; until i >= 5 do i = 1 + i end; i") <= $__rdl_numeric_type
-    assert do_tc("i = 0; until i >= 5 do i = i + 1 end; i") <= $__rdl_numeric_type
-    assert do_tc("i = 0; begin i = 1 + i end while i < 5; i") <= $__rdl_numeric_type
-    assert do_tc("i = 0; begin i = i + 1 end while i < 5; i") <= $__rdl_numeric_type
-    assert do_tc("i = 0; begin i = 1 + i end until i >= 5; i") <= $__rdl_numeric_type
-    assert do_tc("i = 0; begin i = i + 1 end until i >= 5; i") <= $__rdl_numeric_type
+    assert_equal $__rdl_integer_type, do_tc("i = 0; while i < 5 do i = 1 + i end; i")
+    assert_equal $__rdl_integer_type, do_tc("i = 0; while i < 5 do i = i + 1 end; i")
+    assert_equal $__rdl_integer_type, do_tc("i = 0; until i >= 5 do i = 1 + i end; i")
+    assert_equal $__rdl_integer_type, do_tc("i = 0; until i >= 5 do i = i + 1 end; i")
+    assert_equal $__rdl_integer_type, do_tc("i = 0; begin i = 1 + i end while i < 5; i")
+    assert_equal $__rdl_integer_type, do_tc("i = 0; begin i = i + 1 end while i < 5; i")
+    assert_equal $__rdl_integer_type, do_tc("i = 0; begin i = 1 + i end until i >= 5; i")
+    assert_equal $__rdl_integer_type, do_tc("i = 0; begin i = i + 1 end until i >= 5; i")
   end
 
   def test_for
-    assert do_tc("for i in 1..5 do end; i") <= $__rdl_numeric_type
-    assert do_tc("for i in [1,2,3,4,5] do end; i") <= $__rdl_numeric_type
+    assert_equal $__rdl_fixnum_type, do_tc("for i in 1..5 do end; i")
+    assert_equal $__rdl_parser.scan_str("#T 1 or 2 or 3 or 4 or 5"), do_tc("for i in [1,2,3,4,5] do end; i")
   end
 
   def test_return
@@ -575,7 +574,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_op_asgn
-    assert do_tc("x = 0; x += 1") <= $__rdl_numeric_type
+    assert $__rdl_integer_type, do_tc("x = 0; x += 1")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x += 1") }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = Object.new; x += 1", env: @env) }
     assert_equal $__rdl_nil_type, do_tc("e = E.new; e.f += 1", env: @env) # return type of f=
