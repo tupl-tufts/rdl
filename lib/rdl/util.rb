@@ -31,14 +31,15 @@ class RDL::Util
     return SINGLETON_MARKER + klass
   end
 
+  # Duplicate method...
   # Klass should be a string and may have a singleton marker
-  def self.pretty_name(klass, meth)
-    if klass =~ /^#{SINGLETON_MARKER_REGEXP}(.*)/
-      return "#{$1}.#{meth}"
-    else
-      return "#{klass}##{meth}"
-    end
-  end
+  # def self.pretty_name(klass, meth)
+  #   if klass =~ /^#{SINGLETON_MARKER_REGEXP}(.*)/
+  #     return "#{$1}.#{meth}"
+  #   else
+  #     return "#{klass}##{meth}"
+  #   end
+  # end
 
   def self.method_defined?(klass, method)
     begin

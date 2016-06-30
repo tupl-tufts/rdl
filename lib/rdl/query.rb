@@ -56,7 +56,7 @@ class RDL::Query
         if kinds.has_key? :type then
           kinds[:type].each { |t|
             if q.match(t)
-              result << [RDL::Util.pretty_name(klass, meth), t]
+              result << [RDL::Util.pp_klass_method(klass, meth), t]
             end
           }
         end

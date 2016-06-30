@@ -32,6 +32,8 @@ module RDL::Type
 
     alias eql? ==
 
+    alias <= == # hack to allow rdl_query to work with union types...
+
     def match(other)
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
