@@ -58,13 +58,6 @@ class TestTypecheck < Minitest::Test
       def id_fs2(x) "42"; end
     }
     assert_raises(RDL::Typecheck::StaticTypeError) { id_fs2(42) }
-
-    skip "not implemented yet"
-    self.class.class_eval {
-      type "(Fixnum, Fixnum) -> Fixnum", typecheck_now: true
-      def add(x, y) x+y; end
-    }
-    assert_equal 42, id_ff(42)
   end
 
   def test_lits
@@ -147,7 +140,6 @@ class TestTypecheck < Minitest::Test
       def self1() self; end
     }
 
-    skip "not supported yet"
     self.class.class_eval {
       type "() -> self", typecheck_now: true
       def self2() TestTypecheck.new; end
