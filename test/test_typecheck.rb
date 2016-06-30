@@ -256,6 +256,7 @@ class TestTypecheck < Minitest::Test
       type :_send_basic2, "() -> Fixnum"
       type :_send_basic3, "(Fixnum) -> Fixnum"
       type :_send_basic4, "(Fixnum, String) -> Fixnum"
+      type "self._send_basic5", "(Fixnum) -> Fixnum"
     }
 
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("z", env: @env) }
@@ -265,6 +266,8 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_fixnum_type, do_tc("_send_basic4(42, '42')", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_basic4(42, 43)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_basic4('42', '43')", env: @env) }
+    assert_equal $__rdl_fixnum_type, do_tc("TestTypecheck._send_basic5(42)", env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("TestTypecheck._send_basic5('42')", env: @env) }
   end
 
   class A

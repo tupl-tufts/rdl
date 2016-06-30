@@ -546,8 +546,9 @@ module RDL::Typecheck
     tmeth_inter = [] # Array<MethodType>, i.e., an intersection types
     case trecv
     when RDL::Type::SingletonType
-      if (trecv.val.is_a? Class) && (meth == :new)
-        ts = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), :initialize)
+      if trecv.val.is_a? Class
+        meth = :initialize if meth == :new
+        ts = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), meth)
         ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] unless ts # there's always a nullary new if initialize is undefined
         inst = {self: trecv}
         tmeth_inter = ts.map { |t| t.instantiate(inst) }
