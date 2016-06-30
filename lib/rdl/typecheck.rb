@@ -413,20 +413,20 @@ module RDL::Typecheck
       return [Env.join(e, *envbodies), RDL::Type::UnionType.new(*tbodies).canonical]
     when :while, :until
       # break: loop exit
-      # next: before loop header
+      # next: before loop guard
       # retry: before loop initialization, which here is same as next
       # redo: after loop header, which is same as break
       env_break, _ = tc(scope, env, e.children[0]) # guard can have any type, may exit after checking guard
-      scope = scope.merge(break: env_break, next: env)
+      scope = scope.merge(break: env_break, next: env, retry: env, redo: env_break)
       begin
         old_break = scope[:break]
         old_next = scope[:next]
         if e.children[1]
           env_body, _ = tc(scope, scope[:break], e.children[1]) # loop runs
-          scope[:next] = Env.join(e, scope[:next], env_body)
+          scope[:next] = scope[:retry] = Env.join(e, scope[:next], scope[:retry], env_body)
         end
         env_guard, _ = tc(scope, scope[:next], e.children[0]) # then guard runs
-        scope[:break] = Env.join(e, scope[:break], env_guard)
+        scope[:break] = scope[:redo] = Env.join(e, scope[:break], scope[:redo], env_guard)
       end until old_break == scope[:break] && old_next == scope[:next]
       [scope[:break], $__rdl_nil_type]
     when :while_post, :until_post
@@ -480,13 +480,9 @@ module RDL::Typecheck
         envi = Env.join(e, envold, envi)
       end
       [envi, teach.ret]
-    when :break, :redo
+    when :break, :redo, :next, :retry
       raise RuntimeError, "#{e.type} arguments not supported" unless e.children[0].nil?
-      scope[:break] = Env.join(e, scope[:break], env)
-      [env, $__rdl_bot_type]
-    when :next, :retry
-      raise RuntimeError, "#{e.type} arguments not supported" unless e.children[0].nil?
-      scope[:next] = Env.join(e, scope[:next], env)
+      scope[e.type] = Env.join(e, scope[e.type], env)
       [env, $__rdl_bot_type]
     when :return
       # TODO return in lambda returns from lambda and not outer scope
