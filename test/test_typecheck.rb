@@ -525,6 +525,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_while_until
+    # TODO these don't do a great job checking control flow
     assert_equal $__rdl_nil_type, do_tc("while true do end")
     assert_equal $__rdl_nil_type, do_tc("until false do end")
     assert_equal $__rdl_nil_type, do_tc("begin end while true")
@@ -545,11 +546,16 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_break_next_redo_retry
+    # TODO these don't do a great job checking control flow
     assert_equal $__rdl_integer_type, do_tc("i = 0; while i < 5 do if i > 2 then break end; i = 1 + i end; i")
     assert_equal $__rdl_parser.scan_str("#T 0"), do_tc("i = 0; while i < 5 do break end; i")
     assert_equal $__rdl_parser.scan_str("#T 0"), do_tc("i = 0; while i < 5 do redo end; i") # infinite loops...
     assert_equal $__rdl_parser.scan_str("#T 0"), do_tc("i = 0; while i < 5 do next end; i")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("i = 0; while i < 5 do retry end; i") }
+    assert_equal $__rdl_integer_type, do_tc("i = 0; begin i = i + 1; break if i > 2; end while i < 5; i")
+    assert_equal $__rdl_integer_type, do_tc("i = 0; begin i = i + 1; redo if i > 2; end while i < 5; i")
+    assert_equal $__rdl_integer_type, do_tc("i = 0; begin i = i + 1; next if i > 2; end while i < 5; i")
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("i = 0; begin i = i + 1; retry if i > 2; end while i < 5; i") }
   end
 
   def test_return

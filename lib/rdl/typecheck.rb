@@ -92,9 +92,11 @@ module RDL::Typecheck
     end
 
     # [+ envs +] is Array<Env>
+    # any elts of envs that are nil are discarded
     def self.join(e, *envs)
       raise RuntimeError, "Expecting AST, got #{e.class}" unless e.is_a? AST::Node
       env = Env.new
+      envs.delete(nil)
       return env if envs.empty?
       return envs[0] if envs.size == 1
       first = envs[0]
@@ -412,10 +414,10 @@ module RDL::Typecheck
       end
       return [Env.join(e, *envbodies), RDL::Type::UnionType.new(*tbodies).canonical]
     when :while, :until
-      # break: loop exit
+      # break: loop exit, i.e., right after loop guard
       # next: before loop guard
       # retry: not allowed
-      # redo: after loop header, which is same as break
+      # redo: after loop guard, which is same as break
       env_break, _ = tc(scope, env, e.children[0]) # guard can have any type, may exit after checking guard
       scope = scope.merge(break: env_break, next: env, redo: env_break)
       begin
@@ -432,18 +434,35 @@ module RDL::Typecheck
     when :while_post, :until_post
       # break: loop exit; note may exit loop before hitting guard
       # next: before loop guard
-      # retry: same as next
-      # redo: jumps to beginning of body
-      envi = env
-      envi, _ = tc(scope, envi, e.children[1]) if e.children[1] # loop runs once, may be nil
-      envi, _ = tc(scope, envi, e.children[0]) # guard checked once
+      # retry: not allowed
+      # redo: beginning of body, which is same as after guard, i.e., same as break
+      scope = scope.merge(break: nil, next: nil, redo: nil)
+      if e.children[1]
+        env_body, _ = tc(scope, env, e.children[1])
+        scope[:next] = Env.join(e, scope[:next], env_body)
+      end
       begin
-        envold = envi
-        envi, _ = tc(scope, envi, e.children[1]) if e.children[1] # loop runs
-        envi, _ = tc(scope, envi, e.children[0]) # guard checked again
-        envi = Env.join(e, envi, envold)
-      end until envi == envold
-      [envi, $__rdl_nil_type]
+        old_break = scope[:break]
+        old_next = scope[:next]
+        env_guard, _ = tc(scope, scope[:next], e.children[0])
+        scope[:break] = scope[:redo] = Env.join(e, scope[:break], scope[:redo], env_guard)
+        if e.children[1]
+          env_body, _ = tc(scope, scope[:break], e.children[1])
+          scope[:next] = Env.join(e, scope[:next], env_body)
+        end
+      end until old_break == scope[:break] && old_next == scope[:next]
+      [scope[:break], $__rdl_nil_type]
+
+      # envi, _ = tc(scope, envi, e.children[1]) if e.children[1] # loop runs once, may be nil
+      # envi, _ = tc(scope, envi, e.children[0]) # guard checked once
+      # envi = env
+      # begin
+      #   envold = envi
+      #   envi, _ = tc(scope, envi, e.children[1]) if e.children[1] # loop runs
+      #   envi, _ = tc(scope, envi, e.children[0]) # guard checked again
+      #   envi = Env.join(e, envi, envold)
+      # end until envi == envold
+      # [envi, $__rdl_nil_type]
     when :for
       raise RuntimeError, "Loop variable #{e.children[0]} in for unsupported" unless e.children[0].type == :lvasgn
       x  = e.children[0].children[0] # loop variable
