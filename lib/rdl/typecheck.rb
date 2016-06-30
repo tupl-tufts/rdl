@@ -18,6 +18,7 @@ module RDL::Typecheck
     end
 
     def on_def(node)
+      # (def name args body)
       name, _, body = *node
       if @line_defs[node.loc.line]
         raise RuntimeError, "Multiple defs per line (#{name} and #{@line_defs[node.loc.line].children[1]} in #{@file}) currently not allowed"
@@ -26,6 +27,18 @@ module RDL::Typecheck
       process body
       node.updated(nil, nil)
     end
+
+    def on_defs(node)
+      # (defs (self) name args body)
+      _, name, _, body = *node
+      if @line_defs[node.loc.line]
+        raise RuntimeError, "Multiple defs per line (#{name} and #{@line_defs[node.loc.line].children[1]} in #{@file}) currently not allowed"
+      end
+      @line_defs[node.loc.line] = node
+      process body
+      node.updated(nil, nil)
+    end
+
   end
 
   # Local variable environment
@@ -113,7 +126,6 @@ module RDL::Typecheck
   end
 
   def self.typecheck(klass, meth)
-    raise RuntimeError, "singleton method typechecking not supported yet" if RDL::Util.has_singleton_marker(klass)
     file, line = $__rdl_info.get(klass, meth, :source_location)
     raise RuntimeError, "static type checking in irb not supported" if file == "(irb)"
     digest = Digest::MD5.file file
@@ -127,14 +139,26 @@ module RDL::Typecheck
       $__rdl_ruby_parser_cache[file] = [digest, cache]
     end
     ast = $__rdl_ruby_parser_cache[file][1][:line_defs][line]
+    raise RuntimeError, "Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}" if ast.nil?
     types = $__rdl_info.get(klass, meth, :type)
     raise RuntimeError, "Can't typecheck method with no types?!" if types.nil? or types == []
 
-    name, args, body = *ast
+    if ast.type == :def
+      name, args, body = *ast
+    elsif ast.type == :defs
+      _, name, args, body = *ast
+    else
+      raise RuntimeError, "Unexpected ast type #{ast.type}"
+    end
     raise RuntimeError, "Method #{name} defined where method #{meth} expected" if name.to_sym != meth
     types.each { |type|
       # TODO will need fancier logic here for matching up more complex arg lists
-      self_type = RDL::Type::NominalType.new(klass)
+      if RDL::Util.has_singleton_marker(klass)
+        # to_class gets the class object itself, so remove singleton marker to get class rather than singleton class
+        self_type = RDL::Type::SingletonType.new(RDL::Util.to_class(RDL::Util.remove_singleton_marker(klass)))
+      else
+        self_type = RDL::Type::NominalType.new(klass)
+      end
       inst = {self: self_type}
       type = type.instantiate inst
       a = args.children.map { |arg| arg.children[0] }.zip(type.args).to_h
@@ -547,9 +571,10 @@ module RDL::Typecheck
     case trecv
     when RDL::Type::SingletonType
       if trecv.val.is_a? Class
-        meth = :initialize if meth == :new
-        ts = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), meth)
-        ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] unless ts # there's always a nullary new if initialize is undefined
+        if meth == :new then name = :initialize else name = meth end
+        ts = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), name)
+        ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] if (meth == :new) && (ts.nil?) # there's always a nullary new if initialize is undefined
+        error :no_singleton_method_type, [trecv.val, meth], e unless ts
         inst = {self: trecv}
         tmeth_inter = ts.map { |t| t.instantiate(inst) }
       else
@@ -683,6 +708,7 @@ type_error_messages = {
   undefined_local_or_method: "undefined local variable or method `%s'",
   nonmatching_range_type: "attempt to construct range with non-matching types `%s' and `%s'",
   no_instance_method_type: "no type information for instance method `%s#%s'",
+  no_singleton_method_type: "no type information for class/singleton method `%s.%s'",
   arg_type_single_receiver_error: "argument type error for instance method `%s#%s'\n%s",
   untyped_var: "no type for %s variable `%s'",
   vasgn_incompat: "incompatible types: `%s' can't be assigned to variable of type `%s'",

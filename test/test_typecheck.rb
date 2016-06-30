@@ -34,30 +34,49 @@ class TestTypecheck < Minitest::Test
     return t
   end
 
-  def test_basics
+  def test_def
     self.class.class_eval {
       type "(Fixnum) -> Fixnum", typecheck_now: true
-      def id_ff(x) x; end
+      def def_ff(x) x; end
     }
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "(Fixnum) -> Fixnum", typecheck_now: true
-        def id_fs(x) "42"; end
+        def def_fs(x) "42"; end
       }
     }
 
     self.class.class_eval {
       type "(Fixnum) -> Fixnum", typecheck_now: true
-      def id_ff2(x) x; end
+      def def_ff2(x) x; end
     }
-    assert_equal 42, id_ff2(42)
+    assert_equal 42, def_ff2(42)
 
     self.class.class_eval {
       type "(Fixnum) -> Fixnum", typecheck: true
-      def id_fs2(x) "42"; end
+      def def_fs2(x) "42"; end
     }
-    assert_raises(RDL::Typecheck::StaticTypeError) { id_fs2(42) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { def_fs2(42) }
+  end
+
+  def test_defs
+    self.class.class_eval {
+      type "(Fixnum) -> Class", typecheck_now: true
+      def self.defs_ff(x) self; end
+    }
+
+    self.class.class_eval {
+      type "() -> Class", typecheck_now: true
+      def self.defs_nn() defs_ff(42); end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "() -> Class", typecheck_now: true
+        def self.defs_other() fdsakjfhds(42); end
+      }
+    }
   end
 
   def test_lits
