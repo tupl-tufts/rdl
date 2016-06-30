@@ -452,17 +452,6 @@ module RDL::Typecheck
         end
       end until old_break == scope[:break] && old_next == scope[:next]
       [scope[:break], $__rdl_nil_type]
-
-      # envi, _ = tc(scope, envi, e.children[1]) if e.children[1] # loop runs once, may be nil
-      # envi, _ = tc(scope, envi, e.children[0]) # guard checked once
-      # envi = env
-      # begin
-      #   envold = envi
-      #   envi, _ = tc(scope, envi, e.children[1]) if e.children[1] # loop runs
-      #   envi, _ = tc(scope, envi, e.children[0]) # guard checked again
-      #   envi = Env.join(e, envi, envold)
-      # end until envi == envold
-      # [envi, $__rdl_nil_type]
     when :for
       raise RuntimeError, "Loop variable #{e.children[0]} in for unsupported" unless e.children[0].type == :lvasgn
       x  = e.children[0].children[0] # loop variable
