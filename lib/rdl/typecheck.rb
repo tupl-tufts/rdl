@@ -415,6 +415,7 @@ module RDL::Typecheck
       return [Env.join(e, *envbodies), RDL::Type::UnionType.new(*tbodies).canonical]
     when :while, :until
       # break: loop exit, i.e., right after loop guard
+      # TODO: break return a value from loop
       # next: before loop guard
       # retry: not allowed
       # redo: after loop guard, which is same as break
@@ -432,7 +433,8 @@ module RDL::Typecheck
       end until old_break == scope[:break] && old_next == scope[:next]
       [scope[:break], $__rdl_nil_type]
     when :while_post, :until_post
-      # break: loop exit; note may exit loop before hitting guard
+      # break: loop exit; note may exit loop before hitting guard once
+      # TODO: break return a value from loop
       # next: before loop guard
       # retry: not allowed
       # redo: beginning of body, which is same as after guard, i.e., same as break
@@ -453,6 +455,10 @@ module RDL::Typecheck
       end until old_break == scope[:break] && old_next == scope[:next]
       [scope[:break], $__rdl_nil_type]
     when :for
+      # break: loop exit, which is same as top of body TODO: arg allowed
+      # next: top of body TODO: arg allowed
+      # retry: not allowed
+      # redo: top of body TODO: arg allowed
       raise RuntimeError, "Loop variable #{e.children[0]} in for unsupported" unless e.children[0].type == :lvasgn
       x  = e.children[0].children[0] # loop variable
       envi, tcollect = tc(scope, env, e.children[1]) # collection to iterate through
@@ -467,7 +473,7 @@ module RDL::Typecheck
           tcollect = tcollect.canonical
         end
         teaches = lookup(tcollect.base.name, :each)
-        inst = tcollect.to_inst
+        inst = tcollect.to_inst.merge(self: tcollect)
         teaches = teaches.map { |t| t.instantiate(inst) }
       else
         raise RuntimeError, "Collection of type #{tcollect.to_s} in for unsupported"
@@ -485,13 +491,15 @@ module RDL::Typecheck
       }
       error :no_each_type, [tcollect.name], e.children[1] if teach.nil?
       envi = envi.bind(x, teach.block.args[0])
-      envold = nil
-      until envold == envi
-        envold = envi
-        envi, _ = tc(scope, envi, e.children[2]) if e.children[2] # may be nil
-        envi = Env.join(e, envold, envi)
-      end
-      [envi, teach.ret]
+      scope = scope.merge(break: envi, next: envi, redo: envi) # could exit here
+      begin
+        old_break = scope[:break]
+        if e.children[2]
+          env_body, _ = tc(scope, scope[:break], e.children[2])
+          scope[:break] = scope[:next] = scope[:redo] = Env.join(e, scope[:break], scope[:next], scope[:redo], env_body)
+        end
+      end until old_break == scope[:break]
+      [scope[:break], teach.ret]
     when :break, :redo, :next, :retry
       raise RuntimeError, "#{e.type} arguments not supported" unless e.children[0].nil?
       error :kw_not_allowed, [e.type.to_s], e unless scope.has_key? e.type
