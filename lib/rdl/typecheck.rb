@@ -433,9 +433,8 @@ module RDL::Typecheck
       end until old_break == scope[:break] && old_next == scope[:next] && old_tbreak == scope[:tbreak]
       [scope[:break], scope[:tbreak]]
     when :while_post, :until_post
-      # break: loop exit; note may exit loop before hitting guard once
-      # TODO: break return a value from loop
-      # next: before loop guard
+      # break: loop exit; note may exit loop before hitting guard once; maybe take argument
+      # next: before loop guard; argument not allowed
       # retry: not allowed
       # redo: beginning of body, which is same as after guard, i.e., same as break
       scope = scope.merge(break: nil, tbreak: $__rdl_nil_type, next: nil, redo: nil)
