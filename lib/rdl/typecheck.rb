@@ -431,7 +431,7 @@ module RDL::Typecheck
         env_guard, _ = tc(scope, scope[:next], e.children[0]) # then guard runs
         scope[:break] = scope[:redo] = Env.join(e, scope[:break], scope[:redo], env_guard)
       end until old_break == scope[:break] && old_next == scope[:next] && old_tbreak == scope[:tbreak]
-      [scope[:break], scope[:tbreak]]
+      [scope[:break], scope[:tbreak].canonical]
     when :while_post, :until_post
       # break: loop exit; note may exit loop before hitting guard once; maybe take argument
       # next: before loop guard; argument not allowed
@@ -453,13 +453,14 @@ module RDL::Typecheck
           scope[:next] = Env.join(e, scope[:next], env_body)
         end
       end until old_break == scope[:break] && old_next == scope[:next] && old_tbreak == scope[:tbreak]
-      [scope[:break], scope[:tbreak]]
+      [scope[:break], scope[:tbreak].canonical]
     when :for
-      # break: loop exit, which is same as top of body TODO: arg allowed
-      # next: top of body TODO: arg allowed
+      # break: loop exit, which is same as top of body, arg allowed
+      # next: top of body, arg allowed
       # retry: not allowed
-      # redo: top of body TODO: arg allowed
+      # redo: top of body
       raise RuntimeError, "Loop variable #{e.children[0]} in for unsupported" unless e.children[0].type == :lvasgn
+      # TODO: mlhs in e.children[0]
       x  = e.children[0].children[0] # loop variable
       envi, tcollect = tc(scope, env, e.children[1]) # collection to iterate through
       teaches = nil
@@ -491,15 +492,21 @@ module RDL::Typecheck
       }
       error :no_each_type, [tcollect.name], e.children[1] if teach.nil?
       envi = envi.bind(x, teach.block.args[0])
-      scope = scope.merge(break: envi, next: envi, redo: envi) # could exit here
+      scope = scope.merge(break: envi, next: envi, redo: envi, tbreak: teach.ret, tnext: envi[x]) # could exit here
+      # if the loop always exits via break, then return type will come only from break, and otherwise the
+      # collection is returned. But it's hard to tell statically if there are only exits via break, so
+      # conservatively assume that at least the collection is returned.
       begin
         old_break = scope[:break]
+        old_tbreak = scope[:tbreak]
+        old_tnext = scope[:tnext]
         if e.children[2]
+          scope[:break] = scope[:break].bind(x, scope[:tnext])
           env_body, _ = tc(scope, scope[:break], e.children[2])
           scope[:break] = scope[:next] = scope[:redo] = Env.join(e, scope[:break], scope[:next], scope[:redo], env_body)
         end
-      end until old_break == scope[:break]
-      [scope[:break], teach.ret]
+      end until old_break == scope[:break] && old_tbreak == scope[:tbreak] && old_tnext == scope[:tnext]
+      [scope[:break], scope[:tbreak].canonical]
     when :break, :redo, :next, :retry
       error :kw_not_allowed, [e.type], e unless scope.has_key? e.type
       if e.children[0]

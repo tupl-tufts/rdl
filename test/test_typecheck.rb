@@ -563,6 +563,8 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("for i in 1..5 do break end", env: @env)
     assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("for i in 1..5 do next end", env: @env)
     assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("for i in 1..5 do redo end", env: @env) #infinite loop, ok for typing
+    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum> or 3"), do_tc("for i in 1..5 do break 3 end", env: @env)
+    assert_equal @tfs, do_tc("for i in 1..5 do next 'three' end; i", env: @env)
   end
 
   def test_return
