@@ -538,18 +538,8 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_integer_type, do_tc("i = 0; begin i = i + 1 end while i < 5; i")
     assert_equal $__rdl_integer_type, do_tc("i = 0; begin i = 1 + i end until i >= 5; i")
     assert_equal $__rdl_integer_type, do_tc("i = 0; begin i = i + 1 end until i >= 5; i")
-  end
 
-  def test_for
-    assert_equal $__rdl_fixnum_type, do_tc("for i in 1..5 do end; i")
-    assert_equal $__rdl_parser.scan_str("#T 1 or 2 or 3 or 4 or 5"), do_tc("for i in [1,2,3,4,5] do end; i")
-    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("for i in 1..5 do break end", env: @env)
-    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("for i in 1..5 do next end", env: @env)
-    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("for i in 1..5 do redo end", env: @env) #infinite loop, ok for typing
-  end
-
-  def test_break_next_redo_retry
-    # TODO these don't do a great job checking control flow
+    # break, redo, next, no args
     assert_equal $__rdl_integer_type, do_tc("i = 0; while i < 5 do if i > 2 then break end; i = 1 + i end; i")
     assert_equal $__rdl_parser.scan_str("#T 0"), do_tc("i = 0; while i < 5 do break end; i")
     assert_equal $__rdl_parser.scan_str("#T 0"), do_tc("i = 0; while i < 5 do redo end; i") # infinite loop, ok for typing
@@ -559,6 +549,20 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_integer_type, do_tc("i = 0; begin i = i + 1; redo if i > 2; end while i < 5; i")
     assert_equal $__rdl_integer_type, do_tc("i = 0; begin i = i + 1; next if i > 2; end while i < 5; i")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("i = 0; begin i = i + 1; retry if i > 2; end while i < 5; i") }
+
+    # break w/arg, next can't take arg
+    assert_equal @t3n, do_tc("while _any_object do break 3 end", env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("while _any_object do next 3 end", env: @env) }
+    assert_equal @t3n, do_tc("begin break 3 end while _any_object", env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("begin next 3 end while _any_object", env: @env) }
+  end
+
+  def test_for
+    assert_equal $__rdl_fixnum_type, do_tc("for i in 1..5 do end; i")
+    assert_equal $__rdl_parser.scan_str("#T 1 or 2 or 3 or 4 or 5"), do_tc("for i in [1,2,3,4,5] do end; i")
+    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("for i in 1..5 do break end", env: @env)
+    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("for i in 1..5 do next end", env: @env)
+    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("for i in 1..5 do redo end", env: @env) #infinite loop, ok for typing
   end
 
   def test_return

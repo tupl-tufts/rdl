@@ -414,31 +414,31 @@ module RDL::Typecheck
       end
       return [Env.join(e, *envbodies), RDL::Type::UnionType.new(*tbodies).canonical]
     when :while, :until
-      # break: loop exit, i.e., right after loop guard
-      # TODO: break return a value from loop
-      # next: before loop guard
+      # break: loop exit, i.e., right after loop guard; may take argument
+      # next: before loop guard; argument not allowed
       # retry: not allowed
       # redo: after loop guard, which is same as break
       env_break, _ = tc(scope, env, e.children[0]) # guard can have any type, may exit after checking guard
-      scope = scope.merge(break: env_break, next: env, redo: env_break)
+      scope = scope.merge(break: env_break, tbreak: $__rdl_nil_type, next: env, redo: env_break)
       begin
         old_break = scope[:break]
         old_next = scope[:next]
+        old_tbreak = scope[:tbreak]
         if e.children[1]
           env_body, _ = tc(scope, scope[:break], e.children[1]) # loop runs
           scope[:next] = Env.join(e, scope[:next], env_body)
         end
         env_guard, _ = tc(scope, scope[:next], e.children[0]) # then guard runs
         scope[:break] = scope[:redo] = Env.join(e, scope[:break], scope[:redo], env_guard)
-      end until old_break == scope[:break] && old_next == scope[:next]
-      [scope[:break], $__rdl_nil_type]
+      end until old_break == scope[:break] && old_next == scope[:next] && old_tbreak == scope[:tbreak]
+      [scope[:break], scope[:tbreak]]
     when :while_post, :until_post
       # break: loop exit; note may exit loop before hitting guard once
       # TODO: break return a value from loop
       # next: before loop guard
       # retry: not allowed
       # redo: beginning of body, which is same as after guard, i.e., same as break
-      scope = scope.merge(break: nil, next: nil, redo: nil)
+      scope = scope.merge(break: nil, tbreak: $__rdl_nil_type, next: nil, redo: nil)
       if e.children[1]
         env_body, _ = tc(scope, env, e.children[1])
         scope[:next] = Env.join(e, scope[:next], env_body)
@@ -446,14 +446,15 @@ module RDL::Typecheck
       begin
         old_break = scope[:break]
         old_next = scope[:next]
+        old_tbreak = scope[:tbreak]
         env_guard, _ = tc(scope, scope[:next], e.children[0])
         scope[:break] = scope[:redo] = Env.join(e, scope[:break], scope[:redo], env_guard)
         if e.children[1]
           env_body, _ = tc(scope, scope[:break], e.children[1])
           scope[:next] = Env.join(e, scope[:next], env_body)
         end
-      end until old_break == scope[:break] && old_next == scope[:next]
-      [scope[:break], $__rdl_nil_type]
+      end until old_break == scope[:break] && old_next == scope[:next] && old_tbreak == scope[:tbreak]
+      [scope[:break], scope[:tbreak]]
     when :for
       # break: loop exit, which is same as top of body TODO: arg allowed
       # next: top of body TODO: arg allowed
@@ -501,8 +502,13 @@ module RDL::Typecheck
       end until old_break == scope[:break]
       [scope[:break], teach.ret]
     when :break, :redo, :next, :retry
-      raise RuntimeError, "#{e.type} arguments not supported" unless e.children[0].nil?
-      error :kw_not_allowed, [e.type.to_s], e unless scope.has_key? e.type
+      error :kw_not_allowed, [e.type], e unless scope.has_key? e.type
+      if e.children[0]
+        tkw_name = ('t' + e.type.to_s).to_sym
+        error :kw_arg_not_allowed, [e.type], e unless scope.has_key? tkw_name
+        env, tkw = tc(scope, env, e.children[0])
+        scope[tkw_name] = RDL::Type::UnionType.new(scope[tkw_name], tkw)
+      end
       scope[e.type] = Env.join(e, scope[e.type], env)
       [env, $__rdl_bot_type]
     when :return
@@ -755,6 +761,7 @@ type_error_messages = {
   masgn_bad_rhs: "multiple assignment has right-hand side of type `%s' where tuple or array expected",
   masgn_num: "can't multiple-assign %d values to %d variables",
   kw_not_allowed: "can't use %s in current scope",
+  kw_arg_not_allowed: "argument to %s not allowed in current scope",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)
