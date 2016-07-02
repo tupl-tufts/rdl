@@ -6,6 +6,7 @@
 
 ### Changed
 - Modified `self` type to be any instance of the self's class
+- Library types now use new aliases %integer and %numeric instead of the Integer and Numeric classes.
 
 ## [1.1.1] - 2016-05-21
 ### Fixed
