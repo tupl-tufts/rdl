@@ -280,11 +280,11 @@ module RDL::Typecheck
         # (op-asgn (send recv meth) :op operand)
         meth = e.children[0].children[1]
         envleft, trecv = tc(scope, env, e.children[0].children[0]) # recv
-        tloperand = tc_send(trecv, meth, [], e.children[0]) # call recv.meth()
+        tloperand = tc_send(trecv, meth, [], nil, e.children[0]) # call recv.meth()
         envoperand, troperand = tc(scope, envleft, e.children[2]) # operand
-        tright = tc_send(tloperand, e.children[1], [troperand], e) # computer recv.meth().op(operand)
+        tright = tc_send(tloperand, e.children[1], [troperand], nil, e) # recv.meth().op(operand)
         mutation_meth = (meth.to_s + '=').to_sym
-        tres = tc_send(trecv, mutation_meth, [tright], e) # call recv.meth=(recv.meth().op(operand))
+        tres = tc_send(trecv, mutation_meth, [tright], nil, e) # call recv.meth=(recv.meth().op(operand))
         [envoperand, tres]
       else
         # (op-asgn (Xvasgn var-name) :op operand)
@@ -292,7 +292,7 @@ module RDL::Typecheck
         env = env.bind(x, $__rdl_nil_type) if ((e.children[0].type == :lvasgn) && (not (env.has_key? x))) # see :lvasgn
         envi, trecv = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
         envright, tright = tc(scope, envi, e.children[2]) # operand
-        trhs = tc_send(trecv, e.children[1], [tright], e)
+        trhs = tc_send(trecv, e.children[1], [tright], nil, e)
         tc_vasgn(scope, envright, e.children[0].type, x, trhs, e)
       end
     when :and_asgn, :or_asgn
@@ -300,7 +300,7 @@ module RDL::Typecheck
       if e.children[0].type == :send
         meth = e.children[0].children[1]
         envleft, trecv = tc(scope, env, e.children[0].children[0]) # recv
-        tleft = tc_send(trecv, meth, [], e.children[0]) # call recv.meth()
+        tleft = tc_send(trecv, meth, [], nil, e.children[0]) # call recv.meth()
         envright, tright = tc(scope, envleft, e.children[1]) # operand
       else
         x = e.children[0].children[0]
@@ -319,7 +319,7 @@ module RDL::Typecheck
                     end)
       if e.children[0].type == :send
         mutation_meth = (meth.to_s + '=').to_sym
-        tres = tc_send(trecv, mutation_meth, [trhs], e)
+        tres = tc_send(trecv, mutation_meth, [trhs], nil, e)
         [envi, tres]
       else
         tc_vasgn(scope, envi, e.children[0].type, x, trhs, e)
@@ -350,12 +350,17 @@ module RDL::Typecheck
       # children[0] = receiver; if nil, receiver is self
       # children[1] = method name, a symbol
       # children [2..] = actual args
-      return tc_var_type(scope, env, e) if e.children[0].nil? && e.children[1] == :var_type
+      return tc_var_type(scope, env, e) if e.children[1] == :var_type && e.children[0].nil? && scope[:block].nil?
       envi = env
       tactuals = []
+      block = scope[:block]
+      scope = scope.merge(block: nil)
       e.children[2..-1].each { |ei| envi, ti = tc(scope, envi, ei); tactuals << ti }
       envi, trecv = if e.children[0].nil? then [envi, envi[:self]] else tc(scope, envi, e.children[0]) end # if no receiver, self is receiver
-      [envi, tc_send(trecv, e.children[1], tactuals, e).canonical]
+      [envi, tc_send(trecv, e.children[1], tactuals, block, e).canonical]
+    when :block
+      # (block send block-args block-body)
+      tc(scope.merge(block: [e.children[1], e.children[2]]), env, e.children[0])
     when :and, :or
       envleft, tleft = tc(scope, env, e.children[0])
       envright, tright = tc(scope, envleft, e.children[1])
@@ -396,7 +401,7 @@ module RDL::Typecheck
         envguards = []
         wclause.children[0..-2].each { |guard| # first wclause.length-1 children are the guards
           envi, tguard = tc(scope, envi, guard) # guard type can be anything
-          tc_send(tguard, :===, [tcontrol], guard) unless tcontrol.nil?
+          tc_send(tguard, :===, [tcontrol], nil, guard) unless tcontrol.nil?
           envguards << envi
         }
         envbody, tbody = tc(scope, Env.join(e, *envguards), wclause.children[-1]) # last wclause child is body
@@ -596,9 +601,11 @@ module RDL::Typecheck
   # [+ trecvs +] is the type of the recevier
   # [+ meth +] is a symbol with the method name
   # [+ tactuals +] are the actual arguments
+  # [+ block +] is a pair of expressions [block-args, block-body], from the block AST node
   # [+ e +] is the expression at which location to report an error
-  def self.tc_send(trecvs, meth, tactuals, e)
+  def self.tc_send(trecvs, meth, tactuals, block, e)
     # convert trecvs to array containing all receiver types
+    raise RuntimeError, "unimplemented" unless block.nil?
     trecvs = trecvs.canonical
     trecvs = if trecvs.is_a? RDL::Type::UnionType then trecvs.types else [trecvs] end
 
