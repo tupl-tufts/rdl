@@ -440,6 +440,15 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_fixnum_type, do_tc("[1,2,3].size", env: @env)
   end
 
+  def test_send_block
+    self.class.class_eval {
+      type :_send_block1, "(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum"
+      type :_send_block2, "(Fixnum) -> Fixnum"
+    }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block2(42) { |x| x + 1 }", env: @env) }
+  end
+
   def test_send_union
     assert_equal RDL::Type::UnionType.new(@tfs, $__rdl_bignum_type), do_tc("(if _any_object then Fixnum.new else String.new end) * 2", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(if _any_object then Object.new else Fixnum.new end) + 2", env: @env) }

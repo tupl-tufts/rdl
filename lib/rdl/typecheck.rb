@@ -605,20 +605,19 @@ module RDL::Typecheck
   # [+ e +] is the expression at which location to report an error
   def self.tc_send(trecvs, meth, tactuals, block, e)
     # convert trecvs to array containing all receiver types
-    raise RuntimeError, "unimplemented" unless block.nil?
     trecvs = trecvs.canonical
     trecvs = if trecvs.is_a? RDL::Type::UnionType then trecvs.types else [trecvs] end
 
     trets = []
     trecvs.each { |trecv|
-      trets.concat(tc_send_one_recv(trecv, meth, tactuals, e))
+      trets.concat(tc_send_one_recv(trecv, meth, tactuals, block, e))
     }
     return RDL::Type::UnionType.new(*trets)
   end
 
   # Like tc_send but trecv should never be a union type
   # Returns array of possible return types, or throws exception if there are none
-  def self.tc_send_one_recv(trecv, meth, tactuals, e)
+  def self.tc_send_one_recv(trecv, meth, tactuals, block, e)
     tmeth_inter = [] # Array<MethodType>, i.e., an intersection types
     case trecv
     when RDL::Type::SingletonType
@@ -657,14 +656,17 @@ module RDL::Typecheck
     trets = [] # all possible return types
     # there might be more than one return type because multiple cases of an intersection type might match
     tmeth_inter.each { |tmeth| # MethodType
-      trets << tmeth.ret if check_arg_types_one(tmeth, tactuals)
+      if ((tmeth.block && block) || (tmeth.block.nil? && block.nil?)) && tc_arg_types(tmeth, tactuals)
+        tc_block(tmeth.block, block) if block
+        trets << tmeth.ret
+      end
     }
     if trets.empty? # no possible matching call
       msg = <<RUBY
 Method type:
 #{ tmeth_inter.map { |ti| "        " + ti.to_s }.join("\n") }
 Actual arg types#{tactuals.size > 1 ? "s" : ""}:
-      (#{tactuals.map { |ti| ti.to_s }.join(', ')})
+      (#{tactuals.map { |ti| ti.to_s }.join(', ')}) #{if block then '{ block }' end}
 RUBY
       msg.chomp! # remove trailing newline
       name = if (trecv.is_a? RDL::Type::SingletonType) && (trecv.val.is_a? Class) && (meth == :new) then
@@ -686,7 +688,7 @@ RUBY
   # [+ actuals +] is Array<Type> containing the actual argument types
   # return true if actuals match method type, false otherwise
   # Very similar to MethodType#pre_cond?
-  def self.check_arg_types_one(tmeth, tactuals)
+  def self.tc_arg_types(tmeth, tactuals)
     states = [[0, 0]] # position in tmeth, position in tactuals
     tformals = tmeth.args
     until states.empty?
@@ -735,6 +737,14 @@ RUBY
       end
     end
     false
+  end
+
+  # [+ tblock +] is the type of the block (a MethodType)
+  # [+ block +] is a pair [block-args, block-body] from the block AST node
+  # returns if the block matches type tblock
+  # otherwise throws an exception with a type error
+  def self.tc_block(tblock, block)
+    raise RuntimeError, "Unimplemented"
   end
 
   # [+ klass +] is a string containing the class name
