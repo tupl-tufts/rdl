@@ -5,6 +5,7 @@ module RDL::Typecheck
   @@empty_hash_type = RDL::Type::FiniteHashType.new(Hash.new)
   @@asgn_to_var = { lvasgn: :lvar, ivasgn: :ivar, cvasgn: :cvar, gvasgn: :gvar }
 
+  # Create mapping from file/line numbers to the def that appears at that location
   class ASTMapper < AST::Processor
     attr_accessor :line_defs
 
@@ -91,8 +92,17 @@ module RDL::Typecheck
       return @env == other.env
     end
 
+    # merges bindings in self with bindings in other, preferring bindings in other if there is a common key
+    def merge(other)
+      result = Env.new
+      result.env = @env.merge(other.env)
+      return result
+    end
+
     # [+ envs +] is Array<Env>
     # any elts of envs that are nil are discarded
+    # returns new Env where every key is mapped to the union of its bindings in the envs
+    # any fixed binding in any env must be fixed in all envs and at the same type
     def self.join(e, *envs)
       raise RuntimeError, "Expecting AST, got #{e.class}" unless e.is_a? AST::Node
       env = Env.new
@@ -168,7 +178,7 @@ module RDL::Typecheck
       a[:self] = self_type
       scope = {tret: type.ret, tblock: type.block }
       _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(scope, Env.new(a), body) end
-      error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body_type.nil? || body_type <= type.ret
+      error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || body_type <= type.ret
     }
   end
 
@@ -281,11 +291,11 @@ module RDL::Typecheck
         # (op-asgn (send recv meth) :op operand)
         meth = e.children[0].children[1]
         envleft, trecv = tc(scope, env, e.children[0].children[0]) # recv
-        tloperand = tc_send(trecv, meth, [], nil, e.children[0]) # call recv.meth()
+        tloperand = tc_send(scope, envleft, trecv, meth, [], nil, e.children[0]) # call recv.meth()
         envoperand, troperand = tc(scope, envleft, e.children[2]) # operand
-        tright = tc_send(tloperand, e.children[1], [troperand], nil, e) # recv.meth().op(operand)
+        tright = tc_send(scope, envoperand, tloperand, e.children[1], [troperand], nil, e) # recv.meth().op(operand)
         mutation_meth = (meth.to_s + '=').to_sym
-        tres = tc_send(trecv, mutation_meth, [tright], nil, e) # call recv.meth=(recv.meth().op(operand))
+        tres = tc_send(scope, envoperand, trecv, mutation_meth, [tright], nil, e) # call recv.meth=(recv.meth().op(operand))
         [envoperand, tres]
       else
         # (op-asgn (Xvasgn var-name) :op operand)
@@ -293,7 +303,7 @@ module RDL::Typecheck
         env = env.bind(x, $__rdl_nil_type) if ((e.children[0].type == :lvasgn) && (not (env.has_key? x))) # see :lvasgn
         envi, trecv = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
         envright, tright = tc(scope, envi, e.children[2]) # operand
-        trhs = tc_send(trecv, e.children[1], [tright], nil, e)
+        trhs = tc_send(scope, envright, trecv, e.children[1], [tright], nil, e)
         tc_vasgn(scope, envright, e.children[0].type, x, trhs, e)
       end
     when :and_asgn, :or_asgn
@@ -301,7 +311,7 @@ module RDL::Typecheck
       if e.children[0].type == :send
         meth = e.children[0].children[1]
         envleft, trecv = tc(scope, env, e.children[0].children[0]) # recv
-        tleft = tc_send(trecv, meth, [], nil, e.children[0]) # call recv.meth()
+        tleft = tc_send(scope, envleft, trecv, meth, [], nil, e.children[0]) # call recv.meth()
         envright, tright = tc(scope, envleft, e.children[1]) # operand
       else
         x = e.children[0].children[0]
@@ -320,7 +330,7 @@ module RDL::Typecheck
                     end)
       if e.children[0].type == :send
         mutation_meth = (meth.to_s + '=').to_sym
-        tres = tc_send(trecv, mutation_meth, [trhs], nil, e)
+        tres = tc_send(scope, envi, trecv, mutation_meth, [trhs], nil, e)
         [envi, tres]
       else
         tc_vasgn(scope, envi, e.children[0].type, x, trhs, e)
@@ -358,7 +368,7 @@ module RDL::Typecheck
       scope = scope.merge(block: nil)
       e.children[2..-1].each { |ei| envi, ti = tc(scope, envi, ei); tactuals << ti }
       envi, trecv = if e.children[0].nil? then [envi, envi[:self]] else tc(scope, envi, e.children[0]) end # if no receiver, self is receiver
-      [envi, tc_send(trecv, e.children[1], tactuals, block, e).canonical]
+      [envi, tc_send(scope, envi, trecv, e.children[1], tactuals, block, e).canonical]
     when :block
       # (block send block-args block-body)
       tc(scope.merge(block: [e.children[1], e.children[2]]), env, e.children[0])
@@ -402,7 +412,7 @@ module RDL::Typecheck
         envguards = []
         wclause.children[0..-2].each { |guard| # first wclause.length-1 children are the guards
           envi, tguard = tc(scope, envi, guard) # guard type can be anything
-          tc_send(tguard, :===, [tcontrol], nil, guard) unless tcontrol.nil?
+          tc_send(scope, envi, tguard, :===, [tcontrol], nil, guard) unless tcontrol.nil?
           envguards << envi
         }
         envbody, tbody = tc(scope, Env.join(e, *envguards), wclause.children[-1]) # last wclause child is body
@@ -599,26 +609,29 @@ module RDL::Typecheck
   end
 
   # Type check a send
+  # [+ scope +] is the scope; used only for checking block arguments
+  # [+ env +] is the environment; used only for checking block arguments.
+  #   Note locals from blocks args don't escape, so no env is returned.
   # [+ trecvs +] is the type of the recevier
   # [+ meth +] is a symbol with the method name
   # [+ tactuals +] are the actual arguments
   # [+ block +] is a pair of expressions [block-args, block-body], from the block AST node
   # [+ e +] is the expression at which location to report an error
-  def self.tc_send(trecvs, meth, tactuals, block, e)
+  def self.tc_send(scope, env, trecvs, meth, tactuals, block, e)
     # convert trecvs to array containing all receiver types
     trecvs = trecvs.canonical
     trecvs = if trecvs.is_a? RDL::Type::UnionType then trecvs.types else [trecvs] end
 
     trets = []
     trecvs.each { |trecv|
-      trets.concat(tc_send_one_recv(trecv, meth, tactuals, block, e))
+      trets.concat(tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e))
     }
     return RDL::Type::UnionType.new(*trets)
   end
 
   # Like tc_send but trecv should never be a union type
   # Returns array of possible return types, or throws exception if there are none
-  def self.tc_send_one_recv(trecv, meth, tactuals, block, e)
+  def self.tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e)
     tmeth_inter = [] # Array<MethodType>, i.e., an intersection types
     case trecv
     when RDL::Type::SingletonType
@@ -658,7 +671,7 @@ module RDL::Typecheck
     # there might be more than one return type because multiple cases of an intersection type might match
     tmeth_inter.each { |tmeth| # MethodType
       if ((tmeth.block && block) || (tmeth.block.nil? && block.nil?)) && tc_arg_types(tmeth, tactuals)
-        tc_block(tmeth.block, block) if block
+        tc_block(scope, env, tmeth.block, block) if block
         trets << tmeth.ret
       end
     }
@@ -744,12 +757,19 @@ RUBY
   # [+ block +] is a pair [block-args, block-body] from the block AST node
   # returns if the block matches type tblock
   # otherwise throws an exception with a type error
-  def self.tc_block(tblock, block)
+  def self.tc_block(scope, env, tblock, block)
     # TODO more complex arg lists (same as self.typecheck?); also for
     # TODO self is the same *except* instance_exec or instance_eval
-    error :arg_count_mismatch, ['block', tblock.args.length, 'block', block[0].children.length], block[0] unless tblock.args.length == block[0].children.length
-    a = block[0].children.map { |arg| arg.children[0] }.zip(tblock.args).to_h
-    raise RuntimeError, "Unimplemented"
+    raise RuntimeError, "block with block arg?" unless tblock.block.nil?
+    args, body = block
+    error :arg_count_mismatch, ['block', tblock.args.length, 'block', args.children.length], block[0] unless tblock.args.length == args.children.length
+    a = args.children.map { |arg| arg.children[0] }.zip(tblock.args).to_h
+
+    # TODO: enforce var_type for inner scope
+    scope = scope.merge(outer_env: env) # note: okay if overwrites, since nested scope will include outer scope by next line
+    env = env.merge(Env.new(a))
+    _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(scope, env.merge(Env.new(a)), body) end
+    error :bad_return_type, [body_type, tblock.ret], body unless body.nil? || body_type <= tblock.ret
   end
 
   # [+ klass +] is a string containing the class name
