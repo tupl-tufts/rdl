@@ -370,6 +370,23 @@ module RDL::Typecheck
       e.children[2..-1].each { |ei| envi, ti = tc(scope, envi, ei); tactuals << ti }
       envi, trecv = if e.children[0].nil? then [envi, envi[:self]] else tc(scope, envi, e.children[0]) end # if no receiver, self is receiver
       [envi, tc_send(scope, envi, trecv, e.children[1], tactuals, block, e).canonical]
+    when :yield
+      # very similar to send except the callee is the method's block
+      error :no_block, [], e unless scope[:tblock]
+      error :block_block, [], e if scope[:tblock].block
+      envi = env
+      tactuals = []
+      e.children[0..-1].each { |ei| envi, ti = tc(scope, envi, ei); tactuals << ti }
+      unless tc_arg_types(scope[:tblock], tactuals)
+        msg = <<RUBY
+      Block type: #{scope[:tblock]}
+Actual arg types: (#{tactuals.map { |ti| ti.to_s }.join(', ')})
+RUBY
+        msg.chomp! # remove trailing newline
+        error :block_type_error, [msg], e
+      end
+      [envi, scope[:tblock].ret]
+      # tblock
     when :block
       # (block send block-args block-body)
       tc(scope.merge(block: [e.children[1], e.children[2]]), env, e.children[0])
@@ -689,7 +706,7 @@ module RDL::Typecheck
       msg = <<RUBY
 Method type:
 #{ tmeth_inter.map { |ti| "        " + ti.to_s }.join("\n") }
-Actual arg types#{tactuals.size > 1 ? "s" : ""}:
+Actual arg type#{tactuals.size > 1 ? "s" : ""}:
       (#{tactuals.map { |ti| ti.to_s }.join(', ')}) #{if block then '{ block }' end}
 RUBY
       msg.chomp! # remove trailing newline
@@ -821,6 +838,9 @@ type_error_messages = {
   kw_arg_not_allowed: "argument to %s not allowed in current scope",
   arg_count_mismatch: "%s signature expects %d arguments, actual %s has %d arguments",
   nonlocal_access: "variable %s from outer scope must have type declared with var_type",
+  no_block: "attempt to call yield in method not declared to take a block argument",
+  block_block: "can't call yield on a block expecting another block argument",
+  block_type_error: "argument type error for block\n%s",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

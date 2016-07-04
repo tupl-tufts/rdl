@@ -462,6 +462,49 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = 1; _send_block1(42) { |y| for x in 1..5 do end }", env: @env) } # odd case...
   end
 
+  def test_yield
+    self.class.class_eval {
+      type "(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum", typecheck_now: true
+      def _yield1(x)
+        yield x
+      end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum", typecheck_now: true
+        def _yield2(x)
+          yield 'forty-two'
+        end
+      }
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum) { (Fixnum) -> String } -> Fixnum", typecheck_now: true
+        def _yield3(x)
+          yield 42
+        end
+      }
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum) -> Fixnum", typecheck_now: true
+        def _yield4(x)
+          yield 42
+        end
+      }
+    }
+
+    self.class.class_eval {
+      type "(Fixnum) { (Fixnum) { (Fixnum) -> Fixnum } -> Fixnum } -> Fixnum", typecheck_now: true
+      def _yield5(x)
+        yield 42
+      end
+    }
+  end
+
   def test_send_union
     assert_equal RDL::Type::UnionType.new(@tfs, $__rdl_bignum_type), do_tc("(if _any_object then Fixnum.new else String.new end) * 2", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(if _any_object then Object.new else Fixnum.new end) + 2", env: @env) }
