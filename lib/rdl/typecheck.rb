@@ -266,6 +266,7 @@ module RDL::Typecheck
         next unless asgn.type == :lvasgn
         x = e.children[0]
         env = env.bind(x, $__rdl_nil_type) if (not (env.has_key? x)) # see lvasgn
+        # Note don't need to check outer_env here because will be checked by tc_vasgn below
       }
       envi, tright = tc(scope, env, e.children[1])
       if tright.is_a? RDL::Type::TupleType
@@ -299,7 +300,7 @@ module RDL::Typecheck
         [envoperand, tres]
       else
         # (op-asgn (Xvasgn var-name) :op operand)
-        x = e.children[0].children[0]
+        x = e.children[0].children[0] # Note don't need to check outer_env here because will be checked by tc_vasgn below
         env = env.bind(x, $__rdl_nil_type) if ((e.children[0].type == :lvasgn) && (not (env.has_key? x))) # see :lvasgn
         envi, trecv = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
         envright, tright = tc(scope, envi, e.children[2]) # operand
@@ -314,7 +315,7 @@ module RDL::Typecheck
         tleft = tc_send(scope, envleft, trecv, meth, [], nil, e.children[0]) # call recv.meth()
         envright, tright = tc(scope, envleft, e.children[1]) # operand
       else
-        x = e.children[0].children[0]
+        x = e.children[0].children[0] # Note don't need to check outer_env here because will be checked by tc_var below
         env = env.bind(x, $__rdl_nil_type) if ((e.children[0].type == :lvasgn) && (not (env.has_key? x))) # see :lvasgn
         envleft, tleft = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
         envright, tright = tc(scope, envleft, e.children[1])
@@ -478,6 +479,9 @@ module RDL::Typecheck
       raise RuntimeError, "Loop variable #{e.children[0]} in for unsupported" unless e.children[0].type == :lvasgn
       # TODO: mlhs in e.children[0]
       x  = e.children[0].children[0] # loop variable
+      if scope[:outer_env] && (scope[:outer_env].has_key? x) && (not (scope[:outer_env].fixed? x))
+        error :nonlocal_access, [x], e.children[0]
+      end
       envi, tcollect = tc(scope, env, e.children[1]) # collection to iterate through
       teaches = nil
       tcollect = tcollect.canonical
@@ -554,7 +558,10 @@ module RDL::Typecheck
   def self.tc_var(scope, env, kind, name, e)
     case kind
     when :lvar  # local variable
-      error :undefined_local_or_method, name.to_s, e unless env.has_key? name
+      error :undefined_local_or_method, [name], e unless env.has_key? name
+      if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
+        error :nonlocal_access, [name], e
+      end
       [env, env[name].canonical]
     when :ivar, :cvar, :gvar
       klass = (if kind == :gvar then RDL::Util::GLOBAL_NAME else env[:self] end)
@@ -575,6 +582,9 @@ module RDL::Typecheck
   def self.tc_vasgn(scope, env, kind, name, tright, e)
     case kind
     when :lvasgn
+      if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
+        error :nonlocal_access, [name], e
+      end
       if env.fixed? name
         error :vasgn_incompat, [tright, env[name]], e unless tright <= env[name]
         [env, tright]
@@ -765,7 +775,6 @@ RUBY
     error :arg_count_mismatch, ['block', tblock.args.length, 'block', args.children.length], block[0] unless tblock.args.length == args.children.length
     a = args.children.map { |arg| arg.children[0] }.zip(tblock.args).to_h
 
-    # TODO: enforce var_type for inner scope
     scope = scope.merge(outer_env: env) # note: okay if overwrites, since nested scope will include outer scope by next line
     env = env.merge(Env.new(a))
     _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(scope, env.merge(Env.new(a)), body) end
@@ -811,6 +820,7 @@ type_error_messages = {
   kw_not_allowed: "can't use %s in current scope",
   kw_arg_not_allowed: "argument to %s not allowed in current scope",
   arg_count_mismatch: "%s signature expects %d arguments, actual %s has %d arguments",
+  nonlocal_access: "variable %s from outer scope must have type declared with var_type",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

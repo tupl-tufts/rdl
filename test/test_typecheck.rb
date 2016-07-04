@@ -457,6 +457,9 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42) { |x, y| x + y }", env: @env) }
     assert_equal $__rdl_fixnum_type, do_tc("_send_block1(42) { |x| x }", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42) { |x| 'forty-two' }", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = 1; _send_block1(42) { |y| x }", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = 1; _send_block1(42) { |y| x = 2 }", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = 1; _send_block1(42) { |y| for x in 1..5 do end }", env: @env) } # odd case...
   end
 
   def test_send_union
