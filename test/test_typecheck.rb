@@ -58,6 +58,13 @@ class TestTypecheck < Minitest::Test
       def def_fs2(x) "42"; end
     }
     assert_raises(RDL::Typecheck::StaticTypeError) { def_fs2(42) }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum) -> Fixnum", typecheck_now: true
+        def def_ff3(x, y) 42; end
+      }
+    }
   end
 
   def test_defs
@@ -447,6 +454,7 @@ class TestTypecheck < Minitest::Test
     }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block2(42) { |x| x + 1 }", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42) { |x, y| x + y }", env: @env) }
   end
 
   def test_send_union

@@ -163,6 +163,7 @@ module RDL::Typecheck
       end
       inst = {self: self_type}
       type = type.instantiate inst
+      error :arg_count_mismatch, ['method', type.args.length, 'method', args.children.length], args unless type.args.length == args.children.length
       a = args.children.map { |arg| arg.children[0] }.zip(type.args).to_h
       a[:self] = self_type
       scope = {tret: type.ret, tblock: type.block }
@@ -744,6 +745,10 @@ RUBY
   # returns if the block matches type tblock
   # otherwise throws an exception with a type error
   def self.tc_block(tblock, block)
+    # TODO more complex arg lists (same as self.typecheck?); also for
+    # TODO self is the same *except* instance_exec or instance_eval
+    error :arg_count_mismatch, ['block', tblock.args.length, 'block', block[0].children.length], block[0] unless tblock.args.length == block[0].children.length
+    a = block[0].children.map { |arg| arg.children[0] }.zip(tblock.args).to_h
     raise RuntimeError, "Unimplemented"
   end
 
@@ -785,6 +790,7 @@ type_error_messages = {
   masgn_num: "can't multiple-assign %d values to %d variables",
   kw_not_allowed: "can't use %s in current scope",
   kw_arg_not_allowed: "argument to %s not allowed in current scope",
+  arg_count_mismatch: "%s signature expects %d arguments, actual %s has %d arguments",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)
