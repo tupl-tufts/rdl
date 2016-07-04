@@ -293,8 +293,19 @@ class TestTypecheck < Minitest::Test
   class B < A
   end
 
+  class A1
+    type "() -> nil"
+    def _send_inherit2; end
+  end
+  class A2 < A1
+    def _send_inherit2; end
+  end
+  class A3 < A2
+  end
+
   def test_send_inherit
     assert_equal $__rdl_fixnum_type, do_tc("B.new._send_inherit1", env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("A3.new._send_inherit2", env: @env) }
   end
 
   def test_send_inter
@@ -497,11 +508,13 @@ class TestTypecheck < Minitest::Test
       }
     }
 
-    self.class.class_eval {
-      type "(Fixnum) { (Fixnum) { (Fixnum) -> Fixnum } -> Fixnum } -> Fixnum", typecheck_now: true
-      def _yield5(x)
-        yield 42
-      end
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum) { (Fixnum) { (Fixnum) -> Fixnum } -> Fixnum } -> Fixnum", typecheck_now: true
+        def _yield5(x)
+          yield 42
+        end
+      }
     }
   end
 

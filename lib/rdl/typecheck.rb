@@ -504,13 +504,13 @@ RUBY
       tcollect = tcollect.canonical
       case tcollect
       when RDL::Type::NominalType
-        teaches = lookup(tcollect.name, :each)
+        teaches = lookup(tcollect.name, :each, e.children[1])
       when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
         unless tcollect.is_a? RDL::Type::GenericType
           error :tuple_finite_hash_promote, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e.children[1] unless tcollect.promote!
           tcollect = tcollect.canonical
         end
-        teaches = lookup(tcollect.base.name, :each)
+        teaches = lookup(tcollect.base.name, :each, e.children[1])
         inst = tcollect.to_inst.merge(self: tcollect)
         teaches = teaches.map { |t| t.instantiate(inst) }
       else
@@ -664,20 +664,20 @@ RUBY
     when RDL::Type::SingletonType
       if trecv.val.is_a? Class
         if meth == :new then name = :initialize else name = meth end
-        ts = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), name)
+        ts = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), name, e)
         ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] if (meth == :new) && (ts.nil?) # there's always a nullary new if initialize is undefined
         error :no_singleton_method_type, [trecv.val, meth], e unless ts
         inst = {self: trecv}
         tmeth_inter = ts.map { |t| t.instantiate(inst) }
       else
         klass = trecv.val.class.to_s
-        ts = lookup(klass, meth)
+        ts = lookup(klass, meth, e)
         error :no_instance_method_type, [klass, meth], e unless ts
         inst = {self: trecv}
         tmeth_inter = ts.map { |t| t.instantiate(inst) }
       end
     when RDL::Type::NominalType
-      ts = lookup(trecv.name, meth)
+      ts = lookup(trecv.name, meth, e)
       error :no_instance_method_type, [trecv.name, meth], e unless ts
       inst = {self: trecv}
       tmeth_inter = ts.map { |t| t.instantiate(inst) }
@@ -686,7 +686,7 @@ RUBY
         error :tuple_finite_hash_promote, (if trecv.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e unless trecv.promote!
         trecv = trecv.canonical
       end
-      ts = lookup(trecv.base.name, meth)
+      ts = lookup(trecv.base.name, meth, e)
       error :no_instance_method_type, [trecv.base.name, meth], e unless ts
       inst = trecv.to_inst.merge(self: trecv)
       tmeth_inter = ts.map { |t| t.instantiate(inst) }
@@ -802,14 +802,15 @@ RUBY
   # [+ name +] is a symbol naming the thing to look up (either a method or field)
   # returns klass#name's type, walking up the inheritance hierarchy if appropriate
   # returns nil if no type found
-  def self.lookup(klass, name)
+  def self.lookup(klass, name, e)
     name = $__rdl_aliases[klass][name] if $__rdl_aliases[klass] && $__rdl_aliases[klass][name]
     t = $__rdl_info.get(klass, name, :type)
     return t if t # simplest case, no need to walk inheritance hierarchy
-    RDL::Util.to_class(klass).ancestors.each { |ancestor|
+    RDL::Util.to_class(klass).ancestors[1..-1].each { |ancestor|
       # assumes ancestors is proper order to walk hierarchy
       tancestor = $__rdl_info.get(ancestor.to_s, name, :type)
       return tancestor if tancestor
+      error :missing_ancestor_type, [ancestor, klass, name], e if ancestor.instance_methods.member? name
     }
     return nil
   end
@@ -841,6 +842,7 @@ type_error_messages = {
   no_block: "attempt to call yield in method not declared to take a block argument",
   block_block: "can't call yield on a block expecting another block argument",
   block_type_error: "argument type error for block\n%s",
+  missing_ancestor_type: "ancestor %s of %s has method %s but no type for it",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)
