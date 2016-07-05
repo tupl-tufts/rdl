@@ -468,10 +468,11 @@ class Object
     }
   end
 
-  # Returns a new object that wraps self in a type cast. This cast is *unchecked*, so use with caution
-  def type_cast(typ)
+  # Returns a new object that wraps self in a type cast. If force is true this cast is *unchecked*, so use with caution
+  def type_cast(typ, force: false)
     $__rdl_contract_switch.off {
       new_typ = if typ.is_a? RDL::Type::Type then typ else $__rdl_parser.scan_str "#T #{typ}" end
+      raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || typ.member?(self)
       obj = SimpleDelegator.new(self)
       obj.instance_variable_set('@__rdl_type', new_typ)
       return obj

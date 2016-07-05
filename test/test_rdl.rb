@@ -283,10 +283,11 @@ RUBY
   end
 
   def test_cast
-    obj1 = 3.type_cast($__rdl_nil_type)
+    obj1 = 3.type_cast($__rdl_nil_type, force: true)
     assert ($__rdl_nil_type.member? obj1)
-    obj2 = 3.type_cast('nil')
+    obj2 = 3.type_cast('nil', force: true)
     assert ($__rdl_nil_type.member? obj2)
+    assert_raises(RuntimeError) { 3.type_cast($__rdl_nil_type) }
   end
 
   def test_pre_post_self
