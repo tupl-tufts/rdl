@@ -225,6 +225,7 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :x, 3", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type 'x', 'Fixnum'", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :@x, 'Fixnum'", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :x, 'Fluffy Bunny'", env: @env) }
 
     assert_equal $__rdl_fixnum_type, do_tc("var_type :x, 'Fixnum'; x = 3; x", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :x, 'Fixnum'; x = 'three'", env: @env) }
@@ -518,6 +519,24 @@ class TestTypecheck < Minitest::Test
     }
   end
 
+  # class Sup1
+  #   type '(Fixnum) -> Fixnum', typecheck: true
+  #   def foo(y)
+  #     return y
+  #   end
+  # end
+  #
+  # class Sup2 < Sup1
+  #   type '(Fixnum) -> Fixnum', typecheck: true
+  #   def foo(x)
+  #     super(x+1)
+  #   end
+  # end
+  #
+  # def test_super
+  #   assert_equal 43, Sup2.new.foo(42)
+  # end
+
   def test_send_union
     assert_equal RDL::Type::UnionType.new(@tfs, $__rdl_bignum_type), do_tc("(if _any_object then Fixnum.new else String.new end) * 2", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(if _any_object then Object.new else Fixnum.new end) + 2", env: @env) }
@@ -710,6 +729,17 @@ class TestTypecheck < Minitest::Test
     assert_equal @t3, do_tc("a = [3, 'two']; x, y = a; x")
     assert_equal $__rdl_string_type, do_tc("a = [3, 'two']; x, y = a; y")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("a = [3, 'two']; x, y = a; a.length", env: @env) }
+  end
+
+  def test_cast
+    assert_equal $__rdl_fixnum_type, do_tc("(1 + 2).type_cast('Fixnum')", env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("1.type_cast('Fixnum', 42)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("1.type_cast(Fixnum)", env: @env) }
+    assert_equal $__rdl_fixnum_type, do_tc("(1 + 2).type_cast('Fixnum', force: true)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("(1 + 2).type_cast('Fixnum', force: false)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("(1 + 2).type_cast('Fixnum', force: :blah)", env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(1 + 2).type_cast('Fixnum', forc: true)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(1 + 2).type_cast('Fluffy Bunny')") }
   end
 
 end

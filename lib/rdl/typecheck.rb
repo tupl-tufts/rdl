@@ -363,6 +363,7 @@ module RDL::Typecheck
       # children[1] = method name, a symbol
       # children [2..] = actual args
       return tc_var_type(scope, env, e) if e.children[1] == :var_type && e.children[0].nil? && scope[:block].nil?
+      return tc_type_cast(scope, env, e) if e.children[1] == :type_cast && scope[:block].nil?
       envi = env
       tactuals = []
       block = scope[:block]
@@ -626,13 +627,37 @@ RUBY
 
   # [+ e +] is the method call
   def self.tc_var_type(scope, env, e)
-    error :var_type_num_args, [e.children.length - 2], e unless e.children.length == 4
+    error :var_type_format, [], e unless e.children.length == 4
     var = e.children[2].children[0] if e.children[2].type == :sym
-    error :var_type_var, [], e.children[2] if var.nil? || (not (var =~ /^[a-z]/))
+    error :var_type_format, [], e.children[2] if var.nil? || (not (var =~ /^[a-z]/))
     typ_str = e.children[3].children[0] if (e.children[3].type == :str) || (e.children[3].type == :string)
-    error :var_type_type, [], e.children[3] if typ_str.nil?
-    typ = $__rdl_parser.scan_str("#T " + typ_str)
+    error :var_type_format, [], e.children[3] if typ_str.nil?
+    begin
+      typ = $__rdl_parser.scan_str("#T " + typ_str)
+    rescue Racc::ParseError => err
+      error :type_parse_error, [err.to_s[1..-1]], e.children[3] # remove initial newline
+    end
     [env.fix(var, typ), $__rdl_nil_type]
+  end
+
+  def self.tc_type_cast(scope, env, e)
+    error :type_cast_format, [], e unless e.children.length <= 4
+    typ_str = e.children[2].children[0] if (e.children[2].type == :str) || (e.children[2].type == :string)
+    error :type_cast_format, [], e.children[2] if typ_str.nil?
+    begin
+      typ = $__rdl_parser.scan_str("#T " + typ_str)
+    rescue Racc::ParseError => err
+      error :type_parse_error, [err.to_s[1..-1]], e.children[2] # remove initial newline
+    end
+    if e.children[3]
+      fh = e.children[3]
+      error :type_cast_format, [], fh unless fh.type == :hash && fh.children.length == 1
+      pair = fh.children[0]
+      error :type_cast_format, [], fh unless pair.type == :pair && pair.children[0].type == :sym && pair.children[0].children[0] == :force
+      force_arg = pair.children[1]
+      env1, _ = tc(scope, env, force_arg)
+    end
+    [env1, typ]
   end
 
   # Type check a send
@@ -826,9 +851,6 @@ type_error_messages = {
   arg_type_single_receiver_error: "argument type error for instance method `%s#%s'\n%s",
   untyped_var: "no type for %s variable `%s'",
   vasgn_incompat: "incompatible types: `%s' can't be assigned to variable of type `%s'",
-  var_type_num_args: "var_type expects 2 arguments but got %d arguments",
-  var_type_var: "var_type expects first argument to be a symbol with a local variable name",
-  var_type_type: "var_type expects second argument to be a constant string describing a type",
   inconsistent_var_type: "local variable `%s' has declared type on some paths but not all",
   inconsistent_var_type_type: "local variable `%s' declared with inconsistent types %s",
   no_each_type: "can't find `each' method with signature `() { (t1) -> t2 } -> t3' in class `%s'",
@@ -843,6 +865,9 @@ type_error_messages = {
   block_block: "can't call yield on a block expecting another block argument",
   block_type_error: "argument type error for block\n%s",
   missing_ancestor_type: "ancestor %s of %s has method %s but no type for it",
+  type_cast_format: "type_cast must be called as type_cast('type-string') or type_cast('type-string', force: expr)",
+  var_type_format: "var_type must be called as var_type(:var-name, 'type-string')",
+  type_parse_error: "%s",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)
