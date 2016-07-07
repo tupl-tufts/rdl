@@ -587,7 +587,10 @@ RUBY
       [envi, ti]
     when :ensure
       # (ensure main-body ensure-body)
-      raise RuntimeError, "Unimplemented"
+      # TODO exception control flow from main-body, vars initialized to nil
+      env_body, tbody = tc(scope, env, e.children[0])
+      env_ensure, _ = tc(scope, env_body, e.children[1])
+      [env_ensure, tbody] # value of ensure not returned
     when :rescue
       # (rescue main-body resbody1 resbody2 ... (else else-body))
       # resbodyi, else optional

@@ -743,8 +743,8 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(1 + 2).type_cast('Fluffy Bunny')") }
   end
 
-  def test_rescue
-    # assert_equal @t3, do_tc("begin 3; rescue; 4; end")
+  def test_rescue_ensure
+    assert_equal @t3, do_tc("begin 3; rescue; 4; end") # rescue clause can never be executed
     assert_equal @t34, do_tc("begin puts 'foo'; 3; rescue; 4; end", env: @env)
     assert_equal $__rdl_parser.scan_str("#T StandardError or 3"), do_tc("begin puts 'foo'; 3; rescue => e; e; end", env: @env)
     assert_equal $__rdl_parser.scan_str("#T RuntimeError or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; end", env: @env)
@@ -753,6 +753,10 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_parser.scan_str("#T RuntimeError or ArgumentError or 42 or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; rescue ArgumentError => x; x; else 42; end", env: @env)
     assert_equal $__rdl_parser.scan_str("#T RuntimeError or ArgumentError or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError, ArgumentError => e; e; end", env: @env)
     assert_equal $__rdl_parser.scan_str("#T 1 or String"), do_tc("tries = 0; begin puts 'foo'; x = 1; rescue; tries = tries + 1; retry unless tries > 5; x = 'one'; end; x", env: @env)
+    assert_equal @t3, do_tc("begin 3; ensure 4; end", env: @env)
+    assert_equal @t4, do_tc("begin x = 3; ensure x = 4; end; x", env: @env)
+    assert_equal @t5, do_tc("begin puts 'foo'; x = 3; rescue; x = 4; ensure x = 5; end; x", env: @env)
+    assert_equal @t34, do_tc("begin puts 'foo'; 3; rescue; 4; ensure 5; end", env: @env)
   end
 
 end
