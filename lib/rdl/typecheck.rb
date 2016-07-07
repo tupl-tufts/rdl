@@ -132,6 +132,18 @@ module RDL::Typecheck
     end
   end
 
+
+  # Call block with new Hash that is the same as Hash [+ scope +] except mappings in [+ elts +] have been merged.
+  # When block returns, copy out mappings in the new Hash to [+ scope +] except keys in [+ elts +].
+  def self.scope_merge(scope, **elts)
+    new_scope = scope.merge(**elts)
+    r = yield(new_scope)
+    new_scope.each_pair { |k,v|
+      scope[k] = v unless elts.has_key? k
+    }
+    return r
+  end
+
   # report msg at ast's loc
   def self.error(reason, args, ast)
     raise StaticTypeError, ("\n" + (Parser::Diagnostic.new :error, reason, args, ast.loc.expression).render.join("\n"))
@@ -367,14 +379,16 @@ module RDL::Typecheck
       envi = env
       tactuals = []
       block = scope[:block]
-      scope = scope.merge(block: nil)
-      e.children[2..-1].each { |ei| envi, ti = tc(scope, envi, ei); tactuals << ti }
-      envi, trecv = if e.children[0].nil? then [envi, envi[:self]] else tc(scope, envi, e.children[0]) end # if no receiver, self is receiver
-      [envi, tc_send(scope, envi, trecv, e.children[1], tactuals, block, e).canonical]
+      scope_merge(scope, block: nil) { |sscope|
+        e.children[2..-1].each { |ei| envi, ti = tc(sscope, envi, ei); tactuals << ti }
+        envi, trecv = if e.children[0].nil? then [envi, envi[:self]] else tc(sscope, envi, e.children[0]) end # if no receiver, self is receiver
+        [envi, tc_send(sscope, envi, trecv, e.children[1], tactuals, block, e).canonical]
+      }
     when :yield
       # very similar to send except the callee is the method's block
       error :no_block, [], e unless scope[:tblock]
       error :block_block, [], e if scope[:tblock].block
+      scope[:exn] = Env.join(e, scope[:exn], env) if scope.has_key? :exn # assume this call might raise an exception
       envi = env
       tactuals = []
       e.children[0..-1].each { |ei| envi, ti = tc(scope, envi, ei); tactuals << ti }
@@ -390,7 +404,9 @@ RUBY
       # tblock
     when :block
       # (block send block-args block-body)
-      tc(scope.merge(block: [e.children[1], e.children[2]]), env, e.children[0])
+      scope_merge(scope, block: [e.children[1], e.children[2]]) { |bscope|
+        tc(bscope, env, e.children[0])
+      }
     when :and, :or
       envleft, tleft = tc(scope, env, e.children[0])
       envright, tright = tc(scope, envleft, e.children[1])
@@ -454,41 +470,43 @@ RUBY
       # retry: not allowed
       # redo: after loop guard, which is same as break
       env_break, _ = tc(scope, env, e.children[0]) # guard can have any type, may exit after checking guard
-      scope = scope.merge(break: env_break, tbreak: $__rdl_nil_type, next: env, redo: env_break)
-      begin
-        old_break = scope[:break]
-        old_next = scope[:next]
-        old_tbreak = scope[:tbreak]
-        if e.children[1]
-          env_body, _ = tc(scope, scope[:break], e.children[1]) # loop runs
-          scope[:next] = Env.join(e, scope[:next], env_body)
-        end
-        env_guard, _ = tc(scope, scope[:next], e.children[0]) # then guard runs
-        scope[:break] = scope[:redo] = Env.join(e, scope[:break], scope[:redo], env_guard)
-      end until old_break == scope[:break] && old_next == scope[:next] && old_tbreak == scope[:tbreak]
-      [scope[:break], scope[:tbreak].canonical]
+      scope_merge(scope, break: env_break, tbreak: $__rdl_nil_type, next: env, redo: env_break) { |lscope|
+        begin
+          old_break = lscope[:break]
+          old_next = lscope[:next]
+          old_tbreak = lscope[:tbreak]
+          if e.children[1]
+            env_body, _ = tc(lscope, lscope[:break], e.children[1]) # loop runs
+            lscope[:next] = Env.join(e, lscope[:next], env_body)
+          end
+          env_guard, _ = tc(lscope, lscope[:next], e.children[0]) # then guard runs
+          lscope[:break] = lscope[:redo] = Env.join(e, lscope[:break], lscope[:redo], env_guard)
+        end until old_break == lscope[:break] && old_next == lscope[:next] && old_tbreak == lscope[:tbreak]
+        [lscope[:break], lscope[:tbreak].canonical]
+      }
     when :while_post, :until_post
       # break: loop exit; note may exit loop before hitting guard once; maybe take argument
       # next: before loop guard; argument not allowed
       # retry: not allowed
       # redo: beginning of body, which is same as after guard, i.e., same as break
-      scope = scope.merge(break: nil, tbreak: $__rdl_nil_type, next: nil, redo: nil)
-      if e.children[1]
-        env_body, _ = tc(scope, env, e.children[1])
-        scope[:next] = Env.join(e, scope[:next], env_body)
-      end
-      begin
-        old_break = scope[:break]
-        old_next = scope[:next]
-        old_tbreak = scope[:tbreak]
-        env_guard, _ = tc(scope, scope[:next], e.children[0])
-        scope[:break] = scope[:redo] = Env.join(e, scope[:break], scope[:redo], env_guard)
+      scope_merge(scope, break: nil, tbreak: $__rdl_nil_type, next: nil, redo: nil) { |lscope|
         if e.children[1]
-          env_body, _ = tc(scope, scope[:break], e.children[1])
-          scope[:next] = Env.join(e, scope[:next], env_body)
+          env_body, _ = tc(lscope, env, e.children[1])
+          lscope[:next] = Env.join(e, lscope[:next], env_body)
         end
-      end until old_break == scope[:break] && old_next == scope[:next] && old_tbreak == scope[:tbreak]
-      [scope[:break], scope[:tbreak].canonical]
+        begin
+          old_break = lscope[:break]
+          old_next = lscope[:next]
+          old_tbreak = lscope[:tbreak]
+          env_guard, _ = tc(lscope, lscope[:next], e.children[0])
+          lscope[:break] = lscope[:redo] = Env.join(e, lscope[:break], lscope[:redo], env_guard)
+          if e.children[1]
+            env_body, _ = tc(lscope, lscope[:break], e.children[1])
+            lscope[:next] = Env.join(e, lscope[:next], env_body)
+          end
+        end until old_break == lscope[:break] && old_next == lscope[:next] && old_tbreak == lscope[:tbreak]
+        [lscope[:break], lscope[:tbreak].canonical]
+      }
     when :for
       # break: loop exit, which is same as top of body, arg allowed
       # next: top of body, arg allowed
@@ -530,21 +548,23 @@ RUBY
       }
       error :no_each_type, [tcollect.name], e.children[1] if teach.nil?
       envi = envi.bind(x, teach.block.args[0])
-      scope = scope.merge(break: envi, next: envi, redo: envi, tbreak: teach.ret, tnext: envi[x]) # could exit here
-      # if the loop always exits via break, then return type will come only from break, and otherwise the
-      # collection is returned. But it's hard to tell statically if there are only exits via break, so
-      # conservatively assume that at least the collection is returned.
-      begin
-        old_break = scope[:break]
-        old_tbreak = scope[:tbreak]
-        old_tnext = scope[:tnext]
-        if e.children[2]
-          scope[:break] = scope[:break].bind(x, scope[:tnext])
-          env_body, _ = tc(scope, scope[:break], e.children[2])
-          scope[:break] = scope[:next] = scope[:redo] = Env.join(e, scope[:break], scope[:next], scope[:redo], env_body)
-        end
-      end until old_break == scope[:break] && old_tbreak == scope[:tbreak] && old_tnext == scope[:tnext]
-      [scope[:break], scope[:tbreak].canonical]
+      scope_merge(scope, break: envi, next: envi, redo: envi, tbreak: teach.ret, tnext: envi[x])  { |lscope|
+        # could exit here
+        # if the loop always exits via break, then return type will come only from break, and otherwise the
+        # collection is returned. But it's hard to tell statically if there are only exits via break, so
+        # conservatively assume that at least the collection is returned.
+        begin
+          old_break = lscope[:break]
+          old_tbreak = lscope[:tbreak]
+          old_tnext = lscope[:tnext]
+          if e.children[2]
+            lscope[:break] = lscope[:break].bind(x, lscope[:tnext])
+            env_body, _ = tc(lscope, lscope[:break], e.children[2])
+            lscope[:break] = lscope[:next] = lscope[:redo] = Env.join(e, lscope[:break], lscope[:next], lscope[:redo], env_body)
+          end
+        end until old_break == lscope[:break] && old_tbreak == lscope[:tbreak] && old_tnext == lscope[:tnext]
+        [lscope[:break], lscope[:tbreak].canonical]
+      }
     when :break, :redo, :next, :retry
       error :kw_not_allowed, [e.type], e unless scope.has_key? e.type
       if e.children[0]
@@ -565,6 +585,36 @@ RUBY
       ti = nil
       e.children.each { |ei| envi, ti = tc(scope, envi, ei) }
       [envi, ti]
+    when :ensure
+      # (ensure main-body ensure-body)
+
+      raise RuntimeError, "Unimplemented"
+    when :rescue
+      # (rescue main-body resbody1 resbody2 ... (else else-body))
+      # resbodyi, else optional
+      # local variables assigned to in main-body will all be initialized to nil even if an exception
+      # is raised during main-body's execution before those varibles are assigned to.
+      # similarly, local variables assigned in resbody will be initialized to nil even if the resbody
+      # is never triggered
+      scope_merge(scope, retry: env, exn: nil) { |rscope|
+        begin
+          old_retry = rscope[:retry]
+          env_body, tbody = tc(rscope, scope[:retry], e.children[0])
+          tres = [tbody] # note throw away inferred types from previous iterations---should be okay since should be monotonic
+          env_res = [env_body]
+          if rscope[:exn]
+            e.children[1..-1].each { |resbody| # note last resbody is actually else clause, but that's okay
+              env_resbody, tresbody = tc(rscope, rscope[:exn], resbody)
+              tres << tresbody
+              env_res << env_resbody
+            }
+          end
+        end until old_retry == rscope[:retry]
+        # TODO: variables newly bound in *env_res should be unioned with nil
+        [Env.join(e, *env_res), RDL::Type::UnionType.new(*tres)]
+      }
+    when :resbody
+      # (resbody (array exns) (lvasgn var) rescue-body)
     else
       raise RuntimeError, "Expression kind #{e.type} unsupported"
     end
@@ -670,6 +720,8 @@ RUBY
   # [+ block +] is a pair of expressions [block-args, block-body], from the block AST node
   # [+ e +] is the expression at which location to report an error
   def self.tc_send(scope, env, trecvs, meth, tactuals, block, e)
+    scope[:exn] = Env.join(e, scope[:exn], env) if scope.has_key? :exn # assume this call might raise an exception
+
     # convert trecvs to array containing all receiver types
     trecvs = trecvs.canonical
     trecvs = if trecvs.is_a? RDL::Type::UnionType then trecvs.types else [trecvs] end
@@ -817,10 +869,12 @@ RUBY
     error :arg_count_mismatch, ['block', tblock.args.length, 'block', args.children.length], block[0] unless tblock.args.length == args.children.length
     a = args.children.map { |arg| arg.children[0] }.zip(tblock.args).to_h
 
-    scope = scope.merge(outer_env: env) # note: okay if overwrites, since nested scope will include outer scope by next line
-    env = env.merge(Env.new(a))
-    _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(scope, env.merge(Env.new(a)), body) end
-    error :bad_return_type, [body_type, tblock.ret], body unless body.nil? || body_type <= tblock.ret
+    scope_merge(scope, outer_env: env) { |bscope|
+      # note: okay if outer_env shadows, since nested scope will include outer scope by next line
+      env = env.merge(Env.new(a))
+      _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(bscope, env.merge(Env.new(a)), body) end
+      error :bad_return_type, [body_type, tblock.ret], body unless body.nil? || body_type <= tblock.ret
+    }
   end
 
   # [+ klass +] is a string containing the class name
@@ -831,11 +885,20 @@ RUBY
     name = $__rdl_aliases[klass][name] if $__rdl_aliases[klass] && $__rdl_aliases[klass][name]
     t = $__rdl_info.get(klass, name, :type)
     return t if t # simplest case, no need to walk inheritance hierarchy
-    RDL::Util.to_class(klass).ancestors[1..-1].each { |ancestor|
+    the_klass = RDL::Util.to_class(klass)
+    included = the_klass.included_modules
+    the_klass.ancestors[1..-1].each { |ancestor|
       # assumes ancestors is proper order to walk hierarchy
-      tancestor = $__rdl_info.get(ancestor.to_s, name, :type)
+      if (ancestor.is_a? Module) && (included.member? ancestor)
+        ancestor_name = RDL::Util.add_singleton_marker(ancestor.to_s)
+      else
+        ancestor_name = ancestor.to_s
+      end
+      tancestor = $__rdl_info.get(ancestor_name, name, :type)
       return tancestor if tancestor
-      error :missing_ancestor_type, [ancestor, klass, name], e if ancestor.instance_methods.member? name
+      if (if RDL::Util.has_singleton_marker(ancestor_name) then ancestor.singleton_methods.member?(name) else ancestor.instance_methods.member?(name) end)
+        error :missing_ancestor_type, [ancestor_name, klass, name], e
+      end
     }
     return nil
   end

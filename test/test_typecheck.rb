@@ -286,6 +286,7 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_basic4('42', '43')", env: @env) }
     assert_equal $__rdl_fixnum_type, do_tc("TestTypecheck._send_basic5(42)", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("TestTypecheck._send_basic5('42')", env: @env) }
+    assert_equal $__rdl_nil_type, do_tc("puts 42", env: @env)
   end
 
   class A
@@ -740,6 +741,11 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_fixnum_type, do_tc("(1 + 2).type_cast('Fixnum', force: :blah)", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(1 + 2).type_cast('Fixnum', forc: true)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(1 + 2).type_cast('Fluffy Bunny')") }
+  end
+
+  def test_rescue
+    # assert_equal @t3, do_tc("begin 3; rescue; 4; end")
+    assert_equal @t34, do_tc("begin puts 'foo'; 3; rescue; 4; end", env: @env)
   end
 
 end
