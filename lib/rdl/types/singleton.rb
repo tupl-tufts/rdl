@@ -1,6 +1,7 @@
 module RDL::Type
   class SingletonType < Type
     attr_reader :val
+    attr_reader :nominal
 
     @@cache = {}
     @@cache.compare_by_identity
@@ -18,6 +19,7 @@ module RDL::Type
 
     def initialize(val)
       @val = val
+      @nominal = NominalType.new(val.class)
     end
 
     def ==(other)
@@ -55,9 +57,9 @@ module RDL::Type
       other.instance_of?(TopType) ||
         (@val.nil? && (not (other.instance_of?(SingletonType)))) ||
         (other.instance_of?(SingletonType) && other.val == @val) ||
-        (other.instance_of?(NominalType) && @val.class == other.klass) ||
-        (other.instance_of?(NominalType) && @val.is_a?(other.klass)) ||
         (other.instance_of?(UnionType) && other.types.any? { |ot| self <= ot })
+         ||
+        (@nominal <= other)
     end
 
     def member?(obj, *args)

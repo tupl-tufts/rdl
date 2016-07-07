@@ -2,10 +2,7 @@ module RDL::Type
   class NominalType < Type
     attr_reader :name # string
 
-    @@cache = { "NilClass" => SingletonType.new(nil),
-                "TrueClass" => SingletonType.new(true),
-                "FalseClass" => SingletonType.new(false),
-              }
+    @@cache = {}
 
     class << self
       alias :__new__ :new
@@ -86,5 +83,10 @@ module RDL::Type
     def instantiate(inst)
       return self
     end
+
+    @@cache.merge!({"NilClass" => SingletonType.new(nil),
+                    "TrueClass" => SingletonType.new(true),
+                    "FalseClass" => SingletonType.new(false),
+                    })
   end
 end
