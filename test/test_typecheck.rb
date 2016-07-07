@@ -752,6 +752,7 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_parser.scan_str("#T RuntimeError or ArgumentError or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; rescue ArgumentError => x; x; end", env: @env)
     assert_equal $__rdl_parser.scan_str("#T RuntimeError or ArgumentError or 42 or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; rescue ArgumentError => x; x; else 42; end", env: @env)
     assert_equal $__rdl_parser.scan_str("#T RuntimeError or ArgumentError or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError, ArgumentError => e; e; end", env: @env)
+    assert_equal $__rdl_parser.scan_str("#T 1 or String"), do_tc("tries = 0; begin puts 'foo'; x = 1; rescue; tries = tries + 1; retry unless tries > 5; x = 'one'; end; x", env: @env)
   end
 
 end
