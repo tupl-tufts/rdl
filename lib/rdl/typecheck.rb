@@ -587,7 +587,6 @@ RUBY
       [envi, ti]
     when :ensure
       # (ensure main-body ensure-body)
-
       raise RuntimeError, "Unimplemented"
     when :rescue
       # (rescue main-body resbody1 resbody2 ... (else else-body))
@@ -599,22 +598,42 @@ RUBY
       scope_merge(scope, retry: env, exn: nil) { |rscope|
         begin
           old_retry = rscope[:retry]
-          env_body, tbody = tc(rscope, scope[:retry], e.children[0])
+          env_body, tbody = tc(rscope, rscope[:retry], e.children[0])
           tres = [tbody] # note throw away inferred types from previous iterations---should be okay since should be monotonic
           env_res = [env_body]
           if rscope[:exn]
-            e.children[1..-1].each { |resbody| # note last resbody is actually else clause, but that's okay
+            e.children[1..-2].each { |resbody|
               env_resbody, tresbody = tc(rscope, rscope[:exn], resbody)
               tres << tresbody
               env_res << env_resbody
             }
+            if e.children[-1]
+              env_else, telse = tc(rscope, rscope[:exn], e.children[-1])
+              tres << telse
+              env_res << env_else
+            end
           end
         end until old_retry == rscope[:retry]
         # TODO: variables newly bound in *env_res should be unioned with nil
-        [Env.join(e, *env_res), RDL::Type::UnionType.new(*tres)]
+        [Env.join(e, *env_res), RDL::Type::UnionType.new(*tres).canonical]
       }
     when :resbody
       # (resbody (array exns) (lvasgn var) rescue-body)
+      envi = env
+      texns = []
+      if e.children[0]
+        e.children[0].children.each { |exn|
+          envi, texn = tc(scope, envi, exn)
+          error :exn_type, [], exn unless texn.is_a?(RDL::Type::SingletonType) && texn.val.is_a?(Class)
+          texns << RDL::Type::NominalType.new(texn.val)
+        }
+      else
+        texns = [$__rdl_standard_error_type]
+      end
+      if e.children[1]
+        envi, _ = tc_vasgn(scope, envi, :lvasgn, e.children[1].children[0], RDL::Type::UnionType.new(*texns), e.children[1])
+      end
+      tc(scope, envi, e.children[2])
     else
       raise RuntimeError, "Expression kind #{e.type} unsupported"
     end
@@ -655,9 +674,9 @@ RUBY
       end
       if env.fixed? name
         error :vasgn_incompat, [tright, env[name]], e unless tright <= env[name]
-        [env, tright]
+        [env, tright.canonical]
       else
-        [env.bind(name, tright), tright]
+        [env.bind(name, tright), tright.canonical]
       end
     when :ivasgn, :cvasgn, :gvasgn
       klass = (if kind == :gvasgn then RDL::Util::GLOBAL_NAME else env[:self] end)
@@ -669,7 +688,7 @@ RUBY
       end
       tleft = $__rdl_info.get(klass, name, :type)
       error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless tright <= tleft
-      [env, tright]
+      [env, tright.canonical]
     else
       raise RuntimeError, "unknown kind #{kind}"
     end
@@ -931,6 +950,7 @@ type_error_messages = {
   type_cast_format: "type_cast must be called as type_cast('type-string') or type_cast('type-string', force: expr)",
   var_type_format: "var_type must be called as var_type(:var-name, 'type-string')",
   type_parse_error: "%s",
+  exn_type: "can't determine exception type",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)
