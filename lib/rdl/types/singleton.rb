@@ -57,8 +57,7 @@ module RDL::Type
       other.instance_of?(TopType) ||
         (@val.nil? && (not (other.instance_of?(SingletonType)))) ||
         (other.instance_of?(SingletonType) && other.val == @val) ||
-        (other.instance_of?(UnionType) && other.types.any? { |ot| self <= ot })
-         ||
+        (other.instance_of?(UnionType) && other.types.any? { |ot| self <= ot }) ||
         (@nominal <= other)
     end
 
