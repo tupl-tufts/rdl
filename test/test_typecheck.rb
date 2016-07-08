@@ -763,4 +763,37 @@ class TestTypecheck < Minitest::Test
     assert_equal @t5, do_tc("begin puts 'foo'; x = 3; rescue; x = 4; ensure x = 5; end; x", env: @env)
     assert_equal @t34, do_tc("begin puts 'foo'; 3; rescue; 4; ensure 5; end", env: @env)
   end
+
+  def test_array_splat
+    skip "not supported yet"
+    self.class.class_eval {
+      type :_splataf, "() -> Array<Fixnum>"
+      type :_splatas, "() -> Array<String>"
+      type :_splathsf, "() -> Hash<Symbol, Fixnum>"
+    }
+    assert_equal tt("[1]"), do_tc("x = *1")
+    assert_equal tt("[1, 2, 3]"), do_tc("x = [1, *2, 3]")
+    assert_equal tt("[1]"), do_tc("x = *[1]")
+    assert_equal tt("[1, 2, 3]"), do_tc("x = *[1, 2, 3]")
+    assert_equal tt("[1, 2, 3]"), do_tc("x = [1, *[2], 3]")
+    assert_equal tt("[1, 2, 3, 4]"), do_tc("x = [1, *[2, 3], 4]")
+    assert_equal tt("[1, 2, 3, 4]"), do_tc("x = [1, *[2, *[3]], 4]")
+    assert_equal tt("[1, [2, 3], 4]"), do_tc("x = [1, [2, *[3]], 4]")
+    assert_equal tt("[1, 2, 3, 4]"), do_tc("x = [*[1,2], *[3,4]]")
+    assert_equal tt("[]"), do_tc("x = *nil")
+    assert_equal tt("[1, 2]"), do_tc("x = [1, *nil, 2]")
+    assert_equal tt("[[:a, 1]]"), do_tc("x = *{a: 1}")
+    assert_equal tt("[[:a, 1], [:b, 2], [:c, 3]]"), do_tc("x = *{a: 1, b: 2, c: 3}")
+    assert_equal tt("[1, [:a, 2], 3]"), do_tc("x = [1, *{a: 2}, 3]")
+
+    assert_equal tt("Array<Fixnum>"), do_tc("x = *_splataf")
+    assert_equal tt("Array<Fixnum>"), do_tc("x = [1, *_splataf, 2]")
+    assert_equal tt("Array<Fixnum>"), do_tc("x = [*_splataf, *_splataf]")
+    assert_equal tt("Array<Fixnum or String>"), do_tc("x = [*_splataf, *_splatas]")
+    assert_equal tt("Array<Fixnum or String>"), do_tc("x = [1, *_splataf, 2, *_splatas, 3]")
+    assert_equal tt("Array<Fixnum or String or Float>"), do_tc("x = [1, *_splataf, 2, *_splatas, 3.0]")
+    assert_equal tt("Array<[Symbol, Fixnum]>"), do_tc("x = *_splathsf")
+    assert_equal tt("Array<Fixnum or [Symbol, Fixnum]>"), do_tc("x = [1, *_splathsf, 3]")
+  end
+
 end
