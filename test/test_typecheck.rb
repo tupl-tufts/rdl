@@ -19,7 +19,7 @@ class TestTypecheck < Minitest::Test
     @ts34 = RDL::Type::UnionType.new(@ts3, @t4)
     @t3n = RDL::Type::UnionType.new(@t3, $__rdl_nil_type)
     @t4n = RDL::Type::UnionType.new(@t4, $__rdl_nil_type)
-    @env = RDL::Typecheck::Env.new(self: $__rdl_parser.scan_str("#T TestTypecheck"))
+    @env = RDL::Typecheck::Env.new(self: tt("TestTypecheck"))
     @scopef = { tret: $__rdl_fixnum_type }
     @tfs = RDL::Type::UnionType.new($__rdl_fixnum_type, $__rdl_string_type)
     @scopefs = { tret: @tfs }
@@ -32,6 +32,11 @@ class TestTypecheck < Minitest::Test
     ast = Parser::CurrentRuby.parse expr
     _, t = RDL::Typecheck.tc scope, env, ast
     return t
+  end
+
+  # convert arg string to a type
+  def tt(t)
+    $__rdl_parser.scan_str('#T ' + t)
   end
 
   def test_def
@@ -90,14 +95,14 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_nil_type, do_tc("nil")
     assert_equal $__rdl_true_type, do_tc("true")
     assert_equal $__rdl_false_type, do_tc("false")
-    assert_equal $__rdl_parser.scan_str("#T 42"), do_tc("42")
+    assert_equal tt("42"), do_tc("42")
     assert do_tc("123456789123456789123456789") <= $__rdl_bignum_type
-    assert_equal $__rdl_parser.scan_str("#T 3.14"), do_tc("3.14")
+    assert_equal tt("3.14"), do_tc("3.14")
     assert_equal $__rdl_complex_type, do_tc("1i")
     assert_equal $__rdl_rational_type, do_tc("2.0r")
     assert_equal $__rdl_string_type, do_tc("'42'")
     assert_equal $__rdl_string_type, do_tc("\"42\"")
-    assert_equal $__rdl_parser.scan_str("#T :foo"), do_tc(":foo")
+    assert_equal tt(":foo"), do_tc(":foo")
   end
 
   def test_empty
@@ -141,20 +146,20 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_tuple
-    assert_equal $__rdl_parser.scan_str("#T [TrueClass, String]"), do_tc("[true, '42']")
-    assert_equal $__rdl_parser.scan_str("#T [42, String]"), do_tc("[42, '42']")
+    assert_equal tt("[TrueClass, String]"), do_tc("[true, '42']")
+    assert_equal tt("[42, String]"), do_tc("[42, '42']")
   end
 
   def test_hash
-    assert_equal $__rdl_parser.scan_str("#T {x: TrueClass, y: FalseClass}"), do_tc("{x: true, y: false}")
-    assert_equal $__rdl_parser.scan_str("#T Hash<String, 1 or 2>"), do_tc("{'a' => 1, 'b' => 2}")
-    assert_equal $__rdl_parser.scan_str("#T Hash<1 or 2, String>"), do_tc("{1 => 'a', 2 => 'b'}")
-    assert_equal $__rdl_parser.scan_str("#T {}"), do_tc("{}")
+    assert_equal tt("{x: TrueClass, y: FalseClass}"), do_tc("{x: true, y: false}")
+    assert_equal tt("Hash<String, 1 or 2>"), do_tc("{'a' => 1, 'b' => 2}")
+    assert_equal tt("Hash<1 or 2, String>"), do_tc("{1 => 'a', 2 => 'b'}")
+    assert_equal tt("{}"), do_tc("{}")
   end
 
   def test_range
-    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("1..5")
-    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("1...5")
+    assert_equal tt("Range<Fixnum>"), do_tc("1..5")
+    assert_equal tt("Range<Fixnum>"), do_tc("1...5")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("1..'foo'") }
   end
 
@@ -184,7 +189,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_const
-    assert_equal $__rdl_parser.scan_str("#T ${String}"), do_tc("String", env: @env)
+    assert_equal tt("${String}"), do_tc("String", env: @env)
     assert_equal $__rdl_nil_type, do_tc("NIL", env: @env)
   end
 
@@ -213,9 +218,9 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_lvasgn
-    assert_equal $__rdl_parser.scan_str("#T 42"), do_tc("x = 42; x")
-    assert_equal $__rdl_parser.scan_str("#T 42"), do_tc("x = 42; y = x; y")
-    assert_equal $__rdl_parser.scan_str("#T 42"), do_tc("x = y = 42; x")
+    assert_equal tt("42"), do_tc("x = 42; x")
+    assert_equal tt("42"), do_tc("x = 42; y = x; y")
+    assert_equal tt("42"), do_tc("x = y = 42; x")
     assert_equal $__rdl_nil_type, do_tc("x = x") # weird behavior - lhs bound to nil always before assignment!
   end
 
@@ -639,9 +644,9 @@ class TestTypecheck < Minitest::Test
 
     # break, redo, next, no args
     assert_equal $__rdl_integer_type, do_tc("i = 0; while i < 5 do if i > 2 then break end; i = 1 + i end; i")
-    assert_equal $__rdl_parser.scan_str("#T 0"), do_tc("i = 0; while i < 5 do break end; i")
-    assert_equal $__rdl_parser.scan_str("#T 0"), do_tc("i = 0; while i < 5 do redo end; i") # infinite loop, ok for typing
-    assert_equal $__rdl_parser.scan_str("#T 0"), do_tc("i = 0; while i < 5 do next end; i") # infinite loop, ok for typing
+    assert_equal tt("0"), do_tc("i = 0; while i < 5 do break end; i")
+    assert_equal tt("0"), do_tc("i = 0; while i < 5 do redo end; i") # infinite loop, ok for typing
+    assert_equal tt("0"), do_tc("i = 0; while i < 5 do next end; i") # infinite loop, ok for typing
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("i = 0; while i < 5 do retry end; i") }
     assert_equal $__rdl_integer_type, do_tc("i = 0; begin i = i + 1; break if i > 2; end while i < 5; i")
     assert_equal $__rdl_integer_type, do_tc("i = 0; begin i = i + 1; redo if i > 2; end while i < 5; i")
@@ -657,11 +662,11 @@ class TestTypecheck < Minitest::Test
 
   def test_for
     assert_equal $__rdl_fixnum_type, do_tc("for i in 1..5 do end; i")
-    assert_equal $__rdl_parser.scan_str("#T 1 or 2 or 3 or 4 or 5"), do_tc("for i in [1,2,3,4,5] do end; i")
-    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("for i in 1..5 do break end", env: @env)
-    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("for i in 1..5 do next end", env: @env)
-    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum>"), do_tc("for i in 1..5 do redo end", env: @env) #infinite loop, ok for typing
-    assert_equal $__rdl_parser.scan_str("#T Range<Fixnum> or 3"), do_tc("for i in 1..5 do break 3 end", env: @env)
+    assert_equal tt("1 or 2 or 3 or 4 or 5"), do_tc("for i in [1,2,3,4,5] do end; i")
+    assert_equal tt("Range<Fixnum>"), do_tc("for i in 1..5 do break end", env: @env)
+    assert_equal tt("Range<Fixnum>"), do_tc("for i in 1..5 do next end", env: @env)
+    assert_equal tt("Range<Fixnum>"), do_tc("for i in 1..5 do redo end", env: @env) #infinite loop, ok for typing
+    assert_equal tt("Range<Fixnum> or 3"), do_tc("for i in 1..5 do break 3 end", env: @env)
     assert_equal @tfs, do_tc("for i in 1..5 do next 'three' end; i", env: @env)
   end
 
@@ -720,7 +725,7 @@ class TestTypecheck < Minitest::Test
       var_type :@f_masgn, "Array<Fixnum>"
     }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x, y = 3") } # allowed in Ruby but probably has surprising behavior
-    assert_equal $__rdl_parser.scan_str("#T Array<Fixnum>"), do_tc("a, b = @f_masgn", env: @env)
+    assert_equal tt("Array<Fixnum>"), do_tc("a, b = @f_masgn", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("a, b = @f_masgn; a", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("a, b = @f_masgn; b", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :a, 'String'; a, b = @f_masgn", env: @env) }
@@ -746,17 +751,16 @@ class TestTypecheck < Minitest::Test
   def test_rescue_ensure
     assert_equal @t3, do_tc("begin 3; rescue; 4; end") # rescue clause can never be executed
     assert_equal @t34, do_tc("begin puts 'foo'; 3; rescue; 4; end", env: @env)
-    assert_equal $__rdl_parser.scan_str("#T StandardError or 3"), do_tc("begin puts 'foo'; 3; rescue => e; e; end", env: @env)
-    assert_equal $__rdl_parser.scan_str("#T RuntimeError or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; end", env: @env)
-    assert_equal $__rdl_parser.scan_str("#T 3"), do_tc("begin puts 'foo'; 3; else; 4; end", env: @env) # parser discards else clause!
-    assert_equal $__rdl_parser.scan_str("#T RuntimeError or ArgumentError or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; rescue ArgumentError => x; x; end", env: @env)
-    assert_equal $__rdl_parser.scan_str("#T RuntimeError or ArgumentError or 42 or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; rescue ArgumentError => x; x; else 42; end", env: @env)
-    assert_equal $__rdl_parser.scan_str("#T RuntimeError or ArgumentError or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError, ArgumentError => e; e; end", env: @env)
-    assert_equal $__rdl_parser.scan_str("#T 1 or String"), do_tc("tries = 0; begin puts 'foo'; x = 1; rescue; tries = tries + 1; retry unless tries > 5; x = 'one'; end; x", env: @env)
+    assert_equal tt("StandardError or 3"), do_tc("begin puts 'foo'; 3; rescue => e; e; end", env: @env)
+    assert_equal tt("RuntimeError or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; end", env: @env)
+    assert_equal tt("3"), do_tc("begin puts 'foo'; 3; else; 4; end", env: @env) # parser discards else clause!
+    assert_equal tt("RuntimeError or ArgumentError or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; rescue ArgumentError => x; x; end", env: @env)
+    assert_equal tt("RuntimeError or ArgumentError or 42 or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; rescue ArgumentError => x; x; else 42; end", env: @env)
+    assert_equal tt("RuntimeError or ArgumentError or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError, ArgumentError => e; e; end", env: @env)
+    assert_equal tt("1 or String"), do_tc("tries = 0; begin puts 'foo'; x = 1; rescue; tries = tries + 1; retry unless tries > 5; x = 'one'; end; x", env: @env)
     assert_equal @t3, do_tc("begin 3; ensure 4; end", env: @env)
     assert_equal @t4, do_tc("begin x = 3; ensure x = 4; end; x", env: @env)
     assert_equal @t5, do_tc("begin puts 'foo'; x = 3; rescue; x = 4; ensure x = 5; end; x", env: @env)
     assert_equal @t34, do_tc("begin puts 'foo'; 3; rescue; 4; ensure 5; end", env: @env)
   end
-
 end
