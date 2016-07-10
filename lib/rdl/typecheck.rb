@@ -227,7 +227,35 @@ module RDL::Typecheck
     when :array
       envi = env
       tis = []
-      e.children.each { |ei| envi, ti = tc(scope, envi, ei); tis << ti }
+      e.children.each { |ei|
+        if ei.type == :splat
+          envi, ti = tc(scope, envi, ei.children[0]);
+          if ti.is_a? RDL::Type::TupleType
+            ti.cant_promote! # must remain a tuple
+            tis.concat(ti.params)
+          elsif ti.is_a? RDL::Type::FiniteHashType
+            ti.cant_promote! # must remain a finite hash
+            ti.elts.each_pair { |k, t|
+              tis << RDL::Type::TupleType.new(RDL::Type::SingletonType.new(k), t)
+            }
+          elsif ti.is_a?(RDL::Type::GenericType) && ti.base == $__rdl_array_type
+            raise "Unimplemented"
+          elsif ti.is_a?(RDL::Type::GenericType) && ti.base == $__rdl_hash_type
+            raise "Unimplemented"
+          elsif ti.is_a?(RDL::Type::SingletonType) && ti.val.nil?
+            # nil gets thrown out
+          elsif ($__rdl_array_type <= ti) || (ti <= $__rdl_array_type) ||
+                ($__rdl_hash_type <= ti) || (ti <= $__rdl_hash_type)
+            # might or might not be array...can't splat...
+            error :cant_splat, [ti], ei
+          else
+            tis << ti # splat does nothing
+          end
+        else
+          envi, ti = tc(scope, envi, ei);
+          tis << ti
+        end
+      }
       [envi, RDL::Type::TupleType.new(*tis)]
 #    when :splat # TODO!
     when :hash
@@ -707,7 +735,7 @@ RUBY
     begin
       typ = $__rdl_parser.scan_str("#T " + typ_str)
     rescue Racc::ParseError => err
-      error :type_parse_error, [err.to_s[1..-1]], e.children[3] # remove initial newline
+      error :generic_error, [err.to_s[1..-1]], e.children[3] # remove initial newline
     end
     [env.fix(var, typ), $__rdl_nil_type]
   end
@@ -719,7 +747,7 @@ RUBY
     begin
       typ = $__rdl_parser.scan_str("#T " + typ_str)
     rescue Racc::ParseError => err
-      error :type_parse_error, [err.to_s[1..-1]], e.children[2] # remove initial newline
+      error :generic_error, [err.to_s[1..-1]], e.children[2] # remove initial newline
     end
     if e.children[3]
       fh = e.children[3]
@@ -952,8 +980,9 @@ type_error_messages = {
   missing_ancestor_type: "ancestor %s of %s has method %s but no type for it",
   type_cast_format: "type_cast must be called as type_cast('type-string') or type_cast('type-string', force: expr)",
   var_type_format: "var_type must be called as var_type(:var-name, 'type-string')",
-  type_parse_error: "%s",
+  generic_error: "%s",
   exn_type: "can't determine exception type",
+  cant_splat: "can't type splat with element of type %s",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

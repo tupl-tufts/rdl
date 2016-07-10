@@ -764,8 +764,13 @@ class TestTypecheck < Minitest::Test
     assert_equal @t34, do_tc("begin puts 'foo'; 3; rescue; 4; ensure 5; end", env: @env)
   end
 
+  class SubArray < Array
+  end
+
+  class SubHash < Hash
+  end
+
   def test_array_splat
-    skip "not supported yet"
     self.class.class_eval {
       type :_splataf, "() -> Array<Fixnum>"
       type :_splatas, "() -> Array<String>"
@@ -773,6 +778,8 @@ class TestTypecheck < Minitest::Test
     }
     assert_equal tt("[1]"), do_tc("x = *1")
     assert_equal tt("[1, 2, 3]"), do_tc("x = [1, *2, 3]")
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = [1, *Object.new, 3]", env: @env) } # the Object might or might not be an array...
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = [1, *SubArray.new, 3]", env: @env) } # the SubArray is an Array, but unclear how to splat
     assert_equal tt("[1]"), do_tc("x = *[1]")
     assert_equal tt("[1, 2, 3]"), do_tc("x = *[1, 2, 3]")
     assert_equal tt("[1, 2, 3]"), do_tc("x = [1, *[2], 3]")
@@ -783,9 +790,15 @@ class TestTypecheck < Minitest::Test
     assert_equal tt("[]"), do_tc("x = *nil")
     assert_equal tt("[1, 2]"), do_tc("x = [1, *nil, 2]")
     assert_equal tt("[[:a, 1]]"), do_tc("x = *{a: 1}")
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = [1, *SubHash.new, 3]", env: @env) } # the SubHash is an Hash, but unclear how to splat
     assert_equal tt("[[:a, 1], [:b, 2], [:c, 3]]"), do_tc("x = *{a: 1, b: 2, c: 3}")
     assert_equal tt("[1, [:a, 2], 3]"), do_tc("x = [1, *{a: 2}, 3]")
+    assert_equal tt("[1, 2, 3]"), do_tc("y = [2]; x = [1, *y, 3]; ")
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("y = [2]; x = [1, *y, 3]; y.length") }
+    assert_equal tt("[1, [:a, 2], 3]"), do_tc("y = {a: 2}; x = [1, *y, 3]")
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("y = {a: 2}; x = [1, *y, 3]; y.length") }
 
+    skip "not supported yet"
     assert_equal tt("Array<Fixnum>"), do_tc("x = *_splataf")
     assert_equal tt("Array<Fixnum>"), do_tc("x = [1, *_splataf, 2]")
     assert_equal tt("Array<Fixnum>"), do_tc("x = [*_splataf, *_splataf]")
