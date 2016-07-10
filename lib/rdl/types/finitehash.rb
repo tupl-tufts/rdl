@@ -18,6 +18,7 @@ module RDL::Type
       }
       @elts = elts
       @the_hash = nil
+      @cant_promote = false
       @ubounds = []
       @lbounds = []
       super()
@@ -52,9 +53,15 @@ module RDL::Type
     end
 
     def promote!
+      return false if @cant_promote
       @the_hash = GenericType.new($__rdl_hash_type, $__rdl_symbol_type, UnionType.new(*@elts.values))
       # same logic as Tuple
       return (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
+    end
+
+    def cant_promote!
+      raise RuntimeError, "already promoted!" if @the_hash
+      @cant_promote = true
     end
 
     def <=(other)
