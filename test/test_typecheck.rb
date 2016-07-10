@@ -798,15 +798,14 @@ class TestTypecheck < Minitest::Test
     assert_equal tt("[1, [:a, 2], 3]"), do_tc("y = {a: 2}; x = [1, *y, 3]")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("y = {a: 2}; x = [1, *y, 3]; y.length") }
 
-    skip "not supported yet"
-    assert_equal tt("Array<Fixnum>"), do_tc("x = *_splataf")
-    assert_equal tt("Array<Fixnum>"), do_tc("x = [1, *_splataf, 2]")
-    assert_equal tt("Array<Fixnum>"), do_tc("x = [*_splataf, *_splataf]")
-    assert_equal tt("Array<Fixnum or String>"), do_tc("x = [*_splataf, *_splatas]")
-    assert_equal tt("Array<Fixnum or String>"), do_tc("x = [1, *_splataf, 2, *_splatas, 3]")
-    assert_equal tt("Array<Fixnum or String or Float>"), do_tc("x = [1, *_splataf, 2, *_splatas, 3.0]")
-    assert_equal tt("Array<[Symbol, Fixnum]>"), do_tc("x = *_splathsf")
-    assert_equal tt("Array<Fixnum or [Symbol, Fixnum]>"), do_tc("x = [1, *_splathsf, 3]")
+    assert_equal tt("Array<Fixnum>"), do_tc("x = *_splataf", env: @env)
+    assert_equal tt("Array<Fixnum>"), do_tc("x = [1, *_splataf, 2]", env: @env)
+    assert_equal tt("Array<Fixnum>"), do_tc("x = [*_splataf, *_splataf]", env: @env)
+    assert_equal tt("Array<Fixnum or String>"), do_tc("x = [*_splataf, *_splatas]", env: @env)
+    assert_equal tt("Array<Fixnum or String>"), do_tc("x = [1, *_splataf, 2, *_splatas, 3]", env: @env)
+    assert_equal tt("Array<Fixnum or String or 3.0>"), do_tc("x = [1, *_splataf, 2, *_splatas, 3.0]", env: @env)
+    assert_equal tt("Array<[Symbol, Fixnum]>"), do_tc("x = *_splathsf", env: @env)
+    assert_equal tt("Array<1 or 3 or [Symbol, Fixnum]>"), do_tc("x = [1, *_splathsf, 3]", env: @env)
   end
 
 end

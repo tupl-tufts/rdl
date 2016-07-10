@@ -227,6 +227,7 @@ module RDL::Typecheck
     when :array
       envi = env
       tis = []
+      is_array = false
       e.children.each { |ei|
         if ei.type == :splat
           envi, ti = tc(scope, envi, ei.children[0]);
@@ -239,9 +240,11 @@ module RDL::Typecheck
               tis << RDL::Type::TupleType.new(RDL::Type::SingletonType.new(k), t)
             }
           elsif ti.is_a?(RDL::Type::GenericType) && ti.base == $__rdl_array_type
-            raise "Unimplemented"
+            is_array = true
+            tis << ti.params[0]
           elsif ti.is_a?(RDL::Type::GenericType) && ti.base == $__rdl_hash_type
-            raise "Unimplemented"
+            is_array = true
+            tis << RDL::Type::TupleType.new(*ti.params)
           elsif ti.is_a?(RDL::Type::SingletonType) && ti.val.nil?
             # nil gets thrown out
           elsif ($__rdl_array_type <= ti) || (ti <= $__rdl_array_type) ||
@@ -256,8 +259,11 @@ module RDL::Typecheck
           tis << ti
         end
       }
-      [envi, RDL::Type::TupleType.new(*tis)]
-#    when :splat # TODO!
+      if is_array
+        [envi, RDL::Type::GenericType.new($__rdl_array_type, RDL::Type::UnionType.new(*tis).canonical)]
+      else
+        [envi, RDL::Type::TupleType.new(*tis)]
+      end
     when :hash
       envi = env
       tlefts = []
