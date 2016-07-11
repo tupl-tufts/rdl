@@ -736,8 +736,54 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_string_type, do_tc("a = [3, 'two']; x, y = a; y")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("a = [3, 'two']; x, y = a; a.length", env: @env) }
 
+    # w/send
     assert_equal tt("2"), do_tc("e = E.new; e.f, b = 1, 2; b", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("e = E.new; e.f, b = @f_masgn; b", env: @env)
+
+    skip "not implemented"
+    # w/splat
+    assert_equal tt("[1, 2, 3]"), do_tc("*x = [1, 2, 3]")
+    assert_equal tt("[1]"), do_tc("*x = 1")
+
+    # w/splat on right
+    assert_equal tt("1"), do_tc("x, *y = [1, 2, 3]; x")
+    assert_equal tt("[2, 3]"), do_tc("x, *y = [1, 2, 3]; y")
+    assert_equal tt("1"), do_tc("x, *y = [1]; x")
+    assert_equal tt("[]"), do_tc("x, *y = [1]; y")
+    assert_equal tt("1"), do_tc("x, *y = 1; x")
+    assert_equal tt("[]"), do_tc("x, *y = 1; y")
+    assert_equal $__rdl_fixnum_type, do_tc("x, *y = @f_masgn; x", env: @env)
+    assert_equal tt("Array<Fixnum>"), do_tc("x, *y = @f_masgn; y", env: @env)
+    assert_equal tt("1"), do_tc("x, y, *z = [1]; x") # note tricky behvaior; should this be an error?
+    assert_equal $__rdl_nil_type, do_tc("x, y, *z = [1]; y")
+    assert_equal tt("[]"), do_tc("x, y, *z = [1]; z")
+
+    # w/splat on left
+    assert_equal tt("[1, 2]"), do_tc("*x, y = [1, 2, 3]; x")
+    assert_equal tt("3"), do_tc("*x, y = [1, 2, 3]; y")
+    assert_equal tt("[]"), do_tc("*x, y = [1]; x")
+    assert_equal tt("1"), do_tc("*x, y = [1]; y")
+    assert_equal tt("[]"), do_tc("*x, y = 1; x")
+    assert_equal tt("1"), do_tc("*x, y = 1; y")
+    assert_equal tt("Array<Fixnum"), do_tc("*x, y = @f_masgn; x", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("*x, y = @f_masgn; y", env: @env)
+    assert_equal tt("[]"), do_tc("*x, y, z = [1]; x") # note tricky behvaior; should this be an error?
+    assert_equal tt("1"), do_tc("*x, y, z = [1]; y")
+    assert_equal $__rdl_nil_type, do_tc("*x, y, z = [1]; z")
+
+    # w/splat in middle
+    assert_equal tt("1"), do_tc("x, *y, z = [1, 2]; x")
+    assert_equal tt("[]"), do_tc("x, *y, z = [1, 2]; y")
+    assert_equal tt("2"), do_tc("x, *y, z = [1, 2]; z")
+    assert_equal tt("1"), do_tc("x, *y, z = [1, 2, 3, 4]; x")
+    assert_equal tt("[2, 3]"), do_tc("x, *y, z = [1, 2, 3, 4]; y")
+    assert_equal tt("4"), do_tc("x, *y, z = [1, 2, 3, 4]; z")
+    assert_equal tt("1"), do_tc("x, *y, z = 1; x")
+    assert_equal tt("[]"), do_tc("x, *y, z = 1; y")
+    assert_equal $__rdl_nil_type, do_tc("x, *y, z = 1; z")
+    assert_equal $__rdl_fixnum_type, do_tc("x, *y, z = @f_masgn; x")
+    assert_equal tt("Array<Fixnum>"), do_tc("x, *y, z = @f_masgn; y")
+    assert_equal $__rdl_fixnum_type, do_tc("x, *y, z = @f_masgn; z")
   end
 
   def test_cast
