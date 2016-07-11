@@ -60,7 +60,12 @@ module RDL::Type
         if formal == @args.size && actual == args.size then # Matched all actuals, no formals left over
 	        check_arg_preds(bind, preds) if preds.size > 0
           @args.each_with_index {|a,i| args[i] = block_wrap(slf,inst,a,bind,&args[i]) if a.is_a? MethodType }
-          blk = block_wrap(slf,inst,@block,bind,&blk) if @block
+          if @block then
+            raise TypeError, "Expected method block of type {@block}, received no block." unless blk
+            blk = block_wrap(slf,inst,@block,bind,&blk)
+          elsif blk then
+            raise TypeError, "Block passed to method expecting no block."
+          end
           return [true, args, blk, bind]
         end
         next if formal >= @args.size # Too many actuals to match
