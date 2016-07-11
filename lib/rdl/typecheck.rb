@@ -315,19 +315,42 @@ module RDL::Typecheck
         # Note don't need to check outer_env here because will be checked by tc_vasgn below
       }
       envi, tright = tc(scope, env, e.children[1])
+      lhs = e.children[0].children
       if tright.is_a? RDL::Type::TupleType
         tright.cant_promote! # must always remain a tuple because of the way type checking currently works
-        lhs = e.children[0].children
         rhs = tright.params
-        error :masgn_num, [rhs.length, lhs.length], e unless lhs.length == rhs.length
-        lhs.zip(rhs).each { |left, right|
-          envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], right, left)
-        }
-        [envi, tright]
+        splat_ind = lhs.index { |lhs_elt| lhs_elt.type == :splat }
+        if splat_ind
+          if splat_ind > 0
+            lhs[0..splat_ind-1].each { |left|
+              # before splat
+              error :masgn_bad_lhs, [], left if rhs.empty?
+              envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], rhs.shift, left)
+            }
+          end
+          lhs[splat_ind+1..-1].reverse_each { |left|
+            # after splat
+            error :masgn_bad_lhs, [], left if rhs.empty?
+            envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], rhs.pop, left)
+          }
+          splat = lhs[splat_ind]
+          envi, _ = tc_vasgn(scope, envi, splat.children[0].type, splat.children[0].children[0], RDL::Type::TupleType.new(*rhs), splat)
+          [envi, tright]
+        else
+          error :masgn_num, [rhs.length, lhs.length], e unless lhs.length == rhs.length
+          lhs.zip(rhs).each { |left, right|
+            envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], right, left)
+          }
+          [envi, tright]
+        end
       elsif (tright.is_a? RDL::Type::GenericType) && (tright.base == $__rdl_array_type)
         tasgn = tright.params[0]
-        e.children[0].children.each { |asgn|
-          envi, _ = tc_vasgn(scope, envi, asgn.type, asgn.children[0], tasgn, asgn)
+        lhs.each { |asgn|
+          if asgn.type == :splat
+            envi, _ = tc_vasgn(scope, envi, asgn.children[0].type, asgn.children[0].children[0], tright, asgn)
+          else
+            envi, _ = tc_vasgn(scope, envi, asgn.type, asgn.children[0], tasgn, asgn)
+          end
         }
         [envi, tright]
       else
@@ -981,6 +1004,7 @@ type_error_messages = {
   tuple_finite_hash_promote: "can't promote %s to %s",
   masgn_bad_rhs: "multiple assignment has right-hand side of type `%s' where tuple or array expected",
   masgn_num: "can't multiple-assign %d values to %d variables",
+  masgn_bad_lhs: "no corresponding right-hand side elemnt for left-hand side assignee",
   kw_not_allowed: "can't use %s in current scope",
   kw_arg_not_allowed: "argument to %s not allowed in current scope",
   arg_count_mismatch: "%s signature expects %d arguments, actual %s has %d arguments",
