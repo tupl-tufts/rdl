@@ -726,6 +726,11 @@ RUBY
       tleft = $__rdl_info.get(klass, name, :type)
       error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless tright <= tleft
       [env, tright.canonical]
+    when :send
+      meth = e.children[1] # note method name include =!
+      envi, trecv = tc(scope, env, e.children[0]) # receiver
+      # name is not useful here
+      [envi, tc_send(scope, envi, trecv, meth, [tright], nil, e)] # call receiver.meth(tright)
     else
       raise RuntimeError, "unknown kind #{kind}"
     end

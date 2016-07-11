@@ -735,6 +735,9 @@ class TestTypecheck < Minitest::Test
     assert_equal @t3, do_tc("a = [3, 'two']; x, y = a; x")
     assert_equal $__rdl_string_type, do_tc("a = [3, 'two']; x, y = a; y")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("a = [3, 'two']; x, y = a; a.length", env: @env) }
+
+    assert_equal tt("2"), do_tc("e = E.new; e.f, b = 1, 2; b", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("e = E.new; e.f, b = @f_masgn; b", env: @env)
   end
 
   def test_cast
