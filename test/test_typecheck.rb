@@ -153,7 +153,7 @@ class TestTypecheck < Minitest::Test
   def test_hash
     assert_equal tt("{x: TrueClass, y: FalseClass}"), do_tc("{x: true, y: false}")
     assert_equal tt("Hash<String, 1 or 2>"), do_tc("{'a' => 1, 'b' => 2}")
-    assert_equal tt("Hash<1 or 2, String>"), do_tc("{1 => 'a', 2 => 'b'}")
+    assert_equal tt("{1 => String, 2 => String}"), do_tc("{1 => 'a', 2 => 'b'}")
     assert_equal tt("{}"), do_tc("{}")
   end
 
@@ -849,7 +849,6 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_hash_kwsplat
-    skip "Not handled yet"
     self.class.class_eval {
       type :_kwsplathsf, "() -> Hash<Symbol, Fixnum>"
       type :_kwsplathos, "() -> Hash<Float, String>"
@@ -860,17 +859,14 @@ class TestTypecheck < Minitest::Test
     assert_equal tt("{a: 1, b: 2, c: 3}"), do_tc("x = {a: 1, **{b: 2}, **{c: 3}}")
     assert_equal tt("{a: 1, b: 2, c: 3}"), do_tc("x = {a: 1, **{b: 2, c: 3}}")
     assert_equal tt("{a: 1, b: 2, c: 3}"), do_tc("x = {**{a: 1}, b: 2, **{c: 3}}")
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = {a: 1, **Object.new") } # may or may not be hash
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = {a: 1, **SubHash.new") } # is a how, but unclear how to splat
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = {a: 1, **Object.new}", env: @env) } # may or may not be hash
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = {a: 1, **SubHash.new}", env: @env) } # is a how, but unclear how to splat
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("y = {b: 2}; x = {a: 1, **y}; y.length") }
-    do_tc("x = {a: 1, **Object.new")
-    do_tc("x = {a: 1, **SubHash.new")
-    do_tc("y = {b: 2}; x = {a: 1, **y}; y.length")
 
     assert_equal tt("Hash<Symbol, Fixnum>"), do_tc("x = {**_kwsplathsf}", env: @env)
     assert_equal tt("Hash<Symbol or Float, Fixnum or String>"), do_tc("x = {**_kwsplathsf, **_kwsplathos}", env: @env)
-    assert_equal tt("Hash<Symbol, Fixnum>"), do_tc("x = {{a: 1}, **_kwsplathsf, {b: 2}}", env: @env)
-    assert_equal tt("Hash<Symbol or String, Fixnum or String>"), do_tc("x = {{'a' => 1}, **_kwsplathsf, {b: 'two'}}", env: @env)
+    assert_equal tt("Hash<Symbol, Fixnum>"), do_tc("x = {a: 1, **_kwsplathsf, b: 2}", env: @env)
+    assert_equal tt("Hash<Symbol or String, Fixnum or String>"), do_tc("x = {'a' => 1, **_kwsplathsf, b: 'two'}", env: @env)
   end
 
 end

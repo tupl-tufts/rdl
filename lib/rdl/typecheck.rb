@@ -271,11 +271,28 @@ module RDL::Typecheck
       is_fh = true
       e.children.each { |p|
         # each child is a pair
-        envi, tleft = tc(scope, envi, p.children[0])
-        tlefts << tleft
-        envi, tright = tc(scope, envi, p.children[1])
-        trights << tright
-        is_fh = false unless tleft.is_a?(RDL::Type::SingletonType) && tleft.val.is_a?(Symbol)
+        if p.type == :pair
+          envi, tleft = tc(scope, envi, p.children[0])
+          tlefts << tleft
+          envi, tright = tc(scope, envi, p.children[1])
+          trights << tright
+          is_fh = false unless tleft.is_a?(RDL::Type::SingletonType)
+        elsif p.type == :kwsplat
+          envi, tkwsplat = tc(scope, envi, p.children[0])
+          if tkwsplat.is_a? RDL::Type::FiniteHashType
+            tkwsplat.cant_promote! # must remain finite hash
+            tlefts.concat(tkwsplat.elts.keys.map { |k| RDL::Type::SingletonType.new(k) })
+            trights.concat(tkwsplat.elts.values)
+          elsif tkwsplat.is_a?(RDL::Type::GenericType) && tkwsplat.base == $__rdl_hash_type
+            is_fh = false
+            tlefts << tkwsplat.params[0]
+            trights << tkwsplat.params[1]
+          else
+            error :cant_splat, [tkwsplat], p
+          end
+        else
+          raise "Don't know what to do with #{p.type}"
+        end
       }
       if is_fh
         # keys are all symbols
