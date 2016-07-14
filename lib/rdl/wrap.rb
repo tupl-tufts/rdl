@@ -30,9 +30,9 @@ class RDL::Wrap
       klass_str = klass_str.to_s
       klass = RDL::Util.to_class klass_str
       return if wrapped? klass, meth
+      $__rdl_info.set(klass_str, meth, :source_location, klass.instance_method(meth).source_location) # get locs for nowrap meths!
       return if RDL::Config.instance.nowrap.member? klass
       raise ArgumentError, "Attempt to wrap #{klass.to_s}\##{meth.to_s}" if klass.to_s =~ /^RDL::/
-      $__rdl_info.set(klass_str, meth, :source_location, klass.instance_method(meth).source_location)
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
       # return if (klass.method_defined? meth_old) # now checked above by wrapped? call
       is_singleton_method = RDL::Util.has_singleton_marker(klass_str)
