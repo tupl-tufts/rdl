@@ -502,8 +502,7 @@ class TestTypecheck < Minitest::Test
     }
     assert_equal $__rdl_fixnum_type, do_tc("x = ['foo', 42]; _send_splat1(1, *x, 'bar')", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("x = _send_splat_fa; _send_splat2('foo', *x, 3.14)", env: @env)
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = _send_splat_fa; _send_splat1(*x, 'foo', 2, 'bar')") }
-    do_tc("x = _send_splat_fa; _send_splat1(*x, 'foo', 2, 'bar')")
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = _send_splat_fa; _send_splat1(*x, 'foo', 2, 'bar')", env: @env) }
   end
 
 

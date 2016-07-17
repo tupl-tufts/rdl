@@ -459,8 +459,8 @@ module RDL::Typecheck
             envi, ti = tc(sscope, envi, ei.children[0])
             if ti.is_a? RDL::Type::TupleType
               tactuals.concat ti.params
-            elsif ti.is_a? RDL::Type::GenericType && ti.base == $__rdl_array_type
-              tactuals << [:splat, ti]
+            elsif ti.is_a?(RDL::Type::GenericType) && ti.base == $__rdl_array_type
+              tactuals << RDL::Type::VarargType.new(ti)
             else
               error :cant_splat, [ti], ei.children[0]
             end
@@ -939,20 +939,22 @@ RUBY
         t = t.type #TODO .instantiate(inst)
         if actual == tactuals.size
           states << [formal+1, actual] # skip over optinal formal
-        elsif tactuals[actual] <= t
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && tactuals[actual] <= t
           states << [formal+1, actual+1] # match
           states << [formal+1, actual] # skip
         else
           states << [formal+1, actual] # types don't match; must skip this formal
         end
       when RDL::Type::VarargType
-        t = t.type #TODO .instantiate(inst)
+#        t = t.type #TODO .instantiate(inst)
         if actual == tactuals.size
           states << [formal+1, actual] # skip to allow empty vararg at end
-        elsif tactuals[actual] <= t
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && tactuals[actual] <= t.type
           states << [formal, actual+1] # match, more varargs coming
           states << [formal+1, actual+1] # match, no more varargs
           states << [formal+1, actual] # skip over even though matches
+        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && tactuals[actual] = t
+          states << [formal+1, actual+1] # match, no more varargs; no other choices!
         else
           states << [formal+1, actual] # doesn't match, must skip
         end
@@ -963,7 +965,7 @@ RUBY
             states << [formal+1, actual]
           end
           # TODO: finite hash
-        elsif tactuals[actual] <= t
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && tactuals[actual] <= t
           states << [formal+1, actual+1] # match!
           # no else case; if there is no match, this is a dead end
         end
