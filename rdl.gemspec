@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.description = <<-EOF
 RDL is a gem that adds types and contracts to Ruby. RDL includes extensive
 support for specifying method types, which can either be enforced as
-contracts or can be statically checked.
+contracts or statically checked.
 EOF
   s.authors     = ['Jeffrey S. Foster', 'Brianna M. Ren', 'T. Stephen Strickland', 'Alexander T. Yu', 'Milod Kazerounian']
   s.email       = ['rdl-users@googlegroups.com']
