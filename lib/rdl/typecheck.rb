@@ -621,7 +621,7 @@ RUBY
         inst = tcollect.to_inst.merge(self: tcollect)
         teaches = teaches.map { |t| t.instantiate(inst) }
       else
-        raise RuntimeError, "Collection of type #{tcollect.to_s} in for unsupported"
+        error :for_collection, [tcollect], e.children[1]
       end
       teach = nil
       teaches.each { |t|
@@ -964,7 +964,6 @@ RUBY
           if @@empty_hash_type <= t
             states << [formal+1, actual]
           end
-          # TODO: finite hash
         elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && tactuals[actual] <= t
           states << [formal+1, actual+1] # match!
           # no else case; if there is no match, this is a dead end
@@ -1050,7 +1049,8 @@ type_error_messages = {
   var_type_format: "var_type must be called as var_type(:var-name, 'type-string')",
   generic_error: "%s",
   exn_type: "can't determine exception type",
-  cant_splat: "can't type splat with element of type %s",
+  cant_splat: "can't type splat with element of type `%s'",
+  for_collection: "can't type for with collection of type `%s'",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)
