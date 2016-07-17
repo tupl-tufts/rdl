@@ -161,6 +161,17 @@ class TestTypeContract < Minitest::Test
     t16 = @p.scan_str "(Fixnum x {{x > undefvar}}, Fixnum) -> Fixnum"
     p16 = t16.to_contract.wrap(self) { |x,y| x }
     assert_raises(NameError) { p16.call(10,10) }
+
+    t17 = @p.scan_str "(Fixnum, *String, Fixnum) -> Fixnum"
+    p17 = t17.to_contract.wrap(self) { |x| x }
+    assert_equal 42, p17.call(42, 43)
+    assert_equal 42, p17.call(42, 'foo', 43)
+    assert_equal 42, p17.call(42, 'foo', 'bar', 43)
+    assert_raises(TypeError) { p17.call }
+    assert_raises(TypeError) { p17.call('42') }
+    assert_raises(TypeError) { p17.call(42) }
+    assert_raises(TypeError) { p17.call(42, '43') }
+    assert_raises(TypeError) { p17.call(42, 43, '44') }
   end
 
   type '(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum'
