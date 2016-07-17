@@ -78,7 +78,7 @@ file.rb:
   require 'rdl'
 
   type '(Fixnum) -> Fixnum', typecheck_now: true
-  def id_ff2(x)
+  def id(x)
     "forty-two"
   end
 ```
@@ -636,6 +636,7 @@ RDL uses the same approach for hashes: hash literals are treated as finite hashe
   * `lambda` has special semantics for `return`; this is not supported.
   * Only simple block argument lists and `for` iteration variables are supported.
   * Control flow for exceptions is not analyzed fully soundly; some things are not reported as possibly `nil` that could be.
+  * Only simple usage of constants is handled.
 
 # Other RDL Methods
 
