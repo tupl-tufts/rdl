@@ -459,6 +459,8 @@ module RDL::Typecheck
             envi, ti = tc(sscope, envi, ei.children[0])
             if ti.is_a? RDL::Type::TupleType
               tactuals.concat ti.params
+            elsif ti.is_a? RDL::Type::GenericType && ti.base == $__rdl_array_type
+              tactuals << [:splat, ti]
             else
               error :cant_splat, [ti], ei.children[0]
             end
