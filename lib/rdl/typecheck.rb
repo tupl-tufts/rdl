@@ -152,6 +152,7 @@ module RDL::Typecheck
   def self.typecheck(klass, meth)
     file, line = $__rdl_info.get(klass, meth, :source_location)
     raise RuntimeError, "static type checking in irb not supported" if file == "(irb)"
+    raise RuntimeError, "No file for #{RDL::Util.pp_klass_method(klass, meth)}" if file.nil?
     digest = Digest::MD5.file file
     cache_hit = (($__rdl_ruby_parser_cache.has_key? file) &&
                  ($__rdl_ruby_parser_cache[file][0] == digest))
@@ -185,7 +186,9 @@ module RDL::Typecheck
       end
       inst = {self: self_type}
       type = type.instantiate inst
-      error :arg_count_mismatch, ['method', type.args.length, 'method', args.children.length], args unless type.args.length == args.children.length
+      unless type.args.length == args.children.length
+        error :arg_count_mismatch, ['method', type.args.length, 'method', args.children.length], (if args.children.empty? then ast else args end)
+      end
       a = args.children.map { |arg| arg.children[0] }.zip(type.args).to_h
       a[:self] = self_type
       scope = {tret: type.ret, tblock: type.block }
