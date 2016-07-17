@@ -454,7 +454,19 @@ module RDL::Typecheck
       tactuals = []
       block = scope[:block]
       scope_merge(scope, block: nil) { |sscope|
-        e.children[2..-1].each { |ei| envi, ti = tc(sscope, envi, ei); tactuals << ti }
+        e.children[2..-1].each { |ei|
+          if ei.type == :splat
+            envi, ti = tc(sscope, envi, ei.children[0])
+            if ti.is_a? RDL::Type::TupleType
+              tactuals.concat ti.params
+            else
+              error :cant_splat, [ti], ei.children[0]
+            end
+          else
+            envi, ti = tc(sscope, envi, ei)
+            tactuals << ti
+          end
+        }
         envi, trecv = if e.children[0].nil? then [envi, envi[:self]] else tc(sscope, envi, e.children[0]) end # if no receiver, self is receiver
         [envi, tc_send(sscope, envi, trecv, e.children[1], tactuals, block, e).canonical]
       }
