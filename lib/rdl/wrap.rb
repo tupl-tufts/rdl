@@ -30,7 +30,6 @@ class RDL::Wrap
       klass_str = klass_str.to_s
       klass = RDL::Util.to_class klass_str
       return if wrapped? klass, meth
-      $__rdl_info.set(klass_str, meth, :source_location, klass.instance_method(meth).source_location) # get locs for nowrap meths!
       return if RDL::Config.instance.nowrap.member? klass
       raise ArgumentError, "Attempt to wrap #{klass.to_s}\##{meth.to_s}" if klass.to_s =~ /^RDL::/
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
@@ -264,6 +263,7 @@ class Object
         end
         if wrap
           if RDL::Util.method_defined?(klass, meth) || meth == :initialize
+            $__rdl_info.set(klass, meth, :source_location, RDL::Util.to_class(klass).instance_method(meth).source_location)
             RDL::Typecheck.typecheck(klass, meth) if typecheck_now
             RDL::Wrap.wrap(klass, meth)
           else
@@ -296,6 +296,7 @@ class Object
 
       # Apply any deferred contracts and reset list
       if $__rdl_deferred.size > 0
+        $__rdl_info.set(klass, meth, :source_location, instance_method(meth).source_location)
         a = $__rdl_deferred
         $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
         a.each { |prev_klass, kind, contract, h|
@@ -318,6 +319,7 @@ class Object
       if $__rdl_to_wrap.member? [klass, meth]
         $__rdl_to_wrap.delete [klass, meth]
         RDL::Wrap.wrap(klass, meth)
+        $__rdl_info.set(klass, meth, :source_location, instance_method(meth).source_location)
       end
 
       # Type check method if requested; must typecheck before wrap
@@ -336,6 +338,7 @@ class Object
 
       # Apply any deferred contracts and reset list
       if $__rdl_deferred.size > 0
+        $__rdl_info.set(sklass, meth, :source_location, singleton_method(meth).source_location)
         a = $__rdl_deferred
         $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
         a.each { |prev_klass, kind, contract, h|
@@ -351,6 +354,7 @@ class Object
 
       # Wrap method if there was a prior contract for it.
       if $__rdl_to_wrap.member? [sklass, meth]
+        $__rdl_info.set(sklass, meth, :source_location, singleton_method(meth).source_location)
         $__rdl_to_wrap.delete [sklass, meth]
         RDL::Wrap.wrap(sklass, meth)
       end
