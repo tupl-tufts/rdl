@@ -1015,7 +1015,8 @@ RUBY
       end
       tancestor = $__rdl_info.get(ancestor_name, name, :type)
       return tancestor if tancestor
-      if (if RDL::Util.has_singleton_marker(ancestor_name) then ancestor.singleton_methods.member?(name) else ancestor.instance_methods.member?(name) end)
+      if (if RDL::Util.has_singleton_marker(ancestor_name) then ancestor.singleton_methods(false).member?(name) else ancestor.instance_methods(false).member?(name) end)
+        klass = RDL::Util.remove_singleton_marker klass if RDL::Util.has_singleton_marker klass
         error :missing_ancestor_type, [ancestor_name, klass, name], e
       end
     }
