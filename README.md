@@ -803,3 +803,5 @@ Copyright (c) 2014-2016, University of Maryland, College Park. All rights reserv
 * Queries, include more regexp operators aside from . and ...
 
 * Queries, allow regexp in class and method names; suggested by Andreas Adamcik, Vienna
+
+* Tag for private methods
