@@ -8,7 +8,7 @@ class RDL::Wrap
     meth = meth.to_sym
     while $__rdl_aliases[klass] && $__rdl_aliases[klass][meth]
       if $__rdl_info.has_any?(klass, meth, [:pre, :post, :type])
-        raise RuntimeError, "Alias #{klass}\##{meth} has contracts. Contracts are only allowed on methods, not aliases."
+        raise RuntimeError, "Alias #{RDL::Util.pp_klass_method(klass, meth)} has contracts. Contracts are only allowed on methods, not aliases."
       end
       meth = $__rdl_aliases[klass][meth]
     end
@@ -31,7 +31,7 @@ class RDL::Wrap
       klass = RDL::Util.to_class klass_str
       return if wrapped? klass, meth
       return if RDL::Config.instance.nowrap.member? klass
-      raise ArgumentError, "Attempt to wrap #{klass.to_s}\##{meth.to_s}" if klass.to_s =~ /^RDL::/
+      raise ArgumentError, "Attempt to wrap #{RDL::Util.pp_klass_method(klass, meth)}" if klass.to_s =~ /^RDL::/
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
       # return if (klass.method_defined? meth_old) # now checked above by wrapped? call
       is_singleton_method = RDL::Util.has_singleton_marker(klass_str)
@@ -259,7 +259,10 @@ class Object
 #        end
         $__rdl_info.add(klass, meth, :type, type)
         unless $__rdl_info.set(klass, meth, :typecheck, typecheck)
-          raise RuntimeError, "Inconsistent typecheck flag on #{klass}##{meth}"
+          raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
+        end
+        unless $__rdl_info.set(klass, meth, :typecheck_now, typecheck_now)
+          raise RuntimeError, "Inconsistent typecheck_now flag on #{RDL::Util.pp_klass_method(klass, meth)}"
         end
         if wrap
           if RDL::Util.method_defined?(klass, meth) || meth == :initialize
@@ -340,7 +343,7 @@ class Object
           RDL::Wrap.wrap(klass, meth) if h[:wrap]
           RDL::Typecheck.typecheck(klass, meth) if h[:typecheck_now]
           unless $__rdl_info.set(klass, meth, :typecheck, h[:typecheck])
-            raise RuntimeError, "Inconsistent typecheck flag on #{klass}##{meth}"
+            raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
           end
 
 # It turns out Ruby core/stdlib don't always follow this convention...
@@ -382,7 +385,7 @@ class Object
           RDL::Wrap.wrap(sklass, meth) if h[:wrap]
           RDL::Typecheck.typecheck(sklass, meth) if h[:typecheck_now]
           unless $__rdl_info.set(klass, meth, :typecheck, h[:typecheck])
-            raise RuntimeError, "Inconsistent typecheck flag on #{klass}##{meth}"
+            raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
           end
         }
       end
