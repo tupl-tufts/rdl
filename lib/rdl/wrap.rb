@@ -279,6 +279,9 @@ class Object
     }
   end
 
+  # [+ klass +] is the class containing the variable; self if omitted; ignored for local and global variables
+  # [+ var +] is a symbol or string containing the name of the variable
+  # [+ typ +] is a string containing the type
   def var_type(klass=self, var, typ)
     raise RuntimeError, "Variable cannot begin with capital" if var.to_s =~ /^[A-Z]/
     return if var.to_s =~ /^[a-z]/ # local variables handled specially, inside type checker
@@ -288,6 +291,38 @@ class Object
       raise RuntimeError, "Type already declared for #{var}"
     end
   end
+
+  # In the following three methods
+  # [+ args +] is a sequence of symbol, typ. attr_reader is called for each symbol,
+  # and var_type is called to assign the immediately following type to the
+  # attribute named after that symbol.
+  def attr_accessor_type(*args)
+    args.each_slice(2) { |name, typ|
+      attr_accessor name
+      var_type ("@" + name.to_s), typ
+      type name, "() -> #{typ}"
+      type name.to_s + "=", "(#{typ}) -> #{typ}"
+    }
+  end
+
+  def attr_reader_type(*args)
+    args.each_slice(2) { |name, typ|
+      attr_reader name
+      var_type ("@" + name.to_s), typ
+      type name, "() -> #{typ}"
+    }
+  end
+
+  alias_method :attr_type, :attr_reader_type
+
+  def attr_writer_type(*args)
+    args.each_slice(2) { |name, typ|
+      attr_writer name
+      var_type ("@" + name.to_s), typ
+      type name.to_s + "=", "(#{typ}) -> #{typ}"
+    }
+  end
+
 
   def self.method_added(meth)
     $__rdl_contract_switch.off {

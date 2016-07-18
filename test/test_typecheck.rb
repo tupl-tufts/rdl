@@ -890,4 +890,30 @@ class TestTypecheck < Minitest::Test
     assert_equal tt("Hash<Symbol or String, Fixnum or String>"), do_tc("x = {'a' => 1, **_kwsplathsf, b: 'two'}", env: @env)
   end
 
+  def test_attr_etc
+    self.class.class_eval {
+      attr_reader_type :f_attr_reader, "Fixnum", :f_attr_reader2, "String"
+      attr_writer_type :f_attr_writer, "Fixnum"
+      attr_type :f_attr, "Fixnum"
+      attr_accessor_type :f_attr_accessor, "Fixnum"
+    }
+    assert_equal $__rdl_fixnum_type, do_tc("@f_attr_reader", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("TestTypecheck.new.f_attr_reader", env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("TestTypecheck.new.f_attr_reader = 4", env: @env) }
+    assert_equal $__rdl_string_type, do_tc("@f_attr_reader2", env: @env)
+    assert_equal $__rdl_string_type, do_tc("TestTypecheck.new.f_attr_reader2", env: @env)
+
+    assert_equal $__rdl_fixnum_type, do_tc("@f_attr", env: @env) # same as attr_reader
+    assert_equal $__rdl_fixnum_type, do_tc("TestTypecheck.new.f_attr", env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("TestTypecheck.new.f_attr = 42", env: @env) }
+
+    assert_equal @t3, do_tc("@f_attr_writer = 3", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("TestTypecheck.new.f_attr_writer = 3", env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("TestTypecheck.new.f_attr_writer", env: @env) }
+
+    assert_equal $__rdl_fixnum_type, do_tc("@f_attr_accessor", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("TestTypecheck.new.f_attr_accessor", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("TestTypecheck.new.f_attr_accessor = 42", env: @env)
+  end
+
 end

@@ -590,6 +590,18 @@ end
 
 The `var_type` method may also be called as `var_type klass, :name, typ` to assign a type to an instance or class variable of class `klass`.
 
+*[Following in github head only]*
+As a short-hand, RDL defines methods `attr_accessor_type`, `attr_reader_type`, and `attr_writer_type` to behave like their corresponding non-`_type` analogs but  attribute types follow the attribute names. For example, `attr_accessor_type :f, 'Fixnum', :g, 'String'` is equivalent to:
+
+```ruby
+var_type :@f, 'Fixnum'
+var_type :@g, 'String'
+type :f, '() -> Fixnum'
+type :f=, '(Fixnum) -> Fixnum'
+type :g, '() -> String'
+type :g=, '(String) -> String'
+```
+
 ## Tuples, Finite Hashes, and Subtyping
 
 When RDL encounters a literal array in the program, it assigns it a tuple type, which allows, among other things, precise handling of multiple assignment. For example:
