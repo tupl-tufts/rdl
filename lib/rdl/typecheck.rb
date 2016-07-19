@@ -132,7 +132,6 @@ module RDL::Typecheck
     end
   end
 
-
   # Call block with new Hash that is the same as Hash [+ scope +] except mappings in [+ elts +] have been merged.
   # When block returns, copy out mappings in the new Hash to [+ scope +] except keys in [+ elts +].
   def self.scope_merge(scope, **elts)
@@ -142,6 +141,15 @@ module RDL::Typecheck
       scope[k] = v unless elts.has_key? k
     }
     return r
+  end
+
+  # add x:t to the captured map in scope
+  def self.capture(scope, x, t)
+    if scope[:captured][x]
+      scope[:captured][x] = RDL::Type::UnionType.new(scope[:captured][x], t)
+    else
+      scope[:captured][x] = t
+    end
   end
 
   # report msg at ast's loc
@@ -189,10 +197,17 @@ module RDL::Typecheck
       unless type.args.length == args.children.length
         error :arg_count_mismatch, ['method', type.args.length, 'method', args.children.length], (if args.children.empty? then ast else args end)
       end
-      a = args.children.map { |arg| arg.children[0] }.zip(type.args).to_h
-      a[:self] = self_type
-      scope = {tret: type.ret, tblock: type.block }
-      _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(scope, Env.new(a), body) end
+      targs = args.children.map { |arg| arg.children[0] }.zip(type.args).to_h
+      targs[:self] = self_type
+      scope = { tret: type.ret, tblock: type.block, captured: Hash.new }
+      begin
+        old_captured = scope[:captured]
+        if body.nil?
+          body_type = $__rdl_nil_type
+        else
+          _, body_type = tc(scope, Env.new(targs.merge(scope[:captured])), body)
+        end
+      end until old_captured == scope[:captured]
       error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || body_type <= type.ret
     }
     $__rdl_info.set(klass, meth, :typechecked, true)
@@ -608,9 +623,6 @@ RUBY
       raise RuntimeError, "Loop variable #{e.children[0]} in for unsupported" unless e.children[0].type == :lvasgn
       # TODO: mlhs in e.children[0]
       x  = e.children[0].children[0] # loop variable
-      if scope[:outer_env] && (scope[:outer_env].has_key? x) && (not (scope[:outer_env].fixed? x))
-        error :nonlocal_access, [x], e.children[0]
-      end
       envi, tcollect = tc(scope, env, e.children[1]) # collection to iterate through
       teaches = nil
       tcollect = tcollect.canonical
@@ -742,9 +754,10 @@ RUBY
     case kind
     when :lvar  # local variable
       error :undefined_local_or_method, [name], e unless env.has_key? name
-      if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
-        error :nonlocal_access, [name], e
-      end
+      capture(scope, name, env[name].canonical) if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
+      # if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
+      #   error :nonlocal_access, [name], e
+      # end
       [env, env[name].canonical]
     when :ivar, :cvar, :gvar
       klass = (if kind == :gvar then RDL::Util::GLOBAL_NAME else env[:self] end)
@@ -765,9 +778,10 @@ RUBY
   def self.tc_vasgn(scope, env, kind, name, tright, e)
     case kind
     when :lvasgn
-      if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
-        error :nonlocal_access, [name], e
-      end
+      capture(scope, name, tright.canonical) if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
+      # if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
+      #   error :nonlocal_access, [name], e
+      # end
       if env.fixed? name
         error :vasgn_incompat, [tright, env[name]], e unless tright <= env[name]
         [env, tright.canonical]

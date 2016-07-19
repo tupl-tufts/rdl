@@ -22,7 +22,7 @@ class TestTypecheck < Minitest::Test
     @env = RDL::Typecheck::Env.new(self: tt("TestTypecheck"))
     @scopef = { tret: $__rdl_fixnum_type }
     @tfs = RDL::Type::UnionType.new($__rdl_fixnum_type, $__rdl_string_type)
-    @scopefs = { tret: @tfs }
+    @scopefs = { tret: @tfs, tblock: nil }
   end
 
   # [+ a +] is the environment, a map from symbols to types; empty if omitted
@@ -498,9 +498,24 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42) { |x, y| x + y }", env: @env) }
     assert_equal $__rdl_fixnum_type, do_tc("_send_block1(42) { |x| x }", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42) { |x| 'forty-two' }", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = 1; _send_block1(42) { |y| x }", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = 1; _send_block1(42) { |y| x = 2 }", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = 1; _send_block1(42) { |y| for x in 1..5 do end }", env: @env) } # odd case...
+    self.class.class_eval {
+      type "() -> 1", typecheck: :now
+      def _send_blockd1
+        x = 1; _send_block1(42) { |y| x }; x
+      end
+    }
+    self.class.class_eval {
+      type "() -> 1 or String", typecheck: :now
+      def _send_blockd2
+        x = 1; _send_block1(42) { |y| x = 'one'; y}; x
+      end
+    }
+    self.class.class_eval {
+      type "() -> 1 or String", typecheck: :now
+      def _send_blockd3
+        x = 'one'; _send_block1(42) { |y| for x in 1..5 do end; y }; x
+      end
+    }
   end
 
   def test_send_union

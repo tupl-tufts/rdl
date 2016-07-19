@@ -577,6 +577,15 @@ x = "three" # type error
 
 The first argument to `var_type` is a symbol with the local variable name, and the second argument is a string containing the variable's type. Note that `var_type` is most useful at the beginning of method or code block. Using it elsewhere may result in surprising error mesages, since RDL requires variables with fixed types to have the same type along all paths. Method parameters are treated as if `var_type` was called on them at the beginning of the method, fixing them to their declared type. This design choice may be revisited in the future.
 
+*[The following feature is only available in the github head]*
+There is one subtlety for local variables and code blocks. Consider the following code:
+```ruby
+x = 1
+m() { x = 'bar' }
+# what is x's type here?
+```
+If `m` invokes the code block, `x` will be a `String` after the call. Otherwise `x` will be `1`. Since RDL can't tell whether the code block is ever called, it assigns `x` type `1 or String`. It's actually quite tricky to do very precise reasoning about code blocks. For example, `m` could (pathologically) store its block in a global variable and then only call it the second time `m` is invoked. To keep its reasoning simple, RDL treats any local variables captured (i.e., imported from an outer scope) by a code block flow-insensitively for the lifetime of the method. The type of any such local variables is the union of all types that are ever assigned to it.
+
 RDL always treats instance, class, and global variables flow-insensitively, hence their types must be defined with `var_type`:
 
 ```ruby
