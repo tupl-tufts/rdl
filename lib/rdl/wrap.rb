@@ -54,7 +54,7 @@ class RDL::Wrap
             #{if not(is_singleton_method) then "inst[:self] = RDL::Type::NominalType.new(self.class)" end}
 #            puts "Intercepted #{full_method_name}(\#{args.join(", ")}) { \#{blk} }, inst = \#{inst.inspect}"
             meth = RDL::Wrap.resolve_alias(klass, #{meth.inspect})
-            RDL::Typecheck.typecheck(klass, meth) if $__rdl_info.get(klass, meth, :typecheck)
+            RDL::Typecheck.typecheck(klass, meth) if $__rdl_info.get(klass, meth, :typecheck) == :call
             pres = $__rdl_info.get(klass, meth, :pre)
             RDL::Contract::AndContract.check_array(pres, self, *args, &blk) if pres
             types = $__rdl_info.get(klass, meth, :type)
@@ -228,17 +228,20 @@ class Object
     }
   end
 
-  # [+klass+] may be Class, Symbol, or String
-  # [+method+] may be Symbol or String
-  # [+type+] may be Type or String
-  # [+wrap+] indicates whether the type should be enforced (true) or just recorded (false)
-  # [+typecheck+] indicates whether the method should be statically checked against this type (not yet implemented)
+  # [+ klass +] may be Class, Symbol, or String
+  # [+ method +] may be Symbol or String
+  # [+ type +] may be Type or String
+  # [+ wrap +] indicates whether the type should be enforced (true) or just recorded (false)
+  # [+ typecheck +] indicates a method that should be statically type checked, as follows
+  #    if :call, indicates method should be typechecked when called
+  #    if :now, indicates method should be typechecked immediately
+  #    if other-symbol, indicates method should be typechecked when rdl_do_typecheck(other-symbol) is called
   #
   # Set a method's type. Possible invocations:
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
-  def type(*args, wrap: true, typecheck: false, typecheck_now: false, &blk)
+  def type(*args, wrap: true, typecheck: false, &blk)
     $__rdl_contract_switch.off {
       klass, meth, type = begin
                             RDL::Wrap.process_type_args(self, *args, &blk)
@@ -261,23 +264,22 @@ class Object
         unless $__rdl_info.set(klass, meth, :typecheck, typecheck)
           raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
         end
-        unless $__rdl_info.set(klass, meth, :typecheck_now, typecheck_now)
-          raise RuntimeError, "Inconsistent typecheck_now flag on #{RDL::Util.pp_klass_method(klass, meth)}"
-        end
         if wrap
           if RDL::Util.method_defined?(klass, meth) || meth == :initialize
             $__rdl_info.set(klass, meth, :source_location, RDL::Util.to_class(klass).instance_method(meth).source_location)
-            RDL::Typecheck.typecheck(klass, meth) if typecheck_now
+            RDL::Typecheck.typecheck(klass, meth) if typecheck == :now
             RDL::Wrap.wrap(klass, meth)
           else
             $__rdl_to_wrap << [klass, meth]
-            $__rdl_to_typecheck_now << [klass, meth] if typecheck_now
+            if (typecheck && typecheck != :call)
+              $__rdl_to_typecheck[typecheck] = Set.new unless $__rdl_to_typecheck[typecheck]
+              $__rdl_to_typecheck[typecheck].add([klass, meth])
+            end
           end
         end
       else
         $__rdl_deferred << [klass, :type, type, {wrap: wrap,
-                                                 typecheck: typecheck,
-                                                 typecheck_now: typecheck_now}]
+                                                 typecheck: typecheck}]
       end
     }
   end
@@ -288,7 +290,7 @@ class Object
   def var_type(klass=self, var, typ)
     raise RuntimeError, "Variable cannot begin with capital" if var.to_s =~ /^[A-Z]/
     return if var.to_s =~ /^[a-z]/ # local variables handled specially, inside type checker
-    raise Runtimeerror, "Global variables can't be typed in a class" unless klass = self
+    raise RuntimeError, "Global variables can't be typed in a class" unless klass = self
     klass = RDL::Util::GLOBAL_NAME if var.to_s =~ /^\$/
     unless $__rdl_info.set(klass, var, :type, $__rdl_parser.scan_str("#T #{typ}"))
       raise RuntimeError, "Type already declared for #{var}"
@@ -341,16 +343,14 @@ class Object
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
           $__rdl_info.add(klass, meth, kind, contract)
           RDL::Wrap.wrap(klass, meth) if h[:wrap]
-          if h[:typecheck_now]
-            unless $__rdl_info.set(klass, meth, :typecheck_now, h[:typecheck_now])
-              raise RuntimeError, "Inconsistent typecheck_now flag on #{RDL::Util.pp_klass_method(klass, meth)}"
-            end
-            RDL::Typecheck.typecheck(klass, meth)
-          end
           unless $__rdl_info.set(klass, meth, :typecheck, h[:typecheck])
             raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
           end
-
+          RDL::Typecheck.typecheck(klass, meth) if h[:typecheck] == :now
+          if (h[:typecheck] && h[:typecheck] != :call)
+            $__rdl_to_typecheck[h[:typecheck]] = Set.new unless $__rdl_to_typecheck[h[:typecheck]]
+            $__rdl_to_typecheck[h[:typecheck]].add([klass, meth])
+          end
 # It turns out Ruby core/stdlib don't always follow this convention...
 #          if (kind == :type) && (meth.to_s[-1] == "?") && (contract.ret != $__rdl_type_bool)
 #            warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
@@ -366,8 +366,8 @@ class Object
       end
 
       # Type check method if requested; must typecheck before wrap
-      if $__rdl_to_typecheck_now.member? [klass, meth]
-        $__rdl_to_typecheck_now.delete [klass, meth]
+      if $__rdl_to_typecheck[:now].member? [klass, meth]
+        $__rdl_to_typecheck[:now].delete [klass, meth]
         RDL::Typecheck.typecheck(klass, meth)
       end
     }
@@ -388,14 +388,13 @@ class Object
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
           $__rdl_info.add(sklass, meth, kind, contract)
           RDL::Wrap.wrap(sklass, meth) if h[:wrap]
-          if h[:typecheck_now]
-            unless $__rdl_info.set(sklass, meth, :typecheck_now, h[:typecheck_now])
-              raise RuntimeError, "Inconsistent typecheck_now flag on #{RDL::Util.pp_klass_method(sklass, meth)}"
-            end
-            RDL::Typecheck.typecheck(sklass, meth)
-          end
           unless $__rdl_info.set(klass, meth, :typecheck, h[:typecheck])
             raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
+          end
+          RDL::Typecheck.typecheck(sklass, meth) if h[:typecheck] == :now
+          if (h[:typecheck] && h[:typecheck] != :call)
+            $__rdl_to_typecheck[h[:typecheck]] = Set.new unless $__rdl_to_typecheck[h[:typecheck]]
+            $__rdl_to_typecheck[h[:typecheck]].add([sklass, meth])
           end
         }
       end
@@ -408,8 +407,8 @@ class Object
       end
 
       # Type check method if requested
-      if $__rdl_to_typecheck_now.member? [sklass, meth]
-        $__rdl_to_typecheck_now.delete [sklass, meth]
+      if $__rdl_to_typecheck[:now].member? [sklass, meth]
+        $__rdl_to_typecheck[:now].delete [sklass, meth]
         RDL::Typecheck.typecheck(sklass, meth)
       end
     }
@@ -550,5 +549,12 @@ class Object
     }
   end
 
+  # Type check all methods that had annotation `typecheck: sym' at type call
+  def rdl_do_typecheck(sym)
+    $__rdl_to_typecheck[sym].each { |klass, meth|
+      RDL::Typecheck.typecheck(klass, meth)
+    }
+    $__rdl_to_typecheck[sym] = Array.new
+  end
 
 end

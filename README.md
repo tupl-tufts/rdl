@@ -77,7 +77,7 @@ The beta version of RDL also has an experimental mode in which method bodies can
 file.rb:
   require 'rdl'
 
-  type '(Fixnum) -> Fixnum', typecheck_now: true
+  type '(Fixnum) -> Fixnum', typecheck: :now
   def id(x)
     "forty-two"
   end
@@ -91,7 +91,7 @@ $ ruby file.rb
 .../file.rb:5:     ^~~~~~~~~~~
 ```
 
-Passing `typecheck_now: true` to `type` checks the method body immediately or as soon as it is defined. Passing `typecheck: true` to `type` statically type checks the method body whenever it is called.
+Passing `typecheck: :now` to `type` checks the method body immediately or as soon as it is defined. Passing `typecheck: :call` to `type` statically type checks the method body whenever it is called. Passing `typecheck: sym` for some other symbol statically type checks the method body when `rdl_do_typecheck sym` is called.
 
 RDL contracts and types are stored in memory at run time, so it's also possible for programs to query them. RDL includes lots of contracts and types for the core and standard libraries. Since those methods are generally trustworthy, RDL doesn't actually enforce the contracts (since that would add overhead), but they are available to search and query. RDL includes a small script `rdl_query` to look up type information from the command line. Note you might need to put the argument in quotes depending on your shell.
 
@@ -540,9 +540,11 @@ RDL also includes a special *bottom* type `%bot` that is a subtype of any type, 
 
 # Static Type Checking
 
-RDL has experimental support (note: this is in beta release) for static type checking. As mentioned in the introduction, calling `type` with `typecheck_now: true` statically type checks the body of the annotated method body against the given signature. If the method has already been defined, RDL will try to check the method immediately. Otherwise, RDL will statically type check the method as soon as it is loaded.
+RDL has experimental support (note: this is in beta release) for static type checking. As mentioned in the introduction, calling `type` with `typecheck: :now` statically type checks the body of the annotated method body against the given signature. If the method has already been defined, RDL will try to check the method immediately. Otherwise, RDL will statically type check the method as soon as it is loaded.
 
-Often method bodies cannot be type checked as soon as they are loaded because they refer to classes, methods, and variables that have not been created yet. To support these cases, `type` can be called with `typecheck: true`, which will delay checking the method's type until the method is called. Currently these checks are not cached, so expect a big performance hit for using this feature.
+Often method bodies cannot be type checked as soon as they are loaded because they refer to classes, methods, and variables that have not been created yet. To support these cases, some other symbol can be supplied as `typecheck: sym`. Then when `rdl_do_typecheck sym` is called, all methods typechecked at `sym` will be statically checked.
+
+Addditionally, `type` can be called with `typecheck: :call`, which will delay checking the method's type until the method is called. Currently these checks are not cached, so expect a big performance hit for using this feature.
 
 To perform type checking, RDL needs source code, which it gets by parsing the file containing the to-be-typechecked method. Hence, static type checking does not work in `irb` since RDL has no way of getting the source. RDL currently uses the [parser Gem](https://github.com/whitequark/parser) to parse Ruby source code. (And RDL uses the parser gem's amazing diagnostic output facility to print type error messages.)
 

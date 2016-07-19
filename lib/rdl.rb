@@ -39,8 +39,10 @@ $__rdl_aliases = Hash.new
 # method is a symbol
 $__rdl_to_wrap = Set.new
 
-# Same as $__rdl_to_wrap, but records [class, method] pairs to type check when they're defined
-$__rdl_to_typecheck_now = Set.new
+# Map from symbols to set of [class, method] pairs to type check when those symbols are rdl_do_typecheck'd
+# (or the methods are defined, for the symbol :now)
+$__rdl_to_typecheck = Hash.new
+$__rdl_to_typecheck[:now] = Set.new
 
 # List of contracts that should be applied to the next method definition
 $__rdl_deferred = []

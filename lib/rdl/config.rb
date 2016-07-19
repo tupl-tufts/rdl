@@ -128,7 +128,7 @@ at_exit do
     missing = []
     $__rdl_info.info.each_pair { |klass, meths|
       meths.each { |meth, kinds|
-        if kinds[:typecheck] || kinds[:typecheck_now]
+        if kinds[:typecheck]
           if kinds[:typechecked]
             typechecked << [klass, meth]
           else

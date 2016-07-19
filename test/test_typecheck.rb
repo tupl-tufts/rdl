@@ -41,51 +41,58 @@ class TestTypecheck < Minitest::Test
 
   def test_def
     self.class.class_eval {
-      type "(Fixnum) -> Fixnum", typecheck_now: true
+      type "(Fixnum) -> Fixnum", typecheck: :now
       def def_ff(x) x; end
     }
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
-        type "(Fixnum) -> Fixnum", typecheck_now: true
+        type "(Fixnum) -> Fixnum", typecheck: :now
         def def_fs(x) "42"; end
       }
     }
 
     self.class.class_eval {
-      type "(Fixnum) -> Fixnum", typecheck_now: true
+      type "(Fixnum) -> Fixnum", typecheck: :now
       def def_ff2(x) x; end
     }
     assert_equal 42, def_ff2(42)
 
     self.class.class_eval {
-      type "(Fixnum) -> Fixnum", typecheck: true
+      type "(Fixnum) -> Fixnum", typecheck: :call
       def def_fs2(x) "42"; end
     }
     assert_raises(RDL::Typecheck::StaticTypeError) { def_fs2(42) }
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
-        type "(Fixnum) -> Fixnum", typecheck_now: true
+        type "(Fixnum) -> Fixnum", typecheck: :now
         def def_ff3(x, y) 42; end
       }
     }
+
+    self.class.class_eval {
+      type "(Fixnum) -> Fixnum", typecheck: :later
+      def def_ff4(x, y) 42; end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :later }
   end
 
   def test_defs
     self.class.class_eval {
-      type "(Fixnum) -> Class", typecheck_now: true
+      type "(Fixnum) -> Class", typecheck: :now
       def self.defs_ff(x) self; end
     }
 
     self.class.class_eval {
-      type "() -> Class", typecheck_now: true
+      type "() -> Class", typecheck: :now
       def self.defs_nn() defs_ff(42); end
     }
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
-        type "() -> Class", typecheck_now: true
+        type "() -> Class", typecheck: :now
         def self.defs_other() fdsakjfhds(42); end
       }
     }
@@ -107,7 +114,7 @@ class TestTypecheck < Minitest::Test
 
   def test_empty
     self.class.class_eval {
-      type "() -> nil", typecheck_now: true
+      type "() -> nil", typecheck: :now
       def empty() end
     }
   end
@@ -115,10 +122,10 @@ class TestTypecheck < Minitest::Test
   def test_dstr_xstr
     # Hard to read if these are inside of strings, so leave like this
     self.class.class_eval {
-      type "() -> String", typecheck_now: true
+      type "() -> String", typecheck: :now
       def dstr() "Foo #{42} Bar #{43}"; end
 
-      type "() -> String", typecheck_now: true
+      type "() -> String", typecheck: :now
       def xstr() `ls #{42}`; end
     }
   end
@@ -130,7 +137,7 @@ class TestTypecheck < Minitest::Test
   def test_dsym
     # Hard to read if these are inside of strings, so leave like this
     self.class.class_eval {
-      type "() -> Symbol", typecheck_now: true
+      type "() -> Symbol", typecheck: :now
       def dsym() :"foo#{42}"; end
     }
   end
@@ -140,7 +147,7 @@ class TestTypecheck < Minitest::Test
 
     self.class.class_eval {
       # Hard to read if these are inside of strings, so leave like this
-      type "() -> Regexp", typecheck_now: true
+      type "() -> Regexp", typecheck: :now
       def regexp2() /foo#{42}bar#{"baz"}/i; end
     }
   end
@@ -166,18 +173,18 @@ class TestTypecheck < Minitest::Test
   def test_self
     # These need to be inside an actual class
     self.class.class_eval {
-      type "() -> self", typecheck_now: true
+      type "() -> self", typecheck: :now
       def self1() self; end
     }
 
     self.class.class_eval {
-      type "() -> self", typecheck_now: true
+      type "() -> self", typecheck: :now
       def self2() TestTypecheck.new; end
     }
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
-        type "() -> self", typecheck_now: true
+        type "() -> self", typecheck: :now
         def self3() Object.new; end
       }
     }
@@ -199,19 +206,19 @@ class TestTypecheck < Minitest::Test
 
   def test_lvar
     self.class.class_eval {
-      type "(Fixnum, String) -> Fixnum", typecheck_now: true
+      type "(Fixnum, String) -> Fixnum", typecheck: :now
       def lvar1(x, y) x; end
     }
 
     self.class.class_eval {
-      type "(Fixnum, String) -> String", typecheck_now: true
+      type "(Fixnum, String) -> String", typecheck: :now
       def lvar2(x, y) y; end
     }
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       # really a send
       self.class.class_eval {
-        type "(Fixnum, String) -> String", typecheck_now: true
+        type "(Fixnum, String) -> String", typecheck: :now
         def lvar3(x, y) z; end
       }
     }
@@ -235,12 +242,12 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_fixnum_type, do_tc("var_type :x, 'Fixnum'; x = 3; x", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :x, 'Fixnum'; x = 'three'", env: @env) }
     self.class.class_eval {
-      type "(Fixnum) -> nil", typecheck_now: true
+      type "(Fixnum) -> nil", typecheck: :now
       def lvar_type_ff(x) x = 42; nil; end
     }
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
-        type "(Fixnum) -> nil", typecheck_now: true
+        type "(Fixnum) -> nil", typecheck: :now
         def lvar_type_ff2(x) x = "forty-two"; nil; end
       }
     }
@@ -508,7 +515,7 @@ class TestTypecheck < Minitest::Test
 
   def test_yield
     self.class.class_eval {
-      type "(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum", typecheck_now: true
+      type "(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum", typecheck: :now
       def _yield1(x)
         yield x
       end
@@ -516,7 +523,7 @@ class TestTypecheck < Minitest::Test
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
-        type "(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum", typecheck_now: true
+        type "(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum", typecheck: :now
         def _yield2(x)
           yield 'forty-two'
         end
@@ -525,7 +532,7 @@ class TestTypecheck < Minitest::Test
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
-        type "(Fixnum) { (Fixnum) -> String } -> Fixnum", typecheck_now: true
+        type "(Fixnum) { (Fixnum) -> String } -> Fixnum", typecheck: :now
         def _yield3(x)
           yield 42
         end
@@ -534,7 +541,7 @@ class TestTypecheck < Minitest::Test
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
-        type "(Fixnum) -> Fixnum", typecheck_now: true
+        type "(Fixnum) -> Fixnum", typecheck: :now
         def _yield4(x)
           yield 42
         end
@@ -543,7 +550,7 @@ class TestTypecheck < Minitest::Test
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
-        type "(Fixnum) { (Fixnum) { (Fixnum) -> Fixnum } -> Fixnum } -> Fixnum", typecheck_now: true
+        type "(Fixnum) { (Fixnum) { (Fixnum) -> Fixnum } -> Fixnum } -> Fixnum", typecheck: :now
         def _yield5(x)
           yield 42
         end
@@ -552,14 +559,14 @@ class TestTypecheck < Minitest::Test
   end
 
   # class Sup1
-  #   type '(Fixnum) -> Fixnum', typecheck: true
+  #   type '(Fixnum) -> Fixnum', typecheck: :call
   #   def foo(y)
   #     return y
   #   end
   # end
   #
   # class Sup2 < Sup1
-  #   type '(Fixnum) -> Fixnum', typecheck: true
+  #   type '(Fixnum) -> Fixnum', typecheck: :call
   #   def foo(x)
   #     super(x+1)
   #   end
@@ -693,7 +700,7 @@ class TestTypecheck < Minitest::Test
 
   def test_return
     assert self.class.class_eval {
-      type "(Fixnum) -> Fixnum", typecheck_now: true
+      type "(Fixnum) -> Fixnum", typecheck: :now
       def return_ff(x)
         return 42
       end
@@ -701,7 +708,7 @@ class TestTypecheck < Minitest::Test
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
-        type "(Fixnum) -> Fixnum", typecheck_now: true
+        type "(Fixnum) -> Fixnum", typecheck: :now
         def return_ff2(x)
           return "forty-two"
         end
