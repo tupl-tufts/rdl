@@ -925,8 +925,8 @@ RUBY
         :initialize
       elsif trecv.is_a? RDL::Type::SingletonType
         trecv.val.class.to_s
-      elsif trecv.is_a? RDL::Type::NominalType
-        trecv.name
+      elsif (trecv.is_a? RDL::Type::NominalType) || (trecv.is_a? RDL::Type::GenericType)
+        trecv.to_s
       else
         raise RuntimeError, "impossible to get type #{trecv}"
       end
