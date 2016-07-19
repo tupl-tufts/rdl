@@ -341,7 +341,12 @@ class Object
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
           $__rdl_info.add(klass, meth, kind, contract)
           RDL::Wrap.wrap(klass, meth) if h[:wrap]
-          RDL::Typecheck.typecheck(klass, meth) if h[:typecheck_now]
+          if h[:typecheck_now]
+            unless $__rdl_info.set(klass, meth, :typecheck_now, h[:typecheck_now])
+              raise RuntimeError, "Inconsistent typecheck_now flag on #{RDL::Util.pp_klass_method(klass, meth)}"
+            end
+            RDL::Typecheck.typecheck(klass, meth)
+          end
           unless $__rdl_info.set(klass, meth, :typecheck, h[:typecheck])
             raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
           end
@@ -383,7 +388,12 @@ class Object
           raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
           $__rdl_info.add(sklass, meth, kind, contract)
           RDL::Wrap.wrap(sklass, meth) if h[:wrap]
-          RDL::Typecheck.typecheck(sklass, meth) if h[:typecheck_now]
+          if h[:typecheck_now]
+            unless $__rdl_info.set(sklass, meth, :typecheck_now, h[:typecheck_now])
+              raise RuntimeError, "Inconsistent typecheck_now flag on #{RDL::Util.pp_klass_method(sklass, meth)}"
+            end
+            RDL::Typecheck.typecheck(sklass, meth)
+          end
           unless $__rdl_info.set(klass, meth, :typecheck, h[:typecheck])
             raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
           end

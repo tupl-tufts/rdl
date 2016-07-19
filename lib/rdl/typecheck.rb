@@ -195,6 +195,7 @@ module RDL::Typecheck
       _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(scope, Env.new(a), body) end
       error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || body_type <= type.ret
     }
+    $__rdl_info.set(klass, meth, :typechecked, true)
   end
 
   # The actual type checking logic.
