@@ -986,7 +986,9 @@ RUBY
     # TODO self is the same *except* instance_exec or instance_eval
     raise RuntimeError, "block with block arg?" unless tblock.block.nil?
     args, body = block
-    error :arg_count_mismatch, ['block', tblock.args.length, 'block', args.children.length], block[0] unless tblock.args.length == args.children.length
+    unless tblock.args.length == args.children.length
+      error :arg_count_mismatch, ['block', tblock.args.length, 'block', args.children.length], (if block[0].children.empty? then block[1] else block[0] end)
+    end
     a = args.children.map { |arg| arg.children[0] }.zip(tblock.args).to_h
 
     scope_merge(scope, outer_env: env) { |bscope|
