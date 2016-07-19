@@ -789,6 +789,7 @@ class TestTypecheck < Minitest::Test
     # w/send
     assert_equal tt("2"), do_tc("e = E.new; e.f, b = 1, 2; b", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("e = E.new; e.f, b = @f_masgn; b", env: @env)
+    assert_equal tt("[1, 2]"), do_tc("@f_masgn[3], y = 1, 2", env: @env)
 
     # w/splat
    assert_equal tt("[1, 2, 3]"), do_tc("*x = [1, 2, 3]")

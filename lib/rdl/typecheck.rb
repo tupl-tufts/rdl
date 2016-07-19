@@ -807,8 +807,17 @@ RUBY
     when :send
       meth = e.children[1] # note method name include =!
       envi, trecv = tc(scope, env, e.children[0]) # receiver
+      typs = []
+      if e.children.length > 2
+        # special case of []= when there's a second arg (the index)
+        # this code is a little more general than it has to be unless other similar operators added
+        e.children[2..-1].each { |arg|
+          envi, targ = tc(scope, envi, arg)
+          typs << targ
+        }
+      end
       # name is not useful here
-      [envi, tc_send(scope, envi, trecv, meth, [tright], nil, e)] # call receiver.meth(tright)
+      [envi, tc_send(scope, envi, trecv, meth, [*typs, tright], nil, e)] # call receiver.meth(other args, tright)
     else
       raise RuntimeError, "unknown kind #{kind}"
     end
