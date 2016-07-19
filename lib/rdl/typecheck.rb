@@ -600,6 +600,7 @@ RUBY
         [lscope[:break], lscope[:tbreak].canonical]
       }
     when :for
+      # (for (lvasgn var) collection body)
       # break: loop exit, which is same as top of body, arg allowed
       # next: top of body, arg allowed
       # retry: not allowed
@@ -639,7 +640,7 @@ RUBY
         break
       }
       error :no_each_type, [tcollect.name], e.children[1] if teach.nil?
-      envi = envi.bind(x, teach.block.args[0])
+      envi, _ = tc_vasgn(scope, envi, :lvasgn, x, teach.block.args[0], e.children[0])
       scope_merge(scope, break: envi, next: envi, redo: envi, tbreak: teach.ret, tnext: envi[x])  { |lscope|
         # could exit here
         # if the loop always exits via break, then return type will come only from break, and otherwise the
