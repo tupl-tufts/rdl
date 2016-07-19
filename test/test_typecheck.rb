@@ -96,6 +96,13 @@ class TestTypecheck < Minitest::Test
         def self.defs_other() fdsakjfhds(42); end
       }
     }
+
+    self.class.class_eval {
+      type "(Fixnum) -> Fixnum", typecheck: :later
+      def self.defs_ff2(x, y) 42; end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :later }
   end
 
   def test_lits
