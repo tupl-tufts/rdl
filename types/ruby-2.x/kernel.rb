@@ -81,6 +81,7 @@ module Kernel
 #  type 'self.trap' # TODO
 #  type 'self.untrace_var' # TODO
   type 'self.warn', '(*String msg) -> nil'
+  type :clone, '() -> self'
   type :raise, '() -> nil'
   type :raise, '(String) -> nil'
   type :raise, '(Class, String, Array<String>) -> nil'

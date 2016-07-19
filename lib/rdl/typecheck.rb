@@ -928,7 +928,7 @@ RUBY
       elsif trecv.is_a? RDL::Type::NominalType
         trecv.name
       else
-        raise RutimeError, "impossible"
+        raise RuntimeError, "impossible to get type #{trecv}"
       end
       error :arg_type_single_receiver_error, [name, meth, msg], e
     end
@@ -1018,24 +1018,32 @@ RUBY
   # [+ name +] is a symbol naming the thing to look up (either a method or field)
   # returns klass#name's type, walking up the inheritance hierarchy if appropriate
   # returns nil if no type found
+
+  # *always* included module's instance methods only
+  # if included, those methods are added to instance_methods
+  # if extended, those methods are added to singleton_methods
   def self.lookup(klass, name, e)
-    name = $__rdl_aliases[klass][name] if $__rdl_aliases[klass] && $__rdl_aliases[klass][name]
-    t = $__rdl_info.get(klass, name, :type)
+    t = $__rdl_info.get_with_aliases(klass, name, :type)
     return t if t # simplest case, no need to walk inheritance hierarchy
     the_klass = RDL::Util.to_class(klass)
+    is_singleton = RDL::Util.has_singleton_marker(the_klass.to_s)
     included = the_klass.included_modules
     the_klass.ancestors[1..-1].each { |ancestor|
       # assumes ancestors is proper order to walk hierarchy
-      if (ancestor.is_a? Module) && (included.member? ancestor)
-        ancestor_name = RDL::Util.add_singleton_marker(ancestor.to_s)
-      else
-        ancestor_name = ancestor.to_s
-      end
-      tancestor = $__rdl_info.get(ancestor_name, name, :type)
+      # included modules' instance methods get added as instance methods, so can't be in singleton class
+      next if (ancestor.instance_of? Module) && (included.member? ancestor) && is_singleton
+      # extended (i.e., not included) modules' instance methods get added as singleton methods, so can't be in class
+      next if (ancestor.instance_of? Module) && (not (included.member? ancestor)) && (not is_singleton)
+      tancestor = $__rdl_info.get_with_aliases(ancestor.to_s, name, :type)
       return tancestor if tancestor
-      if (if RDL::Util.has_singleton_marker(ancestor_name) then ancestor.singleton_methods(false).member?(name) else ancestor.instance_methods(false).member?(name) end)
+      # special caes: Kernel's singleton methods are *also* added when included?!
+      if ancestor == Kernel
+        tancestor = $__rdl_info.get_with_aliases(RDL::Util.add_singleton_marker('Kernel'), name, :type)
+        return tancestor if tancestor
+      end
+      if ancestor.instance_methods(false).member?(name)
         klass = RDL::Util.remove_singleton_marker klass if RDL::Util.has_singleton_marker klass
-        error :missing_ancestor_type, [ancestor_name, klass, name], e
+        error :missing_ancestor_type, [ancestor, klass, name], e
       end
     }
     return nil

@@ -71,4 +71,12 @@ class RDL::Info
     return t2[kind]
 #    return @info[klass][label][kind]
   end
+
+  def get_with_aliases(klass, label, kind)
+    while $__rdl_aliases[klass] && $__rdl_aliases[klass][label]
+      label = $__rdl_aliases[klass][label]
+    end
+    get(klass, label, kind)
+  end
+
 end
