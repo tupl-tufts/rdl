@@ -330,7 +330,7 @@ module RDL::Typecheck
       # promote singleton types to nominal types; safe since Ranges are immutable
       t1 = RDL::Type::NominalType.new(t1.val.class) if t1.is_a? RDL::Type::SingletonType
       t2 = RDL::Type::NominalType.new(t2.val.class) if t2.is_a? RDL::Type::SingletonType
-      error :nonmatching_range_type, [t1, t2], e if t1 != t2
+      error :nonmatching_range_type, [t1, t2], e unless t1 <= t2 || t2 <= t1
       [env2, RDL::Type::GenericType.new($__rdl_range_type, t1)]
     when :self
       [env, env[:self]]
