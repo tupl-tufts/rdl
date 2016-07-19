@@ -157,6 +157,10 @@ module RDL::Typecheck
     raise StaticTypeError, ("\n" + (Parser::Diagnostic.new :error, reason, args, ast.loc.expression).render.join("\n"))
   end
 
+  def self.note(reason, args, ast)
+    puts (Parser::Diagnostic.new :note, reason, args, ast.loc.expression).render
+  end
+
   def self.typecheck(klass, meth)
     file, line = $__rdl_info.get(klass, meth, :source_location)
     raise RuntimeError, "static type checking in irb not supported" if file == "(irb)"
@@ -467,8 +471,9 @@ module RDL::Typecheck
       # children[0] = receiver; if nil, receiver is self
       # children[1] = method name, a symbol
       # children [2..] = actual args
-      return tc_var_type(scope, env, e) if e.children[1] == :var_type && e.children[0].nil? && scope[:block].nil?
+      return tc_var_type(scope, env, e) if e.children[1] == :var_type && e.children[0].nil?
       return tc_type_cast(scope, env, e) if e.children[1] == :type_cast && scope[:block].nil?
+      return tc_note_type(scope, env, e) if e.children[1] == :rdl_note_type && e.children[0].nil?
       envi = env
       tactuals = []
       block = scope[:block]
@@ -811,7 +816,7 @@ RUBY
 
   # [+ e +] is the method call
   def self.tc_var_type(scope, env, e)
-    error :var_type_format, [], e unless e.children.length == 4
+    error :var_type_format, [], e unless e.children.length == 4 && scope[:block].nil?
     var = e.children[2].children[0] if e.children[2].type == :sym
     error :var_type_format, [], e.children[2] if var.nil? || (not (var =~ /^[a-z]/))
     typ_str = e.children[3].children[0] if (e.children[3].type == :str) || (e.children[3].type == :string)
@@ -842,6 +847,13 @@ RUBY
       env1, _ = tc(scope, env, force_arg)
     end
     [env1, typ]
+  end
+
+  def self.tc_note_type(scope, env, e)
+    error :note_type_format, [], e unless e.children.length == 3 && scope[:block].nil?
+    env, typ = tc(scope, env, e.children[2])
+    note :note_type, [typ], e.children[2]
+    [env, typ]
   end
 
   # Type check a send
@@ -1075,12 +1087,14 @@ type_error_messages = {
   block_block: "can't call yield on a block expecting another block argument",
   block_type_error: "argument type error for block\n%s",
   missing_ancestor_type: "ancestor %s of %s has method %s but no type for it",
-  type_cast_format: "type_cast must be called as type_cast('type-string') or type_cast('type-string', force: expr)",
-  var_type_format: "var_type must be called as var_type(:var-name, 'type-string')",
+  type_cast_format: "type_cast must be called as `type_cast type-string' or `type_cast type-string, force: expr'",
+  var_type_format: "var_type must be called as `var_type :var-name, type-string'",
+  puts_type_format: "puts_type must be called as `puts_type e'",
   generic_error: "%s",
   exn_type: "can't determine exception type",
   cant_splat: "can't type splat with element of type `%s'",
   for_collection: "can't type for with collection of type `%s'",
+  note_type: "Type is `%s'"
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

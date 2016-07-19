@@ -577,7 +577,7 @@ x = "three" # type error
 
 The first argument to `var_type` is a symbol with the local variable name, and the second argument is a string containing the variable's type. Note that `var_type` is most useful at the beginning of method or code block. Using it elsewhere may result in surprising error mesages, since RDL requires variables with fixed types to have the same type along all paths. Method parameters are treated as if `var_type` was called on them at the beginning of the method, fixing them to their declared type. This design choice may be revisited in the future.
 
-*[The following feature is only available in the github head]*
+*[github head only]*
 There is one subtlety for local variables and code blocks. Consider the following code:
 ```ruby
 x = 1
@@ -644,6 +644,9 @@ When RDL encounters the assignment to `@g`, it retroactively changes `x` to have
 RDL uses the same approach for hashes: hash literals are treated as finite hashes. A finite hash `{k1=>v1, ..., kn=>vn}` can be used where `Hash<k1 or ... or kn, v1 or ... or vn>` is expected. And if a finite hash is used as a `Hash` (including invoking methods on the finite hash; this may change in the future), then it is retroactively converted to a `Hash`.
 
 ## Other Features and Limitations
+
+* *[github head only]*
+*Displaying types.* As an aid to debugging, the method `rdl_note_type e` will display the type of `e` during type checking. At run time, this method returns its argument. Note that in certain cases RDL may type check the same code repeatedly in which case an expression's type could be printed multiple times.
 
 * *Conditional guards and singletons.* If an `if` or `unless` guard has a singleton type, RDL will typecheck both branches but not include types from the unrealizable branch in the expression type. For example, `if true then 1 else 'two' end` has type `1`. RDL behaves similarly for `&&` and `||`. However, RDL does not implement this logic for `case`.
 

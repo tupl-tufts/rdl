@@ -536,4 +536,9 @@ class Object
     $__rdl_to_typecheck[sym] = Array.new
   end
 
+  # Does nothing at run time
+  def rdl_note_type(x)
+    return x
+  end
+
 end
