@@ -175,6 +175,53 @@ RUBY
       return $__rdl_parser.scan_str type
     end
   end
+
+  # called by Object#method_added (sing=false) and Object#singleton_method_added (sing=true)
+  def self.do_method_added(the_self, sing, klass, meth)
+    # Apply any deferred contracts and reset list
+    if sing
+      loc = the_self.singleton_method(meth).source_location
+    else
+      loc = the_self.instance_method(meth).source_location
+    end
+
+    if $__rdl_deferred.size > 0
+      $__rdl_info.set(klass, meth, :source_location, loc)
+      a = $__rdl_deferred
+      $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
+      a.each { |prev_klass, kind, contract, h|
+        if RDL::Util.has_singleton_marker(klass)
+          tmp_klass = RDL::Util.remove_singleton_marker(klass)
+        else
+          tmp_klass = klass
+        end
+        raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{tmp_klass}" if prev_klass != tmp_klass
+        $__rdl_info.add(klass, meth, kind, contract)
+        RDL::Wrap.wrap(klass, meth) if h[:wrap]
+        unless $__rdl_info.set(klass, meth, :typecheck, h[:typecheck])
+          raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
+        end
+        RDL::Typecheck.typecheck(klass, meth) if h[:typecheck] == :now
+        if (h[:typecheck] && h[:typecheck] != :call)
+          $__rdl_to_typecheck[h[:typecheck]] = Set.new unless $__rdl_to_typecheck[h[:typecheck]]
+          $__rdl_to_typecheck[h[:typecheck]].add([klass, meth])
+        end
+      }
+    end
+
+    # Wrap method if there was a prior contract for it.
+    if $__rdl_to_wrap.member? [klass, meth]
+      $__rdl_to_wrap.delete [klass, meth]
+      RDL::Wrap.wrap(klass, meth)
+      $__rdl_info.set(klass, meth, :source_location, loc)
+    end
+
+    # Type check method if requested; must typecheck before wrap
+    if $__rdl_to_typecheck[:now].member? [klass, meth]
+      $__rdl_to_typecheck[:now].delete [klass, meth]
+      RDL::Typecheck.typecheck(klass, meth)
+    end
+  end
 end
 
 class Object
@@ -333,43 +380,7 @@ class Object
     $__rdl_contract_switch.off {
       klass = self.to_s
       klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-
-      # Apply any deferred contracts and reset list
-      if $__rdl_deferred.size > 0
-        $__rdl_info.set(klass, meth, :source_location, instance_method(meth).source_location)
-        a = $__rdl_deferred
-        $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
-        a.each { |prev_klass, kind, contract, h|
-          raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
-          $__rdl_info.add(klass, meth, kind, contract)
-          RDL::Wrap.wrap(klass, meth) if h[:wrap]
-          unless $__rdl_info.set(klass, meth, :typecheck, h[:typecheck])
-            raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
-          end
-          RDL::Typecheck.typecheck(klass, meth) if h[:typecheck] == :now
-          if (h[:typecheck] && h[:typecheck] != :call)
-            $__rdl_to_typecheck[h[:typecheck]] = Set.new unless $__rdl_to_typecheck[h[:typecheck]]
-            $__rdl_to_typecheck[h[:typecheck]].add([klass, meth])
-          end
-# It turns out Ruby core/stdlib don't always follow this convention...
-#          if (kind == :type) && (meth.to_s[-1] == "?") && (contract.ret != $__rdl_type_bool)
-#            warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
-#          end
-        }
-      end
-
-      # Wrap method if there was a prior contract for it.
-      if $__rdl_to_wrap.member? [klass, meth]
-        $__rdl_to_wrap.delete [klass, meth]
-        RDL::Wrap.wrap(klass, meth)
-        $__rdl_info.set(klass, meth, :source_location, instance_method(meth).source_location)
-      end
-
-      # Type check method if requested; must typecheck before wrap
-      if $__rdl_to_typecheck[:now].member? [klass, meth]
-        $__rdl_to_typecheck[:now].delete [klass, meth]
-        RDL::Typecheck.typecheck(klass, meth)
-      end
+      RDL::Wrap.do_method_added(self, false, klass, meth)
     }
   end
 
@@ -378,39 +389,7 @@ class Object
       klass = self.to_s
       klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
       sklass = RDL::Util.add_singleton_marker(klass)
-
-      # Apply any deferred contracts and reset list
-      if $__rdl_deferred.size > 0
-        $__rdl_info.set(sklass, meth, :source_location, singleton_method(meth).source_location)
-        a = $__rdl_deferred
-        $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
-        a.each { |prev_klass, kind, contract, h|
-          raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{klass}" if prev_klass != klass
-          $__rdl_info.add(sklass, meth, kind, contract)
-          RDL::Wrap.wrap(sklass, meth) if h[:wrap]
-          unless $__rdl_info.set(sklass, meth, :typecheck, h[:typecheck])
-            raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(sklass, meth)}"
-          end
-          RDL::Typecheck.typecheck(sklass, meth) if h[:typecheck] == :now
-          if (h[:typecheck] && h[:typecheck] != :call)
-            $__rdl_to_typecheck[h[:typecheck]] = Set.new unless $__rdl_to_typecheck[h[:typecheck]]
-            $__rdl_to_typecheck[h[:typecheck]].add([sklass, meth])
-          end
-        }
-      end
-
-      # Wrap method if there was a prior contract for it.
-      if $__rdl_to_wrap.member? [sklass, meth]
-        $__rdl_info.set(sklass, meth, :source_location, singleton_method(meth).source_location)
-        $__rdl_to_wrap.delete [sklass, meth]
-        RDL::Wrap.wrap(sklass, meth)
-      end
-
-      # Type check method if requested
-      if $__rdl_to_typecheck[:now].member? [sklass, meth]
-        $__rdl_to_typecheck[:now].delete [sklass, meth]
-        RDL::Typecheck.typecheck(sklass, meth)
-      end
+      RDL::Wrap.do_method_added(self, true, sklass, meth)
     }
   end
 
