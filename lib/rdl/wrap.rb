@@ -342,6 +342,7 @@ class Object
     unless $__rdl_info.set(klass, var, :type, $__rdl_parser.scan_str("#T #{typ}"))
       raise RuntimeError, "Type already declared for #{var}"
     end
+    nil
   end
 
   # In the following three methods
