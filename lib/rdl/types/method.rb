@@ -129,7 +129,7 @@ module RDL::Type
     end
 
     def check_arg_preds(bind, preds)
-      preds.each_with_index { |p,i|
+      preds.each_with_index { |p, i|
         if !eval(p.predicate, bind) then
           raise TypeError, <<RUBY
 Argument does not match type predicate.
