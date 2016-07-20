@@ -16,7 +16,7 @@ module RDL::Type
     end
 
     def to_s
-      return "#{@type.to_s} #{@name} #{@predicate}"
+      return "#{@type.to_s} #{@name} {{#{@predicate}}}"
     end
 
     def ==(other) # :nodoc:
@@ -27,10 +27,18 @@ module RDL::Type
 
     alias eql? ==
 
-    # doesn't have a match method - queries shouldn't have annotations in them
+    # match on the base type, ignoring refinement
+    def match(other)
+      return @type.match(other)
+    end
 
     def hash # :nodoc:
       return (57 + @name.hash) * @type.hash
+    end
+
+    # ignore refinement in comparison for now
+    def <=(other)
+      return @type <= other
     end
 
     def member?(obj, *args)

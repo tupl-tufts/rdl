@@ -77,7 +77,7 @@ class Parser < Racc::Parser
          action { [:RPAREN, text] }
 
       when (text = @ss.scan(/\{\{(?:(?!}}).)+\}\}/))
-         action { [:PREDICATE, text] }
+         action { [:PREDICATE, text[2..-3]] }
 
       when (text = @ss.scan(/\{/))
          action { [:LBRACE, text] }

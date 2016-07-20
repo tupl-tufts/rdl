@@ -17,7 +17,7 @@ rule
   =>            { [:RASSOC, text] }
   \(            { [:LPAREN, text] }
   \)            { [:RPAREN, text] }
-  {PREDICATE}   { [:PREDICATE, text] } 
+  {PREDICATE}   { [:PREDICATE, text[2..-3]] } 
   \{            { [:LBRACE, text] }
   \}            { [:RBRACE, text] }
   \[            { [:LBRACKET, text] }
