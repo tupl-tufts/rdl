@@ -59,13 +59,13 @@ class Integer < Numeric
   type :<=, '(BigDecimal) -> %bool'
 
   type :<=>, '(%integer) -> Object'
-  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
+  post(:<=>) { |r,x| r == -1 || r == 0 || r == 1 }
   type :<=>, '(Float) -> Object'
-  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
+  post(:<=>) { |r,x| r == -1 || r == 0 || r == 1 }
   type :<=>, '(Rational) -> Object'
-  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
+  post(:<=>) { |r,x| r == -1 || r == 0 || r == 1 }
   type :<=>, '(BigDecimal) -> Object'
-  post(:<=>) { |r,x| r == -1 || r==0 || r==1}
+  post(:<=>) { |r,x| r == -1 || r == 0 || r == 1 }
 
   type :==, '(Object) -> %bool'
 
@@ -81,18 +81,18 @@ class Integer < Numeric
   type :>=, '(Rational) -> %bool'
   type :>=, '(BigDecimal) -> %bool'
 
-  type :>>, '(%integer) -> %integer r {{ r>=0 }}'
+  type :>>, '(%integer) -> %integer r {{ r >= 0 }}'
 
   type :[], '(%integer) -> Fixnum'
   post(:[]) { |r,x| r == 0 || r==1}
   type :[], '(Rational) -> Fixnum'
   post(:[]) { |r,x| r == 0 || r==1}
   type :[], '(Float) -> Fixnum'
-  pre(:[]) { |x| x!=Float::INFINITY && !x.nan? }
+  pre(:[]) { |x| x != Float::INFINITY && !x.nan? }
   post(:[]) { |r,x| r == 0 || r==1}
   type :[], '(BigDecimal) -> Fixnum'
-  pre(:[]) { |x| x!=BigDecimal::INFINITY && !x.nan? }
-  post(:[]) { |r,x| r == 0 || r==1}
+  pre(:[]) { |x| x != BigDecimal::INFINITY && !x.nan? }
+  post(:[]) { |r,x| r == 0 || r == 1 }
 
   type :^, '(%integer) -> %integer'
 

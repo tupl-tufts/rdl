@@ -6,20 +6,17 @@ module RDL::Type
     attr_reader :type
     attr_reader :predicate
 
-# Note: Named argument types aren't hashconsed.
-
     def initialize(name, type, predicate)
       @name = name
       @type = type
-      /\{\{(.+)\}\}/ =~ predicate
-      @predicate = $1
+      @predicate = predicate
       raise RuntimeError, "Attempt to create annotated type with non-type" unless type.is_a? Type
-      raise RuntimeError, "Attempt to create doubly annotated type" if (type.is_a? AnnotatedArgType)||(type.is_a? DependentArgType)
+      raise RuntimeError, "Attempt to create doubly annotated type" if (type.is_a? AnnotatedArgType) || (type.is_a? DependentArgType)
       super()
     end
 
     def to_s
-      return "#{@type.to_s} #{@name} {{#{@predicate}}}"
+      return "#{@type.to_s} #{@name} #{@predicate}"
     end
 
     def ==(other) # :nodoc:
@@ -37,11 +34,11 @@ module RDL::Type
     end
 
     def member?(obj, *args)
-      @type.member?(obj, *args)
+      return @type.member?(obj, *args)
     end
 
     def instantiate(inst)
-      return DependentArgType.new(@name, @type.instantiate(inst),@predicate)
+      return DependentArgType.new(@name, @type.instantiate(inst), @predicate)
     end
   end
 end
