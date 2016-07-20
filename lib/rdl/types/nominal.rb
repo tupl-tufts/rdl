@@ -49,6 +49,7 @@ module RDL::Type
     end
 
     def <=(other)
+      other = other.type if other.is_a? DependentArgType
       other = other.canonical
       k = klass
       if other.instance_of? TopType

@@ -24,6 +24,7 @@ module RDL::Type
     alias eql? ==
 
     def <=(other)
+      other = other.type if other.is_a? DependentArgType
       other = other.canonical
       return self == other
     end

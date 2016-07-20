@@ -59,6 +59,7 @@ module RDL::Type
 
     def <=(other)
       return @array <= other if @array
+      other = other.type if other.is_a? DependentArgType
       other = other.canonical
       return true if other.instance_of? TopType
       other = other.array if other.instance_of?(TupleType) && other.array

@@ -34,6 +34,7 @@ module RDL::Type
     end
 
     def <=(other)
+      other = other.type if other.is_a? DependentArgType
       other = other.canonical
       return true if other.instance_of? TopType
       # in theory a StructuralType could contain all the methods of a NominalType or GenericType,

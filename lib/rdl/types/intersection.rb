@@ -45,6 +45,7 @@ module RDL::Type
 
     def ==(other)  # :nodoc:
       return false if other.nil?
+      other = other.type if other.is_a? DependentArgType
       other = other.canonical
       return (other.instance_of? IntersectionType) && (other.types == @types)
     end

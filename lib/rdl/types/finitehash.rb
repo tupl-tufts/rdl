@@ -66,9 +66,9 @@ module RDL::Type
 
     def <=(other)
       return @the_hash <= other if @the_hash
+      other = other.type if other.is_a? DependentArgType
       other = other.canonical
       return true if other.instance_of? TopType
-      other = other.the_hash if other.instance_of?(FiniteHashType) && other.the_hash
       if other.instance_of? FiniteHashType
         # Like Tuples, FiniteHashes are immutable, so covariant subtyping allowed
         # But note, no width subtyping allowed, to match #member?

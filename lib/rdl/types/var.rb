@@ -32,7 +32,11 @@ module RDL::Type
 
     alias eql? ==
 
-    alias <= == # hack to allow rdl_query to work with union types...
+    # an uninstantiated variable is only comparable to itself
+    def <=(other)
+      other = other.type if other.is_a? DependentArgType
+      return self == other
+    end
 
     def match(other)
       other = other.canonical

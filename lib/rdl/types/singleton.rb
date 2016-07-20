@@ -53,6 +53,7 @@ module RDL::Type
     end
 
     def <=(other)
+      other = other.type if other.is_a? DependentArgType
       other = other.canonical
       other.instance_of?(TopType) ||
         (@val.nil? && (not (other.instance_of?(SingletonType)))) ||

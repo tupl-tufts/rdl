@@ -84,6 +84,7 @@ module RDL::Type
     def <=(other)
       canonicalize!
       return @canonical <= other if @canonical
+      other = other.type if other.is_a? DependentArgType
       other = other.canonical
       @types.all? { |t| t <= other }
     end

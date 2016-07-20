@@ -35,6 +35,7 @@ module RDL::Type
     end
 
     def <=(other)
+      other = other.type if other.is_a? DependentArgType
       other = other.canonical
       formals, variance, _ = $__rdl_type_params[base.name]
       # do check here to avoid hiding errors if generic type written
