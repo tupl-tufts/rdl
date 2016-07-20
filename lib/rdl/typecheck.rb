@@ -928,10 +928,25 @@ RUBY
 
     trets = [] # all possible return types
     # there might be more than one return type because multiple cases of an intersection type might match
-    tmeth_inter.each { |tmeth| # MethodType
-      if ((tmeth.block && block) || (tmeth.block.nil? && block.nil?)) && tc_arg_types(tmeth, tactuals)
-        tc_block(scope, env, tmeth.block, block) if block
-        trets << tmeth.ret
+
+    # for ALL of the expanded lists of actuals...
+    RDL::Type.expand_product(tactuals).each { |tactuals_expanded|
+      # AT LEAST ONE of the possible intesection arms must match
+      trets_tmp = []
+      tmeth_inter.each { |tmeth| # MethodType
+        if ((tmeth.block && block) || (tmeth.block.nil? && block.nil?))
+          if tc_arg_types(tmeth, tactuals_expanded)
+            tc_block(scope, env, tmeth.block, block) if block
+            trets_tmp << tmeth.ret # found a match for this subunion; add its return type to trets_tmp
+          end
+        end
+      }
+      if trets_tmp.empty?
+        # no arm of the intersection matched this expanded actuals lists, so reset trets to signal error and break loop
+        trets = []
+        break
+      else
+        trets.concat(trets_tmp)
       end
     }
     if trets.empty? # no possible matching call

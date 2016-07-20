@@ -519,8 +519,13 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_send_union
+    self.class.class_eval {
+      type :_send_union1, "(Fixnum) -> Float"
+      type :_send_union1, "(String) -> Rational"
+    }
     assert_equal RDL::Type::UnionType.new(@tfs, $__rdl_bignum_type), do_tc("(if _any_object then Fixnum.new else String.new end) * 2", env: @env)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(if _any_object then Object.new else Fixnum.new end) + 2", env: @env) }
+    assert_equal tt("Float or Rational"), do_tc("if _any_object then x = Fixnum.new else x = String.new end; _send_union1(x)", env: @env)
   end
 
   def test_send_splat
