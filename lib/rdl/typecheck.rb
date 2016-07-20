@@ -557,12 +557,23 @@ RUBY
       e.children[1..-2].each { |wclause|
         raise RuntimeError, "Don't know what to do with case clause #{wclause.type}" unless wclause.type == :when
         envguards = []
+        tguards = []
         wclause.children[0..-2].each { |guard| # first wclause.length-1 children are the guards
           envi, tguard = tc(scope, envi, guard) # guard type can be anything
+          tguards << tguard
           tc_send(scope, envi, tguard, :===, [tcontrol], nil, guard) unless tcontrol.nil?
           envguards << envi
         }
-        envbody, tbody = tc(scope, Env.join(e, *envguards), wclause.children[-1]) # last wclause child is body
+        initial_env = Env.join(e, *envguards)
+        if (tguards.all? { |t| t.is_a?(RDL::Type::SingletonType) && t.val.is_a?(Class) }) && (e.children[0].type == :lvar)
+          # Special case! We're branching on the type of the guard, which is a local variable.
+          # So rebind that local variable to have the union of the guard types
+          new_typ = RDL::Type::UnionType.new(*(tguards.map { |t| RDL::Type::NominalType.new(t.val) })).canonical
+          next unless tcontrol <= new_typ || new_typ <= tcontrol # If control can't possibly match type, skip this branch
+          initial_env = initial_env.bind(e.children[0].children[0], new_typ
+          )
+        end
+        envbody, tbody = tc(scope, initial_env, wclause.children[-1]) # last wclause child is body
         tbodies << tbody
         envbodies << envbody
       }

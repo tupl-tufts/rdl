@@ -951,4 +951,11 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_fixnum_type, do_tc("TestTypecheck.new.f_attr_accessor = 42", env: @env)
   end
 
+  # test code where we know different stuff about types on difference branches
+  def test_typeful_branches
+    assert_equal $__rdl_fixnum_type, do_tc("x = Object.new; case x when String; x.length; end", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("x = Object.new; case x when String, Array; x.length; end", env: @env)
+    assert_equal @t3, do_tc("x = String.new; case x when String; 3; when Fixnum; 4; end", env: @env)    
+  end
+
 end
