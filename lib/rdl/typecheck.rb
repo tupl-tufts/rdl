@@ -146,7 +146,7 @@ module RDL::Typecheck
   # add x:t to the captured map in scope
   def self.capture(scope, x, t)
     if scope[:captured][x]
-      scope[:captured][x] = RDL::Type::UnionType.new(scope[:captured][x], t)
+      scope[:captured][x] = RDL::Type::UnionType.new(scope[:captured][x], t).canonical unless t <= scope[:captured][x]
     else
       scope[:captured][x] = t
     end
@@ -205,7 +205,7 @@ module RDL::Typecheck
       targs[:self] = self_type
       scope = { tret: type.ret, tblock: type.block, captured: Hash.new }
       begin
-        old_captured = scope[:captured]
+        old_captured = scope[:captured].dup
         if body.nil?
           body_type = $__rdl_nil_type
         else
@@ -763,7 +763,11 @@ RUBY
       # if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
       #   error :nonlocal_access, [name], e
       # end
-      [env, env[name].canonical]
+      if scope[:captured] && scope[:captured].has_key?(name) then
+        [env, scope[:captured][name]]
+      else
+        [env, env[name].canonical]
+      end
     when :ivar, :cvar, :gvar
       klass = (if kind == :gvar then RDL::Util::GLOBAL_NAME else env[:self] end)
       unless $__rdl_info.has?(klass, name, :type)
@@ -783,11 +787,11 @@ RUBY
   def self.tc_vasgn(scope, env, kind, name, tright, e)
     case kind
     when :lvasgn
-      capture(scope, name, tright.canonical) if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
-      # if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
-      #   error :nonlocal_access, [name], e
-      # end
-      if env.fixed? name
+      if ((scope[:captured] && scope[:captured].has_key?(name)) ||
+          (scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))))
+        capture(scope, name, tright.canonical)
+        [env, scope[:captured][name]]
+      elsif (env.fixed? name)
         error :vasgn_incompat, [tright, env[name]], e unless tright <= env[name]
         [env, tright.canonical]
       else

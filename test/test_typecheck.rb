@@ -511,7 +511,7 @@ class TestTypecheck < Minitest::Test
       end
     }
     self.class.class_eval {
-      type "() -> 1 or String", typecheck: :now
+      type "() -> Fixnum or String", typecheck: :now
       def _send_blockd3
         x = 'one'; _send_block1(42) { |y| for x in 1..5 do end; y }; x
       end
