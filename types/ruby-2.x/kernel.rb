@@ -20,7 +20,7 @@ module Kernel
   type 'self.__dir__', '() -> String or nil'
   type 'self.__method__', '() -> Symbol or nil'
   type 'self.`', '(String) -> String'
-  type 'self.abort', '(?String msg) -> %any'
+  type 'self.abort', '(?String msg) -> %bot'
   type 'self.at_exit', '() { () -> %any} -> Proc' # TODO: Fix proc
   type 'self.autoload', '(String or Symbol module, String filename) -> nil'
   type 'self.autoload?', '(Symbol or String name) -> String or nil'
@@ -33,12 +33,12 @@ module Kernel
 #  type 'self.catch' # TODO
   type 'self.eval', '(String, ?Binding, ?String filename, ?Fixnum lineno) -> %any'
 #  type 'self.exec' #TODO
-  type 'self.exit', '(Fixnum or %bool status) -> %any'
-  type 'self.exit!', '(Fixnum or %bool status) -> %any'
-  type 'self.fail', '() -> %any'
-  type 'self.fail', '(String) -> %any'
-  type 'self.fail', '(Class, Array<String>) -> %any'
-  type 'self.fail', '(Class, String, Array<String>) -> %any'
+  type 'self.exit', '(Fixnum or %bool status) -> %bot'
+  type 'self.exit!', '(Fixnum or %bool status) -> %bot'
+  type 'self.fail', '() -> %bot'
+  type 'self.fail', '(String) -> %bot'
+  type 'self.fail', '(Class, Array<String>) -> %bot'
+  type 'self.fail', '(Class, String, Array<String>) -> %bot'
   #  type 'self.fail', '(String or [exception : () -> String], ?String, ?Array<String>) -> %any'
 #  type 'self.fork' #TODO
   type 'self.format', '(String format, *%any args) -> String'
@@ -58,7 +58,7 @@ module Kernel
   type(:proc, "() {(*%any) -> %any} -> Proc") # TODO more precise
   type 'self.putc', '(Fixnum) -> Fixnum'
   type 'self.puts', '(*[to_s : () -> String]) -> nil'
-  type 'self.raise', '() -> %any'
+  type 'self.raise', '() -> %bot'
 #  type 'self.raise', '(String or [exception : () -> String], ?String, ?Array<String>) -> %any'
 # TODO: above same as fail?
   type 'self.rand', '(Fixnum or Range max) -> Numeric'
@@ -82,9 +82,9 @@ module Kernel
 #  type 'self.untrace_var' # TODO
   type 'self.warn', '(*String msg) -> nil'
   type :clone, '() -> self'
-  type :raise, '() -> nil'
-  type :raise, '(String) -> nil'
-  type :raise, '(Class, String, Array<String>) -> nil'
+  type :raise, '() -> %bot'
+  type :raise, '(String) -> %bot'
+  type :raise, '(Class, String, Array<String>) -> %bot'
   type :send, '(String or Symbol, *%any) -> %any'
   type :send, '(String or Symbol, *%any) { (*%any) -> %any } -> %any'
 end
