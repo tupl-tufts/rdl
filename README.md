@@ -546,7 +546,26 @@ Often method bodies cannot be type checked as soon as they are loaded because th
 
 Addditionally, `type` can be called with `typecheck: :call`, which will delay checking the method's type until the method is called. Currently these checks are not cached, so expect a big performance hit for using this feature.
 
-To perform type checking, RDL needs source code, which it gets by parsing the file containing the to-be-typechecked method. Hence, static type checking does not work in `irb` since RDL has no way of getting the source. RDL currently uses the [parser Gem](https://github.com/whitequark/parser) to parse Ruby source code. (And RDL uses the parser gem's amazing diagnostic output facility to print type error messages.)
+To perform type checking, RDL needs source code, which it gets by parsing the file containing the to-be-typechecked method. Hence, static type checking does not work in `irb` since RDL has no way of getting the source.
+
+*[github head only]* Typechecking does work in `pry` (this feature has only limited testing) as long as typechecking is delayed until after the method is defined:
+
+```ruby
+[2] pry(main)> require 'rdl'
+[3] pry(main)> require 'rdl_types'
+[4] pry(main)> type '() -> Fixnum', typecheck: :later    # note: typecheck: :now doesn't work in pry
+[5] pry(main)> def f
+[5] pry(main)*   'haha'  
+[5] pry(main)* end  
+[6] pry(main)> rdl_do_typecheck :later
+RDL::Typecheck::StaticTypeError:
+(string):2:3: error: got type `String' where return type `Fixnum' expected
+(string):2:   'haha'
+(string):2:   ^~~~~~
+from .../typecheck.rb:158:in `error'
+```
+
+RDL currently uses the [parser Gem](https://github.com/whitequark/parser) to parse Ruby source code. (And RDL uses the parser gem's amazing diagnostic output facility to print type error messages.)
 
 Next we discuss some special features of RDL's type system and some of its limitations.
 

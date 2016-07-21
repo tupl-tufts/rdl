@@ -65,8 +65,9 @@ module RDL::Typecheck
       return @env[var][:type]
     end
 
-    def bind(var, typ)
-      raise RuntimeError, "Can't update variable with fixed type" if @env[var] && @env[var][:fixed]
+    # force should only be used with care! currently only used when type is being refined to a subtype in a lexical scope
+    def bind(var, typ, force: false)
+      raise RuntimeError, "Can't update variable with fixed type" if !force && @env[var] && @env[var][:fixed]
       result = Env.new
       result.env = @env.merge(var => {type: typ, fixed: false})
       return result
@@ -161,10 +162,22 @@ module RDL::Typecheck
     puts (Parser::Diagnostic.new :note, reason, args, ast.loc.expression).render
   end
 
-  def self.typecheck(klass, meth)
+  def self.get_ast(klass, meth)
     file, line = $__rdl_info.get(klass, meth, :source_location)
-    raise RuntimeError, "static type checking in irb not supported" if file == "(irb)"
     raise RuntimeError, "No file for #{RDL::Util.pp_klass_method(klass, meth)}" if file.nil?
+    raise RuntimeError, "static type checking in irb not supported" if file == "(irb)"
+    if file == "(pry)"
+      # no caching...
+      if RDL::Wrap.wrapped?(klass, meth)
+        meth_name = RDL::Wrap.wrapped_name(klass, meth)
+      else
+        meth_name = meth
+      end
+      the_meth = RDL::Util.to_class(klass).instance_method(meth_name)
+      code = Pry::Code.from_method the_meth
+      return Parser::CurrentRuby.parse code.to_s
+    end
+
     digest = Digest::MD5.file file
     cache_hit = (($__rdl_ruby_parser_cache.has_key? file) &&
                  ($__rdl_ruby_parser_cache[file][0] == digest))
@@ -177,6 +190,11 @@ module RDL::Typecheck
     end
     ast = $__rdl_ruby_parser_cache[file][1][:line_defs][line]
     raise RuntimeError, "Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}" if ast.nil?
+    return ast
+  end
+
+  def self.typecheck(klass, meth)
+    ast = get_ast(klass, meth)
     types = $__rdl_info.get(klass, meth, :type)
     raise RuntimeError, "Can't typecheck method with no types?!" if types.nil? or types == []
 
@@ -570,7 +588,10 @@ RUBY
           # So rebind that local variable to have the union of the guard types
           new_typ = RDL::Type::UnionType.new(*(tguards.map { |t| RDL::Type::NominalType.new(t.val) })).canonical
           next unless tcontrol <= new_typ || new_typ <= tcontrol # If control can't possibly match type, skip this branch
-          initial_env = initial_env.bind(e.children[0].children[0], new_typ
+          initial_env = initial_env.bind(e.children[0].children[0], new_typ, force: true
+          # note force is safe above because the env from this arm will be joined with the other envs
+          # (where the type was not refined like this), so after the case the variable will be back to its
+          # previous, unrefined type
           )
         end
         envbody, tbody = tc(scope, initial_env, wclause.children[-1]) # last wclause child is body
@@ -938,7 +959,7 @@ RUBY
       inst = trecv.to_inst.merge(self: trecv)
       tmeth_inter = ts.map { |t| t.instantiate(inst) }
     else
-      raise RuntimeError, "receiver type #{t} not supported yet"
+      raise RuntimeError, "receiver type #{trecv} not supported yet"
     end
 
     trets = [] # all possible return types
@@ -1133,7 +1154,8 @@ type_error_messages = {
   exn_type: "can't determine exception type",
   cant_splat: "can't type splat with element of type `%s'",
   for_collection: "can't type for with collection of type `%s'",
-  note_type: "Type is `%s'"
+  note_type: "Type is `%s'",
+  note_message: "%s",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)
