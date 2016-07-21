@@ -253,6 +253,7 @@ class Object
       else
         $__rdl_deferred << [klass, :pre, contract, {wrap: wrap}]
       end
+      nil
     }
   end
 
@@ -272,6 +273,7 @@ class Object
       else
         $__rdl_deferred << [klass, :post, contract, {wrap: wrap}]
       end
+      nil
     }
   end
 
@@ -328,6 +330,7 @@ class Object
         $__rdl_deferred << [klass, :type, type, {wrap: wrap,
                                                  typecheck: typecheck}]
       end
+      nil
     }
   end
 
@@ -356,6 +359,7 @@ class Object
       type name, "() -> #{typ}"
       type name.to_s + "=", "(#{typ}) -> #{typ}"
     }
+    nil
   end
 
   def attr_reader_type(*args)
@@ -364,6 +368,7 @@ class Object
       var_type ("@" + name.to_s), typ
       type name, "() -> #{typ}"
     }
+    nil
   end
 
   alias_method :attr_type, :attr_reader_type
@@ -374,6 +379,7 @@ class Object
       var_type ("@" + name.to_s), typ
       type name.to_s + "=", "(#{typ}) -> #{typ}"
     }
+    nil
   end
 
 
@@ -382,6 +388,7 @@ class Object
       klass = self.to_s
       klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
       RDL::Wrap.do_method_added(self, false, klass, meth)
+      nil
     }
   end
 
@@ -391,6 +398,7 @@ class Object
       klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
       sklass = RDL::Util.add_singleton_marker(klass)
       RDL::Wrap.do_method_added(self, true, sklass, meth)
+      nil
     }
   end
 
@@ -413,6 +421,7 @@ class Object
       else
         $__rdl_to_wrap << [klass, old_name]
       end
+      nil
     }
   end
 
@@ -449,12 +458,14 @@ class Object
       raise RuntimeError, "At least one of {all, blk} required" unless chk
       variance = params.map { |p| :~ } unless variance # default to invariant
       $__rdl_type_params[klass] = [params, variance, chk]
+      nil
     }
   end
 
   def rdl_nowrap
     $__rdl_contract_switch.off {
       RDL.config { |config| config.add_nowrap(self, self.singleton_class) }
+      nil
     }
   end
 
@@ -496,6 +507,7 @@ class Object
       raise RuntimeError, "Class #{self.to_s} is not parameterized" unless $__rdl_type_params[klass]
       raise RuntimeError, "Instance is not instantiated" unless @__rdl_type && @@__rdl_type.instance_of?(RDL::Type::GenericType)
       @__rdl_type = nil
+      self
     }
   end
 
@@ -506,7 +518,7 @@ class Object
       raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || typ.member?(self)
       obj = SimpleDelegator.new(self)
       obj.instance_variable_set('@__rdl_type', new_typ)
-      return obj
+      obj
     }
   end
 
@@ -526,6 +538,7 @@ class Object
       else
         raise RuntimeError, "Unexpected typ argument #{typ.inspect}"
       end
+      nil
     }
   end
 
@@ -535,6 +548,7 @@ class Object
       RDL::Typecheck.typecheck(klass, meth)
     }
     $__rdl_to_typecheck[sym] = Array.new
+    nil
   end
 
   # Does nothing at run time
