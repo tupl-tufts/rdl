@@ -518,6 +518,26 @@ class TestTypecheck < Minitest::Test
     }
   end
 
+  def test_send_method_generic
+    skip "Not supported yet"
+    self.class.class_eval {
+      type :_send_method_generic1, '(t) -> t'
+      type :_send_method_generic2, '(t, u) -> t or u'
+      type :_send_method_generic3, '() { (u) -> Fixnum } -> Fixnum'
+      type :_send_method_generic4, '() { (Fixnum) -> u } -> u'
+      type :_send_method_generic5, '() { (u) -> u } -> u'
+    }
+    assert_equal @t3, do_tc('_send_method_generic1 3', env: @env)
+    assert_equal $__rdl_string_type, do_tc('_send_method_generic1 "foo"', env: @env)
+    assert_equal tt("3 or String"), do_tc('_send_method_generic2 3, "foo"', env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc('_send_method_generic3 { |x| 42 }')
+    assert_equal $__rdl_string_type, do_tc('_send_method_generic4 { |x| "foo" }')
+    assert_equal @t3, do_tc('_send_method_generic5 { |x| 3 }') # will this work?
+    assert_equal @t3, do_tc('_send_method_generic5 { |x| x }') # fail here...
+    assert_equal tt("%integer"), do_tc('[1,2,3].index(Object.new)', env: @env)
+    assert_equal tt("Array<Fixnum>"), do_tc('[1, 2, 3].map { |y| y * 4 }', env: @env)
+  end
+
   def test_send_union
     self.class.class_eval {
       type :_send_union1, "(Fixnum) -> Float"
@@ -955,7 +975,7 @@ class TestTypecheck < Minitest::Test
   def test_typeful_branches
     assert_equal $__rdl_fixnum_type, do_tc("x = Object.new; case x when String; x.length; end", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("x = Object.new; case x when String, Array; x.length; end", env: @env)
-    assert_equal @t3, do_tc("x = String.new; case x when String; 3; when Fixnum; 4; end", env: @env)    
+    assert_equal @t3, do_tc("x = String.new; case x when String; 3; when Fixnum; 4; end", env: @env)
   end
 
 end
