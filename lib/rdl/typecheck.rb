@@ -587,6 +587,8 @@ RUBY
           # Special case! We're branching on the type of the guard, which is a local variable.
           # So rebind that local variable to have the union of the guard types
           new_typ = RDL::Type::UnionType.new(*(tguards.map { |t| RDL::Type::NominalType.new(t.val) })).canonical
+          # TODO adjust following for generics!
+          raise RuntimeError, "reinfement for generics not implemented yet" if tcontrol.is_a? RDL::Type::GenericType
           next unless tcontrol <= new_typ || new_typ <= tcontrol # If control can't possibly match type, skip this branch
           initial_env = initial_env.bind(e.children[0].children[0], new_typ, force: true
           # note force is safe above because the env from this arm will be joined with the other envs
@@ -958,6 +960,8 @@ RUBY
       error :no_instance_method_type, [trecv.base.name, meth], e unless ts
       inst = trecv.to_inst.merge(self: trecv)
       tmeth_inter = ts.map { |t| t.instantiate(inst) }
+    when RDL::Type::VarType
+      error :recv_var_type, [trecv], e
     else
       raise RuntimeError, "receiver type #{trecv} not supported yet"
     end
@@ -1156,6 +1160,7 @@ type_error_messages = {
   for_collection: "can't type for with collection of type `%s'",
   note_type: "Type is `%s'",
   note_message: "%s",
+  recv_var_type: "Receiver whose type is unconstrained variable `%s' not allowed",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)
