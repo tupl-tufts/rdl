@@ -35,6 +35,7 @@
   * [Types for Variables](#types-for-variables)
   * [Tuples, Finite Hashes, and Subtyping](#tuples-finite-hashes-and-subtyping)
   * [Other Features and Limitations](#other-features-and-limitations)
+  * [Assumptions](#assumptions)
 * [Other RDL Methods](#other-rdl-methods)
 * [Queries](#queries)
 * [Bibliography](#bibliography)
@@ -673,7 +674,7 @@ RDL uses the same approach for hashes: hash literals are treated as finite hashe
 
 * *Block formal arguments.* Similarly, RDL reports an error if a block is called with the wrong number of arguments even though Ruby does not signal an error in this case.
 
-* *Caching.* If `typecheck: true` is specified on a method, Ruby will type check the method every time it is called. In the future, RDL will cache these checks.
+* *Caching.* If `typecheck: :call` is specified on a method, Ruby will type check the method every time it is called. In the future, RDL will cache these checks.
 
 * *Unsupported Features.* There are several features of Ruby that are currently not handled by RDL. Here is a non-exhaustive list:
   * `super` is not supported.
@@ -681,6 +682,14 @@ RDL uses the same approach for hashes: hash literals are treated as finite hashe
   * Only simple block argument lists and `for` iteration variables are supported.
   * Control flow for exceptions is not analyzed fully soundly; some things are not reported as possibly `nil` that could be.
   * Only simple usage of constants is handled.
+
+## Assumptions
+
+RDL makes some assumptions that should hold unless your Ruby code is doing something highly unusual:
+
+* `Class#===` is not redefined
+
+(More assumptions will be added here as they are added to RDL...)
 
 # Other RDL Methods
 
