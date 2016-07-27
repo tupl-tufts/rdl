@@ -8,6 +8,7 @@
   * [Supported versions of Ruby](#supported-versions-of-ruby)
   * [Installing RDL](#installing-rdl)
   * [Loading RDL](#loading-rdl)
+  * [Disabling RDL](#disabling-rdl)
   * [Preconditions and Postconditions](#preconditions-and-postconditions)
   * [Type Annotations](#type-annotations)
 * [RDL Types](#rdl-types)
@@ -150,6 +151,11 @@ require 'rails_types'
 Currently RDL has types for the following versions of Rails:
 
 * Rails support is currently almost non-existent; more coming in the future
+
+## Disabling RDL
+
+*[github head only]*
+For performance reasons you probably don't want to use RDL in production code. To disable RDL, replace `require 'rdl'` with `require 'rdl_disable'`. This will cause all invocations of RDL methods to either be no-ops or to do the minimum necessary to preserve the program's semantics (e.g., if the RDL method returns `self`, then so does the `rdl_disable` method.)
 
 ## Preconditions and Postconditions
 
