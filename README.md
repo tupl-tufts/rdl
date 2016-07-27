@@ -38,6 +38,7 @@
   * [Assumptions](#assumptions)
 * [Other RDL Methods](#other-rdl-methods)
 * [Queries](#queries)
+* [Configuration](#configuration)
 * [Bibliography](#bibliography)
 * [Copyright](#copyright)
 * [Contributors](#contributors)
@@ -486,7 +487,7 @@ To fully enforce generic types, RDL requires that the developer `instantiate!` a
 
 ```ruby
 x = [1,2]
-x.instantate!('Fixnum')
+x.instantiate!('Fixnum')
 x.push("three") # type error
 ```
 
@@ -750,6 +751,23 @@ $ rdl_query "(.?) -> ."                # methods that take one, optional argumen
 ```
 
 Note that aside from `.` and `...`, the matching is exact. For example `(Fixnum) -> Fixnum` will not match a method of type `(Fixnum or String) -> Fixnum`.
+
+# Configuration
+
+To configure RDL, execute the following shortly after RDL is loaded:
+
+```ruby
+RDL.config { |config|
+  # use config to configure RDL here
+}
+```
+
+RDL supports the following configuration options:
+
+* `config.nowrap` - `Array<Class>` containing all classes whose methods should not be wrapped.
+* `config.gather_stats` - currently disabled.
+* `config.report` - if true, then when the program exits, RDL will print out a list of methods that were statically type checked, and methods that were annotated to be statically type checked but weren't.
+* `config.guess_types` - *[github head only]* List of classes (of type `Array<Symbol>`). For every method added to a listed class *after* this configuration option is set, RDL will record the types of its arguments and returns at run-time. Then when the program exits, RDL will print out a skeleton for each class with types for the monitored methods based on what RDL recorded at run-time and based on what Ruby knows about the methods' signatures. This is probably not going to produce the correct method types, but it might be a good starting place.
 
 # Bibliography
 

@@ -36,6 +36,7 @@ class RDL::Wrap
       # return if (klass.method_defined? meth_old) # now checked above by wrapped? call
       is_singleton_method = RDL::Util.has_singleton_marker(klass_str)
       full_method_name = RDL::Util.pp_klass_method(klass_str, meth)
+      klass_str_without_singleton = if is_singleton_method then RDL::Util.remove_singleton_marker(klass_str) else klass_str end
 
       klass.class_eval <<-RUBY, __FILE__, __LINE__
         alias_method meth_old, meth
@@ -59,18 +60,21 @@ class RDL::Wrap
             RDL::Contract::AndContract.check_array(pres, self, *args, &blk) if pres
             types = $__rdl_info.get(klass, meth, :type)
             if types
-              matches,args,blk,bind = RDL::Type::MethodType.check_arg_types("#{full_method_name}", self, bind, types, inst, *args, &blk)
+              matches, args, blk, bind = RDL::Type::MethodType.check_arg_types("#{full_method_name}", self, bind, types, inst, *args, &blk)
             end
           }
-	  ret = send(#{meth_old.inspect}, *args, &blk)
+	        ret = send(#{meth_old.inspect}, *args, &blk)
           $__rdl_wrap_switch.off {
             posts = $__rdl_info.get(klass, meth, :post)
             RDL::Contract::AndContract.check_array(posts, self, ret, *args, &blk) if posts
             if matches
               ret = RDL::Type::MethodType.check_ret_types(self, "#{full_method_name}", types, inst, matches, ret, bind, *args, &blk)
             end
+            if RDL::Config.instance.guess_types.include?("#{klass_str_without_singleton}".to_sym)
+              $__rdl_info.add(klass, meth, :otype, { args: (args.map { |arg| arg.class }), ret: ret.class, block: block_given? })
+            end
+            return ret
           }
-          return ret
         end
         if (public_method_defined? meth_old) then public meth
         elsif (protected_method_defined? meth_old) then protected meth
@@ -216,10 +220,15 @@ RUBY
       $__rdl_info.set(klass, meth, :source_location, loc)
     end
 
-    # Type check method if requested; must typecheck before wrap
+    # Type check method if requested
     if $__rdl_to_typecheck[:now].member? [klass, meth]
       $__rdl_to_typecheck[:now].delete [klass, meth]
       RDL::Typecheck.typecheck(klass, meth)
+    end
+
+    if RDL::Config.instance.guess_types.include?(the_self.to_s.to_sym) && !$__rdl_info.has?(klass, meth, :type)
+      # Added a method with no type annotation from a class we want to guess types for
+      RDL::Wrap.wrap(klass, meth)
     end
   end
 end

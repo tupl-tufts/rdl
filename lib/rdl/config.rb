@@ -6,11 +6,13 @@ class RDL::Config
   attr_accessor :nowrap
   attr_accessor :gather_stats
   attr_accessor :report
+  attr_accessor :guess_types
 
   def initialize
     @nowrap = Set.new
     @gather_stats = false
     @report = false
+    @guess_types = []
   end
 
   def add_nowrap(*klasses)
@@ -120,10 +122,10 @@ RDL::Config.instance.profile_stats
 
     Profiler__.start_profile # Restart profiler after setup
   end
-end
 
-at_exit do
-  if RDL::Config.instance.report
+  def do_report
+    return unless @report
+    puts "------------------------------"
     typechecked = []
     missing = []
     $__rdl_info.info.each_pair { |klass, meths|
@@ -149,4 +151,85 @@ at_exit do
       missing.each { |klass, meth| puts RDL::Util.pp_klass_method(klass, meth) }
     end
   end
+
+  def guess_meth(klass, meth, is_sing, the_meth)
+    # first print based on signature according to Ruby
+    first = true
+    block = false
+    print "  type #{if is_sing then '\'self.' + meth + '\'' else ':' + meth end}, '("
+    params = the_meth.parameters
+    params.each_with_index { |param, i|
+      kind, name = param
+      print ", " unless first || kind == :block
+      case kind
+      when :req
+        print "XXXX #{name}"
+      when :opt
+        print "?XXXX #{name}"
+      when :rest
+        print "*#XXXX #{name}"
+      when :key
+        print "#{name}: XXXX"
+      when :block
+        block = true
+      else
+        print "???? param of kind #{kind} for #{name}"
+      end
+      first = false
+    }
+    print ")"
+    print " { BLOCK }" if block
+    puts " -> XXXX'"
+
+    # next print based on observed types
+    otypes = $__rdl_info.get(klass, meth, :otype) if $__rdl_info.has?(klass, meth, :otype) # observed types
+    return if otypes.nil?
+    first = true
+    print "  type #{if is_sing then '\'self.' + meth + '\'' else ':' + meth end}, '("
+    otargs = []
+    otret = $__rdl_bot_type
+    otblock = false
+    otypes.each { |ot|
+      ot[:args].each_with_index { |t, i|
+        otargs[i] = $__rdl_bot_type if otargs[i].nil?
+        otargs[i] = RDL::Type::UnionType.new(otargs[i], RDL::Type::NominalType.new(t)).canonical
+      }
+      otret = RDL::Type::UnionType.new(otret, RDL::Type::NominalType.new(ot[:ret])).canonical
+      otblock = otblock || ot[:block]
+    }
+    otargs.each { |t|
+      print ", " unless first
+      print t
+      first = false
+    }
+    print ")"
+    print " { BLOCK }" if otblock
+    puts " -> #{otret}'"
+  end
+
+  def do_guess_types
+    return if @guess_types.empty?
+    puts "------------------------------"
+    puts "TYPE GUESSES"
+    RDL::Config.instance.guess_types.each { |klass|
+      puts
+      puts "class #{klass}"
+      the_klass = RDL::Util.to_class(klass)
+      sklass = RDL::Util.add_singleton_marker(klass.to_s)
+      the_klass.singleton_methods(false).each { |meth|
+        next unless meth.to_s =~ /^__rdl_(.*)_old/
+        guess_meth(sklass, $1, true, the_klass.singleton_method(meth))
+      }
+      the_klass.instance_methods(false).each { |meth|
+        next unless meth.to_s =~ /^__rdl_(.*)_old/
+        guess_meth(klass, $1, false, the_klass.instance_method(meth))
+      }
+      puts "end"
+    }
+  end
+end
+
+at_exit do
+  RDL::Config.instance.do_report
+  RDL::Config.instance.do_guess_types
 end
