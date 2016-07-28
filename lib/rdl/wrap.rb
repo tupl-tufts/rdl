@@ -247,7 +247,7 @@ class Object
   # pre(meth) { block } = pre(self, meth, FlatContract.new { block })
   # pre(contract) = pre(self, next method, contract)
   # pre { block } = pre(self, next method, FlatContract.new { block })
-  def pre(*args, wrap: true, &blk)
+  def pre(*args, wrap: RDL::Config.instance.pre_defaults[:wrap], &blk)
     $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
       klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Precondition", *args, &blk)
       if meth
@@ -267,7 +267,7 @@ class Object
   end
 
   # Add a postcondition to a method. Same possible invocations as pre.
-  def post(*args, wrap: true, &blk)
+  def post(*args, wrap: RDL::Config.instance.post_defaults[:wrap], &blk)
     $__rdl_contract_switch.off {
       klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Postcondition", *args, &blk)
       if meth
@@ -299,7 +299,7 @@ class Object
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
-  def type(*args, wrap: true, typecheck: false, &blk)
+  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], &blk)
     $__rdl_contract_switch.off {
       klass, meth, type = begin
                             RDL::Wrap.process_type_args(self, *args, &blk)

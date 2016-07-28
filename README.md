@@ -774,6 +774,9 @@ RDL supports the following configuration options:
 * `config.gather_stats` - currently disabled.
 * `config.report` - if true, then when the program exits, RDL will print out a list of methods that were statically type checked, and methods that were annotated to be statically type checked but weren't.
 * `config.guess_types` - *[github head only]* List of classes (of type `Array<Symbol>`). For every method added to a listed class *after* this configuration option is set, RDL will record the types of its arguments and returns at run-time. Then when the program exits, RDL will print out a skeleton for each class with types for the monitored methods based on what RDL recorded at run-time and based on what Ruby knows about the methods' signatures. This is probably not going to produce the correct method types, but it might be a good starting place.
+* `config.type_defaults` - *[github head only]* Hash containing default options for `type`. Initially `{ wrap: true, typecheck: false }`.
+* `config.pre_defaults` - *[github head only]* Hash containing default options for `pre`. Initially `{ wrap: true }`.
+* `config.post_defaults` - same as `pre_defaults`, but for `post`.
 
 # Bibliography
 

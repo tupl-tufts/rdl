@@ -7,12 +7,16 @@ class RDL::Config
   attr_accessor :gather_stats
   attr_accessor :report
   attr_accessor :guess_types
+  attr_accessor :type_defaults, :pre_defaults, :post_defaults
 
   def initialize
     @nowrap = Set.new
     @gather_stats = false
     @report = false
     @guess_types = []
+    @type_defaults = { wrap: true, typecheck: false }
+    @pre_defaults = { wrap: true }
+    @post_defaults = { wrap: true }
   end
 
   def add_nowrap(*klasses)
