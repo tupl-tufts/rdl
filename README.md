@@ -59,7 +59,7 @@ def sqrt(x)
 end
 ```
 
-Given this program, RDL intercepts the call to `sqrt` and passes its argument to the `pre` block, which checks that the arugment is positive. Then when `sqrt` returns, RDL passes the return value (as `r`) and the initial argument (as `x`) to the `post` block, which checks that the return is positive. (Let's ignore complex numbers to keep things simple...)
+Given this program, RDL intercepts the call to `sqrt` and passes its argument to the `pre` block, which checks that the argument is positive. Then when `sqrt` returns, RDL passes the return value (as `r`) and the initial argument (as `x`) to the `post` block, which checks that the return is positive. (Let's ignore complex numbers to keep things simple...)
 
 RDL contracts are enforced at method entry and exit. For example, if we call `sqrt(49)`, RDL first checks that `49 > 0`; then it passes `49` to `sqrt`, which (presumably) returns `7`; then RDL checks that `7 > 0`; and finally it returns `7`.
 
@@ -326,7 +326,7 @@ type '(Fixnum x {{ x>y }}, Fixnum y) -> Float z {{ z==(x+y) }}'
 def m(x,y) ... end
 ```
 
-Any arbitrary code can be placed between the double braces of a type refinement, and RDL will dynmically check that this predicate evaluates to true, or raise a type error if it evaluates to false.
+Any arbitrary code can be placed between the double braces of a type refinement, and RDL will dynamically check that this predicate evaluates to true, or raise a type error if it evaluates to false.
 
 ## Higher-order Types
 
@@ -360,7 +360,7 @@ type '(Fixnum x, Float y) -> {(Fixnum z {{ z>y }}) -> Fixnum}'
 def m(x,y,&blk) ... end
 ```
 
-The type contract above states that method `m` returns a `Proc` which takes a `Fixnum z` which must be greater than the argument `Float y`. Whenver this `Proc` is called, it will be checked that this contract holds.
+The type contract above states that method `m` returns a `Proc` which takes a `Fixnum z` which must be greater than the argument `Float y`. Whenever this `Proc` is called, it will be checked that this contract holds.
 
 ## Class/Singleton Method Types
 
@@ -522,7 +522,7 @@ The rules for variances are standard. Let's assume `A` is a subclass of `B`. Als
 
 ## Tuple Types
 
-A type such as `Array<Fixnum>` is useful for homogeneous arrays, where all elements have the same type. But Ruby programs often use heterogenous arrays, e.g., `[1, "two"]`. The best generic type we can give this is `Array<Fixnum or String>`, but that's imprecise.
+A type such as `Array<Fixnum>` is useful for homogeneous arrays, where all elements have the same type. But Ruby programs often use heterogeneous arrays, e.g., `[1, "two"]`. The best generic type we can give this is `Array<Fixnum or String>`, but that's imprecise.
 
 RDL includes special *tuple types* to handle this situation. Tuple types are written `[t1, ..., tn]`, denoting an `Array` of `n` elements of types `t1` through `tn`, in that order. For example, `[1, "two"]` has type `[Fixnum, String]`. As another example, here is the type of `Process#getrlimit`, which returns a two-element array of `Fixnums`:
 
@@ -532,7 +532,7 @@ type Process, 'self.getrlimit', '(Symbol or String or Fixnum resource) -> [Fixnu
 
 ## Finite Hash Types
 
-Similarly to tuple types, RDL also supports *finite hash types* for heterogenous hashes. Finite hash types are written `{k1 => v1, ..., kn => vn}` to indicate a `Hash` with `n` mappings of type `ki` maps to `vi`. The `ki` may be strings, integers, floats, or constants denoted with `${.}`. If a key is a symbol, then the mapping should be written `ki: vi`. In the latter case, the `{}`'s can be left off:
+Similarly to tuple types, RDL also supports *finite hash types* for heterogeneous hashes. Finite hash types are written `{k1 => v1, ..., kn => vn}` to indicate a `Hash` with `n` mappings of type `ki` maps to `vi`. The `ki` may be strings, integers, floats, or constants denoted with `${.}`. If a key is a symbol, then the mapping should be written `ki: vi`. In the latter case, the `{}`'s can be left off:
 ```ruby
 type MyClass, :foo, '(a: Fixnum, b: String) { () -> %any } -> %any'
 ```
@@ -552,7 +552,7 @@ RDL has experimental support (note: this is in beta release) for static type che
 
 Often method bodies cannot be type checked as soon as they are loaded because they refer to classes, methods, and variables that have not been created yet. To support these cases, some other symbol can be supplied as `typecheck: sym`. Then when `rdl_do_typecheck sym` is called, all methods typechecked at `sym` will be statically checked.
 
-Addditionally, `type` can be called with `typecheck: :call`, which will delay checking the method's type until the method is called. Currently these checks are not cached, so expect a big performance hit for using this feature.
+Additionally, `type` can be called with `typecheck: :call`, which will delay checking the method's type until the method is called. Currently these checks are not cached, so expect a big performance hit for using this feature.
 
 To perform type checking, RDL needs source code, which it gets by parsing the file containing the to-be-typechecked method. Hence, static type checking does not work in `irb` since RDL has no way of getting the source.
 
@@ -602,7 +602,7 @@ x = 3       # okay
 x = "three" # type error
 ```
 
-The first argument to `var_type` is a symbol with the local variable name, and the second argument is a string containing the variable's type. Note that `var_type` is most useful at the beginning of method or code block. Using it elsewhere may result in surprising error mesages, since RDL requires variables with fixed types to have the same type along all paths. Method parameters are treated as if `var_type` was called on them at the beginning of the method, fixing them to their declared type. This design choice may be revisited in the future.
+The first argument to `var_type` is a symbol with the local variable name, and the second argument is a string containing the variable's type. Note that `var_type` is most useful at the beginning of method or code block. Using it elsewhere may result in surprising error messages, since RDL requires variables with fixed types to have the same type along all paths. Method parameters are treated as if `var_type` was called on them at the beginning of the method, fixing them to their declared type. This design choice may be revisited in the future.
 
 *[github head only]*
 There is one subtlety for local variables and code blocks. Consider the following code:
