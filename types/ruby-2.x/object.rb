@@ -1,5 +1,7 @@
 class Object
-  rdl_nowrap
+  # Instead of rdl_nowrap, mark individual methods as not being wrapped so
+  # we can wrap stuff defined by the user at the top level (since those
+  # methods are added to Object).
 
   # type :ARGF, ARGF
   # type :ARGV, 'Array<String>'
@@ -21,53 +23,53 @@ class Object
   # type :TOPLEVEL_BINDING, 'Binding'
   # type :TRUE, '%true'
 
-  type :!~, '(%any other) -> %bool'
-  type :<=>, '(%any other) -> Fixnum or nil'
-  type :===, '(%any other) -> %bool'
-  type :=~, '(%any other) -> nil'
-  type :class, '() -> Class'
-  type :clone, '() -> self'
+  type :!~, '(%any other) -> %bool', wrap: false
+  type :<=>, '(%any other) -> Fixnum or nil', wrap: false
+  type :===, '(%any other) -> %bool', wrap: false
+  type :=~, '(%any other) -> nil', wrap: false
+  type :class, '() -> Class', wrap: false
+  type :clone, '() -> self', wrap: false
 #  type :define_singleton_method, '(XXXX : *XXXX)') # TODO
-  type :display, '(IO port) -> nil'
-  type :dup, '() -> self an_object'
-  type :enum_for, '(?Symbol method, *%any args) -> Enumerator<%any>'
-  type :enum_for, '(?Symbol method, *%any args) { (*%any args) -> %any } -> Enumerator<%any>'
-  type :eql?, '(%any other) -> %bool'
+  type :display, '(IO port) -> nil', wrap: false
+  type :dup, '() -> self an_object', wrap: false
+  type :enum_for, '(?Symbol method, *%any args) -> Enumerator<%any>', wrap: false
+  type :enum_for, '(?Symbol method, *%any args) { (*%any args) -> %any } -> Enumerator<%any>', wrap: false
+  type :eql?, '(%any other) -> %bool', wrap: false
 #  type :extend, '(XXXX : *XXXX)') # TODO
-  type :freeze, '() -> self'
-  type :frozen?, '() -> %bool'
-  type :hash, '() -> Fixnum'
-  type :inspect, '() -> String'
-  type :instance_of?, '(Class) -> %bool'
-  type :instance_variable_defined?, '(Symbol or String) -> %bool'
-  type :instance_variable_get, '(Symbol or String) -> %any'
-  type :instance_variable_set, '(Symbol or String, %any) -> %any' # returns 2nd argument
-  type :instance_variables, '() -> Array<Symbol>'
-  type :is_a?, '(Class or Module) -> %bool'
-  type :kind_of?, '(Class) -> %bool'
-  type :method, '(Symbol) -> Method'
-  type :methods, '(?%bool regular) -> Array<Symbol>'
-  type :nil?, '() -> %bool'
-  type :private_methods, '(?%bool all) -> Array<Symbol>'
-  type :protected_methods, '(?%bool all) -> Array<Symbol>'
-  type :public_method, '(Symbol) -> Method'
-  type :public_methods, '(?%bool all) -> Array<Symbol>'
-  type :public_send, '(Symbol or String, *%any args) -> %any'
-  type :remove_instance_variable, '(Symbol) -> %any'
+  type :freeze, '() -> self', wrap: false
+  type :frozen?, '() -> %bool', wrap: false
+  type :hash, '() -> Fixnum', wrap: false
+  type :inspect, '() -> String', wrap: false
+  type :instance_of?, '(Class) -> %bool', wrap: false
+  type :instance_variable_defined?, '(Symbol or String) -> %bool', wrap: false
+  type :instance_variable_get, '(Symbol or String) -> %any', wrap: false
+  type :instance_variable_set, '(Symbol or String, %any) -> %any', wrap: false # returns 2nd argument
+  type :instance_variables, '() -> Array<Symbol>', wrap: false
+  type :is_a?, '(Class or Module) -> %bool', wrap: false
+  type :kind_of?, '(Class) -> %bool', wrap: false
+  type :method, '(Symbol) -> Method', wrap: false
+  type :methods, '(?%bool regular) -> Array<Symbol>', wrap: false
+  type :nil?, '() -> %bool', wrap: false
+  type :private_methods, '(?%bool all) -> Array<Symbol>', wrap: false
+  type :protected_methods, '(?%bool all) -> Array<Symbol>', wrap: false
+  type :public_method, '(Symbol) -> Method', wrap: false
+  type :public_methods, '(?%bool all) -> Array<Symbol>', wrap: false
+  type :public_send, '(Symbol or String, *%any args) -> %any', wrap: false
+  type :remove_instance_variable, '(Symbol) -> %any', wrap: false
 #  type :respond_to?, '(Symbol or String, ?%bool include_all) -> %bool'
   type :send, '(Symbol or String, *%any args) -> %any', wrap: false # Can't wrap this, used outside wrap switch
-  type :singleton_class, '() -> Class'
-  type :singleton_method, '(Symbol) -> Method'
-  type :singleton_methods, '(?%bool all) -> Array<Symbol>'
-  type :taint, '() -> self'
-  type :tainted?, '() -> %bool'
+  type :singleton_class, '() -> Class', wrap: false
+  type :singleton_method, '(Symbol) -> Method', wrap: false
+  type :singleton_methods, '(?%bool all) -> Array<Symbol>', wrap: false
+  type :taint, '() -> self', wrap: false
+  type :tainted?, '() -> %bool', wrap: false
 #  type :tap, '()') # TODO
-  type :to_enum, '(?Symbol method, *%any args) -> Enumerator<%any>'
-  type :to_enum, '(?Symbol method, *%any args) {(*%any args) -> %any} -> Enumerator<%any>'
+  type :to_enum, '(?Symbol method, *%any args) -> Enumerator<%any>', wrap: false
+  type :to_enum, '(?Symbol method, *%any args) {(*%any args) -> %any} -> Enumerator<%any>', wrap: false
 # TODO: above alias for enum_for?
-  type :to_s, '() -> String'
-  type :trust, '() -> self'
-  type :untaint, '() -> self'
-  type :untrust, '() -> self'
-  type :untrusted?, '() -> %bool'
+  type :to_s, '() -> String', wrap: false
+  type :trust, '() -> self', wrap: false
+  type :untaint, '() -> self', wrap: false
+  type :untrust, '() -> self', wrap: false
+  type :untrusted?, '() -> %bool', wrap: false
 end
