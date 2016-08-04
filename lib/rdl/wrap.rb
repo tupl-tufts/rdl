@@ -199,7 +199,7 @@ RUBY
         else
           tmp_klass = klass
         end
-        raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{tmp_klass}" if prev_klass != tmp_klass
+        raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{tmp_klass} to #{meth}" if prev_klass != tmp_klass
         $__rdl_info.add(klass, meth, kind, contract)
         RDL::Wrap.wrap(klass, meth) if h[:wrap]
         unless $__rdl_info.set(klass, meth, :typecheck, h[:typecheck])
@@ -322,16 +322,18 @@ class Object
         unless $__rdl_info.set(klass, meth, :typecheck, typecheck)
           raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
         end
-        if wrap
+        if wrap || typecheck == :now
           if RDL::Util.method_defined?(klass, meth) || meth == :initialize
             $__rdl_info.set(klass, meth, :source_location, RDL::Util.to_class(klass).instance_method(meth).source_location)
             RDL::Typecheck.typecheck(klass, meth) if typecheck == :now
-            RDL::Wrap.wrap(klass, meth)
+            RDL::Wrap.wrap(klass, meth) if wrap
           else
-            $__rdl_to_wrap << [klass, meth]
-            if (typecheck && typecheck != :call)
-              $__rdl_to_typecheck[typecheck] = Set.new unless $__rdl_to_typecheck[typecheck]
-              $__rdl_to_typecheck[typecheck].add([klass, meth])
+            if wrap
+              $__rdl_to_wrap << [klass, meth]
+              if (typecheck && typecheck != :call)
+                $__rdl_to_typecheck[typecheck] = Set.new unless $__rdl_to_typecheck[typecheck]
+                $__rdl_to_typecheck[typecheck].add([klass, meth])
+              end
             end
           end
         end
