@@ -35,6 +35,23 @@ module RDL::Type
     # an uninstantiated variable is only comparable to itself
     def <=(other)
       other = other.type if other.is_a? DependentArgType
+      other = other.canonical
+      return self == other
+    end
+
+    def leq_inst(other, inst: nil, ileft: true)
+      other = other.type if other.is_a? DependentArgType
+      other = other.canonical
+      if inst && !ileft && other.is_a?(VarType)
+        return leq_inst(inst[other.name], inst, ileft) if inst[other.name]
+        inst.merge!(other.name => self)
+        return true
+      end
+      if inst && ileft
+        return inst[@name].leq_inst(other, inst, ileft) if inst[@name]
+        inst.merge!(@name => other)
+        return true
+      end
       return self == other
     end
 

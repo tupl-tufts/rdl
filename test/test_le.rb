@@ -15,6 +15,11 @@ class TestLe < Minitest::Test
   class C < B
   end
 
+  # convert arg string to a type
+  def tt(t)
+    $__rdl_parser.scan_str('#T ' + t)
+  end
+
   def setup
     @tbasicobject = NominalType.new "BasicObject"
     @tsymfoo = SingletonType.new :foo
@@ -93,45 +98,42 @@ class TestLe < Minitest::Test
     assert (not (t2 <= t1))
     assert (not (tarray <= t1))
     assert (t1 <= t2) # covariant subtyping since tuples are *immutable*
-    t123 = $__rdl_parser.scan_str "#T [1, 2, 3]"
-    tfff = $__rdl_parser.scan_str "#T [Fixnum, Fixnum, Fixnum]"
-    tooo = $__rdl_parser.scan_str "#T [Object, Object, Object]"
-    assert (t123 <= tfff) # covariant subtyping with singletons
-    assert (tfff <= tooo)
-    assert (t123 <= tooo)
+    assert (tt("[1, 2, 3]") <= tt("[Fixnum, Fixnum, Fixnum]")) # covariant subtyping with singletons
+    assert (tt("[Fixnum, Fixnum, Fixnum]") <= tt("[Object, Object, Object]"))
+    assert (tt("[1, 2, 3]") <= tt("[Object, Object, Object]"))
 
     # subtyping of tuples and arrays
-    tfs_1 = $__rdl_parser.scan_str "#T [Fixnum, String]"
-    tafs_1 = $__rdl_parser.scan_str "#T Array<Fixnum or String>"
+    tfs_1 = tt "[Fixnum, String]"
+    tafs_1 = tt "Array<Fixnum or String>"
     assert (tfs_1 <= tafs_1) # subtyping allowed by tfs_1 promoted to array
-    tfs2_1 = $__rdl_parser.scan_str "#T [Fixnum, String]"
+    tfs2_1 = tt "[Fixnum, String]"
     assert (not (tfs_1 <= tfs2_1)) # t12 has been promoted to array, no longer subtype
 
-    tfs_2 = $__rdl_parser.scan_str "#T [Fixnum, String]"
-    tfs2_2 = $__rdl_parser.scan_str "#T [Fixnum, String]"
+    tfs_2 = tt "[Fixnum, String]"
+    tfs2_2 = tt "[Fixnum, String]"
     assert (tfs_2 <= tfs2_2) # this is allowed here because tfs_2 is still a tuple
-    tafs_2 = $__rdl_parser.scan_str "#T Array<Fixnum or String>"
+    tafs_2 = tt "Array<Fixnum or String>"
     assert (not (tfs_2 <= tafs_2)) # subtyping not allowed because tfs_2 <= tfs2_2 unsatisfiable after tfs_2 promoted
 
-    tfs_3 = $__rdl_parser.scan_str "#T [Fixnum, String]"
-    tfs2_3 = $__rdl_parser.scan_str "#T [Object, Object]"
+    tfs_3 = tt "[Fixnum, String]"
+    tfs2_3 = tt "[Object, Object]"
     assert (tfs_3 <= tfs2_3) # this is allowed here because t12a is still a tuple
-    tafs_3 = $__rdl_parser.scan_str "#T Array<Object>"
+    tafs_3 = tt "Array<Object>"
     assert (not (tfs2_3 <= tafs_3)) # subtyping not allowed because tfs_3 <= tfs2_3 unsatisfiable after tfs2_3 promoted
 
-    tfs_4 = $__rdl_parser.scan_str "#T [Fixnum, String]"
-    tfs2_4 = $__rdl_parser.scan_str "#T [Fixnum, String]"
+    tfs_4 = tt "[Fixnum, String]"
+    tfs2_4 = tt "[Fixnum, String]"
     assert (tfs_4 <= tfs2_4) # allowed, types are the same
-    tafs_4 = $__rdl_parser.scan_str "#T Array<Fixnum or String>"
+    tafs_4 = tt "Array<Fixnum or String>"
     assert (tfs2_4 <= tafs_4) # allowed, both tfs2_4 and tfs_4 promoted to array
-    tfs3_4 = $__rdl_parser.scan_str "#T [Fixnum, String]"
+    tfs3_4 = tt "[Fixnum, String]"
     assert (not(tfs_4 <= tfs3_4)) # not allowed, tfs_4 has been promoted
   end
 
   def test_finite_hash
-    t12 = $__rdl_parser.scan_str "#T {a: 1, b: 2}"
-    tfs = $__rdl_parser.scan_str "#T {a: Fixnum, b: Fixnum}"
-    too = $__rdl_parser.scan_str "#T {a: Object, b: Object}"
+    t12 = tt "{a: 1, b: 2}"
+    tfs = tt "{a: Fixnum, b: Fixnum}"
+    too = tt "{a: Object, b: Object}"
     assert (t12 <= tfs)
     assert (t12 <= too)
     assert (tfs <= too)
@@ -141,30 +143,30 @@ class TestLe < Minitest::Test
 
     # subtyping of finite hashes and hashes; same pattern as tuples
     # subtyping of tuples and arrays
-    tfs_1 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
-    thfs_1 = $__rdl_parser.scan_str "#T Hash<Symbol, Fixnum or String>"
+    tfs_1 = tt "{x: Fixnum, y: String}"
+    thfs_1 = tt "Hash<Symbol, Fixnum or String>"
     assert (tfs_1 <= thfs_1) # subtyping allowed because tfs_1 promoted to hash
-    tfs2_1 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
+    tfs2_1 = tt "{x: Fixnum, y: String}"
     assert (not (tfs_1 <= tfs2_1)) # t12 has been promoted to hash, no longer subtype
 
-    tfs_2 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
-    tfs2_2 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
+    tfs_2 = tt "{x: Fixnum, y: String}"
+    tfs2_2 = tt "{x: Fixnum, y: String}"
     assert (tfs_2 <= tfs2_2) # this is allowed here because tfs_2 is still finite
-    thfs_2 = $__rdl_parser.scan_str "#T Hash<Symbol, Fixnum or String>"
+    thfs_2 = tt "Hash<Symbol, Fixnum or String>"
     assert (not (tfs_2 <= thfs_2)) # subtyping not allowed because tfs_2 <= tfs2_2 unsatisfiable after tfs_2 promoted
 
-    tfs_3 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
-    tfs2_3 = $__rdl_parser.scan_str "#T {x: Object, y: Object}"
+    tfs_3 = tt "{x: Fixnum, y: String}"
+    tfs2_3 = tt "{x: Object, y: Object}"
     assert (tfs_3 <= tfs2_3) # this is allowed here because t12a is still finite
-    thfs_3 = $__rdl_parser.scan_str "#T Hash<Symbol, Object>"
+    thfs_3 = tt "Hash<Symbol, Object>"
     assert (not (tfs2_3 <= thfs_3)) # subtyping not allowed because tfs_3 <= tfs2_3 unsatisfiable after tfs2_3 promoted
 
-    tfs_4 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
-    tfs2_4 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
+    tfs_4 = tt "{x: Fixnum, y: String}"
+    tfs2_4 = tt "{x: Fixnum, y: String}"
     assert (tfs_4 <= tfs2_4) # allowed, types are the same
-    thfs_4 = $__rdl_parser.scan_str "#T Hash<Symbol, Fixnum or String>"
+    thfs_4 = tt "Hash<Symbol, Fixnum or String>"
     assert (tfs2_4 <= thfs_4) # allowed, both tfs2_4 and tfs_4 promoted to hash
-    tfs3_4 = $__rdl_parser.scan_str "#T {x: Fixnum, y: String}"
+    tfs3_4 = tt "{x: Fixnum, y: String}"
     assert (not(tfs_4 <= tfs3_4)) # not allowed, tfs_4 has been promoted
   end
 
@@ -249,6 +251,23 @@ class TestLe < Minitest::Test
     ts4 = StructuralType.new(m1: tmb)
     assert (tnom <= ts4) # types don't matter, only methods
     assert (not (tnomt <= ts4))
+  end
+
+  def test_leq_inst
+    assert_equal [true, {t: @ta}], do_leq_inst(tt("t"), @ta, true)
+    assert_equal [false, {}], do_leq_inst(tt("t"), @ta, false)
+    assert_equal [false, {}], do_leq_inst(@ta, tt("t"), true)
+    assert_equal [true, {t: @ta}], do_leq_inst(@ta, tt("t"), false)
+    assert_equal [true, {}], do_leq_inst($__rdl_bot_type, tt("t"), true)
+    assert_equal [true, {}], do_leq_inst($__rdl_bot_type, tt("t"), false)
+    assert_equal [false, {}], do_leq_inst($__rdl_top_type, tt("t"), true)
+    assert_equal [true, {t: $__rdl_top_type}], do_leq_inst($__rdl_top_type, tt("t"), false)
+  end
+
+  def do_leq_inst(tleft, tright, ileft)
+    inst = Hash.new
+    r = tleft.leq_inst(tright, inst: inst, ileft: ileft)
+    return [r, inst]
   end
 
   # def test_intersection

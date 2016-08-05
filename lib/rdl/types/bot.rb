@@ -36,6 +36,10 @@ module RDL::Type
       true
     end
 
+    def leq_inst(other, inst: nil, ileft: true)
+      true
+    end
+
     def member?(obj, *args)
       # There are no values of this type (note nil does *not* have type %bot)
       false

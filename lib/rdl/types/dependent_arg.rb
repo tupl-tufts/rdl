@@ -41,6 +41,10 @@ module RDL::Type
       return @type <= other
     end
 
+    def leq_inst(other, inst: nil, ileft: true)
+      return @type.leq_inst(other, inst: inst, ileft: ileft)
+    end
+
     def member?(obj, *args)
       return @type.member?(obj, *args)
     end

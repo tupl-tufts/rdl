@@ -40,6 +40,17 @@ module RDL::Type
       other.instance_of? TopType
     end
 
+    def leq_inst(other, inst: nil, ileft: true)
+      other = other.type if other.is_a? DependentArgType
+      other = other.canonical
+      if inst && !ileft && other.is_a?(VarType)
+        return leq_inst(inst[other.name], inst, ileft) if inst[other.name]
+        inst.merge!(other.name => self)
+        return true
+      end
+      return other.is_a? TopType
+    end
+
     def member?(obj, *args)
       t = RDL::Util.rdl_type obj
       return t <= self if t
