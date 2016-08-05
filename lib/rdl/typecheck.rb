@@ -502,7 +502,7 @@ module RDL::Typecheck
             if ti.is_a? RDL::Type::TupleType
               tactuals.concat ti.params
             elsif ti.is_a?(RDL::Type::GenericType) && ti.base == $__rdl_array_type
-              tactuals << RDL::Type::VarargType.new(ti)
+              tactuals << RDL::Type::VarargType.new(ti.params[0]) # Turn Array<t> into *t
             else
               error :cant_splat, [ti], ei.children[0]
             end
@@ -1048,7 +1048,7 @@ RUBY
           states << [formal, actual+1] # match, more varargs coming
           states << [formal+1, actual+1] # match, no more varargs
           states << [formal+1, actual] # skip over even though matches
-        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && tactuals[actual] = t
+        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && tactuals[actual] == t
           states << [formal+1, actual+1] # match, no more varargs; no other choices!
         else
           states << [formal+1, actual] # doesn't match, must skip
