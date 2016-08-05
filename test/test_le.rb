@@ -253,22 +253,22 @@ class TestLe < Minitest::Test
     assert (not (tnomt <= ts4))
   end
 
-  def test_leq_inst
-    assert_equal [true, {t: @ta}], do_leq_inst(tt("t"), @ta, true)
-    assert_equal [false, {}], do_leq_inst(tt("t"), @ta, false)
-    assert_equal [false, {}], do_leq_inst(@ta, tt("t"), true)
-    assert_equal [true, {t: @ta}], do_leq_inst(@ta, tt("t"), false)
-    assert_equal [true, {}], do_leq_inst($__rdl_bot_type, tt("t"), true)
-    assert_equal [true, {}], do_leq_inst($__rdl_bot_type, tt("t"), false)
-    assert_equal [false, {}], do_leq_inst($__rdl_top_type, tt("t"), true)
-    assert_equal [true, {t: $__rdl_top_type}], do_leq_inst($__rdl_top_type, tt("t"), false)
-    assert_equal [true, {t: @ta, u: @ta}], do_leq_inst(tt("t or u"), @ta, true)
-    assert_equal [false, {}], do_leq_inst(tt("t or u"), @ta, false)
+  def test_leq
+    assert_equal [true, {t: @ta}], do_leq(tt("t"), @ta, true)
+    assert_equal [false, {}], do_leq(tt("t"), @ta, false)
+    assert_equal [false, {}], do_leq(@ta, tt("t"), true)
+    assert_equal [true, {t: @ta}], do_leq(@ta, tt("t"), false)
+    assert_equal [true, {}], do_leq($__rdl_bot_type, tt("t"), true)
+    assert_equal [true, {}], do_leq($__rdl_bot_type, tt("t"), false)
+    assert_equal [false, {}], do_leq($__rdl_top_type, tt("t"), true)
+    assert_equal [true, {t: $__rdl_top_type}], do_leq($__rdl_top_type, tt("t"), false)
+    assert_equal [true, {t: @ta, u: @ta}], do_leq(tt("t or u"), @ta, true)
+    assert_equal [false, {}], do_leq(tt("t or u"), @ta, false)
   end
 
-  def do_leq_inst(tleft, tright, ileft)
+  def do_leq(tleft, tright, ileft)
     inst = Hash.new
-    r = tleft.leq_inst(tright, inst, ileft)
+    r = Type.leq(tleft, tright, inst, ileft)
     return [r, inst]
   end
 

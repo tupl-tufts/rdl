@@ -35,7 +35,54 @@ module RDL::Type
     # if inst is nil, returns self <= other
     # if inst is non-nil and ileft, returns inst(self) <= other, possibly mutating inst to make this true
     # if inst is non-nil and !ileft, returns self <= inst(other), again possibly mutating inst
-    # def leq_inst(other, inst=nil, ileft=true) - defined in individual subclasses
+    def self.leq(left, right, inst=nil, ileft=true)
+      left = inst[left.name] if inst && ileft && left.is_a?(VarType) && inst[left.name]
+      right = inst[right.name] if inst && !ileft && right.is_a?(VarType) && inst[right.name]
+      left = left.type if left.is_a? DependentArgType
+      right = right.type if right.is_a? DependentArgType
+      left = left.canonical
+      right = right.canonical
+
+      # top and bottom
+      return true if left.is_a? BotType
+      return true if right.is_a? TopType
+
+      # type variables
+      begin inst.merge!(left.name => right); return true end if inst && ileft && left.is_a?(VarType)
+      begin inst.merge!(right.name => left); return true end if inst && !ileft && right.is_a?(VarType)
+      return true if left.is_a?(VarType) && right.is_a?(VarType) && left.name == right.name
+
+      # union
+      return left.types.all? { |t| leq(t, right, inst, ileft) } if left.is_a?(UnionType)
+      if right.instance_of?(UnionType)
+        right.types.each { |t|
+          # return true at first match, updating inst accordingly to first succeessful match
+          new_inst = inst.dup
+          begin inst.update(new_inst); return true end if leq(left, t, new_inst, ileft)
+        }
+        return false
+      end
+
+      # nominal
+      return left.klass.ancestors.member?(right.klass) if left.is_a?(NominalType) && right.is_a?(NominalType)
+      if left.is_a?(NominalType) && right.is_a?(StructuralType)
+        right.methods.each_pair { |m, t|
+          return false unless left.klass.method_defined? m
+          types = $__rdl_info.get(left.klass, m, :type)
+          if types
+            return false unless types.all? { |tlm| leq(tlm, t, nil, ileft) }
+            # inst above is nil because the method types inside the class and
+            # inside the structural type have an implicit quantifier on them. So
+            # even if we're allowed to instantiate type variables we can't do that
+            # inside those types
+          end
+        }
+        return true
+      end
+
+
+      return false
+    end
   end
 
   # [+ a +] is an Array<Type> that may contain union types.
