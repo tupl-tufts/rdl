@@ -62,23 +62,6 @@ module RDL::Type
         (@nominal <= other)
     end
 
-    def leq_inst(other, inst=nil, ileft=true)
-      other = other.type if other.is_a? DependentArgType
-      other = other.canonical
-      if inst && !ileft && other.is_a?(VarType)
-        return leq_inst(inst[other.name], inst, ileft) if inst[other.name]
-        inst.merge!(other.name => self)
-        return true
-      end
-      return true if other.is_a?(TopType)
-      return true if (@val.nil? && (not (other.is_a?(SingletonType))))
-      return true if (other.is_a?(SingletonType) && other.val == @val)
-      if other.is_a? UnionType
-        # TODO same logic as nominal...
-      end
-      return @nominal.leq_inst(other, inst, ileft)
-    end
-
     def member?(obj, *args)
       t = RDL::Util.rdl_type obj
       return t <= self if t

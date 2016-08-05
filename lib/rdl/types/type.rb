@@ -50,7 +50,9 @@ module RDL::Type
       # type variables
       begin inst.merge!(left.name => right); return true end if inst && ileft && left.is_a?(VarType)
       begin inst.merge!(right.name => left); return true end if inst && !ileft && right.is_a?(VarType)
-      return true if left.is_a?(VarType) && right.is_a?(VarType) && left.name == right.name
+      if left.is_a?(VarType) && right.is_a?(VarType)
+        return left.name == right.name
+      end
 
       # union
       return left.types.all? { |t| leq(t, right, inst, ileft) } if left.is_a?(UnionType)
@@ -58,7 +60,10 @@ module RDL::Type
         right.types.each { |t|
           # return true at first match, updating inst accordingly to first succeessful match
           new_inst = inst.dup
-          begin inst.update(new_inst); return true end if leq(left, t, new_inst, ileft)
+          if leq(left, t, new_inst, ileft)
+            inst.update(new_inst)
+            return true
+          end
         }
         return false
       end
@@ -79,6 +84,11 @@ module RDL::Type
         }
         return true
       end
+
+      # singleton
+      return left.val == right.val if left.is_a?(SingletonType) && right.is_a?(SingletonType)
+      return true if left.is_a?(SingletonType) && left.val.nil? # right cannot be a SingletonType due to above conditional
+      return leq(left.nominal, right, inst, ileft) if left.is_a?(SingletonType) && right.is_a?(NominalType)
 
 
       return false

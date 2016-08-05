@@ -264,6 +264,8 @@ class TestLe < Minitest::Test
     assert_equal [true, {t: $__rdl_top_type}], do_leq($__rdl_top_type, tt("t"), false)
     assert_equal [true, {t: @ta, u: @ta}], do_leq(tt("t or u"), @ta, true)
     assert_equal [false, {}], do_leq(tt("t or u"), @ta, false)
+    assert_equal [false, {}], do_leq(tt("3"), tt("t"), true)
+    assert_equal [true, {t: tt("3")}], do_leq(tt("3"), tt("t"), false)
   end
 
   def do_leq(tleft, tright, ileft)
