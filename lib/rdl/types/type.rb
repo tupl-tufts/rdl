@@ -35,7 +35,7 @@ module RDL::Type
     # if inst is nil, returns self <= other
     # if inst is non-nil and ileft, returns inst(self) <= other, possibly mutating inst to make this true
     # if inst is non-nil and !ileft, returns self <= inst(other), again possibly mutating inst
-    # def leq_inst(other, inst: nil, ileft: true) - defined in individual subclasses
+    # def leq_inst(other, inst=nil, ileft=true) - defined in individual subclasses
   end
 
   # [+ a +] is an Array<Type> that may contain union types.

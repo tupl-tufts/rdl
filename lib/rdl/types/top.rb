@@ -40,7 +40,7 @@ module RDL::Type
       other.instance_of? TopType
     end
 
-    def leq_inst(other, inst: nil, ileft: true)
+    def leq_inst(other, inst=nil, ileft=true)
       other = other.type if other.is_a? DependentArgType
       other = other.canonical
       if inst && !ileft && other.is_a?(VarType)

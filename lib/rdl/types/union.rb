@@ -89,6 +89,19 @@ module RDL::Type
       @types.all? { |t| t <= other }
     end
 
+    def leq_inst(other, inst=nil, ileft=true)
+      canonicalize!
+      return @canonical.leq_inst(other, inst, ileft) if @canonical
+      other = other.type if other.is_a? DependentArgType
+      other = other.canonical
+      if inst && !ileft && other.is_a?(VarType)
+        return leq_inst(inst[other.name], inst, ileft) if inst[other.name]
+        inst.merge!(other.name => self)
+        return true
+      end
+      return @types.all? { |t| t.leq_inst(other, inst, ileft) }
+    end
+
     def member?(obj, *args)
       canonicalize!
       return @canonical.member?(obj, *args) if @canonical

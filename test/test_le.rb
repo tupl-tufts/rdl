@@ -262,11 +262,13 @@ class TestLe < Minitest::Test
     assert_equal [true, {}], do_leq_inst($__rdl_bot_type, tt("t"), false)
     assert_equal [false, {}], do_leq_inst($__rdl_top_type, tt("t"), true)
     assert_equal [true, {t: $__rdl_top_type}], do_leq_inst($__rdl_top_type, tt("t"), false)
+    assert_equal [true, {t: @ta, u: @ta}], do_leq_inst(tt("t or u"), @ta, true)
+    assert_equal [false, {}], do_leq_inst(tt("t or u"), @ta, false)
   end
 
   def do_leq_inst(tleft, tright, ileft)
     inst = Hash.new
-    r = tleft.leq_inst(tright, inst: inst, ileft: ileft)
+    r = tleft.leq_inst(tright, inst, ileft)
     return [r, inst]
   end
 

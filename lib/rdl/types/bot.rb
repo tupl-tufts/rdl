@@ -36,7 +36,7 @@ module RDL::Type
       true
     end
 
-    def leq_inst(other, inst: nil, ileft: true)
+    def leq_inst(other, inst=nil, ileft=true)
       true
     end
 

@@ -39,7 +39,7 @@ module RDL::Type
       return self == other
     end
 
-    def leq_inst(other, inst: nil, ileft: true)
+    def leq_inst(other, inst=nil, ileft=true)
       other = other.type if other.is_a? DependentArgType
       other = other.canonical
       if inst && !ileft && other.is_a?(VarType)
