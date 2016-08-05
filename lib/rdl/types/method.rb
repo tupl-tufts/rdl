@@ -265,17 +265,7 @@ RUBY
     end
 
     def <=(other)
-      return false unless other.instance_of? MethodType # only comparable to method types
-      return false unless other.args.size == @args.size
-      return false unless @args.zip(other.args).all? { |left, right| right <= left } # contravariance
-      return false unless @ret <= other.ret # covariance
-      if @block && other.block
-        return (other.block <= @block) # contravariance
-      elsif @block.nil? && other.block.nil?
-        return true
-      else
-        return false # one has a block and the other doesn't
-      end
+      return Type.leq(self, other)
     end
 
     def instantiate(inst)

@@ -59,9 +59,9 @@ module RDL::Type
       if right.instance_of?(UnionType)
         right.types.each { |t|
           # return true at first match, updating inst accordingly to first succeessful match
-          new_inst = inst.dup
+          new_inst = inst.dup unless inst.nil?
           if leq(left, t, new_inst, ileft)
-            inst.update(new_inst)
+            inst.update(new_inst) unless inst.nil?
             return true
           end
         }
@@ -88,8 +88,112 @@ module RDL::Type
       # singleton
       return left.val == right.val if left.is_a?(SingletonType) && right.is_a?(SingletonType)
       return true if left.is_a?(SingletonType) && left.val.nil? # right cannot be a SingletonType due to above conditional
-      return leq(left.nominal, right, inst, ileft) if left.is_a?(SingletonType) && right.is_a?(NominalType)
+      return leq(left.nominal, right, inst, ileft) if left.is_a?(SingletonType) # fall through case---use nominal type for reasoning
 
+      # generic
+      if left.is_a?(GenericType) && right.is_a?(GenericType)
+        formals, variance, _ = $__rdl_type_params[left.base.name]
+        # do check here to avoid hiding errors if generic type written
+        # with wrong number of parameters but never checked against
+        # instantiated instances
+        raise TypeError, "No type parameters defined for #{base.name}" unless formals
+        return false unless left.base == right.base
+        return variance.zip(left.params, right.params).all? { |v, tl, tr|
+          case v
+          when :+
+            leq(tl, tr, inst, ileft)
+          when :-
+            leq(tr, tl, inst, !ileft)
+          when :~
+            leq(tl, tr, inst, ileft) && leq(tr, tl, inst, !ileft)
+          else
+            raise RuntimeError, "Unexpected variance #{v}" # shouldn't happen
+          end
+        }
+      end
+      if left.is_a?(GenericType) && right.is_a?(StructuralType)
+        # similar to logic above for leq(NominalType, StructuralType, ...)
+        formals, variance, _ = $__rdl_type_params[left.base.name]
+        raise TypeError, "No type parameters defined for #{base.name}" unless formals
+        base_inst = Hash[*formals.zip(left.params).flatten] # instantiation for methods in base's class
+        klass = left.base.klass
+        right.methods.each_pair { |meth, t|
+          return false unless klass.method_defined? meth
+          types = $__rdl_info.get(klass, meth, :type)
+          if types
+            return false unless types.all? { |tlm| leq(tlm.instantiate(base_inst), t, nil, ileft) }
+          end
+        }
+        return true
+      end
+      # Note we do not allow raw subtyping leq(GenericType, NominalType, ...)
+
+      # method
+      if left.is_a?(MethodType) && right.is_a?(MethodType)
+        return false unless left.args.size == right.args.size
+        return false unless left.args.zip(right.args).all? { |tl, tr| leq(tr, tl, inst, !ileft) } # contravariance
+        return false unless leq(left.ret, right.ret, inst, ileft) # covariance
+        if left.block && right.block
+          return leq(right.block, left.block, inst, !ileft) # contravariance
+        elsif left.block.nil? && right.block.nil?
+          return true
+        else
+          return false # one has a block and the other doesn't
+        end
+      end
+
+      # structural
+      if left.is_a?(StructuralType) && right.is_a?(StructuralType)
+        # allow width subtyping - methods of right have to be in left, but not vice-versa
+        return right.methods.all? { |m, t|
+          # in recursive call set inst to nil since those method types have implicit quantifier
+          left.methods.has_key?(m) && leq(left.methods[m], t, nil, ileft)
+        }
+      end
+      # Note we do not allow a structural type to be a subtype of a nominal type or generic type,
+      # even though in theory that would be possible.
+
+      # tuple
+      if left.is_a?(TupleType) && right.is_a?(TupleType)
+        # Tuples are immutable, so covariant subtyping allowed
+        return false unless left.params.length == right.params.length
+        return false unless left.params.zip(right.params).all? { |lt, rt| leq(lt, rt, inst, ileft) }
+        # subyping check passed
+        left.ubounds << right
+        right.lbounds << left
+        return true
+      end
+      if left.is_a?(TupleType) && right.is_a?(GenericType) && right.base == $__rdl_array_type
+        # TODO !ileft and right carries a free variable
+        return false unless left.promote!
+        return leq(left, right, inst, ileft) # recheck for promoted type
+      end
+
+      # finite hash
+      if left.is_a?(FiniteHashType) && right.is_a?(FiniteHashType)
+        # Like Tuples, FiniteHashes are immutable, so covariant subtyping allowed
+        # But note, no width subtyping allowed, to match #member?
+        rest = right.elts.clone # shallow copy
+        left.elts.each_pair { |k, tl|
+          return false unless rest.has_key? k
+          tr = rest[k]
+          tl = tl.type if tl.is_a? OptionalType
+          tr = tr.type if tr.is_a? OptionalType
+          return false unless leq(tl, tr, inst, ileft)
+          rest.delete k
+        }
+        rest.each_pair { |k, t|
+          return false unless t.is_a? OptionalType
+        }
+        left.ubounds << right
+        right.lbounds << left
+        return true
+      end
+      if left.is_a?(FiniteHashType) && right.is_a?(GenericType) && right.base == $__rdl_hash_type
+        # TODO !ileft and right carries a free variable
+        return false unless left.promote!
+        return leq(left, right, inst, ileft) # recheck for promoted type
+      end
 
       return false
     end

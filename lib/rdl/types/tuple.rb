@@ -3,8 +3,8 @@ module RDL::Type
   class TupleType < Type
     attr_reader :params
     attr_reader :array   # either nil or array type if self has been promoted to array
-    attr_reader :ubounds # upper bounds this tuple has been compared with using <=
-    attr_reader :lbounds # lower bounds...
+    attr_accessor :ubounds # upper bounds this tuple has been compared with using <=
+    attr_accessor :lbounds # lower bounds...
 
     # no caching because array might be mutated
     def initialize(*params)
@@ -58,24 +58,7 @@ module RDL::Type
     end
 
     def <=(other)
-      return @array <= other if @array
-      other = other.type if other.is_a? DependentArgType
-      other = other.canonical
-      return true if other.instance_of? TopType
-      other = other.array if other.instance_of?(TupleType) && other.array
-      if other.instance_of? TupleType
-        # Tuples are immutable, so covariant subtyping allowed
-        return false unless @params.length == other.params.length
-        return false unless @params.zip(other.params).all? { |left, right| left <= right }
-        # subyping check passed
-        ubounds << other
-        other.lbounds << self
-        return true
-      elsif (other.instance_of? GenericType) && (other.base == $__rdl_array_type)
-        r = promote!
-        return (self <= other) && r
-      end
-      return false
+      return Type.leq(self, other)
     end
 
     def member?(obj, *args)

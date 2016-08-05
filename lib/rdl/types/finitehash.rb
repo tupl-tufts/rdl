@@ -7,8 +7,8 @@ module RDL::Type
   class FiniteHashType < Type
     attr_reader :elts
     attr_reader :the_hash # either nil or hash type if self has been promoted to hash
-    attr_reader :ubounds  # upper bounds this tuple has been compared with using <=
-    attr_reader :lbounds  # lower bounds...
+    attr_accessor :ubounds  # upper bounds this tuple has been compared with using <=
+    attr_accessor :lbounds  # lower bounds...
 
     # [+elts+] is a map from keys to types
     def initialize(elts)
@@ -65,33 +65,7 @@ module RDL::Type
     end
 
     def <=(other)
-      return @the_hash <= other if @the_hash
-      other = other.type if other.is_a? DependentArgType
-      other = other.canonical
-      return true if other.instance_of? TopType
-      if other.instance_of? FiniteHashType
-        # Like Tuples, FiniteHashes are immutable, so covariant subtyping allowed
-        # But note, no width subtyping allowed, to match #member?
-        rest = other.elts.clone # shallow copy
-        @elts.each_pair { |k, tleft|
-          return false unless rest.has_key? k
-          tright = rest[k]
-          tleft = tleft.type if tleft.instance_of? OptionalType
-          tright = tright.type if tright.instance_of? OptionalType
-          return false unless tleft <= tright
-          rest.delete k
-        }
-        rest.each_pair { |k, tright|
-          return false unless tright.instance_of? OptionalType
-        }
-        ubounds << other
-        other.lbounds << self
-        return true
-      elsif (other.instance_of? GenericType) && (other.base == $__rdl_hash_type)
-        r = promote!
-        return (self <= other) && r
-      end
-      return false
+      return Type.leq(self, other)
     end
 
     def member?(obj, *args)

@@ -34,9 +34,7 @@ module RDL::Type
 
     # an uninstantiated variable is only comparable to itself
     def <=(other)
-      other = other.type if other.is_a? DependentArgType
-      other = other.canonical
-      return self == other
+      return Type.leq(self, other)
     end
 
     def match(other)

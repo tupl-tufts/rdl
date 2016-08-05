@@ -53,13 +53,7 @@ module RDL::Type
     end
 
     def <=(other)
-      other = other.type if other.is_a? DependentArgType
-      other = other.canonical
-      other.instance_of?(TopType) ||
-        (@val.nil? && (not (other.instance_of?(SingletonType)))) ||
-        (other.instance_of?(SingletonType) && other.val == @val) ||
-        (other.instance_of?(UnionType) && other.types.any? { |ot| self <= ot }) ||
-        (@nominal <= other)
+      return Type.leq(self, other)
     end
 
     def member?(obj, *args)

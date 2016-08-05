@@ -49,29 +49,7 @@ module RDL::Type
     end
 
     def <=(other)
-      other = other.type if other.is_a? DependentArgType
-      other = other.canonical
-      k = klass
-      if other.instance_of? TopType
-        return true
-      elsif other.instance_of? NominalType
-        return k.ancestors.member?(other.klass)
-#      return self <= other.base if other.instance_of? GenericType # raw subtyping not allowed
-      elsif other.instance_of? StructuralType
-        # similar logic in GenericType
-        other.methods.each_pair { |m, t|
-          return false unless k.method_defined? m
-          types = $__rdl_info.get(k, m, :type)
-          if types
-            return false unless types.all? { |t_self| t_self <= t }
-          end
-        }
-        return true
-      elsif other.instance_of? UnionType
-        return other.types.any? { |ot| self <= ot }
-      else
-        return false
-      end
+      return Type.leq(self, other)
     end
 
     def member?(obj, *args)

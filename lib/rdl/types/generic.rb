@@ -35,44 +35,7 @@ module RDL::Type
     end
 
     def <=(other)
-      other = other.type if other.is_a? DependentArgType
-      other = other.canonical
-      formals, variance, _ = $__rdl_type_params[base.name]
-      # do check here to avoid hiding errors if generic type written
-      # with wrong number of parameters but never checked against
-      # instantiated instances
-      raise TypeError, "No type parameters defined for #{base.name}" unless formals
-      return true if other.instance_of? TopType
-#      return (@base <= other) if other.instance_of?(NominalType) # raw subtyping not allowed
-      if other.instance_of? GenericType
-        return false unless @base == other.base
-        return variance.zip(params, other.params).all? { |v, self_t, other_t|
-          case v
-          when :+
-            self_t <= other_t
-          when :-
-            other_t <= self_t
-          when :~
-            self_t == other_t
-          else
-            raise RuntimeError, "Unexpected variance #{v}" # shouldn't happen
-          end
-        }
-      end
-      if other.instance_of? StructuralType
-        # similar logic in NominalType
-        inst = Hash[*formals.zip(params).flatten]
-        k = base.klass
-        other.methods.each_pair { |m, t|
-          return false unless k.method_defined? m
-          types = $__rdl_info.get(k, m, :type)
-          if types
-            return false unless types.all? { |t_self| t_self.instantiate(inst) <= t }
-          end
-        }
-        return true
-      end
-      return false
+      return Type.leq(self, other)
     end
 
     def member?(obj, *args)

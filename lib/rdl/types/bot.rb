@@ -33,7 +33,7 @@ module RDL::Type
     end
 
     def <=(other)
-      true
+      return Type.leq(self, other)
     end
 
     def member?(obj, *args)

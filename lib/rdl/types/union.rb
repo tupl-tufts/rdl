@@ -82,11 +82,7 @@ module RDL::Type
     end
 
     def <=(other)
-      canonicalize!
-      return @canonical <= other if @canonical
-      other = other.type if other.is_a? DependentArgType
-      other = other.canonical
-      @types.all? { |t| t <= other }
+      return Type.leq(self, other)
     end
 
     def leq_inst(other, inst=nil, ileft=true)
