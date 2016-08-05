@@ -253,19 +253,28 @@ class TestLe < Minitest::Test
     assert (not (tnomt <= ts4))
   end
 
-  def test_leq
+  def test_leq_inst
+    # when return of do_leq is false, ignore resulting inst, since that's very implementation dependent
     assert_equal [true, {t: @ta}], do_leq(tt("t"), @ta, true)
-    assert_equal [false, {}], do_leq(tt("t"), @ta, false)
-    assert_equal [false, {}], do_leq(@ta, tt("t"), true)
+    assert_equal false, do_leq(tt("t"), @ta, false)[0]
+    assert_equal false, do_leq(@ta, tt("t"), true)[0]
     assert_equal [true, {t: @ta}], do_leq(@ta, tt("t"), false)
     assert_equal [true, {}], do_leq($__rdl_bot_type, tt("t"), true)
     assert_equal [true, {}], do_leq($__rdl_bot_type, tt("t"), false)
-    assert_equal [false, {}], do_leq($__rdl_top_type, tt("t"), true)
+    assert_equal false, do_leq($__rdl_top_type, tt("t"), true)[0]
     assert_equal [true, {t: $__rdl_top_type}], do_leq($__rdl_top_type, tt("t"), false)
     assert_equal [true, {t: @ta, u: @ta}], do_leq(tt("t or u"), @ta, true)
-    assert_equal [false, {}], do_leq(tt("t or u"), @ta, false)
-    assert_equal [false, {}], do_leq(tt("3"), tt("t"), true)
+    assert_equal false, do_leq(tt("t or u"), @ta, false)[0]
+    assert_equal false, do_leq(tt("3"), tt("t"), true)[0]
     assert_equal [true, {t: tt("3")}], do_leq(tt("3"), tt("t"), false)
+    assert_equal [true, {t: $__rdl_fixnum_type}], do_leq(tt("Array<t>"), tt("Array<Fixnum>"), true)
+    assert_equal false, do_leq(tt("Array<t>"), tt("Array<Fixnum>"), false)[0]
+    assert_equal [true, {t: $__rdl_fixnum_type}], do_leq(tt("Array<Fixnum>"), tt("Array<t>"), false)
+    assert_equal false, do_leq(tt("Array<Fixnum>"), tt("Array<t>"), true)[0]
+    assert_equal [true, {t: $__rdl_fixnum_type, u: $__rdl_string_type}], do_leq(tt("Hash<t,u>"), tt("Hash<Fixnum,String>"), true)
+    assert_equal [true, {t: $__rdl_fixnum_type}], do_leq(tt("Hash<t,t>"), tt("Hash<Fixnum,Fixnum>"), true)
+    assert_equal false, do_leq(tt("Hash<t,t>"), tt("Hash<Fixnum,String>"), true)[0]
+    assert_equal false, do_leq(tt("[m:()->t]"), tt("[m:()->Fixnum]"), true)[0] # no inst inside structural types
   end
 
   def do_leq(tleft, tright, ileft)
