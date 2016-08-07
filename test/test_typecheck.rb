@@ -519,23 +519,26 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_send_method_generic
-    skip "Not supported yet"
     self.class.class_eval {
       type :_send_method_generic1, '(t) -> t'
       type :_send_method_generic2, '(t, u) -> t or u'
       type :_send_method_generic3, '() { (u) -> Fixnum } -> Fixnum'
-      type :_send_method_generic4, '() { (Fixnum) -> u } -> u'
+      type :_send_method_generic4, '(t) { (t) -> t } -> t'
       type :_send_method_generic5, '() { (u) -> u } -> u'
+      type :_send_method_generic6, '() { (Fixnum) -> u } -> u'
     }
     assert_equal @t3, do_tc('_send_method_generic1 3', env: @env)
     assert_equal $__rdl_string_type, do_tc('_send_method_generic1 "foo"', env: @env)
     assert_equal tt("3 or String"), do_tc('_send_method_generic2 3, "foo"', env: @env)
-    assert_equal $__rdl_fixnum_type, do_tc('_send_method_generic3 { |x| 42 }')
-    assert_equal $__rdl_string_type, do_tc('_send_method_generic4 { |x| "foo" }')
-    assert_equal @t3, do_tc('_send_method_generic5 { |x| 3 }') # will this work?
-    assert_equal @t3, do_tc('_send_method_generic5 { |x| x }') # fail here...
+    assert_equal $__rdl_fixnum_type, do_tc('_send_method_generic3 { |x| 42 }', env: @env)
+    assert_equal tt("42"), do_tc('_send_method_generic4(42) { |x| x }', env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc('_send_method_generic4(42) { |x| "foo" }', env: @env) }
+    assert_equal tt("u"), do_tc('_send_method_generic5 { |x| x }', env: @env) # not possible to implement _send_method_generic5!
+    assert_equal tt("3"), do_tc('_send_method_generic5 { |x| 3 }', env: @env) # weird example, but can pick u=3
+    assert_equal $__rdl_string_type, do_tc('_send_method_generic6 { |x| "foo" }', env: @env)
     assert_equal tt("%integer"), do_tc('[1,2,3].index(Object.new)', env: @env)
-    assert_equal tt("Array<Fixnum>"), do_tc('[1, 2, 3].map { |y| y * 4 }', env: @env)
+    assert_equal tt("Array<Fixnum or Bignum>"), do_tc('[1, 2, 3].map { |y| y * 4 }', env: @env)
+    assert_equal tt("Array<String>"), do_tc('[1, 2, 3].map { |y| y.to_s }', env: @env)
   end
 
   def test_send_union

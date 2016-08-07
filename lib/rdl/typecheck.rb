@@ -975,9 +975,10 @@ RUBY
       trets_tmp = []
       tmeth_inter.each { |tmeth| # MethodType
         if ((tmeth.block && block) || (tmeth.block.nil? && block.nil?))
-          if tc_arg_types(tmeth, tactuals_expanded)
-            tc_block(scope, env, tmeth.block, block) if block
-            trets_tmp << tmeth.ret # found a match for this subunion; add its return type to trets_tmp
+          tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)
+          if tmeth_inst
+            tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
+            trets_tmp << tmeth.ret.instantiate(tmeth_inst) # found a match for this subunion; add its return type to trets_tmp
           end
         end
       }
@@ -1014,15 +1015,16 @@ RUBY
 
   # [+ tmeth +] is MethodType
   # [+ actuals +] is Array<Type> containing the actual argument types
-  # return true if actuals match method type, false otherwise
+  # return instiation (possibly empty) that makes actuals match method type (if any), nil otherwise
   # Very similar to MethodType#pre_cond?
   def self.tc_arg_types(tmeth, tactuals)
-    states = [[0, 0]] # position in tmeth, position in tactuals
+    states = [[0, 0, Hash.new]] # position in tmeth, position in tactuals, inst of free vars in tmeth
     tformals = tmeth.args
     until states.empty?
-      formal, actual = states.pop
+      formal, actual, inst = states.pop
+      inst = inst.dup # avoid aliasing insts in different states since Type.leq mutates inst arg
       if formal == tformals.size && actual == tactuals.size # Matched everything
-        return true
+        return inst
       end
       next if formal >= tformals.size # Too many actuals to match
       t = tformals[formal]
@@ -1031,48 +1033,48 @@ RUBY
       end
       case t
       when RDL::Type::OptionalType
-        t = t.type #TODO .instantiate(inst)
+        t = t.type
         if actual == tactuals.size
-          states << [formal+1, actual] # skip over optinal formal
-        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && tactuals[actual] <= t
-          states << [formal+1, actual+1] # match
-          states << [formal+1, actual] # skip
+          states << [formal+1, actual, inst] # skip over optinal formal
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t, inst, false)
+          states << [formal+1, actual+1, inst] # match
+          states << [formal+1, actual, inst] # skip
         else
-          states << [formal+1, actual] # types don't match; must skip this formal
+          states << [formal+1, actual, inst] # types don't match; must skip this formal
         end
       when RDL::Type::VarargType
-#        t = t.type #TODO .instantiate(inst)
         if actual == tactuals.size
-          states << [formal+1, actual] # skip to allow empty vararg at end
-        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && tactuals[actual] <= t.type
-          states << [formal, actual+1] # match, more varargs coming
-          states << [formal+1, actual+1] # match, no more varargs
-          states << [formal+1, actual] # skip over even though matches
-        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && tactuals[actual] == t
-          states << [formal+1, actual+1] # match, no more varargs; no other choices!
+          states << [formal+1, actual, inst] # skip to allow empty vararg at end
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t.type, inst, false)
+          states << [formal, actual+1, inst] # match, more varargs coming
+          states << [formal+1, actual+1, inst] # match, no more varargs
+          states << [formal+1, actual, inst] # skip over even though matches
+        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(tactuals[actual].type, t.type, inst, false) &&
+                                                               RDL::Type::Type.leq(t.type, tactuals[actual].type, inst, true)
+          states << [formal+1, actual+1, inst] # match, no more varargs; no other choices!
         else
-          states << [formal+1, actual] # doesn't match, must skip
+          states << [formal+1, actual, inst] # doesn't match, must skip
         end
       else
         if actual == tactuals.size
           next unless t.instance_of? RDL::Type::FiniteHashType
           if @@empty_hash_type <= t
-            states << [formal+1, actual]
+            states << [formal+1, actual, inst]
           end
-        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && tactuals[actual] <= t
-          states << [formal+1, actual+1] # match!
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t, inst, false)
+          states << [formal+1, actual+1, inst] # match!
           # no else case; if there is no match, this is a dead end
         end
       end
     end
-    false
+    return nil
   end
 
   # [+ tblock +] is the type of the block (a MethodType)
   # [+ block +] is a pair [block-args, block-body] from the block AST node
   # returns if the block matches type tblock
   # otherwise throws an exception with a type error
-  def self.tc_block(scope, env, tblock, block)
+  def self.tc_block(scope, env, tblock, block, inst)
     # TODO more complex arg lists (same as self.typecheck?); also for
     # TODO self is the same *except* instance_exec or instance_eval
     raise RuntimeError, "block with block arg?" unless tblock.block.nil?
@@ -1080,13 +1082,15 @@ RUBY
     unless tblock.args.length == args.children.length
       error :arg_count_mismatch, ['block', tblock.args.length, 'block', args.children.length], (if block[0].children.empty? then block[1] else block[0] end)
     end
+    tblock = tblock.instantiate(inst)
     a = args.children.map { |arg| arg.children[0] }.zip(tblock.args).to_h
 
     scope_merge(scope, outer_env: env) { |bscope|
       # note: okay if outer_env shadows, since nested scope will include outer scope by next line
       env = env.merge(Env.new(a))
       _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(bscope, env.merge(Env.new(a)), body) end
-      error :bad_return_type, [body_type, tblock.ret], body unless body.nil? || body_type <= tblock.ret
+      error :bad_return_type, [body_type, tblock.ret], body unless body.nil? || RDL::Type::Type.leq(body_type, tblock.ret, inst, false)
+      #
     }
   end
 
