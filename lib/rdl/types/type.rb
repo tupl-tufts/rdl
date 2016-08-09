@@ -40,6 +40,8 @@ module RDL::Type
       right = inst[right.name] if inst && !ileft && right.is_a?(VarType) && inst[right.name]
       left = left.type if left.is_a? DependentArgType
       right = right.type if right.is_a? DependentArgType
+      left = left.type if left.is_a? NonNullType # ignore nullness!
+      right = right.type if right.is_a? NonNullType
       left = left.canonical
       right = right.canonical
 

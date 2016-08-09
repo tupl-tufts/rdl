@@ -10,7 +10,7 @@ class Parser
 token HASH_TYPE HASH_QUERY CONST_BEGIN RASSOC
 token OR FIXNUM FLOAT COLON RARROW DOT DOTS ID SYMBOL SPECIAL_ID STRING PREDICATE
 token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
-token COMMA QUERY STAR LESS GREATER
+token COMMA QUERY BANG STAR LESS GREATER
 token EOF
 
 rule
@@ -100,6 +100,8 @@ rule
   union_type:
     single_type { result = val[0] }
   | single_type OR union_type { result = RDL::Type::UnionType.new val[0], val[2] }
+  | BANG single_type { result = RDL::Type::NonNullType.new val[1] }
+  | BANG single_type OR union_type { result = RDL::Type::UnionType.new(RDL::Type::NonNullType.new(val[1]), val[3]) }
 
   single_type:
       SYMBOL { result = RDL::Type::SingletonType.new(val[0].to_sym) }

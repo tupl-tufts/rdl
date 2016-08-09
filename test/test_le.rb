@@ -283,6 +283,16 @@ class TestLe < Minitest::Test
     return [r, inst]
   end
 
+  # nonnull annotation is simply removed! so doesn't matter
+  def test_leq_nonnull
+    assert tt("!Fixnum") <= tt("!Fixnum")
+    assert tt("!Fixnum") <= tt("Fixnum")
+    assert tt("Fixnum") <= tt("!Fixnum")
+    assert tt("!Fixnum") <= tt("!Object")
+    assert tt("!Fixnum") <= tt("Object")
+    assert tt("Fixnum") <= tt("!Object")
+  end
+
   # def test_intersection
   #   skip "<= not defined on intersection"
   #   tobject_and_basicobject = IntersectionType.new($__rdl_object_type, @tbasicobject)

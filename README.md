@@ -32,6 +32,7 @@
   * [Finite Hash Types](#finite-hash-types)
   * [Type Casts](#type-casts)
   * [Bottom Type (%bot)](#bottom-type-bot)
+  * [Non-null Type](#non-null-type)
 * [Static Type Checking](#static-type-checking)
   * [Types for Variables](#types-for-variables)
   * [Tuples, Finite Hashes, and Subtyping](#tuples-finite-hashes-and-subtyping)
@@ -546,6 +547,14 @@ Sometimes RDL does not have precise information about an object's type (this is 
 ## Bottom Type (%bot)
 
 RDL also includes a special *bottom* type `%bot` that is a subtype of any type, including any class and any singleton types. In static type checking, the type `%bot` is given to so-called *void value expressions*, which are `return`, `break`, `next`, `redo`, and `retry` (notice that these expressions perform jumps rather than producing a value, hence they can be treated as having an arbitrary type). No Ruby objects have type `%bot`.
+
+## Non-null Type
+
+Types can be prefixed with `!` to indicate the associated value is not `nil`. For example:
+
+`type :x=, '(!Fixnum) -> !Fixnum'  # x's argument must not be nil`
+
+**Warning:** This is simply *documentation* of non-nullness, and **is not checked** by the static type checker. The contract checker might or might not enforce non-nullness. (For those who are curious: RDL has this annotation because it seems useful for descriptive purposes. However, it's quite challenging to build a practical analysis that enforces non-nilness without reporting too many false positives.)
 
 # Static Type Checking
 

@@ -103,6 +103,9 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/\?/))
          action { [:QUERY, text] }
 
+      when (text = @ss.scan(/\!/))
+         action { [:BANG, text] }
+
       when (text = @ss.scan(/\*/))
          action { [:STAR, text] }
 
