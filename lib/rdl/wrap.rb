@@ -183,13 +183,13 @@ RUBY
   # called by Object#method_added (sing=false) and Object#singleton_method_added (sing=true)
   def self.do_method_added(the_self, sing, klass, meth)
     # Apply any deferred contracts and reset list
-    if sing
-      loc = the_self.singleton_method(meth).source_location
-    else
-      loc = the_self.instance_method(meth).source_location
-    end
 
     if $__rdl_deferred.size > 0
+      if sing
+        loc = the_self.singleton_method(meth).source_location
+      else
+        loc = the_self.instance_method(meth).source_location
+      end
       $__rdl_info.set(klass, meth, :source_location, loc)
       a = $__rdl_deferred
       $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
@@ -217,6 +217,11 @@ RUBY
     if $__rdl_to_wrap.member? [klass, meth]
       $__rdl_to_wrap.delete [klass, meth]
       RDL::Wrap.wrap(klass, meth)
+      if sing
+        loc = the_self.singleton_method(meth).source_location
+      else
+        loc = the_self.instance_method(meth).source_location
+      end
       $__rdl_info.set(klass, meth, :source_location, loc)
     end
 
@@ -248,42 +253,38 @@ class Object
   # pre(contract) = pre(self, next method, contract)
   # pre { block } = pre(self, next method, FlatContract.new { block })
   def pre(*args, wrap: RDL::Config.instance.pre_defaults[:wrap], &blk)
-    $__rdl_contract_switch.off { # Don't check contracts inside RDL code itself
-      klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Precondition", *args, &blk)
-      if meth
-        $__rdl_info.add(klass, meth, :pre, contract)
-        if wrap
-          if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
-            RDL::Wrap.wrap(klass, meth)
-          else
-            $__rdl_to_wrap << [klass, meth]
-          end
+    klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Precondition", *args, &blk)
+    if meth
+      $__rdl_info.add(klass, meth, :pre, contract)
+      if wrap
+        if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
+          RDL::Wrap.wrap(klass, meth)
+        else
+          $__rdl_to_wrap << [klass, meth]
         end
-      else
-        $__rdl_deferred << [klass, :pre, contract, {wrap: wrap}]
       end
-      nil
-    }
+    else
+      $__rdl_deferred << [klass, :pre, contract, {wrap: wrap}]
+    end
+    nil
   end
 
   # Add a postcondition to a method. Same possible invocations as pre.
   def post(*args, wrap: RDL::Config.instance.post_defaults[:wrap], &blk)
-    $__rdl_contract_switch.off {
-      klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Postcondition", *args, &blk)
-      if meth
-        $__rdl_info.add(klass, meth, :post, contract)
-        if wrap
-          if RDL::Util.method_defined?(klass, meth) || meth == :initialize
-            RDL::Wrap.wrap(klass, meth)
-          else
-            $__rdl_to_wrap << [klass, meth]
-          end
+    klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Postcondition", *args, &blk)
+    if meth
+      $__rdl_info.add(klass, meth, :post, contract)
+      if wrap
+        if RDL::Util.method_defined?(klass, meth) || meth == :initialize
+          RDL::Wrap.wrap(klass, meth)
+        else
+          $__rdl_to_wrap << [klass, meth]
         end
-      else
-        $__rdl_deferred << [klass, :post, contract, {wrap: wrap}]
       end
-      nil
-    }
+    else
+      $__rdl_deferred << [klass, :post, contract, {wrap: wrap}]
+    end
+    nil
   end
 
   # [+ klass +] may be Class, Symbol, or String
@@ -300,49 +301,47 @@ class Object
   # type(meth, type)
   # type(type)
   def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], &blk)
-    $__rdl_contract_switch.off {
-      klass, meth, type = begin
-                            RDL::Wrap.process_type_args(self, *args, &blk)
-                          rescue Racc::ParseError => err
-                            # Remove enough backtrace to only include actual source line
-                            # Warning: Adjust the -5 below if the code (or this comment) changes
-                            bt = err.backtrace
-                            bt.shift until bt[0] =~ /^#{__FILE__}:#{__LINE__-5}/
-                            bt.shift # remove $__rdl_contract_switch.off call
-                            bt.shift # remove type call itself
-                            err.set_backtrace bt
-                            raise err
-                          end
-      if meth
+    klass, meth, type = begin
+                          RDL::Wrap.process_type_args(self, *args, &blk)
+                        rescue Racc::ParseError => err
+                          # Remove enough backtrace to only include actual source line
+                          # Warning: Adjust the -5 below if the code (or this comment) changes
+                          bt = err.backtrace
+                          bt.shift until bt[0] =~ /^#{__FILE__}:#{__LINE__-5}/
+                          bt.shift # remove $__rdl_contract_switch.off call
+                          bt.shift # remove type call itself
+                          err.set_backtrace bt
+                          raise err
+                        end
+    if meth
 # It turns out Ruby core/stdlib don't always follow this convention...
 #        if (meth.to_s[-1] == "?") && (type.ret != $__rdl_type_bool)
 #          warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
 #        end
-        $__rdl_info.add(klass, meth, :type, type)
-        unless $__rdl_info.set(klass, meth, :typecheck, typecheck)
-          raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
-        end
-        if wrap || typecheck == :now
-          if RDL::Util.method_defined?(klass, meth) || meth == :initialize
-            $__rdl_info.set(klass, meth, :source_location, RDL::Util.to_class(klass).instance_method(meth).source_location)
-            RDL::Typecheck.typecheck(klass, meth) if typecheck == :now
-            RDL::Wrap.wrap(klass, meth) if wrap
-          else
-            if wrap
-              $__rdl_to_wrap << [klass, meth]
-              if (typecheck && typecheck != :call)
-                $__rdl_to_typecheck[typecheck] = Set.new unless $__rdl_to_typecheck[typecheck]
-                $__rdl_to_typecheck[typecheck].add([klass, meth])
-              end
+      $__rdl_info.add(klass, meth, :type, type)
+      unless $__rdl_info.set(klass, meth, :typecheck, typecheck)
+        raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
+      end
+      if wrap || typecheck == :now
+        if RDL::Util.method_defined?(klass, meth) || meth == :initialize
+          $__rdl_info.set(klass, meth, :source_location, RDL::Util.to_class(klass).instance_method(meth).source_location)
+          RDL::Typecheck.typecheck(klass, meth) if typecheck == :now
+          RDL::Wrap.wrap(klass, meth) if wrap
+        else
+          if wrap
+            $__rdl_to_wrap << [klass, meth]
+            if (typecheck && typecheck != :call)
+              $__rdl_to_typecheck[typecheck] = Set.new unless $__rdl_to_typecheck[typecheck]
+              $__rdl_to_typecheck[typecheck].add([klass, meth])
             end
           end
         end
-      else
-        $__rdl_deferred << [klass, :type, type, {wrap: wrap,
-                                                 typecheck: typecheck}]
       end
-      nil
-    }
+    else
+      $__rdl_deferred << [klass, :type, type, {wrap: wrap,
+                                               typecheck: typecheck}]
+    end
+    nil
   end
 
   # [+ klass +] is the class containing the variable; self if omitted; ignored for local and global variables
@@ -393,47 +392,40 @@ class Object
     nil
   end
 
-
   def self.method_added(meth)
-    $__rdl_contract_switch.off {
-      klass = self.to_s
-      klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-      RDL::Wrap.do_method_added(self, false, klass, meth)
-      nil
-    }
+    klass = self.to_s
+    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
+    RDL::Wrap.do_method_added(self, false, klass, meth)
+    nil
   end
 
   def self.singleton_method_added(meth)
-    $__rdl_contract_switch.off {
-      klass = self.to_s
-      klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-      sklass = RDL::Util.add_singleton_marker(klass)
-      RDL::Wrap.do_method_added(self, true, sklass, meth)
-      nil
-    }
+    klass = self.to_s
+    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
+    sklass = RDL::Util.add_singleton_marker(klass)
+    RDL::Wrap.do_method_added(self, true, sklass, meth)
+    nil
   end
 
   # Aliases contracts for meth_old and meth_new. Currently, this must
   # be called for any aliases or they will not be wrapped with
   # contracts. Only creates aliases in the current class.
   def rdl_alias(new_name, old_name)
-    $__rdl_contract_switch.off {
-      klass = self.to_s
-      klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-      $__rdl_aliases[klass] = {} unless $__rdl_aliases[klass]
-      if $__rdl_aliases[klass][new_name]
-        raise RuntimeError,
-              "Tried to alias #{new_name}, already aliased to #{$__rdl_aliases[klass][new_name]}"
-      end
-      $__rdl_aliases[klass][new_name] = old_name
+    klass = self.to_s
+    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
+    $__rdl_aliases[klass] = {} unless $__rdl_aliases[klass]
+    if $__rdl_aliases[klass][new_name]
+      raise RuntimeError,
+            "Tried to alias #{new_name}, already aliased to #{$__rdl_aliases[klass][new_name]}"
+    end
+    $__rdl_aliases[klass][new_name] = old_name
 
-      if self.method_defined? new_name
-        RDL::Wrap.wrap(klass, new_name)
-      else
-        $__rdl_to_wrap << [klass, old_name]
-      end
-      nil
-    }
+    if self.method_defined? new_name
+      RDL::Wrap.wrap(klass, new_name)
+    else
+      $__rdl_to_wrap << [klass, old_name]
+    end
+    nil
   end
 
   # [+params+] is an array of symbols or strings that are the
@@ -449,88 +441,78 @@ class Object
   # parameters of the class, and the block should return true if and
   # only if self is a member of self.class<typs>.
   def type_params(params, all, variance: nil, &blk)
-    $__rdl_contract_switch.off {
-      raise RuntimeError, "Empty type parameters not allowed" if params.empty?
-      klass = self.to_s
-      klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-      if $__rdl_type_params[klass]
-        raise RuntimeError, "#{klass} already has type parameters #{$__rdl_type_params[klass]}"
-      end
-      params = params.map { |v|
-        raise RuntimeError, "Type parameter #{v.inspect} is not symbol or string" unless v.class == String || v.class == Symbol
-        v.to_sym
-      }
-      raise RuntimeError, "Duplicate type parameters not allowed" unless params.uniq.size == params.size
-      raise RuntimeError, "Expecting #{params.size} variance annotations, got #{variance.size}" if variance && params.size != variance.size
-      raise RuntimeError, "Only :+, +-, and :~ are allowed variance annotations" unless (not variance) || variance.all? { |v| [:+, :-, :~].member? v }
-      raise RuntimeError, "Can't pass both all and a block" if all && blk
-      raise RuntimeError, "all must be a symbol" unless (not all) || (all.instance_of? Symbol)
-      chk = all || blk
-      raise RuntimeError, "At least one of {all, blk} required" unless chk
-      variance = params.map { |p| :~ } unless variance # default to invariant
-      $__rdl_type_params[klass] = [params, variance, chk]
-      nil
+    raise RuntimeError, "Empty type parameters not allowed" if params.empty?
+    klass = self.to_s
+    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
+    if $__rdl_type_params[klass]
+      raise RuntimeError, "#{klass} already has type parameters #{$__rdl_type_params[klass]}"
+    end
+    params = params.map { |v|
+      raise RuntimeError, "Type parameter #{v.inspect} is not symbol or string" unless v.class == String || v.class == Symbol
+      v.to_sym
     }
+    raise RuntimeError, "Duplicate type parameters not allowed" unless params.uniq.size == params.size
+    raise RuntimeError, "Expecting #{params.size} variance annotations, got #{variance.size}" if variance && params.size != variance.size
+    raise RuntimeError, "Only :+, +-, and :~ are allowed variance annotations" unless (not variance) || variance.all? { |v| [:+, :-, :~].member? v }
+    raise RuntimeError, "Can't pass both all and a block" if all && blk
+    raise RuntimeError, "all must be a symbol" unless (not all) || (all.instance_of? Symbol)
+    chk = all || blk
+    raise RuntimeError, "At least one of {all, blk} required" unless chk
+    variance = params.map { |p| :~ } unless variance # default to invariant
+    $__rdl_type_params[klass] = [params, variance, chk]
+    nil
   end
 
   def rdl_nowrap
-    $__rdl_contract_switch.off {
-      RDL.config { |config| config.add_nowrap(self, self.singleton_class) }
-      nil
-    }
+    RDL.config { |config| config.add_nowrap(self, self.singleton_class) }
+    nil
   end
 
   # [+typs+] is an array of types, classes, symbols, or strings to instantiate
   # the type parameters. If a class, symbol, or string is given, it is
   # converted to a NominalType.
   def instantiate!(*typs)
-    $__rdl_contract_switch.off {
-      klass = self.class.to_s
-      klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-      formals, _, all = $__rdl_type_params[klass]
-      raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
-      raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless formals.size == typs.size
-      raise RuntimeError, "Instance already has type instantiation" if (defined? @__rdl_type) && @rdl_type
-      new_typs = typs.map { |t| if t.is_a? RDL::Type::Type then t else $__rdl_parser.scan_str "#T #{t}" end }
-      t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *new_typs)
-      if all.instance_of? Symbol
-        self.send(all) { |*objs|
-          new_typs.zip(objs).each { |nt, obj|
-            if nt.instance_of? RDL::Type::GenericType # require obj to be instantiated
-              t_obj = RDL::Util.rdl_type(obj)
-              raise RDL::Type::TypeError, "Expecting element of type #{nt.to_s}, but got uninstantiated object #{obj.inspect}" unless t_obj
-              raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got type #{t_obj.to_s}" unless t_obj <= nt
-            else
-              raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got #{obj.inspect}" unless nt.member? obj
-            end
-          }
+    klass = self.class.to_s
+    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
+    formals, _, all = $__rdl_type_params[klass]
+    raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
+    raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless formals.size == typs.size
+    raise RuntimeError, "Instance already has type instantiation" if (defined? @__rdl_type) && @rdl_type
+    new_typs = typs.map { |t| if t.is_a? RDL::Type::Type then t else $__rdl_parser.scan_str "#T #{t}" end }
+    t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *new_typs)
+    if all.instance_of? Symbol
+      self.send(all) { |*objs|
+        new_typs.zip(objs).each { |nt, obj|
+          if nt.instance_of? RDL::Type::GenericType # require obj to be instantiated
+            t_obj = RDL::Util.rdl_type(obj)
+            raise RDL::Type::TypeError, "Expecting element of type #{nt.to_s}, but got uninstantiated object #{obj.inspect}" unless t_obj
+            raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got type #{t_obj.to_s}" unless t_obj <= nt
+          else
+            raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got #{obj.inspect}" unless nt.member? obj
+          end
         }
-      else
-        raise RDL::Type::TypeError, "Not an instance of #{t}" unless instance_exec(*new_typs, &all)
-      end
-      @__rdl_type = t
-      self
-    }
+      }
+    else
+      raise RDL::Type::TypeError, "Not an instance of #{t}" unless instance_exec(*new_typs, &all)
+    end
+    @__rdl_type = t
+    self
   end
 
   def deinstantiate!
-    $__rdl_contract_switch.off {
-      raise RuntimeError, "Class #{self.to_s} is not parameterized" unless $__rdl_type_params[klass]
-      raise RuntimeError, "Instance is not instantiated" unless @__rdl_type && @@__rdl_type.instance_of?(RDL::Type::GenericType)
-      @__rdl_type = nil
-      self
-    }
+    raise RuntimeError, "Class #{self.to_s} is not parameterized" unless $__rdl_type_params[klass]
+    raise RuntimeError, "Instance is not instantiated" unless @__rdl_type && @@__rdl_type.instance_of?(RDL::Type::GenericType)
+    @__rdl_type = nil
+    self
   end
 
   # Returns a new object that wraps self in a type cast. If force is true this cast is *unchecked*, so use with caution
   def type_cast(typ, force: false)
-    $__rdl_contract_switch.off {
-      new_typ = if typ.is_a? RDL::Type::Type then typ else $__rdl_parser.scan_str "#T #{typ}" end
-      raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || typ.member?(self)
-      obj = SimpleDelegator.new(self)
-      obj.instance_variable_set('@__rdl_type', new_typ)
-      obj
-    }
+    new_typ = if typ.is_a? RDL::Type::Type then typ else $__rdl_parser.scan_str "#T #{typ}" end
+    raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || typ.member?(self)
+    obj = SimpleDelegator.new(self)
+    obj.instance_variable_set('@__rdl_type', new_typ)
+    obj
   end
 
   # Add a new type alias.
@@ -538,19 +520,17 @@ class Object
   # [+typ+] can be either a string, in which case it will be parsed
   # into a type, or a Type.
   def type_alias(name, typ)
-    $__rdl_contract_switch.off {
-      raise RuntimeError, "Attempt to redefine type #{name}" if $__rdl_special_types[name]
-      case typ
-      when String
-        t = $__rdl_parser.scan_str "#T #{typ}"
-        $__rdl_special_types[name] = t
-      when RDL::Type::Type
-        $__rdl_special_types[name] = typ
-      else
-        raise RuntimeError, "Unexpected typ argument #{typ.inspect}"
-      end
-      nil
-    }
+    raise RuntimeError, "Attempt to redefine type #{name}" if $__rdl_special_types[name]
+    case typ
+    when String
+      t = $__rdl_parser.scan_str "#T #{typ}"
+      $__rdl_special_types[name] = t
+    when RDL::Type::Type
+      $__rdl_special_types[name] = typ
+    else
+      raise RuntimeError, "Unexpected typ argument #{typ.inspect}"
+    end
+    nil
   end
 
   # Type check all methods that had annotation `typecheck: sym' at type call
@@ -568,3 +548,14 @@ class Object
   end
 
 end
+
+# method_added for Object doesn't get called on module methods...bug?
+# class Module
+#   def method_added(meth)
+#     $__rdl_contract_switch.off {
+#       klass = self.to_s
+#       RDL::Wrap.do_method_added(self, false, klass, meth)
+#       nil
+#     }
+#   end
+# end
