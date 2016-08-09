@@ -157,7 +157,10 @@ Place the `require` call in `application.rb` after the `Bundler.require` call. (
 Currently RDL has types for the following versions of Rails:
 
 * Rails 5.x support - limited to the following:
-  * Automatically generates type annotations for model columns
+  * Automatically generates
+    * Models
+      * Type annotations for model column getters and setters
+      * find_by and find_by!
 
 ## Preconditions and Postconditions
 
