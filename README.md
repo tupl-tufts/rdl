@@ -553,6 +553,8 @@ RDL also includes a special *bottom* type `%bot` that is a subtype of any type, 
 
 ## Non-null Type
 
+*[github head only]*
+
 Types can be prefixed with `!` to indicate the associated value is not `nil`. For example:
 
 `type :x=, '(!Fixnum) -> !Fixnum'  # x's argument must not be nil`
