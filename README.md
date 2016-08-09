@@ -115,7 +115,7 @@ See below for more details of the query format. The `rdl_query` method performs 
 $ irb
 > require 'rdl'
  => true
-> require 'rdl_types'
+> require 'types/core'   # github head only; earlier versions use 'rdl_types'
  => true
 
 > rdl_query '...' # as above
@@ -150,7 +150,7 @@ For performance reasons you probably don't want to use RDL in production code. T
 
 *[github head only]*
 
-To add types to Ruby on Rails, use `require 'rdl_rails'` instead. In development and test mode, this call will load `rdl`, `rdl_types`, and will load extra type annotations for Rails. In production mode, this call will load `rdl_disable`.
+To add types to Ruby on Rails, use `require 'types/rails'` instead. In development and test mode, this call will load `rdl`, `types/core`, and will load extra type annotations for Rails. In production mode, this call will load `rdl_disable`.
 
 Place the `require` call in `application.rb` after the `Bundler.require` call. (This placement is needed so the Rails version string is available and the Rails environment is loaded):
 
