@@ -588,13 +588,23 @@ RUBY
           # So rebind that local variable to have the union of the guard types
           new_typ = RDL::Type::UnionType.new(*(tguards.map { |t| RDL::Type::NominalType.new(t.val) })).canonical
           # TODO adjust following for generics!
-          raise RuntimeError, "reinfement for generics not implemented yet" if tcontrol.is_a? RDL::Type::GenericType
-          next unless tcontrol <= new_typ || new_typ <= tcontrol # If control can't possibly match type, skip this branch
-          initial_env = initial_env.bind(e.children[0].children[0], new_typ, force: true
-          # note force is safe above because the env from this arm will be joined with the other envs
-          # (where the type was not refined like this), so after the case the variable will be back to its
-          # previous, unrefined type
-          )
+          if tcontrol.is_a? RDL::Type::GenericType
+            if new_typ == tcontrol.base
+              # special case: exact match of control type's base and type of guard; can use
+              # geneirc type on this branch
+              initial_env = initial_env.bind(e.children[0].children[0], tcontrol, force: true)
+            elsif !(tcontrol.base <= new_typ) && !(new_typ <= tcontrol.base)
+              next # can't possibly match this branch
+            else
+              error :generic_error, ["general refinement for generics not implemented yet"], wclause
+            end
+          else
+            next unless tcontrol <= new_typ || new_typ <= tcontrol # If control can't possibly match type, skip this branch
+            initial_env = initial_env.bind(e.children[0].children[0], new_typ, force: true)
+            # note force is safe above because the env from this arm will be joined with the other envs
+            # (where the type was not refined like this), so after the case the variable will be back to its
+            # previous, unrefined type
+          end
         end
         envbody, tbody = tc(scope, initial_env, wclause.children[-1]) # last wclause child is body
         tbodies << tbody
