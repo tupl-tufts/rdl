@@ -10,8 +10,8 @@ module ActiveRecord
             type "#{name}=", "(#{t}) -> #{t} or nil" # setter
           else
             # not null; can't truly check in type system but hint via the name
-            type name,       "() -> #{t} nonnull"                 # getter
-            type "#{name}=", "(#{t} nonnull) -> #{t} nonnull_ret" # setter
+            type name,       "() -> !#{t}"                 # getter
+            type "#{name}=", "(!#{t}) -> !#{t}" # setter
           end
         }
         true
