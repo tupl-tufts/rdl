@@ -331,7 +331,7 @@ type '(Fixnum x {{ x>y }}, Fixnum y) -> Float z {{ z==(x+y) }}'
 def m(x,y) ... end
 ```
 
-Any arbitrary code can be placed between the double braces of a type refinement, and RDL will dynmically check that this predicate evaluates to true, or raise a type error if it evaluates to false.
+Any arbitrary code can be placed between the double braces of a type refinement, and RDL will dynamically check that this predicate evaluates to true, or raise a type error if it evaluates to false.
 
 ## Higher-order Types
 
@@ -365,7 +365,7 @@ type '(Fixnum x, Float y) -> {(Fixnum z {{ z>y }}) -> Fixnum}'
 def m(x,y,&blk) ... end
 ```
 
-The type contract above states that method `m` returns a `Proc` which takes a `Fixnum z` which must be greater than the argument `Float y`. Whenver this `Proc` is called, it will be checked that this contract holds.
+The type contract above states that method `m` returns a `Proc` which takes a `Fixnum z` which must be greater than the argument `Float y`. Whenever this `Proc` is called, it will be checked that this contract holds.
 
 ## Class/Singleton Method Types
 
@@ -567,7 +567,7 @@ RDL has experimental support (note: this is in beta release) for static type che
 
 Often method bodies cannot be type checked as soon as they are loaded because they refer to classes, methods, and variables that have not been created yet. To support these cases, some other symbol can be supplied as `typecheck: sym`. Then when `rdl_do_typecheck sym` is called, all methods typechecked at `sym` will be statically checked.
 
-Addditionally, `type` can be called with `typecheck: :call`, which will delay checking the method's type until the method is called. Currently these checks are not cached, so expect a big performance hit for using this feature.
+Additionally, `type` can be called with `typecheck: :call`, which will delay checking the method's type until the method is called. Currently these checks are not cached, so expect a big performance hit for using this feature.
 
 To perform type checking, RDL needs source code, which it gets by parsing the file containing the to-be-typechecked method. Hence, static type checking does not work in `irb` since RDL has no way of getting the source.
 
@@ -617,7 +617,7 @@ x = 3       # okay
 x = "three" # type error
 ```
 
-The first argument to `var_type` is a symbol with the local variable name, and the second argument is a string containing the variable's type. Note that `var_type` is most useful at the beginning of method or code block. Using it elsewhere may result in surprising error mesages, since RDL requires variables with fixed types to have the same type along all paths. Method parameters are treated as if `var_type` was called on them at the beginning of the method, fixing them to their declared type. This design choice may be revisited in the future.
+The first argument to `var_type` is a symbol with the local variable name, and the second argument is a string containing the variable's type. Note that `var_type` is most useful at the beginning of method or code block. Using it elsewhere may result in surprising error messages, since RDL requires variables with fixed types to have the same type along all paths. Method parameters are treated as if `var_type` was called on them at the beginning of the method, fixing them to their declared type. This design choice may be revisited in the future.
 
 *[github head only]*
 There is one subtlety for local variables and code blocks. Consider the following code:
@@ -822,7 +822,7 @@ MS thesis, University of Maryland, College Park, 2010.
 PhD thesis, University of Maryland, College Park, 2009.
 
 * Michael Furr, Jong-hoon (David) An, Jeffrey S. Foster, and Michael Hicks.
-[The Ruby Intermediate Langauge](http://www.cs.umd.edu/~jfoster/papers/dls09-ril.pdf).
+[The Ruby Intermediate Language](http://www.cs.umd.edu/~jfoster/papers/dls09-ril.pdf).
 In Dynamic Languages Symposium (DLS), pages 89–98, Orlando, Florida, October 2009.
 
 * Michael Furr, Jong-hoon (David) An, and Jeffrey S. Foster.
