@@ -721,6 +721,8 @@ RDL also includes a few other useful methods:
 
 * `rdl_nowrap`, if called at the top-level of a class, causes RDL to behave as if `wrap: false` were passed to all `type`, `pre`, and `post` calls in the class. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead.
 
+* `rdl_remove_type klass, meth` removes the type annotation for meth in klass. Fails if meth does not have a type annotation. (*[github head only]*)
+
 * `rdl_query` prints information about types; see below for details.
 
 # Queries

@@ -356,4 +356,14 @@ RUBY
     }
   end
 
+  def test_rdl_remove_type
+    self.class.class_eval {
+      type "() -> nil"
+      def remove1() return 42; end
+    }
+    assert_raises(RDL::Type::TypeError) { remove1 }
+    rdl_remove_type(self.class, :remove1)
+    assert_equal 42, remove1 # shouldn't raise type error with contract removed
+  end
+
 end

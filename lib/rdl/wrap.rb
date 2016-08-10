@@ -547,6 +547,12 @@ class Object
     return x
   end
 
+  def rdl_remove_type(klass, meth)
+    raise RuntimeError, "No existing type for #{RDL::Util.pp_klass_method(klass, meth)}" unless $__rdl_info.has? klass, meth, :type
+    $__rdl_info.remove klass, meth, :type
+    nil
+  end
+
 end
 
 # method_added for Object doesn't get called on module methods...bug?

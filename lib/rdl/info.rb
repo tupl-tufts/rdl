@@ -79,4 +79,12 @@ class RDL::Info
     get(klass, label, kind)
   end
 
+  def remove(klass, label, kind)
+    klass = klass.to_s
+    label = label.to_sym
+    return unless @info.has_key? klass
+    return unless @info[klass].has_key? label
+    @info[klass][label].delete kind
+  end
+
 end
