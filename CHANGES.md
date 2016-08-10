@@ -2,9 +2,11 @@
 
 ## [Unreleased]
 ### Added
-- Added `wrap: false` optional argument to `type`, `pre`, and `post`
-- Added non-null type annotation (not checked)
-- Added default argument configuration for `type`, `pre`, and `post`
+- `wrap: false` optional argument to `type`, `pre`, and `post`
+- Non-null type annotation (not checked)
+- Default argument configuration for `type`, `pre`, and `post`
+- `attr_*_type` methods
+- Static type checking!
 
 ### Changed
 - Modified `self` type to be any instance of the self's class
