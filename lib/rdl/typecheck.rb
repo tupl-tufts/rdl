@@ -206,6 +206,7 @@ module RDL::Typecheck
       raise RuntimeError, "Unexpected ast type #{ast.type}"
     end
     raise RuntimeError, "Method #{name} defined where method #{meth} expected" if name.to_sym != meth
+    context_types = $__rdl_info.get(klass, meth, :context_types)
     types.each { |type|
       # TODO will need fancier logic here for matching up more complex arg lists
       if RDL::Util.has_singleton_marker(klass)
@@ -221,7 +222,7 @@ module RDL::Typecheck
       end
       targs = args.children.map { |arg| arg.children[0] }.zip(type.args).to_h
       targs[:self] = self_type
-      scope = { tret: type.ret, tblock: type.block, captured: Hash.new }
+      scope = { tret: type.ret, tblock: type.block, captured: Hash.new, context_types: context_types }
       begin
         old_captured = scope[:captured].dup
         if body.nil?
@@ -677,13 +678,13 @@ RUBY
       tcollect = tcollect.canonical
       case tcollect
       when RDL::Type::NominalType
-        teaches = lookup(tcollect.name, :each, e.children[1])
+        teaches = lookup(scope, tcollect.name, :each, e.children[1])
       when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
         unless tcollect.is_a? RDL::Type::GenericType
           error :tuple_finite_hash_promote, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e.children[1] unless tcollect.promote!
           tcollect = tcollect.canonical
         end
-        teaches = lookup(tcollect.base.name, :each, e.children[1])
+        teaches = lookup(scope, tcollect.base.name, :each, e.children[1])
         inst = tcollect.to_inst.merge(self: tcollect)
         teaches = teaches.map { |t| t.instantiate(inst) }
       else
@@ -944,20 +945,20 @@ RUBY
     when RDL::Type::SingletonType
       if trecv.val.is_a? Class
         if meth == :new then name = :initialize else name = meth end
-        ts = lookup(RDL::Util.add_singleton_marker(trecv.val.to_s), name, e)
+        ts = lookup(scope, RDL::Util.add_singleton_marker(trecv.val.to_s), name, e)
         ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] if (meth == :new) && (ts.nil?) # there's always a nullary new if initialize is undefined
         error :no_singleton_method_type, [trecv.val, meth], e unless ts
         inst = {self: trecv}
         tmeth_inter = ts.map { |t| t.instantiate(inst) }
       else
         klass = trecv.val.class.to_s
-        ts = lookup(klass, meth, e)
+        ts = lookup(scope, klass, meth, e)
         error :no_instance_method_type, [klass, meth], e unless ts
         inst = {self: trecv}
         tmeth_inter = ts.map { |t| t.instantiate(inst) }
       end
     when RDL::Type::NominalType
-      ts = lookup(trecv.name, meth, e)
+      ts = lookup(scope, trecv.name, meth, e)
       error :no_instance_method_type, [trecv.name, meth], e unless ts
       inst = {self: trecv}
       tmeth_inter = ts.map { |t| t.instantiate(inst) }
@@ -966,7 +967,7 @@ RUBY
         error :tuple_finite_hash_promote, (if trecv.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e unless trecv.promote!
         trecv = trecv.canonical
       end
-      ts = lookup(trecv.base.name, meth, e)
+      ts = lookup(scope, trecv.base.name, meth, e)
       error :no_instance_method_type, [trecv.base.name, meth], e unless ts
       inst = trecv.to_inst.merge(self: trecv)
       tmeth_inter = ts.map { |t| t.instantiate(inst) }
@@ -1108,11 +1109,19 @@ RUBY
   # [+ name +] is a symbol naming the thing to look up (either a method or field)
   # returns klass#name's type, walking up the inheritance hierarchy if appropriate
   # returns nil if no type found
+  # types in scope[:context_type] take precedence
 
   # *always* included module's instance methods only
   # if included, those methods are added to instance_methods
   # if extended, those methods are added to singleton_methods
-  def self.lookup(klass, name, e)
+  def self.lookup(scope, klass, name, e)
+    if scope[:context_types]
+      # return array of all matching types from context_types, if any
+      ts = []
+      scope[:context_types].each { |ctk, ctm, ctt| ts << ctt if ctk.to_s == klass && ctm == name  }
+      return ts unless ts.empty?
+    end
+    return scope[:context_types][klass][name] if scope[:context_types] && scope[:context_types][klass] && scope[:context_types][klass][name]
     t = $__rdl_info.get_with_aliases(klass, name, :type)
     return t if t # simplest case, no need to walk inheritance hierarchy
     the_klass = RDL::Util.to_class(klass)

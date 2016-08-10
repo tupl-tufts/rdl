@@ -20,6 +20,7 @@ require 'rdl/info.rb'
 #   :source_location to [filename, linenumber] location of most recent definition
 #   :typecheck - boolean that is true if method should be statically type checked
 #   :otype to set of types that were observed at run time, where a type is a finite hash {:args => Array<Class>, :ret => Class, :block => %bool}
+#   :context_types to array of [klass, meth, Type] - method types that exist only within this method. An icky hack to deal with Rails `params`.
 # For variables
 #   :type to type
 $__rdl_info = RDL::Info.new

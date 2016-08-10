@@ -981,4 +981,22 @@ class TestTypecheck < Minitest::Test
     assert_equal @t3, do_tc("x = String.new; case x when String; 3; when Fixnum; 4; end", env: @env)
   end
 
+  def test_context_typecheck
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '() -> Fixnum', typecheck: :now
+        def context_typecheck1
+          context_tc_in_context1 # should fail
+        end
+      }
+    }
+    $__rdl_info.add(self.class, :context_typecheck2, :context_types, [self.class, :context_tc_in_context2, $__rdl_parser.scan_str('() -> Fixnum')])
+    self.class.class_eval {
+      type '() -> Fixnum', typecheck: :now
+      def context_typecheck2
+        context_tc_in_context2 # should not fail since method defined in context
+      end
+    }
+  end
+
 end
