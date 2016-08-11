@@ -688,6 +688,8 @@ RDL uses the same approach for hashes: hash literals are treated as finite hashe
 
 * *Caching.* If `typecheck: :call` is specified on a method, Ruby will type check the method every time it is called. In the future, RDL will cache these checks.
 
+* *Dependent Types.* RDL ignores refinements in checking code with dependent types. E.g., given a `Fixnum x {{ x > 0 }}`, RDL will simply treat `x` as a `Fixnum` and ignore the requirement that it be positive.
+
 * *Unsupported Features.* There are several features of Ruby that are currently not handled by RDL. Here is a non-exhaustive list:
   * `super` is not supported.
   * `lambda` has special semantics for `return`; this is not supported.
