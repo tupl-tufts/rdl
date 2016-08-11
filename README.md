@@ -115,7 +115,7 @@ See below for more details of the query format. The `rdl_query` method performs 
 $ irb
 > require 'rdl'
  => true
-> require 'types/core'   # github head only; earlier versions use 'rdl_types'
+> require 'types/core'
  => true
 
 > rdl_query '...' # as above
@@ -143,7 +143,6 @@ Use `require 'rdl'` to load the RDL library. If you want to use the core and sta
 
 ## Disabling RDL
 
-*[github head only]*
 For performance reasons you probably don't want to use RDL in production code. To disable RDL, replace `require 'rdl'` with `require 'rdl_disable'`. This will cause all invocations of RDL methods to either be no-ops or to do the minimum necessary to preserve the program's semantics (e.g., if the RDL method returns `self`, then so does the `rdl_disable` method.)
 
 ## Rails
@@ -547,8 +546,6 @@ RDL also includes a special *bottom* type `%bot` that is a subtype of any type, 
 
 ## Non-null Type
 
-*[github head only]*
-
 Types can be prefixed with `!` to indicate the associated value is not `nil`. For example:
 
 `type :x=, '(!Fixnum) -> !Fixnum'  # x's argument must not be nil`
@@ -565,7 +562,7 @@ Additionally, `type` can be called with `typecheck: :call`, which will delay che
 
 To perform type checking, RDL needs source code, which it gets by parsing the file containing the to-be-typechecked method. Hence, static type checking does not work in `irb` since RDL has no way of getting the source.
 
-*[github head only]* Typechecking does work in `pry` (this feature has only limited testing) as long as typechecking is delayed until after the method is defined:
+Typechecking does work in `pry` (this feature has only limited testing) as long as typechecking is delayed until after the method is defined:
 
 ```ruby
 [2] pry(main)> require 'rdl'
@@ -613,7 +610,6 @@ x = "three" # type error
 
 The first argument to `var_type` is a symbol with the local variable name, and the second argument is a string containing the variable's type. Note that `var_type` is most useful at the beginning of method or code block. Using it elsewhere may result in surprising error messages, since RDL requires variables with fixed types to have the same type along all paths. Method parameters are treated as if `var_type` was called on them at the beginning of the method, fixing them to their declared type. This design choice may be revisited in the future.
 
-*[github head only]*
 There is one subtlety for local variables and code blocks. Consider the following code:
 ```ruby
 x = 1
@@ -681,7 +677,6 @@ RDL uses the same approach for hashes: hash literals are treated as finite hashe
 
 ## Other Features and Limitations
 
-* *[github head only]*
 *Displaying types.* As an aid to debugging, the method `rdl_note_type e` will display the type of `e` during type checking. At run time, this method returns its argument. Note that in certain cases RDL may type check the same code repeatedly in which case an expression's type could be printed multiple times.
 
 * *Conditional guards and singletons.* If an `if` or `unless` guard has a singleton type, RDL will typecheck both branches but not include types from the unrealizable branch in the expression type. For example, `if true then 1 else 'two' end` has type `1`. RDL behaves similarly for `&&` and `||`. However, RDL does not implement this logic for `case`.
@@ -715,7 +710,7 @@ RDL also includes a few other useful methods:
 
 * `rdl_nowrap`, if called at the top-level of a class, causes RDL to behave as if `wrap: false` were passed to all `type`, `pre`, and `post` calls in the class. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead.
 
-* `rdl_remove_type klass, meth` removes the type annotation for meth in klass. Fails if meth does not have a type annotation. (*[github head only]*)
+* `rdl_remove_type klass, meth` removes the type annotation for meth in klass. Fails if meth does not have a type annotation.
 
 * `rdl_query` prints information about types; see below for details.
 
@@ -784,9 +779,9 @@ RDL supports the following configuration options:
 * `config.nowrap` - `Array<Class>` containing all classes whose methods should not be wrapped.
 * `config.gather_stats` - currently disabled.
 * `config.report` - if true, then when the program exits, RDL will print out a list of methods that were statically type checked, and methods that were annotated to be statically type checked but weren't.
-* `config.guess_types` - *[github head only]* List of classes (of type `Array<Symbol>`). For every method added to a listed class *after* this configuration option is set, RDL will record the types of its arguments and returns at run-time. Then when the program exits, RDL will print out a skeleton for each class with types for the monitored methods based on what RDL recorded at run-time and based on what Ruby knows about the methods' signatures. This is probably not going to produce the correct method types, but it might be a good starting place.
-* `config.type_defaults` - *[github head only]* Hash containing default options for `type`. Initially `{ wrap: true, typecheck: false }`.
-* `config.pre_defaults` - *[github head only]* Hash containing default options for `pre`. Initially `{ wrap: true }`.
+* `config.guess_types` - List of classes (of type `Array<Symbol>`). For every method added to a listed class *after* this configuration option is set, RDL will record the types of its arguments and returns at run-time. Then when the program exits, RDL will print out a skeleton for each class with types for the monitored methods based on what RDL recorded at run-time and based on what Ruby knows about the methods' signatures. This is probably not going to produce the correct method types, but it might be a good starting place.
+* `config.type_defaults` - Hash containing default options for `type`. Initially `{ wrap: true, typecheck: false }`.
+* `config.pre_defaults` - Hash containing default options for `pre`. Initially `{ wrap: true }`.
 * `config.post_defaults` - same as `pre_defaults`, but for `post`.
 
 # Bibliography
