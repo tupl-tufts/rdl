@@ -313,7 +313,7 @@ Here we've named the first argument of `to_s` as `base` to give some extra hint 
 
 ## Dependent Types
 
-RDL allows for refinement predicates to be attached to named arguments. These predicates are then checked when the method is called and returns. For instance:
+RDL allows for refinement predicates to be attached to named arguments. The predicates on the arguments are checked when the method is called, and the predicates on the return is checked when then method returns. For instance:
 
 ```ruby
 type '(Float x {{ x>=0 }}) -> Float y {{ y>=0 }}'
@@ -331,7 +331,13 @@ type '(Fixnum x {{ x>y }}, Fixnum y) -> Float z {{ z==(x+y) }}'
 def m(x,y) ... end
 ```
 
-Any arbitrary code can be placed between the double braces of a type refinement, and RDL will dynmically check that this predicate evaluates to true, or raise a type error if it evaluates to false.
+Any arbitrary code can be placed between the double braces of a type refinement, and RDL will dynamically check that this predicate evaluates to true, or raise a type error if it evaluates to false.
+
+Most pre- and postconditions can be translated into a dependent type by attaching the precondition to one of the arguments and the postcondition to the return. Note, however, that dependently typed positions must always have a name, even if the associated refinment doesn't refer to that name:
+
+```ruby
+type '(Fixnum x {{ $y > 0 }}) -> nil'    # argument name must be present even though refinment doesn't use it.
+```
 
 ## Higher-order Types
 
