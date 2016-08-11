@@ -537,6 +537,7 @@ class Object
 
   # Type check all methods that had annotation `typecheck: sym' at type call
   def rdl_do_typecheck(sym)
+    return unless $__rdl_to_typecheck[sym]
     $__rdl_to_typecheck[sym].each { |klass, meth|
       RDL::Typecheck.typecheck(klass, meth)
     }
