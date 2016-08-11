@@ -356,6 +356,14 @@ RUBY
     }
   end
 
+  def test_inconsistent
+    self.class.class_eval {
+      type "(Fixnum) -> Fixnum"
+      pre { |x| true }
+      def inconsistent1(y) return y; end
+    }
+  end
+
   def test_rdl_remove_type
     self.class.class_eval {
       type "() -> nil"

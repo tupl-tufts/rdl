@@ -121,7 +121,7 @@ RUBY
   end
 
   # [+default_class+] should be a class
-  def self.process_type_args(default_class, *args, &blk)
+  def self.process_type_args(default_class, *args)
     klass = meth = type = nil
     default_class = "Object" if (default_class.is_a? Object) && (default_class.to_s == "main") # special case for main
     if args.size == 3
@@ -199,10 +199,12 @@ RUBY
         else
           tmp_klass = klass
         end
-        raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{tmp_klass} to #{meth}" if prev_klass != tmp_klass
+        if (!h[:class_check] && (prev_klass != tmp_klass)) || (h[:class_check] && (h[:class_check].to_s != tmp_klass))
+          raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{tmp_klass} to #{meth}"
+        end
         $__rdl_info.add(klass, meth, kind, contract)
         RDL::Wrap.wrap(klass, meth) if h[:wrap]
-        unless $__rdl_info.set(klass, meth, :typecheck, h[:typecheck])
+        unless !h.has_key?(:typecheck) || $__rdl_info.set(klass, meth, :typecheck, h[:typecheck])
           raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
         end
         RDL::Typecheck.typecheck(klass, meth) if h[:typecheck] == :now
@@ -300,9 +302,9 @@ class Object
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
-  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], &blk)
+  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck])
     klass, meth, type = begin
-                          RDL::Wrap.process_type_args(self, *args, &blk)
+                          RDL::Wrap.process_type_args(self, *args)
                         rescue Racc::ParseError => err
                           # Remove enough backtrace to only include actual source line
                           # Warning: Adjust the -5 below if the code (or this comment) changes
