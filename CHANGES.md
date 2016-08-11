@@ -13,6 +13,7 @@
 - Library types now use new aliases %integer and %numeric instead of the Integer and Numeric classes.
 - Fix issue #14 - allow type/pre/post to coexist, improve docs on dependent types
 - Fix typos in README, pull req #13
+- Instead of requiring `rdl_types.rb`, require `types/core`
 
 ## [1.1.1] - 2016-05-21
 ### Fixed
