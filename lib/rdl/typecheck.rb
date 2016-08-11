@@ -1121,7 +1121,11 @@ RUBY
       scope[:context_types].each { |ctk, ctm, ctt| ts << ctt if ctk.to_s == klass && ctm == name  }
       return ts unless ts.empty?
     end
-    return scope[:context_types][klass][name] if scope[:context_types] && scope[:context_types][klass] && scope[:context_types][klass][name]
+    if scope[:context_types]
+      scope[:context_types].each { |k, m, t|
+        return t if k == klass && m = name
+      }
+    end
     t = $__rdl_info.get_with_aliases(klass, name, :type)
     return t if t # simplest case, no need to walk inheritance hierarchy
     the_klass = RDL::Util.to_class(klass)
