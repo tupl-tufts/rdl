@@ -1,7 +1,7 @@
 require 'minitest/autorun'
 $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
-require 'rdl_types'
+require 'types/core'
 
 class TestLe < Minitest::Test
   include RDL::Type

@@ -10,7 +10,7 @@ require 'uri'
 require 'minitest/autorun'
 $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
-require 'rdl_types.rb'
+require 'types/core'
 
 class Dummy
   def self.each
