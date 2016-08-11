@@ -11,6 +11,8 @@
 ### Changed
 - Modified `self` type to be any instance of the self's class
 - Library types now use new aliases %integer and %numeric instead of the Integer and Numeric classes.
+- Fix issue #14 - allow type/pre/post to coexist, improve docs on dependent types
+- Fix typos in README, pull req #13
 
 ## [1.1.1] - 2016-05-21
 ### Fixed

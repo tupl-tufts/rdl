@@ -148,19 +148,7 @@ For performance reasons you probably don't want to use RDL in production code. T
 
 ## Rails
 
-*[github head only]*
-
-To add types to Ruby on Rails, use `require 'types/rails'` instead. In development and test mode, this call will load `rdl`, `types/core`, and will load extra type annotations for Rails. In production mode, this call will load `rdl_disable`.
-
-Place the `require` call in `application.rb` after the `Bundler.require` call. (This placement is needed so the Rails version string is available and the Rails environment is loaded):
-
-Currently RDL has types for the following versions of Rails:
-
-* Rails 5.x support - limited to the following:
-  * Automatically generates
-    * Models
-      * Type annotations for model column getters and setters
-      * find_by and find_by!
+To use RDL with Rails, use the [rdl-rails](https://github.com/jeffrey-s-foster/rdl-rails) gem.
 
 ## Preconditions and Postconditions
 

@@ -200,7 +200,7 @@ RUBY
           tmp_klass = klass
         end
         if (!h[:class_check] && (prev_klass != tmp_klass)) || (h[:class_check] && (h[:class_check].to_s != tmp_klass))
-          raise RuntimeError, "Deferred contract from class #{prev_klass} being applied in class #{tmp_klass} to #{meth}"
+          raise RuntimeError, "Deferred #{kind} contract from class #{prev_klass} being applied in class #{tmp_klass} to #{meth}"
         end
         $__rdl_info.add(klass, meth, kind, contract)
         RDL::Wrap.wrap(klass, meth) if h[:wrap]
