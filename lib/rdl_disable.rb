@@ -18,6 +18,7 @@ class Object
   def type_alias(*args); end
   def rdl_do_typecheck(*args); end
   def rdl_note_type(*args); end
+  def rdl_remove_type(*args); end
 
   def attr_accessor_type(*args)
     args.each_slice(2) { |name, typ| attr_accessor name }
@@ -35,7 +36,12 @@ class Object
     args.each_slice(2) { |name, typ| attr_writer name }
     nil
   end
-
-
-
 end
+
+class <<Object
+  remove_method :rdl_query
+  remove_method :method_added
+  remove_method :singleton_method_added
+end
+
+# TODO: remove global variables
