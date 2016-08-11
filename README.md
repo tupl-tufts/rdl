@@ -9,6 +9,7 @@
   * [Installing RDL](#installing-rdl)
   * [Loading RDL](#loading-rdl)
   * [Disabling RDL](#disabling-rdl)
+  * [Rails](#rails)
   * [Preconditions and Postconditions](#preconditions-and-postconditions)
   * [Type Annotations](#type-annotations)
 * [RDL Types](#rdl-types)
@@ -147,7 +148,7 @@ For performance reasons you probably don't want to use RDL in production code. T
 
 ## Rails
 
-To use RDL with Rails, use the [rdl-rails](https://github.com/jeffrey-s-foster/rdl-rails) gem.
+To use RDL with Rails, use the [rdl-rails](https://github.com/plum-umd/rdl-rails) gem.
 
 ## Preconditions and Postconditions
 
