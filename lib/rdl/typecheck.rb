@@ -1114,6 +1114,7 @@ RUBY
   # *always* included module's instance methods only
   # if included, those methods are added to instance_methods
   # if extended, those methods are added to singleton_methods
+  # (except Kernel is special...)
   def self.lookup(scope, klass, name, e)
     if scope[:context_types]
       # return array of all matching types from context_types, if any
@@ -1145,7 +1146,10 @@ RUBY
         return tancestor if tancestor
       end
       if ancestor.instance_methods(false).member?(name)
-        klass = RDL::Util.remove_singleton_marker klass if RDL::Util.has_singleton_marker klass
+        if RDL::Util.has_singleton_marker klass
+          klass = RDL::Util.remove_singleton_marker klass
+          klass = '(singleton) ' + klass
+        end
         error :missing_ancestor_type, [ancestor, klass, name], e
       end
     }
