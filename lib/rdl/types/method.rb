@@ -61,10 +61,10 @@ module RDL::Type
 	        check_arg_preds(bind, preds) if preds.size > 0
           @args.each_with_index {|a,i| args[i] = block_wrap(slf, inst, a, bind, &args[i]) if a.is_a? MethodType }
           if @block then
-            raise TypeError, "Expected method block of type {@block}, received no block." unless blk
+            next unless blk
             blk = block_wrap(slf, inst, @block, bind, &blk)
           elsif blk then
-            raise TypeError, "Block passed to method expecting no block."
+            next
           end
           return [true, args, blk, bind]
         end

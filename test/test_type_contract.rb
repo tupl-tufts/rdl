@@ -264,4 +264,31 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p8.call(43, x: "foo", y: "foo") }
     assert_raises(TypeError) { p8.call(43, x: :foo, y: "foo", z: 44) }
   end
+
+  type '() { () -> nil } -> nil'
+  def _test_with_block
+    nil
+  end
+
+  type '() -> nil'
+  def _test_without_block
+    nil
+  end
+
+  type '() -> nil'
+  type '() { () -> nil } -> nil'
+  def _test_with_without_block
+    nil
+  end
+
+  def test_block
+    assert_nil(_test_with_block { nil })
+    assert_raises(TypeError) { _test_with_block }
+
+    assert_raises(TypeError) { _test_without_block { nil } }
+    assert_nil(_test_without_block)
+
+    assert_nil(_test_with_without_block)
+    assert_nil(_test_with_without_block { nil })
+  end
 end

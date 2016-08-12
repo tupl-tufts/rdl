@@ -10,10 +10,13 @@
 
 ### Changed
 - Modified `self` type to be any instance of the self's class
-- Library types now use new aliases %integer and %numeric instead of the Integer and Numeric classes.
+- Library types now use new aliases %integer and %numeric instead of the Integer and Numeric classes
+- Instead of requiring `rdl_types.rb`, require `types/core`
+
+### Fixed
 - Fix issue #14 - allow type/pre/post to coexist, improve docs on dependent types
 - Fix typos in README, pull req #13
-- Instead of requiring `rdl_types.rb`, require `types/core`
+- Fix bug where calling method overloaded sometimes with block and sometimes without would always report type error
 
 ## [1.1.1] - 2016-05-21
 ### Fixed
