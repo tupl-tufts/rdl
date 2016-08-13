@@ -805,9 +805,6 @@ RUBY
     when :lvar  # local variable
       error :undefined_local_or_method, [name], e unless env.has_key? name
       capture(scope, name, env[name].canonical) if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
-      # if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
-      #   error :nonlocal_access, [name], e
-      # end
       if scope[:captured] && scope[:captured].has_key?(name) then
         [env, scope[:captured][name]]
       else
@@ -1170,18 +1167,17 @@ type_error_messages = {
   inconsistent_var_type: "local variable `%s' has declared type on some paths but not all",
   inconsistent_var_type_type: "local variable `%s' declared with inconsistent types %s",
   no_each_type: "can't find `each' method with signature `() { (t1) -> t2 } -> t3' in class `%s'",
-  tuple_finite_hash_promote: "can't promote %s to %s",
+  tuple_finite_hash_promote: "can't promote `%s' to `%s'",
   masgn_bad_rhs: "multiple assignment has right-hand side of type `%s' where tuple or array expected",
   masgn_num: "can't multiple-assign %d values to %d variables",
   masgn_bad_lhs: "no corresponding right-hand side elemnt for left-hand side assignee",
-  kw_not_allowed: "can't use %s in current scope",
-  kw_arg_not_allowed: "argument to %s not allowed in current scope",
-  arg_count_mismatch: "%s signature expects %d arguments, actual %s has %d arguments",
-  nonlocal_access: "variable %s from outer scope must have type declared with var_type",
+  kw_not_allowed: "can't use `%s' in current scope",
+  kw_arg_not_allowed: "argument to `%s' not allowed in current scope",
+  arg_count_mismatch: "`%s' signature expects %d arguments, actual `%s' has %d arguments",
   no_block: "attempt to call yield in method not declared to take a block argument",
   block_block: "can't call yield on a block expecting another block argument",
   block_type_error: "argument type error for block\n%s",
-  missing_ancestor_type: "ancestor %s of %s has method %s but no type for it",
+  missing_ancestor_type: "ancestor `%s' of `%s' has method `%s' but no type for it",
   type_cast_format: "type_cast must be called as `type_cast type-string' or `type_cast type-string, force: expr'",
   var_type_format: "var_type must be called as `var_type :var-name, type-string'",
   puts_type_format: "puts_type must be called as `puts_type e'",
