@@ -37,10 +37,3 @@ class Object
     nil
   end
 end
-
-class <<Object
-  remove_method :method_added if Object.singleton_class.method_defined? :method_added
-  remove_method :singleton_method_added if Object.singleton_class.method_defined? :singleton_method_added
-end
-
-# TODO: remove global variables
