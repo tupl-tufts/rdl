@@ -7,7 +7,9 @@ if Rails.env.development? || Rails.env.test?
   Dir[File.dirname(__FILE__) + "/../types/rails-#{dir}/**/*.rb"].each { |f| require f }
 elsif Rails.env.production?
   require 'rdl_disable'
-  def (ActionController::Base).params_type(typs); end
+  class ActionController::Base
+    def self.params_type(typs); end
+  end
 else
   raise RuntimeError, "Don't know what to do in Rails environment #{Rails.env}"
 end
