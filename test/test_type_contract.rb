@@ -172,6 +172,16 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p17.call(42) }
     assert_raises(TypeError) { p17.call(42, '43') }
     assert_raises(TypeError) { p17.call(42, 43, '44') }
+
+    t18 = @p.scan_str "(Fixnum, ?{(Fixnum) -> Fixnum}) -> Fixnum"
+    p18 = t18.to_higher_contract(self) { |x,p=nil| if p then p.call(x) else x end }
+    assert_equal 42, p18.call(41, Proc.new {|x| x+1})
+    assert_equal 42, p18.call(42)
+    assert_raises(TypeError) { p18.call(41.5, Proc.new {|x| x+1}) }
+    assert_raises(TypeError) { p18.call(41, 1) }
+    assert_raises(TypeError) { p18.call(41, Proc.new {|x| x+1.5}) }
+    p18b = t18.to_higher_contract(self) { |x,p=nil| if p then p.call(x+0.5) else x end }
+    assert_raises(TypeError) { p18b.call(41, Proc.new {|x| x+1}) }
   end
 
   type '(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum'
