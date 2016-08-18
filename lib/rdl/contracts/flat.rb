@@ -9,8 +9,7 @@ module RDL::Contract
 
     def check(slf, *v, &blk)
       $__rdl_contract_switch.off {
-        if (@pred &&
-            ((@pred.arity < 0) ? (@pred.arity.abs - 1) <= v.size : @pred.arity == v.size)) then
+        if @pred && v.length >= @pred.arity
           unless blk ? slf.instance_exec(*v, blk, &@pred) : slf.instance_exec(*v, &@pred) # TODO: Fix blk
 #          unless blk ? pred.call(*v, &blk) : pred.call(*v)
             raise ContractError,
