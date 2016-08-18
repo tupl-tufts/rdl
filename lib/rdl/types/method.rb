@@ -79,6 +79,13 @@ module RDL::Type
           t = t.type.instantiate(inst)
           if actual == args.size
             states << [formal+1, actual] # skip to allow extra formal optionals at end
+          elsif t.is_a? MethodType
+            if args[actual].is_a? Proc
+              args[actual] = block_wrap(slf, inst, t, bind, &args[actual])
+              states << [formal+1, actual+1]
+            else
+              states << [formal+1, actual]
+            end
           elsif t.member?(args[actual], vars_wild: true)
             states << [formal+1, actual+1] # match
             states << [formal+1, actual] # skip
