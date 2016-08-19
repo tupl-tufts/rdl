@@ -152,7 +152,11 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { block_contract_test2(42) {|z| z} }
     assert_raises(TypeError) { block_contract_test1(42) }
     assert_raises(TypeError) { block_contract_test3(42) { |x| x } }
-
+    assert_equal 42, block_contract_test4(42)
+    assert_equal 42, block_contract_test4(41) {|x| x+1}
+    assert_raises(TypeError) { block_contract_test4(40.5) }
+    assert_raises(TypeError) { block_contract_test4(42) {|x| x+1.5} }
+    
     t15 = @p.scan_str "(Fixnum x {{x>y}}, Fixnum y) -> Fixnum"
     p15 = t15.to_contract.wrap(self) { |x, y| x+y }
     assert_equal 21, p15.call(11, 10)
@@ -182,6 +186,8 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p18.call(41, Proc.new {|x| x+1.5}) }
     p18b = t18.to_higher_contract(self) { |x,p=nil| if p then p.call(x+0.5) else x end }
     assert_raises(TypeError) { p18b.call(41, Proc.new {|x| x+1}) }
+
+    
   end
 
   type '(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum'
@@ -197,6 +203,12 @@ class TestTypeContract < Minitest::Test
   type '(Fixnum) -> Fixnum'
   def block_contract_test3(x)
     42
+  end
+
+  type '(Fixnum) ?{(Fixnum) -> Fixnum} -> Fixnum'
+  def block_contract_test4(x,&blk)
+    return yield(x) if blk
+    return x
   end
 
   def test_proc_names

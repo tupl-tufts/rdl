@@ -41,7 +41,7 @@ module RDL::Type
       }
       @args = *args
 
-      raise "Block must be MethodType" unless (not block) or (block.instance_of? MethodType)
+      raise "Block must be MethodType" unless (not block) or (block.instance_of? MethodType) or (if (block.instance_of? OptionalType) then (block.type.instantiate(nil).is_a? MethodType) else false end)
       @block = block
 
       raise "Attempt to create method type with non-type ret" unless ret.is_a? Type
@@ -61,8 +61,12 @@ module RDL::Type
 	        check_arg_preds(bind, preds) if preds.size > 0
           @args.each_with_index {|a,i| args[i] = block_wrap(slf, inst, a, bind, &args[i]) if a.is_a? MethodType }
           if @block then
-            next unless blk
-            blk = block_wrap(slf, inst, @block, bind, &blk)
+            if @block.is_a? OptionalType
+              blk = block_wrap(slf, inst, @block.type.instantiate(inst), bind, &blk) if blk
+            else
+              next unless blk
+              blk = block_wrap(slf, inst, @block, bind, &blk)
+              end
           elsif blk then
             next
           end
