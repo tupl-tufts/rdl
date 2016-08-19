@@ -70,7 +70,7 @@ module RDL::Type
             else
               next unless blk
               blk = block_wrap(slf, inst, @block, bind, &blk)
-              end
+            end
           elsif blk then
             next
           end
