@@ -41,7 +41,11 @@ module RDL::Type
       }
       @args = *args
 
-      raise "Block must be MethodType" unless (not block) or (block.instance_of? MethodType) or (if (block.instance_of? OptionalType) then (block.type.instantiate(nil).is_a? MethodType) else false end)
+      if block.instance_of? OptionalType
+        raise "Block must be MethodType" unless block.type.instantiate(nil).is_a? MethodType
+      else
+        raise "Block must be MethodType" unless (not block) or (block.instance_of? MethodType)
+      end
       @block = block
 
       raise "Attempt to create method type with non-type ret" unless ret.is_a? Type
