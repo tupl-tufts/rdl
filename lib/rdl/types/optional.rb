@@ -11,8 +11,10 @@ module RDL::Type
     end
 
     def to_s
-      if @type.instance_of? UnionType
+      if @type.is_a? UnionType
         "?(#{@type.to_s})"
+      elsif @type.is_a? MethodType
+        "?{ #{@type.to_s} }"
       else
         "?#{@type.to_s}"
       end

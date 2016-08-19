@@ -91,6 +91,9 @@ module RDL::Type
             if args[actual].is_a? Proc
               args[actual] = block_wrap(slf, inst, t, bind, &args[actual])
               states << [formal+1, actual+1]
+            elsif args[actual].nil?
+              states << [formal+1, actual+1] # match
+              states << [formal+1, actual] # skip
             else
               states << [formal+1, actual]
             end
@@ -270,7 +273,9 @@ RUBY
     end
 
     def to_s  # :nodoc:
-      if @block
+      if @block && @block.is_a?(OptionalType)
+        return "(#{@args.map { |arg| arg.to_s }.join(', ')}) #{@block.to_s} -> #{@ret.to_s}"
+      elsif @block
         return "(#{@args.map { |arg| arg.to_s }.join(', ')}) {#{@block.to_s}} -> #{@ret.to_s}"
       elsif @args
         return "(#{@args.map { |arg| arg.to_s }.join(', ')}) -> #{@ret.to_s}"
