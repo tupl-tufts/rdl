@@ -75,6 +75,7 @@ rule
   block:
       { result = nil }
     | LBRACE method_type RBRACE { result = val[1] }
+    | QUERY LBRACE method_type RBRACE { result = RDL::Type::OptionalType.new val[2] }
 
   type_expr:
     union_type { result = val[0] }
