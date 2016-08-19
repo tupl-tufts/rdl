@@ -535,13 +535,26 @@ class Object
     nil
   end
 
-  # Type check all methods that had annotation `typecheck: sym' at type call
+  # Register [+ blk +] to be executed when `rdl_do_typecheck [+ sym +]` is called.
+  # The blk will be called with sym as its argument. The order
+  # in which multiple blks for the same sym will be executed is unspecified
+  def rdl_at(sym, &blk)
+    $__rdl_at[sym] = [] unless $__rdl_at[sym]
+    $__rdl_at[sym] << blk
+  end
+
+  # Invokes all callbacks from rdl_at(sym), in unspecified order.
+  # Afterwards, type checks all methods that had annotation `typecheck: sym' at type call, in unspecified order.
   def rdl_do_typecheck(sym)
+    if $__rdl_at[sym]
+      $__rdl_at[sym].each { |blk| blk.call(sym) }
+    end
+    $__rdl_at[sym] = Array.new
     return unless $__rdl_to_typecheck[sym]
     $__rdl_to_typecheck[sym].each { |klass, meth|
       RDL::Typecheck.typecheck(klass, meth)
     }
-    $__rdl_to_typecheck[sym] = Array.new
+    $__rdl_to_typecheck[sym] = Set.new
     nil
   end
 

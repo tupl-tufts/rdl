@@ -46,6 +46,9 @@ $__rdl_to_wrap = Set.new
 $__rdl_to_typecheck = Hash.new
 $__rdl_to_typecheck[:now] = Set.new
 
+# Map from symbols to Array<Proc> where the Procs are called when those symbols are rdl_do_typecheck'd
+$__rdl_at = Hash.new
+
 # List of contracts that should be applied to the next method definition
 $__rdl_deferred = []
 

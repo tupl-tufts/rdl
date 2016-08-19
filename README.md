@@ -739,6 +739,8 @@ RDL also includes a few other useful methods:
 
 * `rdl_query` prints information about types; see below for details.
 
+* `rdl_do_at(sym, &blk)` invokes `blk.call(sym)` when `rdl_do_typecheck(sym)` is called. Useful when type annotations need to be generated at some later time, e.g., because not all classes are loaded.
+
 # Queries
 
 As discussed above, RDL includes a small script, `rdl_query`, to look up type information. (Currently it does not support other pre- and postconditions.) The script takes a single argument, which should be a string. Note that when using the shell script, you may need to use quotes depending on your shell. Currently several queries are supported:
