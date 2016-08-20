@@ -164,13 +164,18 @@ to get the head version from github.
 
 In development and test mode, you will now have access to `rdl`, `types/core` from RDL, and extra type annotations for Rails and some related gems. In production mode, RDL will be disabled (by loading `rdl_disable`).
 
+**Warning:** Rails support is currently very limited, not well tested, and definitely has bugs...please send bug reports/pull requests/etc and we will fix things.
+
 Currently, rdl has types for the following versions of Rails:
 
 * Rails 5.x support - limited to the following:
-  * Automatically generates
-    * Models
-      * Type annotations for model column getters and setters
-      * `find_by` and `find_by!`
+  * Models
+    * Generates type annotations for model column getters and setters
+    * `find_by` and `find_by!`
+    * Generates types annotations for methods added by `belongs_to`, `has_one`, `has_many`, `has_and_belongs_to_many`.
+      * Note currently rdl doesn't do very precise type checking of relations
+  * Controllers
+    * `errors`
 
 ## Preconditions and Postconditions
 

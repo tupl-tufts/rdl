@@ -135,6 +135,23 @@ module ActiveRecord::Associations::ClassMethods
                   'source_type: ?%symstr, validate: ?%bool, inverse_of: ?%symstr, extend: ?(Module or Array<Module>))' +
                   '?{ () -> %any } -> %any'
 
+  pre :has_many do |name, scope=nil, class_name: nil, foreign_key: nil, foreign_type: nil, primary_key: nil,
+                    dependent: nil, counter_cache: nil, as: nil, through: nil, source: nil, source_type: nil,
+                    validate: nil, inverse_of: nil, extend: nil|
+    if class_name
+      collect_type = class_name.to_s.classify
+    else
+      collect_type = name.to_s.singularize.classify
+    end
+    type name, "() -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>"
+    type "#{name}=", "(Array<t>) -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>" # TODO not sure of type
+    id_type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash['id'].type) # TODO assumes id field is "id"
+    type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
+    type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
+
+    true
+  end
+
   type :has_and_belongs_to_many, '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?%symstr,' +
                                  'join_table: ?%symstr, foreign_key: ?%symstr, association_foreign_key: ?%symstr,' +
                                  'validate: ?%bool, autosave: ?%bool) ?{ () -> %any } -> %any'
@@ -148,22 +165,25 @@ module ActiveRecord::Associations::ClassMethods
       collect_type = name.to_s.singularize.classify
     end
     type name, "() -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>"
-                                  # collection
-                                  # collection<<(object, ...)
-                                  # collection.delete(object, ...)
-                                  # collection.destroy(object, ...)
-                                  # collection=(objects)
-                                  # collection_singular_ids
-                                  # collection_singular_ids=(ids)
-                                  # collection.clear
-                                  # collection.empty?
-                                  # collection.size
-                                  # collection.find(...)
-                                  # collection.where(...)
-                                  # collection.exists?(...)
-                                  # collection.build(attributes = {})
-                                  # collection.create(attributes = {})
-                                  # collection.create!(attributes = {})
+    type "#{name}=", "(Array<t>) -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>" # TODO not sure of type
+    id_type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash['id'].type) # TODO assumes id field is "id"
+    type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
+    type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
+
+    # Remaining methods are from CollectionProxy
+    # TODO give these precise types for this particular model
+    # collection<<(object, ...)
+    # collection.delete(object, ...)
+    # collection.destroy(object, ...)
+    # collection.clear
+    # collection.empty?
+    # collection.size
+    # collection.find(...)
+    # collection.where(...)
+    # collection.exists?(...)
+    # collection.build(attributes = {})
+    # collection.create(attributes = {})
+    # collection.create!(attributes = {})
     true
   end
 
