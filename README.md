@@ -728,7 +728,8 @@ RDL uses the same approach for hashes: hash literals are treated as finite hashe
 
 RDL makes some assumptions that should hold unless your Ruby code is doing something highly unusual:
 
-* `Class#===` is not redefined
+* `Class#===` not redefined
+* `Proc#call` not redefined
 
 (More assumptions will be added here as they are added to RDL...)
 
