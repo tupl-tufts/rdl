@@ -217,10 +217,7 @@ module RDL::Typecheck
       end
       inst = {self: self_type}
       type = type.instantiate inst
-      unless type.args.length == args.children.length
-        error :arg_count_mismatch, ['method', type.args.length, 'method', args.children.length], (if args.children.empty? then ast else args end)
-      end
-      targs = args.children.map { |arg| arg.children[0] }.zip(type.args).to_h
+      targs = args_hash(type, args, ast, 'method')
       targs[:self] = self_type
       scope = { tret: type.ret, tblock: type.block, captured: Hash.new, context_types: context_types }
       begin
@@ -234,6 +231,34 @@ module RDL::Typecheck
       error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || body_type <= type.ret
     }
     $__rdl_info.set(klass, meth, :typechecked, true)
+  end
+
+  # [+ type +] is a MethodType
+  # [+ args +] is an `args` node from the AST
+  # [+ ast +] is where to report an error if `args` is empty
+  # [+ kind +] is either `'method'` or `'block'`, and is only used for printing error messages
+  # Returns a Hash<Symbol, Type> mapping formal argument names to their types
+  def self.args_hash(type, args, ast, kind)
+    targs = Hash.new
+    tpos = 0 # position in type.args
+    args.children.each { |arg|
+      error :type_args_fewer, [kind, kind], arg if tpos >= type.args.length
+      if arg.type == :arg
+        error :type_arg_optional, [kind], arg if type.args[tpos].is_a? RDL::Type::OptionalType
+        targs[arg.children[0]] = type.args[tpos]
+        tpos += 1
+      elsif arg.type == :optarg
+      elsif arg.type == :restarg
+      elsif arg.type == :kwarg
+      elsif arg.type == :kwoptarg
+      elsif arg.type == :kwrestarg
+      elsif arg.type == :blockarg
+      else
+        error :generic_error, ["Don't know what to do with actual argument of type #{arg.type}"], arg
+      end
+    }
+    error :type_args_more, [kind, kind], (if args.children.empty? then ast else args end) if type.args.length != tpos
+    return targs
   end
 
   # The actual type checking logic.
@@ -1087,12 +1112,8 @@ RUBY
     # TODO self is the same *except* instance_exec or instance_eval
     raise RuntimeError, "block with block arg?" unless tblock.block.nil?
     args, body = block
-    unless tblock.args.length == args.children.length
-      error :arg_count_mismatch, ['block', tblock.args.length, 'block', args.children.length], (if block[0].children.empty? then block[1] else block[0] end)
-    end
     tblock = tblock.instantiate(inst)
-    a = args.children.map { |arg| arg.children[0] }.zip(tblock.args).to_h
-
+    a = args_hash(tblock, args, block, 'block')
     scope_merge(scope, outer_env: env) { |bscope|
       # note: okay if outer_env shadows, since nested scope will include outer scope by next line
       env = env.merge(Env.new(a))
@@ -1173,7 +1194,6 @@ type_error_messages = {
   masgn_bad_lhs: "no corresponding right-hand side elemnt for left-hand side assignee",
   kw_not_allowed: "can't use `%s' in current scope",
   kw_arg_not_allowed: "argument to `%s' not allowed in current scope",
-  arg_count_mismatch: "`%s' signature expects %d arguments, actual `%s' has %d arguments",
   no_block: "attempt to call yield in method not declared to take a block argument",
   block_block: "can't call yield on a block expecting another block argument",
   block_type_error: "argument type error for block\n%s",
@@ -1188,6 +1208,9 @@ type_error_messages = {
   note_type: "Type is `%s'",
   note_message: "%s",
   recv_var_type: "Receiver whose type is unconstrained variable `%s' not allowed",
+  type_args_more: "%s signature accepts more arguments than actual %s definition",
+  type_args_fewer: "%s signature accepts fewer arguments than actual %s definition",
+  type_arg_optional: "%s signature has optional argument where actual argument is required",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)
