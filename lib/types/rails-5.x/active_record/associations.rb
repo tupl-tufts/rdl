@@ -1,3 +1,65 @@
+class ActiveRecord::Associations::CollectionProxy
+  type_params [:t], :all?
+
+  type :<<, '(*(t or Array<t>)) -> self'
+  type :==, '(%any) -> %bool'
+  type :any?, '() ?{ (t) -> %bool } -> %bool'
+  rdl_alias :append, :<<
+  type :build, '(Hash<Symbol, %any> or Array<Hash<Symbol, %any>>) -> self'
+  type :clear, '() -> self'
+  type :concat, '(*t) -> self'
+  type :count, '() -> %integer'
+  type :create, '(Hash<Symbol, %any> or Array<Hash<Symbol, %any>>) -> self'
+  type :create!, '(Hash<Symbol, %any> or Array<Hash<Symbol, %any>>) -> self'
+  type :delete, '(*t) -> Array<t>'
+  type :delete_all, '(?Symbol dependent) -> Array<t>'
+  type :destroy, '(*t) -> Array<t>'
+  type :destroy_all, '() -> %any'
+  type :distinct, '() -> self'
+  type :empty?, '() -> %bool'
+  type :find, '(%integer) -> t'
+  type :find, '(%integer, %integer, *%integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+  type :include?, '(t) -> %bool'
+  type :length, '() -> %integer'
+  type :load_target, '() -> %any'
+  type :loaded?, '() -> %bool'
+  type :many?, '() ?{ (t) -> %bool } -> %bool'
+  rdl_alias :new, :build
+  rdl_alias :push, :<<
+  type :reload, '() -> self'
+  type :replace, '(Array<t>) -> %any'
+  type :reset, '() -> self'
+  type :scope, '() -> ActiveRecord::Relation' # TODO fix
+  type :select, '(*Symbol) -> t'
+  type :select, '() { (t) -> %bool } -> ActiveRecord::Associations::CollectionProxy<t>'
+  type :size, '() -> %integer'
+  rdl_alias :spawn, :scope
+  type :take, '() -> t or nil'
+  type :take, '(%integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+  type :to_ary, '() -> Array<t>'
+  rdl_alias :to_a, :to_ary
+  rdl_alias :unique, :distinct
+
+  type :first, '() -> t or nil'
+  type :first, '(%integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+  type :second, '() -> t or nil'
+  type :second, '(%integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+  type :third, '() -> t or nil'
+  type :third, '(%integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+  type :fourth, '() -> t or nil'
+  type :fourth, '(%integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+  type :fifth, '() -> t or nil'
+  type :fifth, '(%integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+  type :forty_two, '() -> t or nil'
+  type :forty_two, '(%integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+  type :third_to_last, '() -> t or nil'
+  type :third_to_last, '(%integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+  type :second_to_last, '() -> t or nil'
+  type :second_to_last, '(%integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+  type :last, '() -> t or nil'
+  type :last, '(%integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+end
+
 module ActiveRecord::Associations::ClassMethods
 
   # TODO: Check presence of methods required by, e.g., foreign_key, primary_key, etc.
@@ -80,7 +142,12 @@ module ActiveRecord::Associations::ClassMethods
   pre :has_and_belongs_to_many do |name, scope=nil, class_name: nil, join_table: nil,
                                   foreign_key: nil, association_foreign_key: nil,
                                   validate: nil, autosave: nil|
-
+    if class_name
+      collect_type = class_name.to_s.classify
+    else
+      collect_type = name.to_s.singularize.classify
+    end
+    type name, "() -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>"
                                   # collection
                                   # collection<<(object, ...)
                                   # collection.delete(object, ...)
