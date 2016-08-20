@@ -197,6 +197,7 @@ class TestLe < Minitest::Test
     assert (not (tbos <= tbso))
     assert (tbso <= tbso)
     assert (tbso <= tbos)
+    assert (tss <= $__rdl_proc_type)
   end
 
   def test_structural

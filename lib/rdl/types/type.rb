@@ -143,6 +143,7 @@ module RDL::Type
           return false # one has a block and the other doesn't
         end
       end
+      return true if left.is_a?(MethodType) && right.is_a?(NominalType) && right.name == 'Proc'
 
       # structural
       if left.is_a?(StructuralType) && right.is_a?(StructuralType)

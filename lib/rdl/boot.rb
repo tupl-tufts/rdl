@@ -125,6 +125,7 @@ $__rdl_symbol_type = RDL::Type::NominalType.new Symbol
 $__rdl_range_type = RDL::Type::NominalType.new Range
 $__rdl_regexp_type = RDL::Type::NominalType.new Regexp
 $__rdl_standard_error_type = RDL::Type::NominalType.new StandardError
+$__rdl_proc_type = RDL::Type::NominalType.new Proc
 
 # Hash from special type names to their values
 $__rdl_special_types = {'%any' => $__rdl_top_type,
