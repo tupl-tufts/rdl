@@ -244,7 +244,7 @@ module RDL::Typecheck
     targs = Hash.new
     tpos = 0 # position in type.args
     args.children.each { |arg|
-      error :type_args_fewer, [kind, kind], arg if tpos >= type.args.length
+      error :type_args_fewer, [kind, kind], arg if tpos >= type.args.length && arg.type != :blockarg  # blocks could be called with yield
       if arg.type == :arg
         error :type_arg_optional, [kind], arg if type.args[tpos].is_a? RDL::Type::OptionalType
         targs[arg.children[0]] = type.args[tpos]
@@ -260,6 +260,9 @@ module RDL::Typecheck
       elsif arg.type == :kwoptarg
       elsif arg.type == :kwrestarg
       elsif arg.type == :blockarg
+        error :type_arg_block, [kind, kind], arg unless type.block
+        targs[arg.children[0]] = type.block
+        # Note no check that if type.block then method expects block, because blocks can be called with yield
       else
         error :generic_error, ["Don't know what to do with actual argument of type #{arg.type}"], arg
       end
@@ -1002,6 +1005,14 @@ RUBY
       tmeth_inter = ts.map { |t| t.instantiate(inst) }
     when RDL::Type::VarType
       error :recv_var_type, [trecv], e
+    when RDL::Type::MethodType
+      if meth == :call
+        # Special case - invokes the Proc
+        tmeth_inter = [trecv]
+      else
+        # treat as Proc
+        tc_send_one_recv(scope, env, $__rdl_proc_type, meth, tactuals, block, e)
+      end
     else
       raise RuntimeError, "receiver type #{trecv} not supported yet"
     end
@@ -1038,12 +1049,14 @@ Actual arg type#{tactuals.size > 1 ? "s" : ""}:
       (#{tactuals.map { |ti| ti.to_s }.join(', ')}) #{if block then '{ block }' end}
 RUBY
       msg.chomp! # remove trailing newline
-      name = if (trecv.is_a? RDL::Type::SingletonType) && (trecv.val.is_a? Class) && (meth == :new) then
+      name = if trecv.is_a?(RDL::Type::SingletonType) && trecv.val.is_a?(Class) && (meth == :new) then
         :initialize
       elsif trecv.is_a? RDL::Type::SingletonType
         trecv.val.class.to_s
-      elsif (trecv.is_a? RDL::Type::NominalType) || (trecv.is_a? RDL::Type::GenericType)
+      elsif trecv.is_a?(RDL::Type::NominalType) || trecv.is_a?(RDL::Type::GenericType)
         trecv.to_s
+      elsif trecv.is_a?(RDL::Type::MethodType)
+        'Proc'
       else
         raise RuntimeError, "impossible to get type #{trecv}"
       end
@@ -1219,7 +1232,9 @@ type_error_messages = {
   type_args_fewer: "%s signature accepts fewer arguments than actual %s definition",
   type_arg_optional: "%s signature has optional argument where actual argument is required",
   type_arg_required: "%s signature has required argument where actual argument is optional",
-  optional_default_type: "default value has type `%s' where type `%s' expected"
+  optional_default_type: "default value has type `%s' where type `%s' expected",
+  type_arg_block:
+   "%s signature does not expect block but actual %s takes block",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)
