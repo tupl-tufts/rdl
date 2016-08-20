@@ -217,7 +217,7 @@ module RDL::Typecheck
       end
       inst = {self: self_type}
       type = type.instantiate inst
-      targs = args_hash(type, args, ast, 'method')
+      _, targs = args_hash({}, Env.new, type, args, ast, 'method')
       targs[:self] = self_type
       scope = { tret: type.ret, tblock: type.block, captured: Hash.new, context_types: context_types }
       begin
@@ -233,12 +233,14 @@ module RDL::Typecheck
     $__rdl_info.set(klass, meth, :typechecked, true)
   end
 
+  # [+ scope +] is used to typecheck default values for optional arguments
+  # [+ env +] is used to typecheck default values for optional arguments
   # [+ type +] is a MethodType
   # [+ args +] is an `args` node from the AST
   # [+ ast +] is where to report an error if `args` is empty
   # [+ kind +] is either `'method'` or `'block'`, and is only used for printing error messages
   # Returns a Hash<Symbol, Type> mapping formal argument names to their types
-  def self.args_hash(type, args, ast, kind)
+  def self.args_hash(scope, env, type, args, ast, kind)
     targs = Hash.new
     tpos = 0 # position in type.args
     args.children.each { |arg|
@@ -248,6 +250,11 @@ module RDL::Typecheck
         targs[arg.children[0]] = type.args[tpos]
         tpos += 1
       elsif arg.type == :optarg
+        error :type_arg_required, [kind], arg if !type.args[tpos].is_a?(RDL::Type::OptionalType)
+        env, default_type = tc(scope, env, arg.children[1])
+        error :optional_default_type, [default_type, type.args[tpos].type], arg.children[1] unless default_type <= type.args[tpos].type
+        targs[arg.children[0]] = type.args[tpos].type
+        tpos += 1
       elsif arg.type == :restarg
       elsif arg.type == :kwarg
       elsif arg.type == :kwoptarg
@@ -258,7 +265,7 @@ module RDL::Typecheck
       end
     }
     error :type_args_more, [kind, kind], (if args.children.empty? then ast else args end) if type.args.length != tpos
-    return targs
+    return [env, targs]
   end
 
   # The actual type checking logic.
@@ -1113,11 +1120,11 @@ RUBY
     raise RuntimeError, "block with block arg?" unless tblock.block.nil?
     args, body = block
     tblock = tblock.instantiate(inst)
-    a = args_hash(tblock, args, block, 'block')
+    env, targs = args_hash(scope, env, tblock, args, block, 'block')
     scope_merge(scope, outer_env: env) { |bscope|
       # note: okay if outer_env shadows, since nested scope will include outer scope by next line
-      env = env.merge(Env.new(a))
-      _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(bscope, env.merge(Env.new(a)), body) end
+      env = env.merge(Env.new(targs))
+      _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(bscope, env.merge(Env.new(targs)), body) end
       error :bad_return_type, [body_type, tblock.ret], body unless body.nil? || RDL::Type::Type.leq(body_type, tblock.ret, inst, false)
       #
     }
@@ -1211,6 +1218,8 @@ type_error_messages = {
   type_args_more: "%s signature accepts more arguments than actual %s definition",
   type_args_fewer: "%s signature accepts fewer arguments than actual %s definition",
   type_arg_optional: "%s signature has optional argument where actual argument is required",
+  type_arg_required: "%s signature has required argument where actual argument is optional",
+  optional_default_type: "default value has type `%s' where type `%s' expected"
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

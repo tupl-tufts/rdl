@@ -608,6 +608,51 @@ class TestTypecheck < Minitest::Test
     }
   end
 
+  def test_block_arg
+    self.class.class_eval {
+      type "(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum", typecheck: :now
+      def _block_arg1(x, &blk)
+        blk.call x
+      end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum", typecheck: :now
+        def _block_arg2(x, &blk)
+          blk.call 'forty-two'
+        end
+      }
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum) { (Fixnum) -> String } -> Fixnum", typecheck: :now
+        def _block_arg3(x, &foo)
+          foo.call 42
+        end
+      }
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum) -> Fixnum", typecheck: :now
+        def _block_arg4(x, &blk)
+          blk.call 42
+        end
+      }
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum) { (Fixnum) { (Fixnum) -> Fixnum } -> Fixnum } -> Fixnum", typecheck: :now
+        def _block_arg5(x, &blk)
+          blk.call 42
+        end
+      }
+    }
+  end
+
   # class Sup1
   #   type '(Fixnum) -> Fixnum', typecheck: :call
   #   def foo(y)
@@ -996,6 +1041,42 @@ class TestTypecheck < Minitest::Test
       def context_typecheck2
         context_tc_in_context2 # should not fail since method defined in context
       end
+    }
+  end
+
+  def test_optional_varargs_mapping
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '(?Fixnum) -> Fixnum', typecheck: :now
+        def _optional_varargs_mapping1(x)
+          42
+        end
+      }
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '(Fixnum) -> Fixnum', typecheck: :now
+        def _optional_varargs_mapping2(x=42)
+          x
+        end
+      }
+    }
+
+    self.class.class_eval {
+      type '(?Fixnum) -> Fixnum', typecheck: :now
+      def _optional_varargs_mapping3(x=42)
+        x
+      end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '(?Fixnum) -> Fixnum', typecheck: :now
+        def _optional_varargs_mapping4(x='forty-two')
+          42
+        end
+      }
     }
   end
 
