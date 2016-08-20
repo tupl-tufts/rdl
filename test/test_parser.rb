@@ -206,4 +206,13 @@ class TestParser < Minitest::Test
     assert_raises(RuntimeError) { tt("!3") }
   end
 
+  def test_optional_block
+    t1 = tm "() { (%any) -> nil } -> %any"
+    assert_equal (MethodType.new [], MethodType.new([$__rdl_top_type], nil, $__rdl_nil_type), $__rdl_top_type), t1
+    t2 = tm "() ?{ (%any) -> nil } -> %any"
+    assert_equal (MethodType.new [], OptionalType.new(MethodType.new([$__rdl_top_type], nil, $__rdl_nil_type)), $__rdl_top_type), t2
+    t3 = tm "() ?{ (t) -> nil } -> %any"
+    assert_equal (MethodType.new [], OptionalType.new(MethodType.new([VarType.new('t')], nil, $__rdl_nil_type)), $__rdl_top_type), t3
+  end
+
 end

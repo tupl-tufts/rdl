@@ -42,7 +42,7 @@ module RDL::Type
       @args = *args
 
       if block.instance_of? OptionalType
-        raise "Block must be MethodType" unless block.type.instantiate(nil).is_a? MethodType
+        raise "Block must be MethodType" unless block.type.is_a? MethodType
       else
         raise "Block must be MethodType" unless (not block) or (block.instance_of? MethodType)
       end
