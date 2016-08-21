@@ -208,7 +208,6 @@ module RDL::Typecheck
     raise RuntimeError, "Method #{name} defined where method #{meth} expected" if name.to_sym != meth
     context_types = $__rdl_info.get(klass, meth, :context_types)
     types.each { |type|
-      # TODO will need fancier logic here for matching up more complex arg lists
       if RDL::Util.has_singleton_marker(klass)
         # to_class gets the class object itself, so remove singleton marker to get class rather than singleton class
         self_type = RDL::Type::SingletonType.new(RDL::Util.to_class(RDL::Util.remove_singleton_marker(klass)))
@@ -549,6 +548,12 @@ module RDL::Typecheck
             else
               error :cant_splat, [ti], ei.children[0]
             end
+          elsif ei.type == :block_pass
+            raise RuntimeError, "impossible to pass block arg and literal block" if scope[:block]
+            envi, ti = tc(sscope, envi, ei.children[0])
+            # convert using to_proc if necessary
+            ti = tc_send(sscope, envi, ti, :to_proc, [], nil, ei) unless ti.is_a? RDL::Type::MethodType
+            block = [ti, ei]
           else
             envi, ti = tc(sscope, envi, ei)
             tactuals << ti
@@ -960,7 +965,7 @@ RUBY
   # [+ trecvs +] is the type of the recevier
   # [+ meth +] is a symbol with the method name
   # [+ tactuals +] are the actual arguments
-  # [+ block +] is a pair of expressions [block-args, block-body], from the block AST node
+  # [+ block +] is a pair of expressions [block-args, block-body], from the block AST node OR [block-type, block-arg-AST-node]
   # [+ e +] is the expression at which location to report an error
   def self.tc_send(scope, env, trecvs, meth, tactuals, block, e)
     scope[:exn] = Env.join(e, scope[:exn], env) if scope.has_key? :exn # assume this call might raise an exception
@@ -989,6 +994,16 @@ RUBY
         error :no_singleton_method_type, [trecv.val, meth], e unless ts
         inst = {self: trecv}
         tmeth_inter = ts.map { |t| t.instantiate(inst) }
+      elsif trecv.val.is_a?(Symbol) && meth == :to_proc
+        # Symbol#to_proc on a singleton symbol type produces a Proc for the method of the same name
+        if env[:self].is_a?(RDL::Type::NominalType)
+          klass = env[:self].klass
+        else # SingletonType(class)
+          klass = env[:self].val
+        end
+        ts = lookup(scope, klass.to_s, trecv.val, e)
+        error :no_type_for_symbol, [trecv.val.inspect], e if ts.nil?
+        return ts
       else
         klass = trecv.val.class.to_s
         ts = lookup(scope, klass, meth, e)
@@ -1131,23 +1146,28 @@ RUBY
   end
 
   # [+ tblock +] is the type of the block (a MethodType)
-  # [+ block +] is a pair [block-args, block-body] from the block AST node
+  # [+ block +] is a pair [block-args, block-body] from the block AST node OR [block-type, block-arg-AST-node]
   # returns if the block matches type tblock
   # otherwise throws an exception with a type error
   def self.tc_block(scope, env, tblock, block, inst)
-    # TODO more complex arg lists (same as self.typecheck?); also for
     # TODO self is the same *except* instance_exec or instance_eval
     raise RuntimeError, "block with block arg?" unless tblock.block.nil?
-    args, body = block
     tblock = tblock.instantiate(inst)
-    env, targs = args_hash(scope, env, tblock, args, block, 'block')
-    scope_merge(scope, outer_env: env) { |bscope|
-      # note: okay if outer_env shadows, since nested scope will include outer scope by next line
-      env = env.merge(Env.new(targs))
-      _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(bscope, env.merge(Env.new(targs)), body) end
-      error :bad_return_type, [body_type, tblock.ret], body unless body.nil? || RDL::Type::Type.leq(body_type, tblock.ret, inst, false)
-      #
-    }
+    if block[0].is_a? RDL::Type::MethodType
+      error :bad_block_arg_type, [block[0], tblock], block[1] unless block[0] <= tblock
+    elsif block[0].is_a?(RDL::Type::NominalType) && block[0].name == 'Proc'
+      error :proc_block_arg_type, [tblock], block[1]
+    else # must be [block-args, block-body]
+      args, body = block
+      env, targs = args_hash(scope, env, tblock, args, block, 'block')
+      scope_merge(scope, outer_env: env) { |bscope|
+        # note: okay if outer_env shadows, since nested scope will include outer scope by next line
+        env = env.merge(Env.new(targs))
+        _, body_type = if body.nil? then [nil, $__rdl_nil_type] else tc(bscope, env.merge(Env.new(targs)), body) end
+        error :bad_return_type, [body_type, tblock.ret], body unless body.nil? || RDL::Type::Type.leq(body_type, tblock.ret, inst, false)
+        #
+      }
+    end
   end
 
   # [+ klass +] is a string containing the class name
@@ -1234,13 +1254,16 @@ type_error_messages = {
   for_collection: "can't type for with collection of type `%s'",
   note_type: "Type is `%s'",
   note_message: "%s",
-  recv_var_type: "Receiver whose type is unconstrained variable `%s' not allowed",
+  recv_var_type: "receiver whose type is unconstrained variable `%s' not allowed",
   type_args_more: "%s signature accepts more arguments than actual %s definition",
   type_args_fewer: "%s signature accepts fewer arguments than actual %s definition",
   type_arg_kind_mismatch: "%s signature has %s argument where actual argument is %s",
   optional_default_type: "default value has type `%s' where type `%s' expected",
-  type_arg_block:
-   "%s signature does not expect block but actual %s takes block",
+  type_arg_block: "%s signature does not expect block but actual %s takes block",
+  bad_block_arg_type: "block argument has type `%s' but expecting type `%s'",
+  non_block_block_arg: "block argument should have a block type but instead has type `%s'",
+  proc_block_arg_type: "block argument is a Proc; can't tell if it matches expected type `%s'",
+  no_type_for_symbol: "can't find type for method corresponding to `%s.to_proc'",
 }
 old_messages = Parser::MESSAGES
 Parser.send(:remove_const, :MESSAGES)

@@ -651,6 +651,40 @@ class TestTypecheck < Minitest::Test
         end
       }
     }
+
+    self.class.class_eval {
+      type :_block_arg6, "(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum"
+      type "() { (Fixnum) -> Fixnum } -> Fixnum", typecheck: :now
+      def _block_arg7(&blk)
+        _block_arg6(42, &blk)
+      end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "() { (Fixnum) -> String } -> Fixnum", typecheck: :now
+        def _block_arg8(&blk)
+          _block_arg6(42, &blk)
+        end
+      }
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "() -> Fixnum", typecheck: :now
+        def _block_arg9()
+          _block_arg6(42, &(1+2))
+        end
+      }
+    }
+
+    self.class.class_eval {
+      type :_block_arg10, "(Fixnum) -> Fixnum"
+      type :_block_arg11, "(Fixnum) -> String"
+    }
+    assert_equal $__rdl_fixnum_type, do_tc("_block_arg6(42, &:_block_arg10)", env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_block_arg6(42, &:_block_arg11)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_block_arg6(42, &:_block_arg_does_not_exist)", env: @env) }
   end
 
   # class Sup1
