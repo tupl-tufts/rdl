@@ -2,7 +2,7 @@ module RDL::Typecheck
 
   class StaticTypeError < StandardError; end
 
-  @@empty_hash_type = RDL::Type::FiniteHashType.new(Hash.new)
+  @@empty_hash_type = RDL::Type::FiniteHashType.new(Hash.new, nil)
   @@asgn_to_var = { lvasgn: :lvar, ivasgn: :ivar, cvasgn: :cvar, gvasgn: :gvar }
 
   # Create mapping from file/line numbers to the def that appears at that location
@@ -403,7 +403,7 @@ module RDL::Typecheck
       if is_fh
         # keys are all symbols
         fh = tlefts.map { |t| t.val }.zip(trights).to_h
-        [envi, RDL::Type::FiniteHashType.new(fh)]
+        [envi, RDL::Type::FiniteHashType.new(fh, nil)]
       else
         tleft = RDL::Type::UnionType.new(*tlefts)
         tright = RDL::Type::UnionType.new(*trights)

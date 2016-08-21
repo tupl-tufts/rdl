@@ -38,9 +38,9 @@ class TestQuery < Minitest::Test
     q10 = @p.scan_str "#Q ([to_str: () -> .]) -> Fixnum"
     assert_equal (MethodType.new [StructuralType.new(to_str: (MethodType.new [], nil, @qwild))], nil, @tfixnum), q10
     q11 = @p.scan_str "#Q ({a: Fixnum, b: .}) -> Fixnum"
-    assert_equal (MethodType.new [FiniteHashType.new({a: @tfixnum, b: @qwild})], nil, @tfixnum), q11
+    assert_equal (MethodType.new [FiniteHashType.new({a: @tfixnum, b: @qwild}, nil)], nil, @tfixnum), q11
     q12 = @p.scan_str "#Q (Fixnum, x: .) -> Fixnum"
-    assert_equal (MethodType.new [@tfixnum, FiniteHashType.new(x: @qwild)], nil, @tfixnum), q12
+    assert_equal (MethodType.new [@tfixnum, FiniteHashType.new({x: @qwild}, nil)], nil, @tfixnum), q12
     q13 = @p.scan_str "#Q (Fixnum, ..., Fixnum) -> Fixnum"
     assert_equal (MethodType.new [@tfixnum, @qdots, @tfixnum], nil, @tfixnum), q13
     q14 = @p.scan_str "#Q (Fixnum, ...) -> Fixnum"

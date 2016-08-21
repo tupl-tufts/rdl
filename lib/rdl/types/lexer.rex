@@ -27,6 +27,7 @@ rule
   ,             { [:COMMA, text] }
   \?            { [:QUERY, text] }
   \!            { [:BANG, text] }
+  \*\*          { [:STARSTAR, text] } 
   \*            { [:STAR, text] }
   \#T           { [:HASH_TYPE, text] }
   \#Q           { [:HASH_QUERY, text] }

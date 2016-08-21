@@ -174,28 +174,28 @@ class TestParser < Minitest::Test
 
   def test_finite_hash
     t1 = tt "{a: Fixnum, b: String}"
-    assert_equal (FiniteHashType.new({a: $__rdl_fixnum_type, b: $__rdl_string_type})), t1
+    assert_equal (FiniteHashType.new({a: $__rdl_fixnum_type, b: $__rdl_string_type}, nil)), t1
     t2 = tt "{'a'=>Fixnum, 2=>String}"
-    assert_equal (FiniteHashType.new({"a"=>$__rdl_fixnum_type, 2=>$__rdl_string_type})), t2
+    assert_equal (FiniteHashType.new({"a"=>$__rdl_fixnum_type, 2=>$__rdl_string_type}, nil)), t2
   end
 
   def test_named_params
     t1 = tm "(Fixnum, x: Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [$__rdl_fixnum_type, FiniteHashType.new(x: $__rdl_fixnum_type)], nil, $__rdl_fixnum_type), t1
+    assert_equal (MethodType.new [$__rdl_fixnum_type, FiniteHashType.new({x: $__rdl_fixnum_type}, nil)], nil, $__rdl_fixnum_type), t1
     t2 = tm "(Fixnum, x: Fixnum, y: String) -> Fixnum"
-    assert_equal (MethodType.new [$__rdl_fixnum_type, FiniteHashType.new(x: $__rdl_fixnum_type, y: $__rdl_string_type)], nil, $__rdl_fixnum_type), t2
+    assert_equal (MethodType.new [$__rdl_fixnum_type, FiniteHashType.new({x: $__rdl_fixnum_type, y: $__rdl_string_type}, nil)], nil, $__rdl_fixnum_type), t2
     t3 = tm "(Fixnum, y: String, x: Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [$__rdl_fixnum_type, FiniteHashType.new(x: $__rdl_fixnum_type, y: $__rdl_string_type)], nil, $__rdl_fixnum_type), t3
+    assert_equal (MethodType.new [$__rdl_fixnum_type, FiniteHashType.new({x: $__rdl_fixnum_type, y: $__rdl_string_type}, nil)], nil, $__rdl_fixnum_type), t3
     t4 = tm "(Fixnum, y: String, x: ?Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [$__rdl_fixnum_type, FiniteHashType.new(x: @tfixnumopt, y: $__rdl_string_type)], nil, $__rdl_fixnum_type), t4
+    assert_equal (MethodType.new [$__rdl_fixnum_type, FiniteHashType.new({x: @tfixnumopt, y: $__rdl_string_type}, nil)], nil, $__rdl_fixnum_type), t4
     t4 = tm "(Fixnum, y: ?String, x: Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [$__rdl_fixnum_type, FiniteHashType.new(x: $__rdl_fixnum_type, y: @tstringopt)], nil, $__rdl_fixnum_type), t4
+    assert_equal (MethodType.new [$__rdl_fixnum_type, FiniteHashType.new({x: $__rdl_fixnum_type, y: @tstringopt}, nil)], nil, $__rdl_fixnum_type), t4
     t5 = tm "(Fixnum x, x: Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [@tfixnumx, FiniteHashType.new(x: $__rdl_fixnum_type)], nil, $__rdl_fixnum_type), t5
+    assert_equal (MethodType.new [@tfixnumx, FiniteHashType.new({x: $__rdl_fixnum_type}, nil)], nil, $__rdl_fixnum_type), t5
     t6 = tm "(x: Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [FiniteHashType.new(x: $__rdl_fixnum_type)], nil, $__rdl_fixnum_type), t6
+    assert_equal (MethodType.new [FiniteHashType.new({x: $__rdl_fixnum_type}, nil)], nil, $__rdl_fixnum_type), t6
     t7 = tm "(x: Fixnum) { (%any, String) -> nil } -> :symbol"
-    assert_equal (MethodType.new [FiniteHashType.new(x: $__rdl_fixnum_type)], MethodType.new([$__rdl_top_type, $__rdl_string_type], nil, $__rdl_nil_type), @tsymbol), t7
+    assert_equal (MethodType.new [FiniteHashType.new({x: $__rdl_fixnum_type}, nil)], MethodType.new([$__rdl_top_type, $__rdl_string_type], nil, $__rdl_nil_type), @tsymbol), t7
   end
 
   def test_nonnull

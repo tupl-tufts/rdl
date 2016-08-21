@@ -119,13 +119,13 @@ class TestMember < Minitest::Test
   end
 
   def test_finite_hash
-    t1 = FiniteHashType.new(a: $__rdl_symbol_type, b: $__rdl_string_type)
+    t1 = FiniteHashType.new({a: $__rdl_symbol_type, b: $__rdl_string_type}, nil)
     assert (t1.member?(a: :foo, b: "foo"))
     assert (not (t1.member?(a: 1, b: "foo")))
     assert (not (t1.member?(a: :foo)))
     assert (not (t1.member?(b: "foo")))
     assert (not (t1.member?(a: :foo, b: "foo", c: :baz)))
-    t2 = FiniteHashType.new({"a"=>$__rdl_symbol_type, 2=>$__rdl_string_type})
+    t2 = FiniteHashType.new({"a"=>$__rdl_symbol_type, 2=>$__rdl_string_type}, nil)
     assert (t2.member?({"a"=>:foo, 2=>"foo"}))
     assert (not (t2.member?({"a"=>2, 2=>"foo"})))
     assert (not (t2.member?({"a"=>:foo})))

@@ -10,7 +10,7 @@ class Parser
 token HASH_TYPE HASH_QUERY CONST_BEGIN RASSOC
 token OR FIXNUM FLOAT COLON RARROW DOT DOTS ID SYMBOL SPECIAL_ID STRING PREDICATE
 token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
-token COMMA QUERY BANG STAR LESS GREATER
+token COMMA QUERY BANG STARSTAR STAR LESS GREATER
 token EOF
 
 rule
@@ -45,13 +45,13 @@ rule
       { result = [] }
     | nonempty_arg_list { result = val[0] }
     | named_arg_list {
-      result = [RDL::Type::FiniteHashType.new(Hash[*val[0]])]
+      result = [RDL::Type::FiniteHashType.new(Hash[*val[0]], nil)]
       }
   nonempty_arg_list:
       arg { result = [val[0]] }
     | arg COMMA nonempty_arg_list { result = val[2].unshift val[0] }
     | arg COMMA named_arg_list { # named arg list must come last
-      result = [val[0], RDL::Type::FiniteHashType.new(Hash[*val[2]])]
+      result = [val[0], RDL::Type::FiniteHashType.new(Hash[*val[2]], nil)]
       }
   arg:
       base_arg { result = val[0] }
@@ -141,7 +141,7 @@ rule
       result = RDL::Type::TupleType.new
     }
     | LBRACE hash_expr_comma_list RBRACE {
-      result = RDL::Type::FiniteHashType.new(Hash[*val[1]])
+      result = RDL::Type::FiniteHashType.new(Hash[*val[1]], nil)
     }
     | FIXNUM { result = RDL::Type::SingletonType.new(val[0].to_i) }
     | FLOAT { result = RDL::Type::SingletonType.new(val[0].to_f) }
