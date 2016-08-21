@@ -6,6 +6,7 @@ module RDL::Type
       raise RuntimeError, "Attempt to create optional type with non-type" unless type.is_a? Type
       raise "Can't have optional optional type" if type.is_a? OptionalType
       raise "Can't have optional vararg type" if type.is_a? VarargType
+      raise "Can't have optional annotated type" if type.is_a? AnnotatedArgType
       @type = type
       super()
     end
@@ -43,6 +44,10 @@ module RDL::Type
 
     def hash # :nodoc:
       return 57 + @type.hash
+    end
+
+    def optional?
+      return true
     end
   end
 end

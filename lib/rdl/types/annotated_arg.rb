@@ -40,5 +40,13 @@ module RDL::Type
     def instantiate(inst)
       return AnnotatedArgType.new(@name, @type.instantiate(inst))
     end
+
+    def optional?
+      return type.optional?
+    end
+
+    def vararg?
+      return type.vararg?
+    end
   end
 end

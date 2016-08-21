@@ -25,9 +25,9 @@ module RDL::Type
     end
 
     # default behavior, override in appropriate subclasses
-    def canonical
-      return self
-    end
+    def canonical; return self; end
+    def optional?; return false; end
+    def vararg?; return false; end
 
     # [+ other +] is a Type
     # [+ inst +] is a Hash<Symbol, Type> representing an instantiation

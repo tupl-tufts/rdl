@@ -17,8 +17,9 @@ module RDL::Type
     end
 
     def initialize(type)
-      raise "Can't have vararg optional type" if type.class == OptionalType
-      raise "Can't have vararg vararg type" if type.class == VarargType
+      raise "Can't have vararg optional type" if type.is_a? OptionalType
+      raise "Can't have vararg vararg type" if type.is_a? VarargType
+      raise "Can't have optional annotated type" if type.is_a? AnnotatedArgType
       @type = type
       super()
     end
@@ -54,6 +55,10 @@ module RDL::Type
 
     def hash # :nodoc:
       return 59 + @type.hash
+    end
+
+    def vararg?
+      return true
     end
   end
 end
