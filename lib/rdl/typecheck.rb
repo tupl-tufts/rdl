@@ -242,6 +242,7 @@ module RDL::Typecheck
   def self.args_hash(scope, env, type, args, ast, kind)
     targs = Hash.new
     tpos = 0 # position in type.args
+    kw_args_matched = []
     args.children.each { |arg|
       error :type_args_fewer, [kind, kind], arg if tpos >= type.args.length && arg.type != :blockarg  # blocks could be called with yield
       targ = type.args[tpos]
@@ -263,8 +264,25 @@ module RDL::Typecheck
         targs[arg.children[0]] = RDL::Type::GenericType.new($__rdl_array_type, targ.type)
         tpos += 1
       elsif arg.type == :kwarg
+        error :type_args_no_kws, [kind], arg unless targ.is_a?(RDL::Type::FiniteHashType)
+        kw = arg.children[0]
+        error :type_args_no_kw, [kind, kw], arg unless targ.elts.has_key? kw
+        tkw = targ.elts[kw]
+        error :type_args_kw_mismatch, [kind, 'optional', kw, 'required'], arg if tkw.is_a? RDL::Type::OptionalType
+        kw_args_matched << kw
+        targs[kw] = tkw
       elsif arg.type == :kwoptarg
+        error :type_args_no_kws, [kind], arg unless targ.is_a?(RDL::Type::FiniteHashType)
+        kw = arg.children[0]
+        error :type_args_no_kw, [kind, kw], arg unless targ.elts.has_key? kw
+        tkw = targ.elts[kw]
+        error :type_args_kw_mismatch, [kind, 'required', kw, 'optional'], arg if !tkw.is_a?(RDL::Type::OptionalType)
+        env, default_type = tc(scope, env, arg.children[1])
+        error :optional_default_kw_type, [kw, default_type, tkw.type], arg.children[1] unless default_type <= tkw.type
+        kw_args_matched << kw
+        targs[kw] = tkw.type
       elsif arg.type == :kwrestarg
+        error :type_args_no_kws, [kind], e unless targ.is_a?(RDL::Type::FiniteHashType)
       elsif arg.type == :blockarg
         error :type_arg_block, [kind, kind], arg unless type.block
         targs[arg.children[0]] = type.block
@@ -273,7 +291,12 @@ module RDL::Typecheck
         error :generic_error, ["Don't know what to do with actual argument of type #{arg.type}"], arg
       end
     }
-    error :type_args_more, [kind, kind], (if args.children.empty? then ast else args end) if type.args.length != tpos
+    if (tpos == type.args.length - 1) && type.args[tpos].is_a?(RDL::Type::FiniteHashType)
+      rest = type.args[tpos].elts.keys - kw_args_matched
+      error :type_args_kw_more, [kind, rest.map { |s| s.to_s }.join(", "), kind], ast unless rest.empty?
+    else
+      error :type_args_more, [kind, kind], (if args.children.empty? then ast else args end) if type.args.length != tpos
+    end
     return [env, targs]
   end
 
@@ -1255,11 +1278,16 @@ type_error_messages = {
   note_type: "Type is `%s'",
   note_message: "%s",
   recv_var_type: "receiver whose type is unconstrained variable `%s' not allowed",
-  type_args_more: "%s signature accepts more arguments than actual %s definition",
-  type_args_fewer: "%s signature accepts fewer arguments than actual %s definition",
-  type_arg_kind_mismatch: "%s signature has %s argument where actual argument is %s",
+  type_args_more: "%s type accepts more arguments than actual %s definition",
+  type_args_fewer: "%s type accepts fewer arguments than actual %s definition",
+  type_arg_kind_mismatch: "%s type has %s argument but actual argument is %s",
+  type_args_no_kws: "%s type does not expect keyword arguments but actual expects keywords",
+  type_args_no_kw: "%s type does not expect keyword argument `%s'",
+  type_args_kw_mismatch: "%s type has %s keyword `%s' but actual argument is %s",
+  type_args_kw_more: "%s type expects keywords `%s' that are not expected by actual %s",
   optional_default_type: "default value has type `%s' where type `%s' expected",
-  type_arg_block: "%s signature does not expect block but actual %s takes block",
+  optional_default_kw_type: "default value for `%s' has type `%s' where type `%s' expected",
+  type_arg_block: "%s type does not expect block but actual %s takes block",
   bad_block_arg_type: "block argument has type `%s' but expecting type `%s'",
   non_block_block_arg: "block argument should have a block type but instead has type `%s'",
   proc_block_arg_type: "block argument is a Proc; can't tell if it matches expected type `%s'",

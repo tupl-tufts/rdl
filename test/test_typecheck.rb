@@ -1149,4 +1149,81 @@ class TestTypecheck < Minitest::Test
 
   end
 
+  def test_kw_mapping
+    self.class.class_eval {
+      type '(kw: Fixnum) -> Fixnum', typecheck: :now
+      def _kw_mapping1(kw:)
+        kw
+      end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '(Fixnum) -> Fixnum', typecheck: :now
+        def _kw_mapping2(kw:)
+          kw
+        end
+      }
+    }
+
+    self.class.class_eval {
+      type '(kw: Fixnum) -> Fixnum', typecheck: :now
+      def _kw_mapping3(kw_args) # slightly awkward example
+        kw_args[:kw]
+      end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '(kw: Fixnum) -> Fixnum', typecheck: :now
+        def _kw_mapping4(kw: 42)
+          kw
+        end
+      }
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '(kw: ?Fixnum) -> Fixnum', typecheck: :now
+        def _kw_mapping5(kw:)
+          kw
+        end
+      }
+    }
+
+    self.class.class_eval {
+      type '(kw: ?Fixnum) -> Fixnum', typecheck: :now
+      def _kw_mapping6(kw: 42)
+        kw
+      end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '(kw: ?Fixnum) -> Fixnum', typecheck: :now
+        def _kw_mapping7(kw: 'forty-two')
+          kw
+        end
+      }
+    }
+
+    self.class.class_eval {
+      type '(kw1: Fixnum, kw2: Fixnum) -> Fixnum', typecheck: :now
+      def _kw_mapping8(kw1:, kw2:)
+        kw1
+      end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '(kw1: Fixnum, kw2: Fixnum, kw3: Fixnum
+        ) -> Fixnum', typecheck: :now
+        def _kw_mapping9(kw2:)
+          kw1
+        end
+      }
+    }
+
+  end
+
 end
