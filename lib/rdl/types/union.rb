@@ -15,6 +15,9 @@ module RDL::Type
           ts.concat t.types
         else
           raise RuntimeError, "Attempt to create union type with non-type" unless t.is_a? Type
+          raise RuntimeError, "Attempt to create union with optional type" if t.is_a? OptionalType
+          raise RuntimeError, "Attempt to create union with vararg type" if t.is_a? VarargType
+          raise RuntimeError, "Attempt to create union with annotated type" if t.is_a? AnnotatedArgType
           ts << t
         end
       }
