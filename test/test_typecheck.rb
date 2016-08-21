@@ -1063,9 +1063,18 @@ class TestTypecheck < Minitest::Test
       }
     }
 
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '(*Fixnum) -> Fixnum', typecheck: :now
+        def _optional_varargs_mapping3(x=42)
+          x
+        end
+      }
+    }
+
     self.class.class_eval {
       type '(?Fixnum) -> Fixnum', typecheck: :now
-      def _optional_varargs_mapping3(x=42)
+      def _optional_varargs_mapping4(x=42)
         x
       end
     }
@@ -1073,11 +1082,37 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type '(?Fixnum) -> Fixnum', typecheck: :now
-        def _optional_varargs_mapping4(x='forty-two')
+        def _optional_varargs_mapping5(x='forty-two')
           42
         end
       }
     }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '(Fixnum) -> Fixnum', typecheck: :now
+        def _optional_varargs_mapping6(*x)
+          42
+        end
+      }
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '(?Fixnum) -> Fixnum', typecheck: :now
+        def _optional_varargs_mapping7(*x)
+          42
+        end
+      }
+    }
+
+    self.class.class_eval {
+      type '(*Fixnum) -> Array<Fixnum>', typecheck: :now
+      def _optional_varargs_mapping8(*x)
+        x
+      end
+    }
+
   end
 
 end

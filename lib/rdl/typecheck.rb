@@ -245,17 +245,24 @@ module RDL::Typecheck
     tpos = 0 # position in type.args
     args.children.each { |arg|
       error :type_args_fewer, [kind, kind], arg if tpos >= type.args.length && arg.type != :blockarg  # blocks could be called with yield
+      targ = type.args[tpos]
       if arg.type == :arg
-        error :type_arg_optional, [kind], arg if type.args[tpos].is_a? RDL::Type::OptionalType
-        targs[arg.children[0]] = type.args[tpos]
+        error :type_arg_kind_mismatch, [kind, 'optional', 'required'], arg if targ.optional?
+        error :type_arg_kind_mismatch, [kind, 'vararg', 'required'], arg if targ.vararg?
+        targs[arg.children[0]] = targ
         tpos += 1
       elsif arg.type == :optarg
-        error :type_arg_required, [kind], arg if !type.args[tpos].is_a?(RDL::Type::OptionalType)
+        error :type_arg_kind_mismatch, [kind, 'vararg', 'optional'], arg if targ.vararg?
+        error :type_arg_kind_mismatch, [kind, 'required', 'optional'], arg if !targ.optional?
         env, default_type = tc(scope, env, arg.children[1])
-        error :optional_default_type, [default_type, type.args[tpos].type], arg.children[1] unless default_type <= type.args[tpos].type
-        targs[arg.children[0]] = type.args[tpos].type
+        error :optional_default_type, [default_type, targ.type], arg.children[1] unless default_type <= targ.type
+        targs[arg.children[0]] = targ.type
         tpos += 1
       elsif arg.type == :restarg
+        error :type_arg_kind_mismatch, [kind, 'optional', 'vararg'], arg if targ.optional?
+        error :type_arg_kind_mismatch, [kind, 'required', 'vararg'], arg if !targ.vararg?
+        targs[arg.children[0]] = RDL::Type::GenericType.new($__rdl_array_type, targ.type)
+        tpos += 1
       elsif arg.type == :kwarg
       elsif arg.type == :kwoptarg
       elsif arg.type == :kwrestarg
@@ -1230,8 +1237,7 @@ type_error_messages = {
   recv_var_type: "Receiver whose type is unconstrained variable `%s' not allowed",
   type_args_more: "%s signature accepts more arguments than actual %s definition",
   type_args_fewer: "%s signature accepts fewer arguments than actual %s definition",
-  type_arg_optional: "%s signature has optional argument where actual argument is required",
-  type_arg_required: "%s signature has required argument where actual argument is optional",
+  type_arg_kind_mismatch: "%s signature has %s argument where actual argument is %s",
   optional_default_type: "default value has type `%s' where type `%s' expected",
   type_arg_block:
    "%s signature does not expect block but actual %s takes block",
