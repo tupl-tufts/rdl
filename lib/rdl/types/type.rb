@@ -188,6 +188,10 @@ module RDL::Type
         rest.each_pair { |k, t|
           return false unless t.is_a? OptionalType
         }
+        unless left.rest.nil? && right.rest.nil?
+          return false if left.rest.nil? || right.rest.nil?
+          return false unless leq(left.rest, right.rest, inst, ileft)
+        end
         left.ubounds << right
         right.lbounds << left
         return true

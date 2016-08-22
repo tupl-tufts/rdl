@@ -41,7 +41,7 @@ module RDL::Type
       return false if other.nil?
       return (@the_hash == other) if @the_hash
       other = other.canonical
-      return (other.instance_of? FiniteHashType) && (other.elts == @elts)
+      return (other.instance_of? FiniteHashType) && (other.elts == @elts) && (other.rest == @rest)
     end
 
     alias eql? ==
@@ -51,6 +51,8 @@ module RDL::Type
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
+      return false unless ((@rest.nil? && other.rest.nil?) ||
+                           (!@rest.nil? && !other.rest.nil? && @rest.match(other.rest)))
       return (@elts.length == other.elts.length &&
               @elts.all? { |k, v| (other.elts.has_key? k) && (v.match(other.elts[k]))})
     end
@@ -60,6 +62,10 @@ module RDL::Type
       # TODO look at key types
       domain_type = UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }))
       range_type = UnionType.new(*@elts.values)
+      if @rest
+        domain_type = UnionType.new(domain_type, $__rdl_symbol_type)
+        range_type = UnionType.new(range_type, @rest)
+      end
       @the_hash = GenericType.new($__rdl_hash_type, domain_type, range_type)
       # same logic as Tuple
       return (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
@@ -78,21 +84,25 @@ module RDL::Type
       return @the_hash.member(obj, *args) if @the_hash
       t = RDL::Util.rdl_type obj
       return t <= self if t
-      rest = @elts.clone # shallow copy
+      elts_not_present = @elts.clone # shallow copy
 
       return false unless obj.instance_of? Hash
 
       # Check that every mapping in obj exists in @map and matches the type
       obj.each_pair { |k, v|
-        return false unless @elts.has_key? k
+        if @rest
+          return false unless @rest.member? v
+        else
+          return false unless @elts.has_key? k
+        end
         t = @elts[k]
         t = t.type if t.instance_of? OptionalType
         return false unless t.member? v
-        rest.delete(k)
+        elts_not_present.delete(k)
       }
 
       # Check that any remaining types are optional
-      rest.each_pair { |k, vt|
+      elts_not_present.each_pair { |k, vt|
         return false unless vt.instance_of? OptionalType
       }
 
@@ -106,7 +116,7 @@ module RDL::Type
 
     def hash
       # note don't change hash value if @the_hash becomes non-nil
-      return 229 * @elts.hash
+      return 229 * @elts.hash * @rest.hash
     end
   end
 end
