@@ -110,7 +110,7 @@ module RDL::Type
 
     def instantiate(inst)
       return @the_hash.instantiate(inst) if @the_hash
-      return FiniteHashType.new(Hash[@elts.map { |k, t| [k, t.instantiate(inst)] }], (if rest then @rest.instantiate(inst) end))
+      return FiniteHashType.new(Hash[@elts.map { |k, t| [k, t.instantiate(inst)] }], (if @rest then @rest.instantiate(inst) end))
     end
 
     def hash

@@ -170,17 +170,20 @@ class TestTypes < Minitest::Test
     ta = VarType.new :a
     tb = VarType.new :b
     tc = VarType.new :c
+    td = VarType.new :d
     thash = NominalType.new :Hash
     thashAB = GenericType.new(thash, tA, tB)
     thashab = GenericType.new(thash, ta, tb)
     thashstringfixnum = GenericType.new(thash, tstring, tfixnum)
-    inst = {a: tstring, b: tfixnum}
+    inst = {a: tstring, b: tfixnum, d: tsyma}
     ttupleAB = TupleType.new(tA, tB)
     ttupleab = TupleType.new(ta, tb)
     ttuplestringfixnum = TupleType.new(tstring, tfixnum)
     tfinitehashaAbB = FiniteHashType.new({a: tA, b: tB}, nil)
     tfinitehashaabb = FiniteHashType.new({a: ta, b: tb}, nil)
     tfinitehashastringbfixnum = FiniteHashType.new({a: tstring, b: tfixnum}, nil)
+    tfinitehashaabbrd = FiniteHashType.new({a: ta, b: tb}, td)
+    tfinitehashastringbfixnumrsyma = FiniteHashType.new({a: tstring, b: tfixnum}, tsyma)
     tmethAAB = MethodType.new([tA, tA], nil, tB)
     tmethaab = MethodType.new([ta, ta], nil, tb)
     tmethstringstringfixnum = MethodType.new([tstring, tstring], nil, tfixnum)
@@ -210,6 +213,7 @@ class TestTypes < Minitest::Test
     assert_equal ttuplestringfixnum, ttupleab.instantiate(inst)
     assert_equal tfinitehashaAbB, tfinitehashaAbB.instantiate(inst)
     assert_equal tfinitehashastringbfixnum, tfinitehashaabb.instantiate(inst)
+    assert_equal tfinitehashastringbfixnumrsyma, tfinitehashaabbrd.instantiate(inst)
     assert_equal tmethAAB, tmethAAB.instantiate(inst)
     assert_equal tmethstringstringfixnum, tmethaab.instantiate(inst)
     assert_equal tmethbAABn, tmethbAABn.instantiate(inst)
