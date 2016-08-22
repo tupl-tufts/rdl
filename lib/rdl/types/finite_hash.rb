@@ -90,15 +90,14 @@ module RDL::Type
 
       # Check that every mapping in obj exists in @map and matches the type
       obj.each_pair { |k, v|
-        if @rest
-          return false unless @rest.member? v
+        if @elts.has_key? k
+          t = @elts[k]
+          t = t.type if t.instance_of? OptionalType
+          return false unless t.member? v
+          elts_not_present.delete(k)
         else
-          return false unless @elts.has_key? k
+          return false unless @rest && @rest.member?(v)
         end
-        t = @elts[k]
-        t = t.type if t.instance_of? OptionalType
-        return false unless t.member? v
-        elts_not_present.delete(k)
       }
 
       # Check that any remaining types are optional
