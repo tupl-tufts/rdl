@@ -156,7 +156,7 @@ class TestTypeContract < Minitest::Test
     assert_equal 42, block_contract_test4(41) {|x| x+1}
     assert_raises(TypeError) { block_contract_test4(40.5) }
     assert_raises(TypeError) { block_contract_test4(42) {|x| x+1.5} }
-    
+
     t15 = @p.scan_str "(Fixnum x {{x>y}}, Fixnum y) -> Fixnum"
     p15 = t15.to_contract.wrap(self) { |x, y| x+y }
     assert_equal 21, p15.call(11, 10)
@@ -187,7 +187,7 @@ class TestTypeContract < Minitest::Test
     p18b = t18.to_higher_contract(self) { |x,p=nil| if p then p.call(x+0.5) else x end }
     assert_raises(TypeError) { p18b.call(41, Proc.new {|x| x+1}) }
 
-    
+
   end
 
   type '(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum'
@@ -265,7 +265,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p6.call(x: 43, y: "44", z: 45) }
     t7 = @p.scan_str "(x: ?Fixnum, y: ?String) -> Fixnum"
     p7 = t7.to_contract.wrap(self) { |**args| 42 }
-    assert_equal 42, p7.call()
+    assert_equal 42, p7.call
     assert_equal 42, p7.call(x: 43)
     assert_equal 42, p7.call(y: "44")
     assert_equal 42, p7.call(x: 43, y: "44")
@@ -274,7 +274,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p7.call(x: 43, y: "44", z: 45) }
     t8 = @p.scan_str "(?Fixnum, x: ?Symbol, y: ?String) -> Fixnum"
     p8 = t8.to_contract.wrap(self) { |*args| 42 }
-    assert_equal 42, p8.call()
+    assert_equal 42, p8.call
     assert_equal 42, p8.call(43)
     assert_equal 42, p8.call(x: :foo)
     assert_equal 42, p8.call(43, x: :foo)
@@ -285,6 +285,16 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p8.call(43, 44, x: :foo, y: "foo") }
     assert_raises(TypeError) { p8.call(43, x: "foo", y: "foo") }
     assert_raises(TypeError) { p8.call(43, x: :foo, y: "foo", z: 44) }
+    t9 = @p.scan_str "(Fixnum, x: String, y: Fixnum, **Float) -> Fixnum"
+    p9 = t9.to_contract.wrap(self) { |*args| 42 }
+    assert_raises(TypeError) { p9.call }
+    assert_raises(TypeError) { p9.call(43) }
+    assert_raises(TypeError) { p9.call(43, x: "foo") }
+    assert_equal 42, p9.call(43, x: "foo", y: 44)
+    assert_equal 42, p9.call(43, x: "foo", y: 44, z: 3.14)
+    assert_equal 42, p9.call(43, x: "foo", y: 44, pi: 3.14, e: 2.72)
+    assert_raises(TypeError) { p9.call(43, x: "foo", y: 44, pi: 3) }
+    assert_raises(TypeError) { p9.call(43, x: "foo", y: 44, pi: 3.14, e: 3) }
   end
 
   type '() { () -> nil } -> nil'
