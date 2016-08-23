@@ -196,6 +196,8 @@ class TestParser < Minitest::Test
     assert_equal (MethodType.new [FiniteHashType.new({x: $__rdl_fixnum_type}, nil)], nil, $__rdl_fixnum_type), t6
     t7 = tm "(x: Fixnum) { (%any, String) -> nil } -> :symbol"
     assert_equal (MethodType.new [FiniteHashType.new({x: $__rdl_fixnum_type}, nil)], MethodType.new([$__rdl_top_type, $__rdl_string_type], nil, $__rdl_nil_type), @tsymbol), t7
+    t8 = tm "(Fixnum, x: Fixnum, **String) -> Fixnum"
+    assert_equal (MethodType.new [$__rdl_fixnum_type, FiniteHashType.new({x: $__rdl_fixnum_type}, $__rdl_string_type)], nil, $__rdl_fixnum_type), t8
   end
 
   def test_nonnull

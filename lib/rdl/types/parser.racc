@@ -45,22 +45,23 @@ rule
       { result = [] }
     | nonempty_arg_list { result = val[0] }
     | named_arg_list {
-      result = [RDL::Type::FiniteHashType.new(Hash[*val[0]], nil)]
+      result = [RDL::Type::FiniteHashType.new(Hash[*val[0][0]], val[0][1])]
       }
   nonempty_arg_list:
       arg { result = [val[0]] }
     | arg COMMA nonempty_arg_list { result = val[2].unshift val[0] }
     | arg COMMA named_arg_list { # named arg list must come last
-      result = [val[0], RDL::Type::FiniteHashType.new(Hash[*val[2]], nil)]
+      result = [val[0], RDL::Type::FiniteHashType.new(Hash[*val[2][0]], val[2][1])]
       }
   arg:
       base_arg { result = val[0] }
-    | base_arg ID PREDICATE {result = RDL::Type::DependentArgType.new(val[1], val[0], val[2])}
+    | base_arg ID PREDICATE { result = RDL::Type::DependentArgType.new(val[1], val[0], val[2]) }
     | base_arg ID { result = RDL::Type::AnnotatedArgType.new(val[1], val[0]) }
     | DOTS { result = RDL::Type::DotsQuery.new }
   named_arg_list:
-      named_arg { result = val[0] }
-    | named_arg COMMA named_arg_list { result = val[0] + val[2] }
+      named_arg { result = [val[0], nil] }
+    | STARSTAR type_expr { result = [[], val[1]] }
+    | named_arg COMMA named_arg_list { result = [val[0] + val[2][0], val[2][1]] }
   named_arg:
       ID COLON base_arg_query_only { result = [val[0].to_sym, val[2]] }
 
@@ -95,8 +96,9 @@ rule
   | STRING RASSOC union_type { result = [val[0], val[2]] } # strings are allowed as finite hash keys
 
   hash_expr_comma_list:
-      hash_expr { result = val[0] }
-    | hash_expr COMMA hash_expr_comma_list { result = val[0] + val[2] }
+      hash_expr { result = [val[0], nil] }
+    | STARSTAR type_expr { result = [[], val[1]] }
+    | hash_expr COMMA hash_expr_comma_list { result = [val[0] + val[2][0], val[2][1]] }
 
   union_type:
     single_type { result = val[0] }
@@ -141,7 +143,7 @@ rule
       result = RDL::Type::TupleType.new
     }
     | LBRACE hash_expr_comma_list RBRACE {
-      result = RDL::Type::FiniteHashType.new(Hash[*val[1]], nil)
+      result = RDL::Type::FiniteHashType.new(Hash[*val[1][0]], val[1][1])
     }
     | FIXNUM { result = RDL::Type::SingletonType.new(val[0].to_i) }
     | FLOAT { result = RDL::Type::SingletonType.new(val[0].to_f) }

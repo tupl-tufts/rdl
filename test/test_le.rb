@@ -168,6 +168,22 @@ class TestLe < Minitest::Test
     assert (tfs2_4 <= thfs_4) # allowed, both tfs2_4 and tfs_4 promoted to hash
     tfs3_4 = tt "{x: Fixnum, y: String}"
     assert (not(tfs_4 <= tfs3_4)) # not allowed, tfs_4 has been promoted
+
+    tfss_5 = tt "{x: Fixnum, y: String, **Symbol}"
+    tfns_5 = tt "{x: Fixnum, **Symbol}"
+    tfsn_5 = tt "{x: Fixnum, y: String}"
+    tooo_5 = tt "{x: Object, y: Object, **Object}"
+    tono_5 = tt "{x: Object, **Object}"
+    toon_5 = tt "{x: Object, y: Object}"
+    assert (tfss_5 <= tooo_5)
+    assert (tfns_5 <= tono_5)
+    assert (tfsn_5 <= toon_5)
+    assert (not (tfss_5 <= tfns_5))
+    assert (not (tfns_5 <= tfss_5))
+    assert (not (tfss_5 <= tfsn_5))
+    assert (not (tfsn_5 <= tfss_5))
+    assert (not (tfns_5 <= tfsn_5))
+    assert (not (tfsn_5 <= tfns_5))
   end
 
   def test_method
