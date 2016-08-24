@@ -1225,9 +1225,33 @@ class TestTypecheck < Minitest::Test
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
-        type '(kw1: Fixnum, kw2: Fixnum, kw3: Fixnum
-        ) -> Fixnum', typecheck: :now
+        type '(kw1: Fixnum, kw2: Fixnum, kw3: Fixnum) -> Fixnum', typecheck: :now
         def _kw_mapping9(kw2:)
+          kw1
+        end
+      }
+    }
+
+    self.class.class_eval {
+      type '(kw1: Fixnum, kw2: Fixnum, **String) -> String', typecheck: :now
+      def _kw_mapping10(kw1:, kw2:, **kws)
+        kws[:foo]
+      end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '(kw1: Fixnum, kw2: Fixnum) -> String', typecheck: :now
+        def _kw_mapping11(kw1:, kw2:, **kws)
+          kws[:foo]
+        end
+      }
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '(kw1: Fixnum, kw2: Fixnum, **String) -> Fixnum', typecheck: :now
+        def _kw_mapping12(kw1:, kw2:)
           kw1
         end
       }

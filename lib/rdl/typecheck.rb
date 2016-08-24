@@ -243,6 +243,7 @@ module RDL::Typecheck
     targs = Hash.new
     tpos = 0 # position in type.args
     kw_args_matched = []
+    kw_rest_matched = false
     args.children.each { |arg|
       error :type_args_fewer, [kind, kind], arg if tpos >= type.args.length && arg.type != :blockarg  # blocks could be called with yield
       targ = type.args[tpos]
@@ -283,6 +284,9 @@ module RDL::Typecheck
         targs[kw] = tkw.type
       elsif arg.type == :kwrestarg
         error :type_args_no_kws, [kind], e unless targ.is_a?(RDL::Type::FiniteHashType)
+        error :type_args_no_kw_rest, [kind], arg if targ.rest.nil?
+        targs[arg.children[0]] = RDL::Type::GenericType.new($__rdl_hash_type, $__rdl_symbol_type, targ.rest)
+        kw_rest_matched = true
       elsif arg.type == :blockarg
         error :type_arg_block, [kind, kind], arg unless type.block
         targs[arg.children[0]] = type.block
@@ -294,6 +298,7 @@ module RDL::Typecheck
     if (tpos == type.args.length - 1) && type.args[tpos].is_a?(RDL::Type::FiniteHashType)
       rest = type.args[tpos].elts.keys - kw_args_matched
       error :type_args_kw_more, [kind, rest.map { |s| s.to_s }.join(", "), kind], ast unless rest.empty?
+      error :type_args_kw_rest, [kind], ast unless kw_rest_matched || type.args[tpos].rest.nil?
     else
       error :type_args_more, [kind, kind], (if args.children.empty? then ast else args end) if type.args.length != tpos
     end
@@ -1285,6 +1290,8 @@ type_error_messages = {
   type_args_no_kw: "%s type does not expect keyword argument `%s'",
   type_args_kw_mismatch: "%s type has %s keyword `%s' but actual argument is %s",
   type_args_kw_more: "%s type expects keywords `%s' that are not expected by actual %s",
+  type_args_no_kw_rest: "%s type has no rest keyword but actual method accepts rest keywords",
+  type_args_kw_rest: "%s type has rest keyword but actual method does not accept rest keywords",
   optional_default_type: "default value has type `%s' where type `%s' expected",
   optional_default_kw_type: "default value for `%s' has type `%s' where type `%s' expected",
   type_arg_block: "%s type does not expect block but actual %s takes block",
