@@ -105,5 +105,8 @@ class TestQuery < Minitest::Test
     assert (@p.scan_str "#Q (. x, Fixnum) -> Fixnum").match(t10)
     assert (@p.scan_str "#Q (String, Fixnum) -> Fixnum").match(t10)
     assert (@p.scan_str "#Q (., Fixnum) -> Fixnum").match(t10)
+    t11 = @p.scan_str "(Fixnum, x: String, **Float) -> Fixnum"
+    assert (@p.scan_str "#Q (Fixnum, x: String, **Float) -> Fixnum").match(t11)
+    assert (@p.scan_str "#Q (Fixnum, x: String, **.) -> Fixnum").match(t11)
   end
 end
