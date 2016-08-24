@@ -291,7 +291,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p9.call(43) }
     assert_raises(TypeError) { p9.call(43, x: "foo") }
     assert_equal 42, p9.call(43, x: "foo", y: 44)
-    assert_equal 42, p9.call(43, x: "foo", y: 44, z: 3.14)
+    assert_equal 42, p9.call(43, x: "foo", y: 44, pi: 3.14)
     assert_equal 42, p9.call(43, x: "foo", y: 44, pi: 3.14, e: 2.72)
     assert_raises(TypeError) { p9.call(43, x: "foo", y: 44, pi: 3) }
     assert_raises(TypeError) { p9.call(43, x: "foo", y: 44, pi: 3.14, e: 3) }

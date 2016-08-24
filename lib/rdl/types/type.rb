@@ -176,21 +176,25 @@ module RDL::Type
       if left.is_a?(FiniteHashType) && right.is_a?(FiniteHashType)
         # Like Tuples, FiniteHashes are immutable, so covariant subtyping allowed
         # But note, no width subtyping allowed, to match #member?
-        rest = right.elts.clone # shallow copy
+        right_elts = right.elts.clone # shallow copy
         left.elts.each_pair { |k, tl|
-          return false unless rest.has_key? k
-          tr = rest[k]
-          tl = tl.type if tl.is_a? OptionalType
-          tr = tr.type if tr.is_a? OptionalType
-          return false unless leq(tl, tr, inst, ileft)
-          rest.delete k
+          if right_elts.has_key? k
+            tr = right_elts[k]
+            return false if tl.is_a?(OptionalType) && !tr.is_a?(OptionalType) # optional left, required right not allowed, since left may not have key
+            tl = tl.type if tl.is_a? OptionalType
+            tr = tr.type if tr.is_a? OptionalType
+            return false unless leq(tl, tr, inst, ileft)
+            right_elts.delete k
+          else
+            return false unless right.rest && leq(tl, right.rest, inst, ileft)
+          end
         }
-        rest.each_pair { |k, t|
+        right_elts.each_pair { |k, t|
           return false unless t.is_a? OptionalType
         }
-        unless left.rest.nil? && right.rest.nil?
-          return false if left.rest.nil? || right.rest.nil?
-          return false unless leq(left.rest, right.rest, inst, ileft)
+        unless left.rest.nil?
+          # If left has optional stuff, right needs to accept it
+          return false unless !(right.rest.nil?) && leq(left.rest, right.rest, inst, ileft)
         end
         left.ubounds << right
         right.lbounds << left

@@ -172,18 +172,25 @@ class TestLe < Minitest::Test
     tfss_5 = tt "{x: Fixnum, y: String, **Symbol}"
     tfns_5 = tt "{x: Fixnum, **Symbol}"
     tfsn_5 = tt "{x: Fixnum, y: String}"
+    tftn_5 = tt "{x: Fixnum, z: Symbol}"
     tooo_5 = tt "{x: Object, y: Object, **Object}"
     tono_5 = tt "{x: Object, **Object}"
-    toon_5 = tt "{x: Object, y: Object}"
     assert (tfss_5 <= tooo_5)
     assert (tfns_5 <= tono_5)
-    assert (tfsn_5 <= toon_5)
     assert (not (tfss_5 <= tfns_5))
-    assert (not (tfns_5 <= tfss_5))
     assert (not (tfss_5 <= tfsn_5))
-    assert (not (tfsn_5 <= tfss_5))
+    assert (not (tfss_5 <= tftn_5))
+    assert (not (tfns_5 <= tfss_5))
     assert (not (tfns_5 <= tfsn_5))
+    assert (not (tfns_5 <= tftn_5))
+    assert (tfsn_5 <= tfss_5)
     assert (not (tfsn_5 <= tfns_5))
+    assert (not (tfsn_5 <= tftn_5))
+    assert (not (tftn_5 <= tfss_5))
+    assert (tftn_5 <= tfns_5)
+    assert (not (tftn_5 <= tfsn_5))
+
+    assert (not (tt("{x: ?Fixnum}") <= tt("{x: Fixnum}")))
   end
 
   def test_method

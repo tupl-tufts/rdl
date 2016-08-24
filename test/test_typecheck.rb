@@ -412,52 +412,53 @@ class TestTypecheck < Minitest::Test
       type :_send_named_args6, "(x: ?Fixnum, y: String) -> Fixnum"
       type :_send_named_args7, "(x: ?Fixnum, y: ?String) -> Fixnum"
       type :_send_named_args8, "(?Fixnum, x: ?Symbol, y: ?String) -> Fixnum"
+      type :_send_named_args9, "(Fixnum, x: String, y: Fixnum, **Float) -> Fixnum"
     }
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args1(x: 42)", env: @env)
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args1(x: '42')", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args1()", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args1(x: 42, y: 42)", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args1(y: 42)", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args1(42)", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args1(42, x: '42')", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args1(x: '42')", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args1()", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args1(x: 42, y: 42)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args1(y: 42)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args1(42)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args1(42, x: '42')", env: @env) }
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args2(x: 42, y: '43')", env: @env)
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args2()", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args2(x: 42)", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args2(x: '42', y: '43')", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args2(42, '43')", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args2(42, x: 42, y: '43')", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args2(x: 42, y: '43', z: 44)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args2()", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args2(x: 42)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args2(x: '42', y: '43')", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args2(42, '43')", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args2(42, x: 42, y: '43')", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args2(x: 42, y: '43', z: 44)", env: @env) }
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args3(42, y: '43')", env: @env)
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args3(42, y: 43)", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args3()", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args3(42, 43, y: 44)", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args3(42, y: 43, z: 44)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args3(42, y: 43)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args3()", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args3(42, 43, y: 44)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args3(42, y: 43, z: 44)", env: @env) }
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args4(42, x: 43, y: '44')", env: @env)
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args4(42, x: 43)", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args4(42, y: '43')", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args4()", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args4(42, 43, x: 44, y: '45')", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args4(42, x: 43, y: '44', z: 45)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args4(42, x: 43)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args4(42, y: '43')", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args4()", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args4(42, 43, x: 44, y: '45')", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args4(42, x: 43, y: '44', z: 45)", env: @env) }
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args5(x: 42, y: '43')", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args5(x: 42)", env: @env)
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args5()", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args5(x: 42, y: 43)", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args5(x: 42, y: 43, z: 44)", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args5(3, x: 42, y: 43)", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args5(3, x: 42)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args5()", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args5(x: 42, y: 43)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args5(x: 42, y: 43, z: 44)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args5(3, x: 42, y: 43)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args5(3, x: 42)", env: @env) }
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args6(x: 43, y: '44')", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args6(y: '44')", env: @env)
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args6()", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args6(x: '43', y: '44')", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args6(42, x: 43, y: '44')", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args6(x: 43, y: '44', z: 45)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args6()", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args6(x: '43', y: '44')", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args6(42, x: 43, y: '44')", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args6(x: 43, y: '44', z: 45)", env: @env) }
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args7()", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args7(x: 43)", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args7(y: '44')", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args7(x: 43, y: '44')", env: @env)
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args7(x: '43', y: '44')", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args7(41, x: 43, y: '44')", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args7(x: 43, y: '44', z: 45)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args7(x: '43', y: '44')", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args7(41, x: 43, y: '44')", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args7(x: 43, y: '44', z: 45)", env: @env) }
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args8()", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args8(43)", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args8(x: :foo)", env: @env)
@@ -466,9 +467,17 @@ class TestTypecheck < Minitest::Test
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args8(43, y: 'foo')", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args8(x: :foo, y: 'foo')", env: @env)
     assert_equal $__rdl_fixnum_type, do_tc("_send_named_args8(43, x: :foo, y: 'foo')", env: @env)
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args8(43, 44, x: :foo, y: 'foo')", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args8(43, x: 'foo', y: 'foo')", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_named_args8(43, x: :foo, y: 'foo', z: 44)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args8(43, 44, x: :foo, y: 'foo')", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args8(43, x: 'foo', y: 'foo')", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args8(43, x: :foo, y: 'foo', z: 44)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args9", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args9(43)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args9(43, x: 'foo')", env: @env) }
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args9(43, x:'foo', y: 44)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args9(43, x:'foo', y: 44, pi: 3.14)", env: @env)
+    assert_equal $__rdl_fixnum_type, do_tc("_send_named_args9(43, x:'foo', y: 44, pi: 3.14, e: 2.72)", env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args9(43, x: 'foo', y: 44, pi: 3)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args9(43, x: 'foo', y: 44, pi: 3.14, e: 3)", env: @env) }
   end
 
   def test_send_singleton

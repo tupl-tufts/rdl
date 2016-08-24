@@ -34,7 +34,7 @@ module RDL::Type
 
     def to_s
       return @the_hash.to_s if @the_hash
-      "{" + @elts.map { |k, t| k.to_s + ": " + t.to_s }.join(', ') + "}"
+      return "{ " + @elts.map { |k, t| k.to_s + ": " + t.to_s }.join(', ') + (if @rest then ", **" + @rest.to_s else "" end) + " }"
     end
 
     def ==(other) # :nodoc:
@@ -84,7 +84,7 @@ module RDL::Type
       return @the_hash.member(obj, *args) if @the_hash
       t = RDL::Util.rdl_type obj
       return t <= self if t
-      elts_not_present = @elts.clone # shallow copy
+      right_elts = @elts.clone # shallow copy
 
       return false unless obj.instance_of? Hash
 
@@ -94,14 +94,14 @@ module RDL::Type
           t = @elts[k]
           t = t.type if t.instance_of? OptionalType
           return false unless t.member? v
-          elts_not_present.delete(k)
+          right_elts.delete k
         else
           return false unless @rest && @rest.member?(v)
         end
       }
 
       # Check that any remaining types are optional
-      elts_not_present.each_pair { |k, vt|
+      right_elts.each_pair { |k, vt|
         return false unless vt.instance_of? OptionalType
       }
 
