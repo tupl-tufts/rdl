@@ -1,12 +1,15 @@
 # Change log!
 
 ## [Unreleased]
+
+## [2.0.0] - 2016-08-24
 ### Added
+- Static type checking!
 - `wrap: false` optional argument to `type`, `pre`, and `post`
 - Non-null type annotation (not checked)
 - Default argument configuration for `type`, `pre`, and `post`
 - `attr_*_type` methods
-- Static type checking!
+- Initial types for Rails
 
 ### Changed
 - Modified `self` type to be any instance of the self's class
