@@ -40,6 +40,7 @@
   * [Other Features and Limitations](#other-features-and-limitations)
   * [Assumptions](#assumptions)
 * [Other RDL Methods](#other-rdl-methods)
+* [Performance](#performance)
 * [Queries](#queries)
 * [Configuration](#configuration)
 * [Bibliography](#bibliography)
@@ -81,6 +82,8 @@ $ ruby file.rb
 ```
 
 Passing `typecheck: :now` to `type` checks the method body immediately or as soon as it is defined. Passing `typecheck: :call` to `type` statically type checks the method body whenever it is called. Passing `typecheck: sym` for some other symbol statically type checks the method body when `rdl_do_typecheck sym` is called.
+
+Note that RDL tries to follow the philosophy that you get what you pay for. Methods with type annotations can be checked dynamically or statically; methods without type annotations are unaffected by RDL. See the [performance](#performance) discussion for more detail.
 
 RDL supports many more complex type annotations; see below for a complete discussion and examples.
 
@@ -748,6 +751,24 @@ RDL also includes a few other useful methods:
 * `rdl_query` prints information about types; see below for details.
 
 * `rdl_do_at(sym, &blk)` invokes `blk.call(sym)` when `rdl_do_typecheck(sym)` is called. Useful when type annotations need to be generated at some later time, e.g., because not all classes are loaded.
+
+# Performance
+
+RDL supports some tradeoffs between safety and performance. There are three main sources of overhead in using RDL:
+
+* When a method is wrapped by RDL, invoking it is more expensive because it requires calling the wrapper which then calls the underlying method. This is the most significant run-time cost of using RDL, and it can be eliminated by adding `wrap: false` to an annotation. (But, this only makes sense for types, since those are the only annotations that can be statically checked.)
+
+* When type checking is performed, RDL parses the program's source code and type checks method bodies. This source of overhead only happens once per method (unless `typecheck: :call` is used), so the overhead is probably not too bad (though we have not measured it).
+
+* RDL adds an implementation of `method_added` and `singleton_method_added` to carry out some of its work, and those are called on every method addition. This source of overhead is again likely not too significant.
+
+For uses of `pre` and `post`, there's not a lot of choice: those contracts are enforced at run-time and will incur the costs of wrapped methods. However, note that any methods that are not annotated with `pre` or `post` will not incur the cost of wrapping. (Similarly, methods not annotated with `type` never incur any wrapping cost.)
+
+For uses of `type`, there are more choices, which can be split into two main use cases. First, suppose there's a method `m` that we want a type for but don't want to type check (for example, it may come from some external library). So suppose we read the documentation and give `m` type `(Fixnum) -> Fixnum`. We now have to decide whether to wrap `m`. If we don't wrap `m`, then we incur no overhead on calls to `m`, but we are trusting the type. If we do wrap `m`, then on every call to it RDL will check that we call it with a `Fixnum` and it actually returns a `Fixnum`. So if we're not completely sure of `m`'s type, it might be useful to wrap it and then run test cases against it to see if the type annotation is every violated. (For example, the RDL developers did this to test out many of the core library annotations in RDL.)
+
+Second, suppose there's a method `m` that we do want to type check, and again `m` has type `(Fixnum) -> Fixnum`. Now RDL will use type checking to ensure that if `m` is given a `Fixnum` then it returns `Fixnum`. But now we again have to decide whether to wrap `m`. If we don't wrap `m`, then we get the most efficiency, since typechecking (assuming we do not do it at calls) will only happen once and calls will incur no overhead. On the other hand, it could be that some non-typechecked code calls `m` with something that's not a `Fixnum`, in which case `m` might do anything, including report a type error. (Notice the type checking of `m` assumed its input was a `Fixnum`, and it doesn't say anything about the case when its argument is not.) To protect against this case, we can wrap `m`. Then if a caller violates `m`'s type, we'll get an error in the caller code when it tries to call `m`.
+
+(Side note: If typed methods are wrapped, then their type contracts are checked at run time for *all* callers, including ones that are were statically type checked and hence couldn't call methods at incorrect types. A future version of RDL will fix this, but it will require some significant changes to RDL's implementation strategy.)
 
 # Queries
 
