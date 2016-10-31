@@ -1009,6 +1009,7 @@ RUBY
     trecvs.each { |trecv|
       trets.concat(tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e))
     }
+    trets.map! {|t| t.is_a?(RDL::Type::AnnotatedArgType) ? t.type : t}
     return RDL::Type::UnionType.new(*trets)
   end
 

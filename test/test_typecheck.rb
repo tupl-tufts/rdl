@@ -4,6 +4,7 @@ require 'rdl'
 require 'types/core'
 
 class TestTypecheckC
+  type 'self.bar', '() -> Fixnum or String ret'
   type 'self.foo', '() -> :A'
 end
 
@@ -1269,5 +1270,10 @@ class TestTypecheck < Minitest::Test
   def test_singleton
     assert_equal ':A', do_tc("TestTypecheckC.foo", env: @env).to_s
     assert_equal ':B', do_tc("TestTypecheckM.foo", env: @env).to_s
+  end
+
+  def test_annotated_ret
+    t = $__rdl_parser.scan_str '#T Fixnum or String'
+    assert_equal t, do_tc("TestTypecheckC.bar", env: @env)
   end
 end
