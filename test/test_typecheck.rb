@@ -3,8 +3,15 @@ $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
 require 'types/core'
 
-class TestTypecheck < Minitest::Test
+class TestTypecheckC
+  type 'self.foo', '() -> :A'
+end
 
+module TestTypecheckM
+  type 'self.foo', '() -> :B'
+end
+
+class TestTypecheck < Minitest::Test
   type :_any_object, "() -> Object" # a method that could return true or false
 
   def setup
@@ -1259,4 +1266,8 @@ class TestTypecheck < Minitest::Test
 
   end
 
+  def test_singleton
+    assert_equal ':A', do_tc("TestTypecheckC.foo", env: @env).to_s
+    assert_equal ':B', do_tc("TestTypecheckM.foo", env: @env).to_s
+  end
 end

@@ -549,6 +549,9 @@ module RDL::Typecheck
       case c
       when TrueClass, FalseClass, Complex, Rational, Fixnum, Bignum, Float, Symbol, Class
         [env, RDL::Type::SingletonType.new(c)]
+      when Module
+        t = RDL::Type::SingletonType.new(const_get(e.children[1]))
+        [env, t]
       else
         [env, RDL::Type::NominalType.new(const_get(e.children[1]).class)]
       end
@@ -1015,7 +1018,7 @@ RUBY
     tmeth_inter = [] # Array<MethodType>, i.e., an intersection types
     case trecv
     when RDL::Type::SingletonType
-      if trecv.val.is_a? Class
+      if trecv.val.is_a? Class or trecv.val.is_a? Module
         if meth == :new then name = :initialize else name = meth end
         ts = lookup(scope, RDL::Util.add_singleton_marker(trecv.val.to_s), name, e)
         ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] if (meth == :new) && (ts.nil?) # there's always a nullary new if initialize is undefined
