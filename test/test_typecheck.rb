@@ -6,6 +6,10 @@ require 'types/core'
 class TestTypecheckC
   type 'self.bar', '() -> Fixnum or String ret'
   type 'self.foo', '() -> :A'
+  type 'self.new', '(:D) -> :E'
+end
+
+class TestTypecheckD
 end
 
 module TestTypecheckM
@@ -1275,5 +1279,14 @@ class TestTypecheck < Minitest::Test
   def test_annotated_ret
     t = $__rdl_parser.scan_str '#T Fixnum or String'
     assert_equal t, do_tc("TestTypecheckC.bar", env: @env)
+  end
+
+  def test_constructor
+    t = do_tc("TestTypecheckC.new(:D)", env: @env)
+    assert_equal ':E', t.to_s
+
+    t = do_tc("TestTypecheckD.new", env: @env)
+    t2 = RDL::Type::NominalType.new TestTypecheckD
+    assert_equal t2, t
   end
 end
