@@ -2,9 +2,14 @@ if Rails.env.development? || Rails.env.test?
   require 'rdl/boot'
   require 'types/core'
 
-  dir = Rails::VERSION::STRING.split('.')[0] + ".x"
-  require_relative "../types/rails-#{dir}/_helpers.rb" # load type aliases first
-  Dir[File.dirname(__FILE__) + "/../types/rails-#{dir}/**/*.rb"].each { |f| require f }
+  version = Rails::VERSION::STRING.split('.')[0] + ".x"
+
+  begin
+    require_relative "../types/rails-#{version}/_helpers.rb" # load type aliases first
+    Dir[File.dirname(__FILE__) + "/../types/rails-#{version}/**/*.rb"].each { |f| require f }
+  rescue LoadError
+    $stderr.puts("rdl could not load type definitions for Rails v#{version}")
+  end
 elsif Rails.env.production?
   require 'rdl_disable'
   class ActionController::Base
