@@ -4,8 +4,8 @@
 
 Gem::Specification.new do |s|
   s.name        = 'rdl'
-  s.version     = '2.0.0'
-  s.date        = '2016-08-24'
+  s.version     = '2.0.1'
+  s.date        = '2016-11-11'
   s.summary     = 'Ruby type and contract system'
   s.description = <<-EOF
 RDL is a gem that adds types and contracts to Ruby. RDL includes extensive
@@ -18,5 +18,5 @@ EOF
   s.executables << 'rdl_query'
   s.homepage    = 'https://github.com/plum-umd/rdl'
   s.license     = 'BSD-3-Clause'
-  s.add_runtime_dependency 'parser', '~>2.3', '>= 2.3.1.2'
+  s.add_runtime_dependency 'parser', '~>2.3', '>= 2.3.1.4'
 end

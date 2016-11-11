@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [2.0.1] - 2016-11-11
+
 ### Fixed
 - Improved support for modules (still incomplete)
 - Fix a bug with typing self.new
