@@ -662,10 +662,10 @@ RUBY
           envguards << envi
         }
         initial_env = Env.join(e, *envguards)
-        if (tguards.all? { |t| t.is_a?(RDL::Type::SingletonType) && t.val.is_a?(Class) }) && (e.children[0].type == :lvar)
+        if (tguards.all? { |typ| typ.is_a?(RDL::Type::SingletonType) && typ.val.is_a?(Class) }) && (e.children[0].type == :lvar)
           # Special case! We're branching on the type of the guard, which is a local variable.
           # So rebind that local variable to have the union of the guard types
-          new_typ = RDL::Type::UnionType.new(*(tguards.map { |t| RDL::Type::NominalType.new(t.val) })).canonical
+          new_typ = RDL::Type::UnionType.new(*(tguards.map { |typ| RDL::Type::NominalType.new(typ.val) })).canonical
           # TODO adjust following for generics!
           if tcontrol.is_a? RDL::Type::GenericType
             if new_typ == tcontrol.base
@@ -764,19 +764,19 @@ RUBY
         end
         teaches = lookup(scope, tcollect.base.name, :each, e.children[1])
         inst = tcollect.to_inst.merge(self: tcollect)
-        teaches = teaches.map { |t| t.instantiate(inst) }
+        teaches = teaches.map { |typ| typ.instantiate(inst) }
       else
         error :for_collection, [tcollect], e.children[1]
       end
       teach = nil
-      teaches.each { |t|
+      teaches.each { |typ|
         # find `each` method with right type signature:
         #    () { (t1) -> t2 } -> t3
-        next unless t.args.empty?
-        next if t.block.nil?
-        next unless t.block.args.size == 1
-        next unless t.block.block.nil?
-        teach = t
+        next unless typ.args.empty?
+        next if typ.block.nil?
+        next unless typ.block.args.size == 1
+        next unless typ.block.block.nil?
+        teach = typ
         break
       }
       error :no_each_type, [tcollect.name], e.children[1] if teach.nil?
