@@ -972,7 +972,7 @@ class TestTypecheck < Minitest::Test
     assert_equal @t34, do_tc("begin puts 'foo'; 3; rescue; 4; end", env: @env)
     assert_equal tt("StandardError or 3"), do_tc("begin puts 'foo'; 3; rescue => e; e; end", env: @env)
     assert_equal tt("RuntimeError or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; end", env: @env)
-    assert_equal tt("3"), do_tc("begin puts 'foo'; 3; else; 4; end", env: @env) # parser discards else clause!
+    assert_equal tt("4"), do_tc("begin puts 'foo'; 3; else; 4; end", env: @env) # parser discards else clause!
     assert_equal tt("RuntimeError or ArgumentError or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; rescue ArgumentError => x; x; end", env: @env)
     assert_equal tt("RuntimeError or ArgumentError or 42 or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; rescue ArgumentError => x; x; else 42; end", env: @env)
     assert_equal tt("RuntimeError or ArgumentError or 3"), do_tc("begin puts 'foo'; 3; rescue RuntimeError, ArgumentError => e; e; end", env: @env)

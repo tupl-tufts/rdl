@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed
+- Improved support for modules (still incomplete)
+- Fix a bug with typing self.new
+- Fix bug with annotated return types
+- Fix bug with rdl_query
+
 ## [2.0.0] - 2016-08-24
 ### Added
 - Static type checking!
