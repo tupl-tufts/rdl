@@ -884,15 +884,17 @@ In Object-Oriented Program Languages and Systems (OOPS) Track at ACM Symposium o
 
 Copyright (c) 2014-2016, University of Maryland, College Park. All rights reserved.
 
-# Contributors
-
-## Authors
+# Authors
 
 * [Jeffrey S. Foster](http://www.cs.umd.edu/~jfoster/)
 * [Brianna M. Ren](https://www.cs.umd.edu/~bren/)
 * [T. Stephen Strickland](https://www.cs.umd.edu/~sstrickl/)
 * Alexander T. Yu
 * Milod Kazerounian
+
+# Contributors
+
+* [Joel Holdbrooks](https://github.com/noprompt)
 
 # Discussion group
 

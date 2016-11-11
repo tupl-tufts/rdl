@@ -9,6 +9,7 @@
 - Fix a bug with typing self.new
 - Fix bug with annotated return types
 - Fix bug with rdl_query
+- Fix bug with running under Rails where type files don't exist (Joel Holdbrooks)
 
 ## [2.0.0] - 2016-08-24
 ### Added
