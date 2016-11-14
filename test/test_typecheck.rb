@@ -1289,4 +1289,21 @@ class TestTypecheck < Minitest::Test
     t2 = RDL::Type::NominalType.new TestTypecheckD
     assert_equal t2, t
   end
+
+  def test_nil_return
+    self.class.class_eval {
+      type "(%any) -> NilClass", typecheck: :now
+      def self.def_nil_ret(x) return; end
+    }
+    self.class.class_eval {
+      type "(Fixnum) -> :A or NilClass", typecheck: :now
+      def self.def_nil_ret_2(x)
+        if x > 0
+          :A
+        else
+          return
+        end
+      end
+    }
+  end
 end

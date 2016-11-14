@@ -810,7 +810,11 @@ RUBY
       [env, $__rdl_bot_type]
     when :return
       # TODO return in lambda returns from lambda and not outer scope
-      env1, t1 = tc(scope, env, e.children[0])
+      if e.children[0]
+         env1, t1 = tc(scope, env, e.children[0])
+       else
+         env1, t1 = [env, $__rdl_nil_type]
+       end
       error :bad_return_type, [t1.to_s, scope[:tret]], e unless t1 <= scope[:tret]
       [env1, $__rdl_bot_type] # return is a void value expression
     when :begin, :kwbegin # sequencing
