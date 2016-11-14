@@ -16,6 +16,15 @@ module TestTypecheckM
   type 'self.foo', '() -> :B'
 end
 
+class TestTypecheckOuter
+  class A
+    class B
+      class C
+      end
+    end
+  end
+end
+
 class TestTypecheck < Minitest::Test
   type :_any_object, "() -> Object" # a method that could return true or false
 
@@ -217,6 +226,14 @@ class TestTypecheck < Minitest::Test
   def test_const
     assert_equal tt("${String}"), do_tc("String", env: @env)
     assert_equal $__rdl_nil_type, do_tc("NIL", env: @env)
+
+
+    t = RDL::Type::SingletonType.new(TestTypecheckOuter)
+    assert_equal t, do_tc("TestTypecheckOuter", env: @env)
+    t = RDL::Type::SingletonType.new(TestTypecheckOuter::A)
+    assert_equal t, do_tc("TestTypecheckOuter::A", env: @env)
+    t = RDL::Type::SingletonType.new(TestTypecheckOuter::A::B::C)
+    assert_equal t, do_tc("TestTypecheckOuter::A::B::C", env: @env)
   end
 
   def test_defined

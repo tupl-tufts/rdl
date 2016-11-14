@@ -162,6 +162,17 @@ module RDL::Typecheck
     puts (Parser::Diagnostic.new :note, reason, args, ast.loc.expression).render
   end
 
+  def self.get_leaves(node, r=[])
+    node.children.each {|n|
+      if n.is_a? AST::Node
+        get_leaves(n, r)
+      elsif n
+        r.push n
+      end
+    }
+    r
+  end
+
   def self.get_ast(klass, meth)
     file, line = $__rdl_info.get(klass, meth, :source_location)
     raise RuntimeError, "No file for #{RDL::Util.pp_klass_method(klass, meth)}" if file.nil?
@@ -543,6 +554,17 @@ module RDL::Typecheck
         raise "const cbase not implemented yet" # TODO!
       elsif e.children[0].type == :lvar
         raise "const lvar not implemented yet" # TODO!
+      elsif e.children[0].type == :const
+        if env[:self]
+          if env[:self].is_a?(RDL::Type::SingletonType)
+            raise "const not implemented when env[:self] is SingletonType"
+          else
+            ic = env[:self].class
+          end
+        else
+          ic = Object
+        end
+        c = get_leaves(e).inject(ic) {|m, c| m.const_get(c)}
       else
         raise "const other not implemented yet"
       end
