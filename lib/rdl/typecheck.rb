@@ -500,11 +500,26 @@ module RDL::Typecheck
         # (op-asgn (send recv meth) :op operand)
         meth = e.children[0].children[1]
         envleft, trecv = tc(scope, env, e.children[0].children[0]) # recv
-        tloperand = tc_send(scope, envleft, trecv, meth, [], nil, e.children[0]) # call recv.meth()
+        elargs = e.children[0].children[2]
+
+        if elargs
+          envleft, elargs = tc(scope, envleft, elargs)
+          largs = [elargs]
+        else
+          largs = []
+        end
+
+        tloperand = tc_send(scope, envleft, trecv, meth, largs, nil, e.children[0]) # call recv.meth()
         envoperand, troperand = tc(scope, envleft, e.children[2]) # operand
         tright = tc_send(scope, envoperand, tloperand, e.children[1], [troperand], nil, e) # recv.meth().op(operand)
+
+        if largs
+          tright = largs.push(tright)
+        else
+          tright = tright
+        end
         mutation_meth = (meth.to_s + '=').to_sym
-        tres = tc_send(scope, envoperand, trecv, mutation_meth, [tright], nil, e) # call recv.meth=(recv.meth().op(operand))
+        tres = tc_send(scope, envoperand, trecv, mutation_meth, tright, nil, e) # call recv.meth=(recvt.meth().op(operand))
         [envoperand, tres]
       else
         # (op-asgn (Xvasgn var-name) :op operand)

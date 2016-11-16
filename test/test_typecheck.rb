@@ -900,6 +900,7 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = Object.new; x += 1", env: @env) }
     assert_equal $__rdl_nil_type, do_tc("e = E.new; e.f += 1", env: @env) # return type of f=
     assert_equal $__rdl_false_type, do_tc("x &= false") # weird
+    assert_equal $__rdl_string_type, do_tc("h = {}; h = h.type_cast('Hash<Symbol, String>', force: true); h[:a] = ''; h[:a] += 's'", env: @env)
   end
 
   def test_and_or_asgn
