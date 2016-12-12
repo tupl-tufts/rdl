@@ -61,9 +61,6 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/\s/))
         ;
 
-      when (text = @ss.scan(/or/))
-         action { [:OR, text] }
-
       when (text = @ss.scan(/->/))
          action { [:RARROW, text] }
 
@@ -134,7 +131,7 @@ class Parser < Racc::Parser
          action { [:FIXNUM, text] }
 
       when (text = @ss.scan(/(\w|\:\:)+/))
-         action { [:ID, text] }
+         action { if text == "or" then [:OR, text] else [:ID, text] end }
 
       when (text = @ss.scan(/:\w+/))
          action { [:SYMBOL, text[1..-1]] }

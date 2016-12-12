@@ -217,4 +217,9 @@ class TestParser < Minitest::Test
     assert_equal (MethodType.new [], OptionalType.new(MethodType.new([VarType.new('t')], nil, $__rdl_nil_type)), $__rdl_top_type), t3
   end
 
+  def test_or
+    assert_equal (FiniteHashType.new({aorganization: $__rdl_symbol_type}, nil)), tt('{aorganization: Symbol}')
+    assert_equal (FiniteHashType.new({organization: $__rdl_symbol_type}, nil)), tt('{organization: Symbol}')
+  end
+
 end

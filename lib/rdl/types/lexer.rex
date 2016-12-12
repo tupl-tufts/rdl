@@ -12,7 +12,6 @@ macro
 
 rule
   \s            # skip
-  or            { [:OR, text] }
   ->            { [:RARROW, text] }
   =>            { [:RASSOC, text] }
   \(            { [:LPAREN, text] }
@@ -27,7 +26,7 @@ rule
   ,             { [:COMMA, text] }
   \?            { [:QUERY, text] }
   \!            { [:BANG, text] }
-  \*\*          { [:STARSTAR, text] } 
+  \*\*          { [:STARSTAR, text] }
   \*            { [:STAR, text] }
   \#T           { [:HASH_TYPE, text] }
   \#Q           { [:HASH_QUERY, text] }
@@ -36,7 +35,7 @@ rule
   \.            { [:DOT, text] }
   {FLOAT}       { [:FLOAT, text] } # Must go before FIXNUM
   {FIXNUM}      { [:FIXNUM, text] }
-  {ID}          { [:ID, text] }
+  {ID}          { if text == "or" then [:OR, text] else [:ID, text] end }
   {SYMBOL}      { [:SYMBOL, text[1..-1]] }
   \:            { [:COLON, text] } # Must come after SYMBOL
   {SPECIAL_ID}  { [:SPECIAL_ID, text] }
