@@ -513,11 +513,7 @@ module RDL::Typecheck
         envoperand, troperand = tc(scope, envleft, e.children[2]) # operand
         tright = tc_send(scope, envoperand, tloperand, e.children[1], [troperand], nil, e) # recv.meth().op(operand)
 
-        if largs
-          tright = largs.push(tright)
-        else
-          tright = tright
-        end
+        tright = largs.push(tright) if largs
         mutation_meth = (meth.to_s + '=').to_sym
         tres = tc_send(scope, envoperand, trecv, mutation_meth, tright, nil, e) # call recv.meth=(recvt.meth().op(operand))
         [envoperand, tres]
