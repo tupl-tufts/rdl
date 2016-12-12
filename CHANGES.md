@@ -6,6 +6,9 @@
 - Support operator assignment when left-hand side has method args
 - Support nested class names
 
+### Fixed
+- Parsing bug with `or`
+
 ## [2.0.1] - 2016-11-11
 
 ### Fixed
