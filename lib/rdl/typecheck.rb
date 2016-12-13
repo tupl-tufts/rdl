@@ -155,11 +155,11 @@ module RDL::Typecheck
 
   # report msg at ast's loc
   def self.error(reason, args, ast)
-    raise StaticTypeError, ("\n" + (Parser::Diagnostic.new :error, reason, args, ast.loc.expression).render.join("\n"))
+    raise StaticTypeError, ("\n" + (Diagnostic.new :error, reason, args, ast.loc.expression).render.join("\n"))
   end
 
   def self.note(reason, args, ast)
-    puts (Parser::Diagnostic.new :note, reason, args, ast.loc.expression).render
+    puts (Diagnostic.new :note, reason, args, ast.loc.expression).render
   end
 
   def self.get_leaves(node, r=[])
@@ -1292,56 +1292,60 @@ RUBY
   end
 end
 
-# Modify Parser::MESSAGES so can use the awesome parser diagnostics printing!
-type_error_messages = {
-  bad_return_type: "got type `%s' where return type `%s' expected",
-  undefined_local_or_method: "undefined local variable or method `%s'",
-  nonmatching_range_type: "attempt to construct range with non-matching types `%s' and `%s'",
-  no_instance_method_type: "no type information for instance method `%s#%s'",
-  no_singleton_method_type: "no type information for class/singleton method `%s.%s'",
-  arg_type_single_receiver_error: "argument type error for instance method `%s#%s'\n%s",
-  untyped_var: "no type for %s variable `%s'",
-  vasgn_incompat: "incompatible types: `%s' can't be assigned to variable of type `%s'",
-  inconsistent_var_type: "local variable `%s' has declared type on some paths but not all",
-  inconsistent_var_type_type: "local variable `%s' declared with inconsistent types %s",
-  no_each_type: "can't find `each' method with signature `() { (t1) -> t2 } -> t3' in class `%s'",
-  tuple_finite_hash_promote: "can't promote `%s' to `%s'",
-  masgn_bad_rhs: "multiple assignment has right-hand side of type `%s' where tuple or array expected",
-  masgn_num: "can't multiple-assign %d values to %d variables",
-  masgn_bad_lhs: "no corresponding right-hand side elemnt for left-hand side assignee",
-  kw_not_allowed: "can't use `%s' in current scope",
-  kw_arg_not_allowed: "argument to `%s' not allowed in current scope",
-  no_block: "attempt to call yield in method not declared to take a block argument",
-  block_block: "can't call yield on a block expecting another block argument",
-  block_type_error: "argument type error for block\n%s",
-  missing_ancestor_type: "ancestor `%s' of `%s' has method `%s' but no type for it",
-  type_cast_format: "type_cast must be called as `type_cast type-string' or `type_cast type-string, force: expr'",
-  var_type_format: "var_type must be called as `var_type :var-name, type-string'",
-  puts_type_format: "puts_type must be called as `puts_type e'",
-  generic_error: "%s",
-  exn_type: "can't determine exception type",
-  cant_splat: "can't type splat with element of type `%s'",
-  for_collection: "can't type for with collection of type `%s'",
-  note_type: "Type is `%s'",
-  note_message: "%s",
-  recv_var_type: "receiver whose type is unconstrained variable `%s' not allowed",
-  type_args_more: "%s type accepts more arguments than actual %s definition",
-  type_args_fewer: "%s type accepts fewer arguments than actual %s definition",
-  type_arg_kind_mismatch: "%s type has %s argument but actual argument is %s",
-  type_args_no_kws: "%s type does not expect keyword arguments but actual expects keywords",
-  type_args_no_kw: "%s type does not expect keyword argument `%s'",
-  type_args_kw_mismatch: "%s type has %s keyword `%s' but actual argument is %s",
-  type_args_kw_more: "%s type expects keywords `%s' that are not expected by actual %s",
-  type_args_no_kw_rest: "%s type has no rest keyword but actual method accepts rest keywords",
-  type_args_kw_rest: "%s type has rest keyword but actual method does not accept rest keywords",
-  optional_default_type: "default value has type `%s' where type `%s' expected",
-  optional_default_kw_type: "default value for `%s' has type `%s' where type `%s' expected",
-  type_arg_block: "%s type does not expect block but actual %s takes block",
-  bad_block_arg_type: "block argument has type `%s' but expecting type `%s'",
-  non_block_block_arg: "block argument should have a block type but instead has type `%s'",
-  proc_block_arg_type: "block argument is a Proc; can't tell if it matches expected type `%s'",
-  no_type_for_symbol: "can't find type for method corresponding to `%s.to_proc'",
-}
-old_messages = Parser::MESSAGES
-Parser.send(:remove_const, :MESSAGES)
-Parser.const_set :MESSAGES, (old_messages.merge(type_error_messages))
+# Use parser's Diagnostic to output RDL typechecker error messages
+class Diagnostic < Parser::Diagnostic
+
+  def message
+    RDL_MESSAGES[@reason] % @arguments
+  end
+
+  RDL_MESSAGES = {
+    bad_return_type: "got type `%s' where return type `%s' expected",
+    undefined_local_or_method: "undefined local variable or method `%s'",
+    nonmatching_range_type: "attempt to construct range with non-matching types `%s' and `%s'",
+    no_instance_method_type: "no type information for instance method `%s#%s'",
+    no_singleton_method_type: "no type information for class/singleton method `%s.%s'",
+    arg_type_single_receiver_error: "argument type error for instance method `%s#%s'\n%s",
+    untyped_var: "no type for %s variable `%s'",
+    vasgn_incompat: "incompatible types: `%s' can't be assigned to variable of type `%s'",
+    inconsistent_var_type: "local variable `%s' has declared type on some paths but not all",
+    inconsistent_var_type_type: "local variable `%s' declared with inconsistent types %s",
+    no_each_type: "can't find `each' method with signature `() { (t1) -> t2 } -> t3' in class `%s'",
+    tuple_finite_hash_promote: "can't promote `%s' to `%s'",
+    masgn_bad_rhs: "multiple assignment has right-hand side of type `%s' where tuple or array expected",
+    masgn_num: "can't multiple-assign %d values to %d variables",
+    masgn_bad_lhs: "no corresponding right-hand side elemnt for left-hand side assignee",
+    kw_not_allowed: "can't use `%s' in current scope",
+    kw_arg_not_allowed: "argument to `%s' not allowed in current scope",
+    no_block: "attempt to call yield in method not declared to take a block argument",
+    block_block: "can't call yield on a block expecting another block argument",
+    block_type_error: "argument type error for block\n%s",
+    missing_ancestor_type: "ancestor `%s' of `%s' has method `%s' but no type for it",
+    type_cast_format: "type_cast must be called as `type_cast type-string' or `type_cast type-string, force: expr'",
+    var_type_format: "var_type must be called as `var_type :var-name, type-string'",
+    puts_type_format: "puts_type must be called as `puts_type e'",
+    generic_error: "%s",
+    exn_type: "can't determine exception type",
+    cant_splat: "can't type splat with element of type `%s'",
+    for_collection: "can't type for with collection of type `%s'",
+    note_type: "Type is `%s'",
+    note_message: "%s",
+    recv_var_type: "receiver whose type is unconstrained variable `%s' not allowed",
+    type_args_more: "%s type accepts more arguments than actual %s definition",
+    type_args_fewer: "%s type accepts fewer arguments than actual %s definition",
+    type_arg_kind_mismatch: "%s type has %s argument but actual argument is %s",
+    type_args_no_kws: "%s type does not expect keyword arguments but actual expects keywords",
+    type_args_no_kw: "%s type does not expect keyword argument `%s'",
+    type_args_kw_mismatch: "%s type has %s keyword `%s' but actual argument is %s",
+    type_args_kw_more: "%s type expects keywords `%s' that are not expected by actual %s",
+    type_args_no_kw_rest: "%s type has no rest keyword but actual method accepts rest keywords",
+    type_args_kw_rest: "%s type has rest keyword but actual method does not accept rest keywords",
+    optional_default_type: "default value has type `%s' where type `%s' expected",
+    optional_default_kw_type: "default value for `%s' has type `%s' where type `%s' expected",
+    type_arg_block: "%s type does not expect block but actual %s takes block",
+    bad_block_arg_type: "block argument has type `%s' but expecting type `%s'",
+    non_block_block_arg: "block argument should have a block type but instead has type `%s'",
+    proc_block_arg_type: "block argument is a Proc; can't tell if it matches expected type `%s'",
+    no_type_for_symbol: "can't find type for method corresponding to `%s.to_proc'",
+  }
+end

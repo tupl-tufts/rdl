@@ -8,6 +8,7 @@
 
 ### Fixed
 - Parsing bug with `or`
+- Subclass Parser::Diagnostic instead of monkey patching it
 
 ## [2.0.1] - 2016-11-11
 
