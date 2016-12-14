@@ -70,7 +70,7 @@ end
 class Object
 
   def rdl_query(q)
-    $__rdl_contract_switch.off {
+    RDL.contract_switch.off {
       if q =~ /^[A-Z]\w*(#|\.)([a-z_]\w*(!|\?|=)?|!|~|\+|\*\*|-|\*|\/|%|<<|>>|&|\||\^|<|<=|=>|>|==|===|!=|=~|!~|<=>|\[\]|\[\]=)$/
         typs = RDL::Query.method_query(q)
         if typs.nil? then

@@ -8,7 +8,7 @@ require 'rdl_types'
 def check_one(cl) #checks class for missing methods
 	array_one = cl.instance_methods(false)
 	array_one.each{ |t|
-		if query(cl.to_s+'#'+t.to_s)==nil 
+		if query(cl.to_s+'#'+t.to_s)==nil
 		puts t end}
 end
 
@@ -46,7 +46,7 @@ end
   end
 
 def query(q)
-    $__rdl_contract_switch.off {
+    RDL.contract_switch.off {
       if q =~ /^(\w+(#|\.))?(\w+(!|\?|=)?|!|~|\+|\*\*|-|\*|\/|%|<<|>>|&|\||\^|<|<=|=>|>|==|===|!=|=~|!~|<=>|\[\]|\[\]=)$/
         klass = nil
         klass_pref = nil
@@ -70,10 +70,10 @@ def query(q)
             #puts "#{klass_pref}#{meth}: #{t}"
 	    t_string = "#{t}"
 	    t_string =~ /\((\w*)\)(.+)/
-	
+
 	    #puts y
 	    return t_string
-	    #return "#{t}" 
+	    #return "#{t}"
           }
           nil
         else

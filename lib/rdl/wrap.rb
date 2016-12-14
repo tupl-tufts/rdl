@@ -26,7 +26,7 @@ class RDL::Wrap
   # Wraps klass#method to check contracts and types. Does not rewrap
   # if already wrapped. Also records source location of method.
   def self.wrap(klass_str, meth)
-    $__rdl_wrap_switch.off {
+    RDL.wrap_switch.off {
       klass_str = klass_str.to_s
       klass = RDL::Util.to_class klass_str
       return if wrapped? klass, meth
@@ -46,7 +46,7 @@ class RDL::Wrap
 	        bind = binding
           inst = nil
 
-          $__rdl_wrap_switch.off {
+          RDL.wrap_switch.off {
             $__rdl_wrapped_calls["#{full_method_name}"] += 1 if RDL::Config.instance.gather_stats
             inst = nil
             inst = @__rdl_inst if defined? @__rdl_inst
@@ -64,7 +64,7 @@ class RDL::Wrap
             end
           }
 	        ret = send(#{meth_old.inspect}, *args, &blk)
-          $__rdl_wrap_switch.off {
+          RDL.wrap_switch.off {
             posts = $__rdl_info.get(klass, meth, :post)
             RDL::Contract::AndContract.check_array(posts, self, ret, *args, &blk) if posts
             if matches
@@ -310,7 +310,7 @@ class Object
                           # Warning: Adjust the -5 below if the code (or this comment) changes
                           bt = err.backtrace
                           bt.shift until bt[0] =~ /^#{__FILE__}:#{__LINE__-5}/
-                          bt.shift # remove $__rdl_contract_switch.off call
+                          bt.shift # remove RDL.contract_switch.off call
                           bt.shift # remove type call itself
                           err.set_backtrace bt
                           raise err
@@ -574,7 +574,7 @@ end
 # method_added for Object doesn't get called on module methods...bug?
 # class Module
 #   def method_added(meth)
-#     $__rdl_contract_switch.off {
+#     RDL.contract_switch.off {
 #       klass = self.to_s
 #       RDL::Wrap.do_method_added(self, false, klass, meth)
 #       nil

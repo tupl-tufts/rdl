@@ -59,8 +59,8 @@ end
 # is loaded.
 require 'rdl/switch.rb'
 module RDL
-  $__rdl_wrap_switch = RDL::Switch.new
-  $__rdl_contract_switch = RDL::Switch.new
+  @wrap_switch = RDL::Switch.new
+  @contract_switch = RDL::Switch.new
 end
 
 require 'rdl/types/type.rb'
@@ -140,6 +140,8 @@ module RDL
 end
 
 class << RDL
+  attr_reader :wrap_switch
+  attr_reader :contract_switch
   attr_reader :parser
   attr_accessor :parser_cache
   attr_reader :types

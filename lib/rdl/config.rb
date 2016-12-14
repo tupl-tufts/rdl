@@ -39,7 +39,7 @@ RDL::Config.instance.profile_stats
 
     at_exit do
       Profiler__.stop_profile
-      $__rdl_contract_switch.off {
+      RDL.contract_switch.off {
         puts "START."
         puts "Performing Profile Analysis"
         # Class Name => [Times Contract Called | Times Called | Time | Time | Class Profile]

@@ -15,7 +15,7 @@ MIN_FIXNUM = -(2**(0.size*8-2)) #Smallest fixnum.
 		type_two = y.class.to_s
 	elsif type_one=="Rational"
 		y = gen_number(0.2,0.2,0.2,0.1,0,0.2,0,0.1)
-		type_two = y.class.to_s		
+		type_two = y.class.to_s
 	elsif x.is_a?(Float)&&(x==Float::INFINITY|| x.nan?)
 		y = gen_number(0.2,0.2,0,0.1,0.1,0.3,0,0.1)
 		type_two = y.class.to_s
@@ -87,7 +87,7 @@ def gen_rational()
 	y = gen_fixnum()
 	return Rational(x,y)
 end
-	
+
 
 def gen_number(probFixnum,probBignum,probBigDec,probInf,probNAN,probFloat,probComplex,probRational)
 	r = Random.rand()
@@ -121,14 +121,14 @@ end
 		if (!b) then
 			counter=counter+1
 		end
-	
+
 	end
 	return counter
- end	
+ end
 
 
 def query(q,y)
-    $__rdl_contract_switch.off {
+    RDL.contract_switch.off {
       if q =~ /^(\w+(#|\.))?(\w+(!|\?|=)?|!|~|\+|\*\*|-|\*|\/|%|<<|>>|&|\||\^|<|<=|=>|>|==|===|!=|=~|!~|<=>|\[\]|\[\]=)$/
         klass = nil
         klass_pref = nil
@@ -152,12 +152,12 @@ def query(q,y)
             #puts "#{klass_pref}#{meth}: #{t}"
 	    t_string = "#{t}"
 	    t_string =~ /\((\w*)\)(.+)/
-	
+
 	    #puts y
 	    if y.is_a?(Object.const_get($1))
 		return t_string
 	    end
-	    #return "#{t}" 
+	    #return "#{t}"
           }
           nil
         else
@@ -168,4 +168,3 @@ def query(q,y)
       end
     }
   end
-

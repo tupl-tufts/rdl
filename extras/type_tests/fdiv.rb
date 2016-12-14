@@ -110,7 +110,7 @@ def gen_complex3()
 	#puts y
 	return Complex(x,y)
 end
-	
+
 
 def gen_number(probFixnum,probBignum,probBigDec,probInf,probNAN,probFloat,probComplex,probRational)
 	r = Random.rand()
@@ -194,14 +194,14 @@ end
 		if (!b) then
 			counter=counter+1
 		end
-	
+
 	end
 	return counter
- end	
+ end
 
 
 def query(q,y)
-    $__rdl_contract_switch.off {
+    RDL.contract_switch.off {
       if q =~ /^(\w+(#|\.))?(\w+(!|\?|=)?|!|~|\+|\*\*|-|\*|\/|%|<<|>>|&|\||\^|<|<=|=>|>|==|===|!=|=~|!~|<=>|\[\]|\[\]=)$/
         klass = nil
         klass_pref = nil
@@ -225,12 +225,12 @@ def query(q,y)
             #puts "#{klass_pref}#{meth}: #{t}"
 	    t_string = "#{t}"
 	    t_string =~ /\((\w*)\)(.+)/
-	
+
 	    #puts y
 	    if y.is_a?(Object.const_get($1))
 		return t_string
 	    end
-	    #return "#{t}" 
+	    #return "#{t}"
           }
           nil
         else
@@ -241,4 +241,3 @@ def query(q,y)
       end
     }
   end
-
