@@ -29,49 +29,49 @@ class TestLe < Minitest::Test
   end
 
   def test_nil
-    assert ($__rdl_nil_type <= $__rdl_top_type)
-    assert ($__rdl_nil_type <= $__rdl_string_type)
-    assert ($__rdl_nil_type <= $__rdl_object_type)
-    assert ($__rdl_nil_type <= @tbasicobject)
-    assert (not ($__rdl_nil_type <= @tsymfoo)) # nil no longer <= other singleton types
-    assert (not ($__rdl_top_type <= $__rdl_nil_type))
-    assert (not ($__rdl_string_type <= $__rdl_nil_type))
-    assert (not ($__rdl_object_type <= $__rdl_nil_type))
-    assert (not (@tbasicobject <= $__rdl_nil_type))
-    assert (not (@tsymfoo <= $__rdl_nil_type))
+    assert (RDL.types[:nil] <= RDL.types[:top])
+    assert (RDL.types[:nil] <= RDL.types[:string])
+    assert (RDL.types[:nil] <= RDL.types[:object])
+    assert (RDL.types[:nil] <= @tbasicobject)
+    assert (not (RDL.types[:nil] <= @tsymfoo)) # nil no longer <= other singleton types
+    assert (not (RDL.types[:top] <= RDL.types[:nil]))
+    assert (not (RDL.types[:string] <= RDL.types[:nil]))
+    assert (not (RDL.types[:object] <= RDL.types[:nil]))
+    assert (not (@tbasicobject <= RDL.types[:nil]))
+    assert (not (@tsymfoo <= RDL.types[:nil]))
   end
 
   def test_top
-    assert (not ($__rdl_top_type <= $__rdl_nil_type))
-    assert (not ($__rdl_top_type <= $__rdl_string_type))
-    assert (not ($__rdl_top_type <= $__rdl_object_type))
-    assert (not ($__rdl_top_type <= @tbasicobject))
-    assert (not ($__rdl_top_type <= @tsymfoo))
-    assert ($__rdl_top_type <= $__rdl_top_type)
-    assert ($__rdl_string_type <= $__rdl_top_type)
-    assert ($__rdl_object_type <= $__rdl_top_type)
-    assert (@tbasicobject <= $__rdl_top_type)
-    assert (@tsymfoo <= $__rdl_top_type)
+    assert (not (RDL.types[:top] <= RDL.types[:nil]))
+    assert (not (RDL.types[:top] <= RDL.types[:string]))
+    assert (not (RDL.types[:top] <= RDL.types[:object]))
+    assert (not (RDL.types[:top] <= @tbasicobject))
+    assert (not (RDL.types[:top] <= @tsymfoo))
+    assert (RDL.types[:top] <= RDL.types[:top])
+    assert (RDL.types[:string] <= RDL.types[:top])
+    assert (RDL.types[:object] <= RDL.types[:top])
+    assert (@tbasicobject <= RDL.types[:top])
+    assert (@tsymfoo <= RDL.types[:top])
   end
 
   def test_sym
-    assert ($__rdl_symbol_type <= $__rdl_symbol_type)
+    assert (RDL.types[:symbol] <= RDL.types[:symbol])
     assert (@tsymfoo <= @tsymfoo)
-    assert (@tsymfoo <= $__rdl_symbol_type)
-    assert (not ($__rdl_symbol_type <= @tsymfoo))
+    assert (@tsymfoo <= RDL.types[:symbol])
+    assert (not (RDL.types[:symbol] <= @tsymfoo))
   end
 
   def test_nominal
-    assert ($__rdl_string_type <= $__rdl_string_type)
-    assert ($__rdl_symbol_type <= $__rdl_symbol_type)
-    assert (not ($__rdl_string_type <= $__rdl_symbol_type))
-    assert (not ($__rdl_symbol_type <= $__rdl_string_type))
-    assert ($__rdl_string_type <= $__rdl_object_type)
-    assert ($__rdl_string_type <= @tbasicobject)
-    assert ($__rdl_object_type <= @tbasicobject)
-    assert (not ($__rdl_object_type <= $__rdl_string_type))
-    assert (not (@tbasicobject <= $__rdl_string_type))
-    assert (not (@tbasicobject <= $__rdl_object_type))
+    assert (RDL.types[:string] <= RDL.types[:string])
+    assert (RDL.types[:symbol] <= RDL.types[:symbol])
+    assert (not (RDL.types[:string] <= RDL.types[:symbol]))
+    assert (not (RDL.types[:symbol] <= RDL.types[:string]))
+    assert (RDL.types[:string] <= RDL.types[:object])
+    assert (RDL.types[:string] <= @tbasicobject)
+    assert (RDL.types[:object] <= @tbasicobject)
+    assert (not (RDL.types[:object] <= RDL.types[:string]))
+    assert (not (@tbasicobject <= RDL.types[:string]))
+    assert (not (@tbasicobject <= RDL.types[:object]))
     assert (@ta <= @ta)
     assert (@tb <= @ta)
     assert (@tc <= @ta)
@@ -84,14 +84,14 @@ class TestLe < Minitest::Test
   end
 
   def test_union
-    tstring_or_sym = UnionType.new($__rdl_string_type, $__rdl_symbol_type)
-    assert (tstring_or_sym <= $__rdl_object_type)
-    assert (not ($__rdl_object_type <= tstring_or_sym))
+    tstring_or_sym = UnionType.new(RDL.types[:string], RDL.types[:symbol])
+    assert (tstring_or_sym <= RDL.types[:object])
+    assert (not (RDL.types[:object] <= tstring_or_sym))
   end
 
   def test_tuple
-    t1 = TupleType.new($__rdl_symbol_type, $__rdl_string_type)
-    t2 = TupleType.new($__rdl_object_type, $__rdl_object_type)
+    t1 = TupleType.new(RDL.types[:symbol], RDL.types[:string])
+    t2 = TupleType.new(RDL.types[:object], RDL.types[:object])
     tarray = NominalType.new("Array")
     assert (t1 <= t1)
     assert (t2 <= t2)
@@ -194,10 +194,10 @@ class TestLe < Minitest::Test
   end
 
   def test_method
-    tss = MethodType.new([$__rdl_string_type], nil, $__rdl_string_type)
-    tso = MethodType.new([$__rdl_string_type], nil, $__rdl_object_type)
-    tos = MethodType.new([$__rdl_object_type], nil, $__rdl_string_type)
-    too = MethodType.new([$__rdl_object_type], nil, $__rdl_object_type)
+    tss = MethodType.new([RDL.types[:string]], nil, RDL.types[:string])
+    tso = MethodType.new([RDL.types[:string]], nil, RDL.types[:object])
+    tos = MethodType.new([RDL.types[:object]], nil, RDL.types[:string])
+    too = MethodType.new([RDL.types[:object]], nil, RDL.types[:object])
     assert (tss <= tss)
     assert (tss <= tso)
     assert (not (tss <= tos))
@@ -214,21 +214,21 @@ class TestLe < Minitest::Test
     assert (too <= tso)
     assert (not (too <= tos))
     assert (too <= too)
-    tbos = MethodType.new([], tos, $__rdl_object_type)
-    tbso = MethodType.new([], tso, $__rdl_object_type)
+    tbos = MethodType.new([], tos, RDL.types[:object])
+    tbso = MethodType.new([], tso, RDL.types[:object])
     assert (tbos <= tbos)
     assert (not (tbos <= tbso))
     assert (tbso <= tbso)
     assert (tbso <= tbos)
-    assert (tss <= $__rdl_proc_type)
+    assert (tss <= RDL.types[:proc])
   end
 
   def test_structural
-    tso = MethodType.new([$__rdl_string_type], nil, $__rdl_object_type)
-    tos = MethodType.new([$__rdl_object_type], nil, $__rdl_string_type)
+    tso = MethodType.new([RDL.types[:string]], nil, RDL.types[:object])
+    tos = MethodType.new([RDL.types[:object]], nil, RDL.types[:string])
     ts1 = StructuralType.new(m1: tso)
     ts2 = StructuralType.new(m1: tos)
-    assert (ts1 <= $__rdl_top_type)
+    assert (ts1 <= RDL.types[:top])
     assert (ts1 <= ts1)
     assert (ts2 <= ts2)
     assert (ts2 <= ts1)
@@ -261,8 +261,8 @@ class TestLe < Minitest::Test
   def test_nominal_structural
     tnom = NominalType.new(Nom)
     tnomt = NominalType.new(NomT)
-    tma = MethodType.new([], nil, $__rdl_nil_type)
-    tmb = MethodType.new([$__rdl_fixnum_type], nil, $__rdl_nil_type)
+    tma = MethodType.new([], nil, RDL.types[:nil])
+    tmb = MethodType.new([RDL.types[:fixnum]], nil, RDL.types[:nil])
     ts1 = StructuralType.new(m1: tma)
     assert (tnom <= ts1)
     assert (tnomt <= ts1)
@@ -283,20 +283,20 @@ class TestLe < Minitest::Test
     assert_equal false, do_leq(tt("t"), @ta, false)[0]
     assert_equal false, do_leq(@ta, tt("t"), true)[0]
     assert_equal [true, {t: @ta}], do_leq(@ta, tt("t"), false)
-    assert_equal [true, {}], do_leq($__rdl_bot_type, tt("t"), true)
-    assert_equal [true, {}], do_leq($__rdl_bot_type, tt("t"), false)
-    assert_equal false, do_leq($__rdl_top_type, tt("t"), true)[0]
-    assert_equal [true, {t: $__rdl_top_type}], do_leq($__rdl_top_type, tt("t"), false)
+    assert_equal [true, {}], do_leq(RDL.types[:bot], tt("t"), true)
+    assert_equal [true, {}], do_leq(RDL.types[:bot], tt("t"), false)
+    assert_equal false, do_leq(RDL.types[:top], tt("t"), true)[0]
+    assert_equal [true, {t: RDL.types[:top]}], do_leq(RDL.types[:top], tt("t"), false)
     assert_equal [true, {t: @ta, u: @ta}], do_leq(tt("t or u"), @ta, true)
     assert_equal false, do_leq(tt("t or u"), @ta, false)[0]
     assert_equal false, do_leq(tt("3"), tt("t"), true)[0]
     assert_equal [true, {t: tt("3")}], do_leq(tt("3"), tt("t"), false)
-    assert_equal [true, {t: $__rdl_fixnum_type}], do_leq(tt("Array<t>"), tt("Array<Fixnum>"), true)
+    assert_equal [true, {t: RDL.types[:fixnum]}], do_leq(tt("Array<t>"), tt("Array<Fixnum>"), true)
     assert_equal false, do_leq(tt("Array<t>"), tt("Array<Fixnum>"), false)[0]
-    assert_equal [true, {t: $__rdl_fixnum_type}], do_leq(tt("Array<Fixnum>"), tt("Array<t>"), false)
+    assert_equal [true, {t: RDL.types[:fixnum]}], do_leq(tt("Array<Fixnum>"), tt("Array<t>"), false)
     assert_equal false, do_leq(tt("Array<Fixnum>"), tt("Array<t>"), true)[0]
-    assert_equal [true, {t: $__rdl_fixnum_type, u: $__rdl_string_type}], do_leq(tt("Hash<t,u>"), tt("Hash<Fixnum,String>"), true)
-    assert_equal [true, {t: $__rdl_fixnum_type}], do_leq(tt("Hash<t,t>"), tt("Hash<Fixnum,Fixnum>"), true)
+    assert_equal [true, {t: RDL.types[:fixnum], u: RDL.types[:string]}], do_leq(tt("Hash<t,u>"), tt("Hash<Fixnum,String>"), true)
+    assert_equal [true, {t: RDL.types[:fixnum]}], do_leq(tt("Hash<t,t>"), tt("Hash<Fixnum,Fixnum>"), true)
     assert_equal false, do_leq(tt("Hash<t,t>"), tt("Hash<Fixnum,String>"), true)[0]
     assert_equal false, do_leq(tt("[m:()->t]"), tt("[m:()->Fixnum]"), true)[0] # no inst inside structural types
   end
@@ -319,9 +319,9 @@ class TestLe < Minitest::Test
 
   # def test_intersection
   #   skip "<= not defined on intersection"
-  #   tobject_and_basicobject = IntersectionType.new($__rdl_object_type, @tbasicobject)
-  #   assert (not (tobject_and_basicobject <= $__rdl_object_type))
-  #   assert ($__rdl_object_type <= tobject_and_basicobject)
+  #   tobject_and_basicobject = IntersectionType.new(RDL.types[:object], @tbasicobject)
+  #   assert (not (tobject_and_basicobject <= RDL.types[:object]))
+  #   assert (RDL.types[:object] <= tobject_and_basicobject)
   # end
 
 end

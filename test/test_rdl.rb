@@ -283,11 +283,11 @@ RUBY
   end
 
   def test_cast
-    obj1 = 3.type_cast($__rdl_nil_type, force: true)
-    assert ($__rdl_nil_type.member? obj1)
+    obj1 = 3.type_cast(RDL.types[:nil], force: true)
+    assert (RDL.types[:nil].member? obj1)
     obj2 = 3.type_cast('nil', force: true)
-    assert ($__rdl_nil_type.member? obj2)
-    assert_raises(RuntimeError) { 3.type_cast($__rdl_nil_type) }
+    assert (RDL.types[:nil].member? obj2)
+    assert_raises(RuntimeError) { 3.type_cast(RDL.types[:nil]) }
   end
 
   def test_pre_post_self
@@ -339,9 +339,9 @@ RUBY
       var_type :@@foo, "String"
       var_type :$foo, "Symbol"
     }
-    assert_equal $__rdl_fixnum_type, $__rdl_info.get(TestRDL, :@foo, :type)
-    assert_equal $__rdl_string_type, $__rdl_info.get(TestRDL, :@@foo, :type)
-    assert_equal $__rdl_symbol_type, $__rdl_info.get(RDL::Util::GLOBAL_NAME, :$foo, :type)
+    assert_equal RDL.types[:fixnum], $__rdl_info.get(TestRDL, :@foo, :type)
+    assert_equal RDL.types[:string], $__rdl_info.get(TestRDL, :@@foo, :type)
+    assert_equal RDL.types[:symbol], $__rdl_info.get(RDL::Util::GLOBAL_NAME, :$foo, :type)
     assert_raises(RuntimeError) {
       self.class.class_eval { var_type :@foo, "String" }
     }

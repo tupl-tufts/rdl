@@ -166,7 +166,7 @@ module RDL::Type
         right.lbounds << left
         return true
       end
-      if left.is_a?(TupleType) && right.is_a?(GenericType) && right.base == $__rdl_array_type
+      if left.is_a?(TupleType) && right.is_a?(GenericType) && right.base == RDL.types[:array]
         # TODO !ileft and right carries a free variable
         return false unless left.promote!
         return leq(left, right, inst, ileft) # recheck for promoted type
@@ -200,7 +200,7 @@ module RDL::Type
         right.lbounds << left
         return true
       end
-      if left.is_a?(FiniteHashType) && right.is_a?(GenericType) && right.base == $__rdl_hash_type
+      if left.is_a?(FiniteHashType) && right.is_a?(GenericType) && right.base == RDL.types[:hash]
         # TODO !ileft and right carries a free variable
         return false unless left.promote!
         return leq(left, right, inst, ileft) # recheck for promoted type

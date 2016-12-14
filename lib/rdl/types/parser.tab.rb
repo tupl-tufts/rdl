@@ -698,11 +698,11 @@ module_eval(<<'.,.,', 'parser.racc', 109)
 module_eval(<<'.,.,', 'parser.racc', 111)
   def _reduce_51(val, _values, result)
           if val[0] == 'nil' then
-        result = $__rdl_nil_type
+        result = RDL.types[:nil]
       elsif val[0] == 'true' then
-        result = $__rdl_true_type
+        result = RDL.types[:true]
       elsif val[0] == 'false'
-        result = $__rdl_false_type
+        result = RDL.types[:false]
       elsif val[0] =~ /^[a-z_]+\w*\'?/ then
         result = RDL::Type::VarType.new(val[0].to_sym)
       else

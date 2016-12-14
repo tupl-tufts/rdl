@@ -11,7 +11,7 @@ class TestTypeContract < Minitest::Test
   end
 
   def test_flat
-    cnil = $__rdl_nil_type.to_contract
+    cnil = RDL.types[:nil].to_contract
     assert (cnil.check self, nil)
     assert_raises(TypeError) { cnil.check self, true }
     tfixnum = NominalType.new :Fixnum

@@ -191,11 +191,11 @@ RDL::Config.instance.profile_stats
     first = true
     print "  type #{if is_sing then '\'self.' + meth + '\'' else ':' + meth end}, '("
     otargs = []
-    otret = $__rdl_bot_type
+    otret = RDL.types[:bot]
     otblock = false
     otypes.each { |ot|
       ot[:args].each_with_index { |t, i|
-        otargs[i] = $__rdl_bot_type if otargs[i].nil?
+        otargs[i] = RDL.types[:bot] if otargs[i].nil?
         otargs[i] = RDL::Type::UnionType.new(otargs[i], RDL::Type::NominalType.new(t)).canonical
       }
       otret = RDL::Type::UnionType.new(otret, RDL::Type::NominalType.new(ot[:ret])).canonical

@@ -317,7 +317,7 @@ class Object
                         end
     if meth
 # It turns out Ruby core/stdlib don't always follow this convention...
-#        if (meth.to_s[-1] == "?") && (type.ret != $__rdl_type_bool)
+#        if (meth.to_s[-1] == "?") && (type.ret != RDL.types[:bool])
 #          warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
 #        end
       $__rdl_info.add(klass, meth, :type, type)

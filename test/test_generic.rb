@@ -37,13 +37,13 @@ class TestGeneric < Minitest::Test
   def setup
     @ta = RDL::Type::NominalType.new "TestGeneric::A"
     @th = RDL::Type::NominalType.new "TestGeneric::H"
-    @tas = RDL::Type::GenericType.new(@ta, $__rdl_string_type)
-    @tao = RDL::Type::GenericType.new(@ta, $__rdl_object_type)
+    @tas = RDL::Type::GenericType.new(@ta, RDL.types[:string])
+    @tao = RDL::Type::GenericType.new(@ta, RDL.types[:object])
     @taas = RDL::Type::GenericType.new(@ta, @tas)
     @taao = RDL::Type::GenericType.new(@ta, @tao)
-    @thss = RDL::Type::GenericType.new(@th, $__rdl_string_type, $__rdl_string_type)
-    @thoo = RDL::Type::GenericType.new(@th, $__rdl_object_type, $__rdl_object_type)
-    @thsf = RDL::Type::GenericType.new(@th, $__rdl_string_type, $__rdl_fixnum_type)
+    @thss = RDL::Type::GenericType.new(@th, RDL.types[:string], RDL.types[:string])
+    @thoo = RDL::Type::GenericType.new(@th, RDL.types[:object], RDL.types[:object])
+    @thsf = RDL::Type::GenericType.new(@th, RDL.types[:string], RDL.types[:fixnum])
     @tb = RDL::Type::NominalType.new "TestGeneric::B"
   end
 
@@ -68,10 +68,10 @@ class TestGeneric < Minitest::Test
     assert (not (@thss <= @th))
 
     # Check co- and contravariance using B
-    tbss = RDL::Type::GenericType.new(@tb, $__rdl_string_type, $__rdl_string_type)
-    tbso = RDL::Type::GenericType.new(@tb, $__rdl_string_type, $__rdl_object_type)
-    tbos = RDL::Type::GenericType.new(@tb, $__rdl_object_type, $__rdl_string_type)
-    tboo = RDL::Type::GenericType.new(@tb, $__rdl_object_type, $__rdl_object_type)
+    tbss = RDL::Type::GenericType.new(@tb, RDL.types[:string], RDL.types[:string])
+    tbso = RDL::Type::GenericType.new(@tb, RDL.types[:string], RDL.types[:object])
+    tbos = RDL::Type::GenericType.new(@tb, RDL.types[:object], RDL.types[:string])
+    tboo = RDL::Type::GenericType.new(@tb, RDL.types[:object], RDL.types[:object])
     assert (tbss <= tbss)
     assert (not (tbss <= tbso))
     assert (tbss <= tbos)
@@ -91,10 +91,10 @@ class TestGeneric < Minitest::Test
   end
 
   def test_le_structural
-    tbss = RDL::Type::GenericType.new(@tb, $__rdl_string_type, $__rdl_string_type)
-    tma = RDL::Type::MethodType.new([], nil, $__rdl_nil_type)
-    tmb = RDL::Type::MethodType.new([$__rdl_string_type], nil, $__rdl_nil_type)
-    tmc = RDL::Type::MethodType.new([$__rdl_fixnum_type], nil, $__rdl_nil_type)
+    tbss = RDL::Type::GenericType.new(@tb, RDL.types[:string], RDL.types[:string])
+    tma = RDL::Type::MethodType.new([], nil, RDL.types[:nil])
+    tmb = RDL::Type::MethodType.new([RDL.types[:string]], nil, RDL.types[:nil])
+    tmc = RDL::Type::MethodType.new([RDL.types[:fixnum]], nil, RDL.types[:nil])
     ts1 = RDL::Type::StructuralType.new(m2: tma)
     assert (tbss <= ts1)
     ts2 = RDL::Type::StructuralType.new(m1: tmb)
@@ -141,17 +141,17 @@ class TestGeneric < Minitest::Test
   end
 
   def test_instantiate
-    assert_raises(RuntimeError) { Object.new.instantiate!($__rdl_string_type) }
+    assert_raises(RuntimeError) { Object.new.instantiate!(RDL.types[:string]) }
 
     # Array<String>
     assert (A.new([]).instantiate!('String'))
-    assert (A.new(["a", "b", "c"]).instantiate!($__rdl_string_type))
+    assert (A.new(["a", "b", "c"]).instantiate!(RDL.types[:string]))
     assert (A.new(["a", "b", "c"]).instantiate!('String'))
     assert_raises(RDL::Type::TypeError) { A.new([1, 2, 3]).instantiate!('String') }
 
     # Array<Object>
     assert (A.new([])).instantiate!('Object')
-    assert (A.new(["a", "b", "c"]).instantiate!($__rdl_object_type))
+    assert (A.new(["a", "b", "c"]).instantiate!(RDL.types[:object]))
     assert (A.new(["a", "b", "c"]).instantiate!('Object'))
     assert (A.new([1, 2, 3]).instantiate!('Object'))
 
