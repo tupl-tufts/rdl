@@ -17,7 +17,7 @@ class TestLe < Minitest::Test
 
   # convert arg string to a type
   def tt(t)
-    $__rdl_parser.scan_str('#T ' + t)
+    RDL.parser.scan_str('#T ' + t)
   end
 
   def setup

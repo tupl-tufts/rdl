@@ -100,12 +100,12 @@ require 'rdl/typecheck.rb'
 #require_relative 'rdl/stats.rb'
 
 module RDL
-  $__rdl_parser = RDL::Type::Parser.new
+  @parser = RDL::Type::Parser.new
 
   # Map from file names to [digest, cache] where 2nd elt maps
   #  :ast to the AST
   #  :line_defs maps linenumber to AST for def at that line
-  $__rdl_ruby_parser_cache = Hash.new
+  @parser_cache = Hash.new
 
   # Some generally useful types; not really a big deal to do this since
   # NominalTypes are cached, but these names are shorter to type
@@ -134,11 +134,14 @@ module RDL
   @types[:proc] = RDL::Type::NominalType.new Proc
 
   # Hash from special type names to their values
-  $__rdl_special_types = {'%any' => @types[:top],
-                          '%bot' => @types[:bot],
-                          '%bool' => @types[:bool]}
+  @special_types = {'%any' => @types[:top],
+                    '%bot' => @types[:bot],
+                    '%bool' => @types[:bool]}
 end
 
 class << RDL
+  attr_reader :parser
+  attr_accessor :parser_cache
   attr_reader :types
+  attr_reader :special_types
 end

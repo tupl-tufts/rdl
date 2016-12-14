@@ -27,11 +27,11 @@ class TestParser < Minitest::Test
   end
 
   def tt(t)
-    $__rdl_parser.scan_str('#T ' + t)
+    RDL.parser.scan_str('#T ' + t)
   end
 
   def tm(t)
-    $__rdl_parser.scan_str t
+    RDL.parser.scan_str t
   end
 
   def test_basic

@@ -715,8 +715,8 @@ module_eval(<<'.,.,', 'parser.racc', 111)
 
 module_eval(<<'.,.,', 'parser.racc', 124)
   def _reduce_52(val, _values, result)
-          if $__rdl_special_types.has_key? val[0] then
-        result = $__rdl_special_types[val[0]]
+          if RDL.special_types.has_key? val[0] then
+        result = RDL.special_types[val[0]]
       else
         fail "Unexpected special type identifier #{val[0]}"
       end

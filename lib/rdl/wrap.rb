@@ -176,7 +176,7 @@ RUBY
     when RDL::Type::Type
       return type
     when String
-      return $__rdl_parser.scan_str type
+      return RDL.parser.scan_str type
     end
   end
 
@@ -354,7 +354,7 @@ class Object
     return if var.to_s =~ /^[a-z]/ # local variables handled specially, inside type checker
     raise RuntimeError, "Global variables can't be typed in a class" unless klass = self
     klass = RDL::Util::GLOBAL_NAME if var.to_s =~ /^\$/
-    unless $__rdl_info.set(klass, var, :type, $__rdl_parser.scan_str("#T #{typ}"))
+    unless $__rdl_info.set(klass, var, :type, RDL.parser.scan_str("#T #{typ}"))
       raise RuntimeError, "Type already declared for #{var}"
     end
     nil
@@ -480,7 +480,7 @@ class Object
     raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
     raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless formals.size == typs.size
     raise RuntimeError, "Instance already has type instantiation" if (defined? @__rdl_type) && @rdl_type
-    new_typs = typs.map { |t| if t.is_a? RDL::Type::Type then t else $__rdl_parser.scan_str "#T #{t}" end }
+    new_typs = typs.map { |t| if t.is_a? RDL::Type::Type then t else RDL.parser.scan_str "#T #{t}" end }
     t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *new_typs)
     if all.instance_of? Symbol
       self.send(all) { |*objs|
@@ -510,7 +510,7 @@ class Object
 
   # Returns a new object that wraps self in a type cast. If force is true this cast is *unchecked*, so use with caution
   def type_cast(typ, force: false)
-    new_typ = if typ.is_a? RDL::Type::Type then typ else $__rdl_parser.scan_str "#T #{typ}" end
+    new_typ = if typ.is_a? RDL::Type::Type then typ else RDL.parser.scan_str "#T #{typ}" end
     raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || typ.member?(self)
     obj = SimpleDelegator.new(self)
     obj.instance_variable_set('@__rdl_type', new_typ)
@@ -522,13 +522,13 @@ class Object
   # [+typ+] can be either a string, in which case it will be parsed
   # into a type, or a Type.
   def type_alias(name, typ)
-    raise RuntimeError, "Attempt to redefine type #{name}" if $__rdl_special_types[name]
+    raise RuntimeError, "Attempt to redefine type #{name}" if RDL.special_types[name]
     case typ
     when String
-      t = $__rdl_parser.scan_str "#T #{typ}"
-      $__rdl_special_types[name] = t
+      t = RDL.parser.scan_str "#T #{typ}"
+      RDL.special_types[name] = t
     when RDL::Type::Type
-      $__rdl_special_types[name] = typ
+      RDL.special_types[name] = typ
     else
       raise RuntimeError, "Unexpected typ argument #{typ.inspect}"
     end

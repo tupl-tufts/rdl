@@ -49,7 +49,7 @@ class RDL::Query
 
   # Returns sorted list of pairs [method name, type] matching query. The query should be a string containing a method type query.
   def self.method_type_query(q)
-    q = $__rdl_parser.scan_str "#Q #{q}"
+    q = RDL.parser.scan_str "#Q #{q}"
     result = []
     $__rdl_info.info.each { |klass, meths|
       meths.each { |meth, kinds|

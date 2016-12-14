@@ -190,16 +190,16 @@ module RDL::Typecheck
     end
 
     digest = Digest::MD5.file file
-    cache_hit = (($__rdl_ruby_parser_cache.has_key? file) &&
-                 ($__rdl_ruby_parser_cache[file][0] == digest))
+    cache_hit = ((RDL.parser_cache.has_key? file) &&
+                 (RDL.parser_cache[file][0] == digest))
     unless cache_hit
       file_ast = Parser::CurrentRuby.parse_file file
       mapper = ASTMapper.new(file)
       mapper.process(file_ast)
       cache = {ast: file_ast, line_defs: mapper.line_defs}
-      $__rdl_ruby_parser_cache[file] = [digest, cache]
+      RDL.parser_cache[file] = [digest, cache]
     end
-    ast = $__rdl_ruby_parser_cache[file][1][:line_defs][line]
+    ast = RDL.parser_cache[file][1][:line_defs][line]
     raise RuntimeError, "Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}" if ast.nil?
     return ast
   end
@@ -992,7 +992,7 @@ RUBY
     typ_str = e.children[3].children[0] if (e.children[3].type == :str) || (e.children[3].type == :string)
     error :var_type_format, [], e.children[3] if typ_str.nil?
     begin
-      typ = $__rdl_parser.scan_str("#T " + typ_str)
+      typ = RDL.parser.scan_str("#T " + typ_str)
     rescue Racc::ParseError => err
       error :generic_error, [err.to_s[1..-1]], e.children[3] # remove initial newline
     end
@@ -1004,7 +1004,7 @@ RUBY
     typ_str = e.children[2].children[0] if (e.children[2].type == :str) || (e.children[2].type == :string)
     error :type_cast_format, [], e.children[2] if typ_str.nil?
     begin
-      typ = $__rdl_parser.scan_str("#T " + typ_str)
+      typ = RDL.parser.scan_str("#T " + typ_str)
     rescue Racc::ParseError => err
       error :generic_error, [err.to_s[1..-1]], e.children[2] # remove initial newline
     end
