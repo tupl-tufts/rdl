@@ -174,7 +174,7 @@ module RDL::Typecheck
   end
 
   def self.get_ast(klass, meth)
-    file, line = $__rdl_info.get(klass, meth, :source_location)
+    file, line = RDL.info.get(klass, meth, :source_location)
     raise RuntimeError, "No file for #{RDL::Util.pp_klass_method(klass, meth)}" if file.nil?
     raise RuntimeError, "static type checking in irb not supported" if file == "(irb)"
     if file == "(pry)"
@@ -206,7 +206,7 @@ module RDL::Typecheck
 
   def self.typecheck(klass, meth)
     ast = get_ast(klass, meth)
-    types = $__rdl_info.get(klass, meth, :type)
+    types = RDL.info.get(klass, meth, :type)
     raise RuntimeError, "Can't typecheck method with no types?!" if types.nil? or types == []
 
     if ast.type == :def
@@ -217,7 +217,7 @@ module RDL::Typecheck
       raise RuntimeError, "Unexpected ast type #{ast.type}"
     end
     raise RuntimeError, "Method #{name} defined where method #{meth} expected" if name.to_sym != meth
-    context_types = $__rdl_info.get(klass, meth, :context_types)
+    context_types = RDL.info.get(klass, meth, :context_types)
     types.each { |type|
       if RDL::Util.has_singleton_marker(klass)
         # to_class gets the class object itself, so remove singleton marker to get class rather than singleton class
@@ -240,7 +240,7 @@ module RDL::Typecheck
       end until old_captured == scope[:captured]
       error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || body_type <= type.ret
     }
-    $__rdl_info.set(klass, meth, :typechecked, true)
+    RDL.info.set(klass, meth, :typechecked, true)
   end
 
   # [+ scope +] is used to typecheck default values for optional arguments
@@ -927,13 +927,13 @@ RUBY
       end
     when :ivar, :cvar, :gvar
       klass = (if kind == :gvar then RDL::Util::GLOBAL_NAME else env[:self] end)
-      unless $__rdl_info.has?(klass, name, :type)
+      unless RDL.info.has?(klass, name, :type)
         kind_text = (if kind == :ivar then "instance"
                      elsif kind == :cvar then "class"
                      else "global" end)
         error :untyped_var, [kind_text, name], e
       end
-      [env, $__rdl_info.get(klass, name, :type).canonical]
+      [env, RDL.info.get(klass, name, :type).canonical]
     else
       raise RuntimeError, "unknown kind #{kind}"
     end
@@ -956,13 +956,13 @@ RUBY
       end
     when :ivasgn, :cvasgn, :gvasgn
       klass = (if kind == :gvasgn then RDL::Util::GLOBAL_NAME else env[:self] end)
-      unless $__rdl_info.has?(klass, name, :type)
+      unless RDL.info.has?(klass, name, :type)
         kind_text = (if kind == :ivasgn then "instance"
                     elsif kind == :cvasgn then "class"
                     else "global" end)
         error :untyped_var, [kind_text, name], e
       end
-      tleft = $__rdl_info.get(klass, name, :type)
+      tleft = RDL.info.get(klass, name, :type)
       error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless tright <= tleft
       [env, tright.canonical]
     when :send
@@ -1260,7 +1260,7 @@ RUBY
         return t if k == klass && m = name
       }
     end
-    t = $__rdl_info.get_with_aliases(klass, name, :type)
+    t = RDL.info.get_with_aliases(klass, name, :type)
     return t if t # simplest case, no need to walk inheritance hierarchy
     the_klass = RDL::Util.to_class(klass)
     is_singleton = RDL::Util.has_singleton_marker(the_klass.to_s)
@@ -1271,11 +1271,11 @@ RUBY
       next if (ancestor.instance_of? Module) && (included.member? ancestor) && is_singleton
       # extended (i.e., not included) modules' instance methods get added as singleton methods, so can't be in class
       next if (ancestor.instance_of? Module) && (not (included.member? ancestor)) && (not is_singleton)
-      tancestor = $__rdl_info.get_with_aliases(ancestor.to_s, name, :type)
+      tancestor = RDL.info.get_with_aliases(ancestor.to_s, name, :type)
       return tancestor if tancestor
       # special caes: Kernel's singleton methods are *also* added when included?!
       if ancestor == Kernel
-        tancestor = $__rdl_info.get_with_aliases(RDL::Util.add_singleton_marker('Kernel'), name, :type)
+        tancestor = RDL.info.get_with_aliases(RDL::Util.add_singleton_marker('Kernel'), name, :type)
         return tancestor if tancestor
       end
       if ancestor.instance_methods(false).member?(name)

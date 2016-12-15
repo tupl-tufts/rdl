@@ -339,9 +339,9 @@ RUBY
       var_type :@@foo, "String"
       var_type :$foo, "Symbol"
     }
-    assert_equal RDL.types[:fixnum], $__rdl_info.get(TestRDL, :@foo, :type)
-    assert_equal RDL.types[:string], $__rdl_info.get(TestRDL, :@@foo, :type)
-    assert_equal RDL.types[:symbol], $__rdl_info.get(RDL::Util::GLOBAL_NAME, :$foo, :type)
+    assert_equal RDL.types[:fixnum], RDL.info.get(TestRDL, :@foo, :type)
+    assert_equal RDL.types[:string], RDL.info.get(TestRDL, :@@foo, :type)
+    assert_equal RDL.types[:symbol], RDL.info.get(RDL::Util::GLOBAL_NAME, :$foo, :type)
     assert_raises(RuntimeError) {
       self.class.class_eval { var_type :@foo, "String" }
     }

@@ -75,7 +75,7 @@ module RDL::Type
       if left.is_a?(NominalType) && right.is_a?(StructuralType)
         right.methods.each_pair { |m, t|
           return false unless left.klass.method_defined? m
-          types = $__rdl_info.get(left.klass, m, :type)
+          types = RDL.info.get(left.klass, m, :type)
           if types
             return false unless types.all? { |tlm| leq(tlm, t, nil, ileft) }
             # inst above is nil because the method types inside the class and
@@ -121,7 +121,7 @@ module RDL::Type
         klass = left.base.klass
         right.methods.each_pair { |meth, t|
           return false unless klass.method_defined? meth
-          types = $__rdl_info.get(klass, meth, :type)
+          types = RDL.info.get(klass, meth, :type)
           if types
             return false unless types.all? { |tlm| leq(tlm.instantiate(base_inst), t, nil, ileft) }
           end

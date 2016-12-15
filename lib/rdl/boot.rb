@@ -24,7 +24,7 @@ module RDL
   #   :context_types to array of [klass, meth, Type] - method types that exist only within this method. An icky hack to deal with Rails `params`.
   # For variables
   #   :type to type
-  $__rdl_info = RDL::Info.new
+  @info = RDL::Info.new
 
   # Map from full_method_name to number of times called when wrapped
   $__rdl_wrapped_calls = Hash.new 0
@@ -140,6 +140,8 @@ module RDL
 end
 
 class << RDL
+  attr_accessor :info
+  
   attr_reader :wrap_switch
   attr_reader :contract_switch
   attr_reader :parser

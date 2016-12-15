@@ -132,7 +132,7 @@ RDL::Config.instance.profile_stats
     puts "------------------------------"
     typechecked = []
     missing = []
-    $__rdl_info.info.each_pair { |klass, meths|
+    RDL.info.info.each_pair { |klass, meths|
       meths.each { |meth, kinds|
         if kinds[:typecheck]
           if kinds[:typechecked]
@@ -186,7 +186,7 @@ RDL::Config.instance.profile_stats
     puts " -> XXXX'"
 
     # next print based on observed types
-    otypes = $__rdl_info.get(klass, meth, :otype) if $__rdl_info.has?(klass, meth, :otype) # observed types
+    otypes = RDL.info.get(klass, meth, :otype) if RDL.info.has?(klass, meth, :otype) # observed types
     return if otypes.nil?
     first = true
     print "  type #{if is_sing then '\'self.' + meth + '\'' else ':' + meth end}, '("
