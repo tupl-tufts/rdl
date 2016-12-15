@@ -575,7 +575,7 @@ module RDL::Typecheck
         else
           ic = Object
         end
-        c = get_leaves(e).inject(ic) {|m, c| m.const_get(c)}
+        c = get_leaves(e).inject(ic) {|m, c2| m.const_get(c2)}
       else
         raise "const other not implemented yet"
       end
@@ -845,9 +845,9 @@ RUBY
       # TODO return in lambda returns from lambda and not outer scope
       if e.children[0]
          env1, t1 = tc(scope, env, e.children[0])
-       else
+      else
          env1, t1 = [env, RDL.types[:nil]]
-       end
+      end
       error :bad_return_type, [t1.to_s, scope[:tret]], e unless t1 <= scope[:tret]
       [env1, RDL.types[:bot]] # return is a void value expression
     when :begin, :kwbegin # sequencing
