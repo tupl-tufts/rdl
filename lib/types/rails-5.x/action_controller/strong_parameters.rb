@@ -10,7 +10,7 @@ class ActionController::Base
     typs.each_pair { |param, param_type|
       param_type = RDL.parser.scan_str "#T #{param_type}"
       meth_type = RDL.parser.scan_str "(#{param.inspect}) -> #{param_type}" # given singleton symbol arg, get param's return type
-      $__rdl_deferred << [self, :context_types, [ActionController::Parameters, :[], meth_type], class_check: self]
+      RDL.deferred << [self, :context_types, [ActionController::Parameters, :[], meth_type], class_check: self]
     }
   end
 end

@@ -6,18 +6,18 @@ class RDL::Wrap
   def self.resolve_alias(klass, meth)
     klass = klass.to_s
     meth = meth.to_sym
-    while $__rdl_aliases[klass] && $__rdl_aliases[klass][meth]
+    while RDL.aliases[klass] && RDL.aliases[klass][meth]
       if RDL.info.has_any?(klass, meth, [:pre, :post, :type])
         raise RuntimeError, "Alias #{RDL::Util.pp_klass_method(klass, meth)} has contracts. Contracts are only allowed on methods, not aliases."
       end
-      meth = $__rdl_aliases[klass][meth]
+      meth = RDL.aliases[klass][meth]
     end
     return meth
   end
 
   def self.get_type_params(klass)
     klass = klass.to_s
-    $__rdl_type_params[klass]
+    RDL.type_params[klass]
   end
 
   # [+klass+] may be a Class, String, or Symbol
@@ -47,10 +47,10 @@ class RDL::Wrap
           inst = nil
 
           RDL.wrap_switch.off {
-            $__rdl_wrapped_calls["#{full_method_name}"] += 1 if RDL::Config.instance.gather_stats
+            RDL.wrapped_calls["#{full_method_name}"] += 1 if RDL::Config.instance.gather_stats
             inst = nil
             inst = @__rdl_inst if defined? @__rdl_inst
-            inst = Hash[$__rdl_type_params[klass][0].zip []] if (not(inst) && $__rdl_type_params[klass])
+            inst = Hash[RDL.type_params[klass][0].zip []] if (not(inst) && RDL.type_params[klass])
             inst = {} if not inst
             #{if not(is_singleton_method) then "inst[:self] = RDL::Type::NominalType.new(self.class)" end}
 #            puts "Intercepted #{full_method_name}(\#{args.join(", ")}) { \#{blk} }, inst = \#{inst.inspect}"
@@ -184,15 +184,15 @@ RUBY
   def self.do_method_added(the_self, sing, klass, meth)
     # Apply any deferred contracts and reset list
 
-    if $__rdl_deferred.size > 0
+    if RDL.deferred.size > 0
       if sing
         loc = the_self.singleton_method(meth).source_location
       else
         loc = the_self.instance_method(meth).source_location
       end
       RDL.info.set(klass, meth, :source_location, loc)
-      a = $__rdl_deferred
-      $__rdl_deferred = [] # Reset before doing more work to avoid infinite recursion
+      a = RDL.deferred
+      RDL.deferred = [] # Reset before doing more work to avoid infinite recursion
       a.each { |prev_klass, kind, contract, h|
         if RDL::Util.has_singleton_marker(klass)
           tmp_klass = RDL::Util.remove_singleton_marker(klass)
@@ -209,15 +209,15 @@ RUBY
         end
         RDL::Typecheck.typecheck(klass, meth) if h[:typecheck] == :now
         if (h[:typecheck] && h[:typecheck] != :call)
-          $__rdl_to_typecheck[h[:typecheck]] = Set.new unless $__rdl_to_typecheck[h[:typecheck]]
-          $__rdl_to_typecheck[h[:typecheck]].add([klass, meth])
+          RDL.to_typecheck[h[:typecheck]] = Set.new unless RDL.to_typecheck[h[:typecheck]]
+          RDL.to_typecheck[h[:typecheck]].add([klass, meth])
         end
       }
     end
 
     # Wrap method if there was a prior contract for it.
-    if $__rdl_to_wrap.member? [klass, meth]
-      $__rdl_to_wrap.delete [klass, meth]
+    if RDL.to_wrap.member? [klass, meth]
+      RDL.to_wrap.delete [klass, meth]
       RDL::Wrap.wrap(klass, meth)
       if sing
         loc = the_self.singleton_method(meth).source_location
@@ -228,8 +228,8 @@ RUBY
     end
 
     # Type check method if requested
-    if $__rdl_to_typecheck[:now].member? [klass, meth]
-      $__rdl_to_typecheck[:now].delete [klass, meth]
+    if RDL.to_typecheck[:now].member? [klass, meth]
+      RDL.to_typecheck[:now].delete [klass, meth]
       RDL::Typecheck.typecheck(klass, meth)
     end
 
@@ -262,11 +262,11 @@ class Object
         if RDL::Util.method_defined?(klass, meth) || meth == :initialize # there is always an initialize
           RDL::Wrap.wrap(klass, meth)
         else
-          $__rdl_to_wrap << [klass, meth]
+          RDL.to_wrap << [klass, meth]
         end
       end
     else
-      $__rdl_deferred << [klass, :pre, contract, {wrap: wrap}]
+      RDL.deferred << [klass, :pre, contract, {wrap: wrap}]
     end
     nil
   end
@@ -280,11 +280,11 @@ class Object
         if RDL::Util.method_defined?(klass, meth) || meth == :initialize
           RDL::Wrap.wrap(klass, meth)
         else
-          $__rdl_to_wrap << [klass, meth]
+          RDL.to_wrap << [klass, meth]
         end
       end
     else
-      $__rdl_deferred << [klass, :post, contract, {wrap: wrap}]
+      RDL.deferred << [klass, :post, contract, {wrap: wrap}]
     end
     nil
   end
@@ -331,16 +331,16 @@ class Object
           RDL::Wrap.wrap(klass, meth) if wrap
         else
           if wrap
-            $__rdl_to_wrap << [klass, meth]
+            RDL.to_wrap << [klass, meth]
             if (typecheck && typecheck != :call)
-              $__rdl_to_typecheck[typecheck] = Set.new unless $__rdl_to_typecheck[typecheck]
-              $__rdl_to_typecheck[typecheck].add([klass, meth])
+              RDL.to_typecheck[typecheck] = Set.new unless RDL.to_typecheck[typecheck]
+              RDL.to_typecheck[typecheck].add([klass, meth])
             end
           end
         end
       end
     else
-      $__rdl_deferred << [klass, :type, type, {wrap: wrap,
+      RDL.deferred << [klass, :type, type, {wrap: wrap,
                                                typecheck: typecheck}]
     end
     nil
@@ -415,17 +415,17 @@ class Object
   def rdl_alias(new_name, old_name)
     klass = self.to_s
     klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-    $__rdl_aliases[klass] = {} unless $__rdl_aliases[klass]
-    if $__rdl_aliases[klass][new_name]
+    RDL.aliases[klass] = {} unless RDL.aliases[klass]
+    if RDL.aliases[klass][new_name]
       raise RuntimeError,
-            "Tried to alias #{new_name}, already aliased to #{$__rdl_aliases[klass][new_name]}"
+            "Tried to alias #{new_name}, already aliased to #{RDL.aliases[klass][new_name]}"
     end
-    $__rdl_aliases[klass][new_name] = old_name
+    RDL.aliases[klass][new_name] = old_name
 
     if self.method_defined? new_name
       RDL::Wrap.wrap(klass, new_name)
     else
-      $__rdl_to_wrap << [klass, old_name]
+      RDL.to_wrap << [klass, old_name]
     end
     nil
   end
@@ -446,8 +446,8 @@ class Object
     raise RuntimeError, "Empty type parameters not allowed" if params.empty?
     klass = self.to_s
     klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-    if $__rdl_type_params[klass]
-      raise RuntimeError, "#{klass} already has type parameters #{$__rdl_type_params[klass]}"
+    if RDL.type_params[klass]
+      raise RuntimeError, "#{klass} already has type parameters #{RDL.type_params[klass]}"
     end
     params = params.map { |v|
       raise RuntimeError, "Type parameter #{v.inspect} is not symbol or string" unless v.class == String || v.class == Symbol
@@ -461,7 +461,7 @@ class Object
     chk = all || blk
     raise RuntimeError, "At least one of {all, blk} required" unless chk
     variance = params.map { |p| :~ } unless variance # default to invariant
-    $__rdl_type_params[klass] = [params, variance, chk]
+    RDL.type_params[klass] = [params, variance, chk]
     nil
   end
 
@@ -476,7 +476,7 @@ class Object
   def instantiate!(*typs)
     klass = self.class.to_s
     klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-    formals, _, all = $__rdl_type_params[klass]
+    formals, _, all = RDL.type_params[klass]
     raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
     raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless formals.size == typs.size
     raise RuntimeError, "Instance already has type instantiation" if (defined? @__rdl_type) && @rdl_type
@@ -502,7 +502,7 @@ class Object
   end
 
   def deinstantiate!
-    raise RuntimeError, "Class #{self.to_s} is not parameterized" unless $__rdl_type_params[klass]
+    raise RuntimeError, "Class #{self.to_s} is not parameterized" unless RDL.type_params[klass]
     raise RuntimeError, "Instance is not instantiated" unless @__rdl_type && @@__rdl_type.instance_of?(RDL::Type::GenericType)
     @__rdl_type = nil
     self
@@ -539,22 +539,22 @@ class Object
   # The blk will be called with sym as its argument. The order
   # in which multiple blks for the same sym will be executed is unspecified
   def rdl_at(sym, &blk)
-    $__rdl_at[sym] = [] unless $__rdl_at[sym]
-    $__rdl_at[sym] << blk
+    RDL.to_do_at[sym] = [] unless RDL.to_do_at[sym]
+    RDL.to_do_at[sym] << blk
   end
 
   # Invokes all callbacks from rdl_at(sym), in unspecified order.
   # Afterwards, type checks all methods that had annotation `typecheck: sym' at type call, in unspecified order.
   def rdl_do_typecheck(sym)
-    if $__rdl_at[sym]
-      $__rdl_at[sym].each { |blk| blk.call(sym) }
+    if RDL.to_do_at[sym]
+      RDL.to_do_at[sym].each { |blk| blk.call(sym) }
     end
-    $__rdl_at[sym] = Array.new
-    return unless $__rdl_to_typecheck[sym]
-    $__rdl_to_typecheck[sym].each { |klass, meth|
+    RDL.to_do_at[sym] = Array.new
+    return unless RDL.to_typecheck[sym]
+    RDL.to_typecheck[sym].each { |klass, meth|
       RDL::Typecheck.typecheck(klass, meth)
     }
-    $__rdl_to_typecheck[sym] = Set.new
+    RDL.to_typecheck[sym] = Set.new
     nil
   end
 

@@ -27,31 +27,42 @@ module RDL
   @info = RDL::Info.new
 
   # Map from full_method_name to number of times called when wrapped
-  $__rdl_wrapped_calls = Hash.new 0
+  @wrapped_calls = Hash.new 0
 
   # Hash from class name to array of symbols that are the class's type parameters
-  $__rdl_type_params = Hash.new
+  @type_params = Hash.new
 
   # Hash from class name to method name to its alias method name
   # class names are strings
   # method names are symbols
-  $__rdl_aliases = Hash.new
+  @aliases = Hash.new
 
   # Set of [class, method] pairs to wrap.
   # class is a string
   # method is a symbol
-  $__rdl_to_wrap = Set.new
+  @to_wrap = Set.new
 
   # Map from symbols to set of [class, method] pairs to type check when those symbols are rdl_do_typecheck'd
   # (or the methods are defined, for the symbol :now)
-  $__rdl_to_typecheck = Hash.new
-  $__rdl_to_typecheck[:now] = Set.new
+  @to_typecheck = Hash.new
+  @to_typecheck[:now] = Set.new
 
   # Map from symbols to Array<Proc> where the Procs are called when those symbols are rdl_do_typecheck'd
-  $__rdl_at = Hash.new
+  @to_do_at = Hash.new
 
   # List of contracts that should be applied to the next method definition
-  $__rdl_deferred = []
+  @deferred = []
+end
+
+class << RDL # add accessors and readers for module variables
+  attr_accessor :info
+  attr_accessor :wrapped_calls
+  attr_accessor :type_params
+  attr_reader :aliases
+  attr_accessor :to_wrap
+  attr_accessor :to_typecheck
+  attr_accessor :to_do_at
+  attr_accessor :deferred
 end
 
 # Create switches to control whether wrapping happens and whether
@@ -61,6 +72,11 @@ require 'rdl/switch.rb'
 module RDL
   @wrap_switch = RDL::Switch.new
   @contract_switch = RDL::Switch.new
+end
+
+class << RDL
+  attr_reader :wrap_switch
+  attr_reader :contract_switch
 end
 
 require 'rdl/types/type.rb'
@@ -140,10 +156,6 @@ module RDL
 end
 
 class << RDL
-  attr_accessor :info
-  
-  attr_reader :wrap_switch
-  attr_reader :contract_switch
   attr_reader :parser
   attr_accessor :parser_cache
   attr_reader :types

@@ -75,7 +75,7 @@ RDL::Config.instance.profile_stats
         }
 
         p "Scanning RDL Contract Log"
-        $__rdl_wrapped_calls.each{ |mname,ct|
+        RDL.wrapped_calls.each{ |mname,ct|
           if (totals[mname]) then
             if (totals[mname][0]) then
               totals[mname][0] = ct
