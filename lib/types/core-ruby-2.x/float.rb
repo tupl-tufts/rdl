@@ -80,9 +80,9 @@ class Float < Numeric
   type :>=, '(Rational) -> %bool'
   type :>=, '(BigDecimal x {{ !self.infinite? && !self.nan? }}) -> %bool'
 
-  type :abs, '() -> Float r {{ r>=0 }}'
+  type :abs, '() -> Float r {{ r>=0 || (if self.nan? then r.nan? end) }}'
 
-  type :abs2, '() -> Float r {{ r>=0 }}'
+  type :abs2, '() -> Float r {{ r>=0 || (if self.nan? then r.nan? end) }}'
 
   type :div, '(%integer x {{ x != 0 && !self.infinite? && !self.nan? }}) -> %integer'
   type :div, '(Float x {{ x != 0 && !self.infinite? && !self.nan? }}) -> %integer'
