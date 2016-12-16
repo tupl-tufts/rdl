@@ -62,7 +62,7 @@ module RDL::Type
       until states.empty?
         formal, actual = states.pop
         if formal == @args.size && actual == args.size then # Matched all actuals, no formals left over
-	        check_arg_preds(bind, preds) if preds.size > 0
+	  check_arg_preds(bind, preds) if preds.size > 0
           @args.each_with_index {|a,i| args[i] = block_wrap(slf, inst, a, bind, &args[i]) if a.is_a? MethodType }
           if @block then
             if @block.is_a? OptionalType
@@ -115,7 +115,7 @@ module RDL::Type
             states << [formal+1, actual] # doesn't match, must skip
           end
         when DependentArgType
-	        bind.local_variable_set(t.name.to_sym,args[actual])
+	  bind.local_variable_set(t.name.to_sym,args[actual])
           preds.push(t)
           t = t.type.instantiate(inst)
           the_actual = nil

@@ -78,9 +78,9 @@ class BigDecimal < Numeric
   type :<=>, '(BigDecimal) -> Object'
   post(:<=>) { |r,x| r == -1 || r==0 || r==1}
 
-  type :abs, '() -> BigDecimal r {{ r>=0 }}'
+  type :abs, '() -> BigDecimal r {{ r>=0 || (if r.nan? then self.nan? end) }}'
 
-  type :abs2, '() -> BigDecimal r {{ r>=0 }}'
+  type :abs2, '() -> BigDecimal r {{ r>=0 || (if r.nan? then self.nan? end) }}'
 
   type :angle, '() -> %numeric'
   post(:angle) { |r,x| r == 0 || r == Math::PI}
@@ -89,13 +89,13 @@ class BigDecimal < Numeric
   post(:arg) { |r,x| r == 0 || r == Math::PI}
 
   type :ceil, '() -> %integer'
-  pre(:ceil) { !self.ininite? && !self.nan?}
+  pre(:ceil) { !self.infinite? && !self.nan?}
 
   type :conj, '() -> BigDecimal'
   type :conjugate, '() -> BigDecimal'
 
   type :denominator, '() -> %integer'
-  pre(:denominator) { !self.ininite? && !self.nan?}
+  pre(:denominator) { !self.infinite? && !self.nan?}
   post(:denominator) { |r,x| r>0}
 
   type :div, '(Fixnum x {{ x!=0 && !self.infinite? && !self.nan? }}) -> %integer'
@@ -127,7 +127,7 @@ class BigDecimal < Numeric
   type :imag, '() -> Fixnum r {{ r==0 }}'
   type :imaginary, '() -> Fixnum r {{ r==0 }}'
 
-  type :infinite?, '() -> %bool'
+  type :infinite?, '() -> NilClass or Fixnum'
 
   type :to_s, '() -> String'
   type :inspect, '() -> String'

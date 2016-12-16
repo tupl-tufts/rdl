@@ -48,9 +48,9 @@ class Complex < Numeric
 
   type:==, '(Object) -> %bool'
 
-  type :abs, '() -> %numeric r {{ r>=0 }}'
-
-  type :abs2, '() -> %numeric r {{ r>=0 }}'
+  type :abs, '() -> %numeric r {{ r>=0 || (if ((((self.real.is_a? BigDecimal)||(self.real.is_a? Float)) && self.real.nan?) || (((self.imaginary.is_a? BigDecimal)||(self.imaginary.is_a? Float)) && self.imaginary.nan?)) then r.nan? end) }}'
+  
+  type :abs2, '() -> %numeric r {{ r>=0 || (if ((((self.real.is_a? BigDecimal)||(self.real.is_a? Float)) && self.real.nan?) || (((self.imaginary.is_a? BigDecimal)||(self.imaginary.is_a? Float)) && self.imaginary.nan?)) then r.nan? end) }}'
 
   type :angle, '() -> Float'
 
