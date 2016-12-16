@@ -5,18 +5,33 @@ class RDL::Config
 
   attr_accessor :nowrap
   attr_accessor :gather_stats
-  attr_accessor :report
-  attr_accessor :guess_types
+  attr_reader :report # writer is custom defined
   attr_accessor :type_defaults, :pre_defaults, :post_defaults
 
   def initialize
     @nowrap = Set.new
     @gather_stats = false
-    @report = false
-    @guess_types = []
+    @report = false # if this is enabled by default, modify @at_exit_installed
+    @guess_types = [] # same as above
+    @at_exit_installed = false
     @type_defaults = { wrap: true, typecheck: false }
     @pre_defaults = { wrap: true }
     @post_defaults = { wrap: true }
+  end
+
+  def report=(val)
+    install_at_exit
+    @report = val
+  end
+
+  def guess_types
+    install_at_exit
+    return @guess_types
+  end
+
+  def guess_types=(val)
+    install_at_exit
+    @guess_types = val
   end
 
   def add_nowrap(*klasses)
@@ -233,7 +248,13 @@ RDL::Config.instance.profile_stats
   end
 end
 
-at_exit do
-  RDL::Config.instance.do_report
-  RDL::Config.instance.do_guess_types
-end
+private
+
+  def install_at_exit
+    return if @at_exit_installed
+    at_exit do
+      RDL::Config.instance.do_report
+      RDL::Config.instance.do_guess_types
+    end
+    @at_exit_installed = true
+  end
