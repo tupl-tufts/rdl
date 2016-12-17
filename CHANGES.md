@@ -8,11 +8,11 @@
 
 ### Fixed
 - Parsing bug with `or`
-- Subclass Parser::Diagnostic instead of monkey patching it
 
 ### Changed
 - Global variables are now module variables of RDL
 - at_exit handler only installed if `Config.report` or `.guess_types` are accessed
+- Subclass Parser::Diagnostic instead of monkey patching it
 
 ## [2.0.1] - 2016-11-11
 
