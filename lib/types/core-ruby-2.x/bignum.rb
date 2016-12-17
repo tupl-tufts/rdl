@@ -7,7 +7,7 @@ class Bignum < Integer
   type :%, '(Rational x {{ x!=0 }}) -> Rational'
   type :%, '(BigDecimal x {{ x!=0 }}) -> BigDecimal'
 
-  type :&, '(%integer) -> Fixnum'
+  type :&, '(%integer) -> %integer'
 
   type :*, '(Fixnum) -> %integer'
   type :*, '(Bignum) -> Bignum'
