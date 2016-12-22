@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- Typechecking bug in const expressions when env[:self] is SingletonType
+
 ### Added
 - Support operator assignment when left-hand side has method args
 - Support nested class names

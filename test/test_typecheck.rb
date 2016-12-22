@@ -25,6 +25,11 @@ class TestTypecheckOuter
   end
 end
 
+class X
+end
+class Y
+end
+
 class TestTypecheck < Minitest::Test
   type :_any_object, "() -> Object" # a method that could return true or false
 
@@ -124,6 +129,18 @@ class TestTypecheck < Minitest::Test
     }
 
     assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :later }
+  end
+
+  def test_singleton_method_const
+    X.class_eval {
+      type '(Fixnum) -> Fixnum'
+      def foo(x) x; end
+    }
+    Y.class_eval {
+      type '(Fixnum) -> Fixnum', typecheck: :later2
+      def self.bar(x) a = X.new; a.foo(x); end
+    }
+    self.class.class_eval { rdl_do_typecheck :later2 }
   end
 
   def test_lits
