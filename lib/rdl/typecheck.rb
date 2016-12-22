@@ -560,7 +560,12 @@ module RDL::Typecheck
     when :const
       c = nil
       if e.children[0].nil?
-        c = env[:self].klass.const_get(e.children[1])
+        case env[:self]
+        when RDL::Type::SingletonType
+          c = env[:self].nominal.klass.const_get(e.children[1])
+        else
+          c = env[:self].klass.const_get(e.children[1])
+        end
       elsif e.children[0].type == :cbase
         raise "const cbase not implemented yet" # TODO!
       elsif e.children[0].type == :lvar
