@@ -4,10 +4,12 @@
 
 ### Fixed
 - Typechecking bug in const expressions when env[:self] is SingletonType
+- Type for unary minus in numeric type files (changed :- to :-@)
 
 ### Added
 - Support operator assignment when left-hand side has method args
 - Support nested class names
+- Type for unary plus in numeric type files
 
 ### Fixed
 - Parsing bug with `or`

@@ -35,7 +35,9 @@ class Complex < Numeric
   type :-, '(Complex) -> Complex'
   pre(:-) { |x| if (x.real.is_a?(BigDecimal) && self.real.is_a?(Float)) then !(self.real.infinite?||self.real.nan?) elsif x.real.is_a?(Float)&&self.real.is_a?(BigDecimal) then !(x.real.infinite?||x.real.nan?) elsif (x.imaginary.is_a?(BigDecimal) && self.imaginary.is_a?(Float)) then !(self.imaginary.infinite?||self.imaginary.nan?) elsif x.imaginary.is_a?(Float)&&self.imaginary.is_a?(BigDecimal) then !(x.imaginary.infinite?||x.imaginary.nan?) else true end}
 
-  type :-, '() -> Complex'
+  type :-@, '() -> Complex'
+
+  type :+@, '() -> Complex'
 
   type :/, '(%integer x {{ x!=0 }}) -> Complex'
   type :/, '(Float x {{ x!=0 }}) -> Complex'

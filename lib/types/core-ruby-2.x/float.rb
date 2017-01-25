@@ -36,7 +36,9 @@ class Float < Numeric
   type :-, '(Complex) -> Complex'
   pre(:-) { |x| if x.real.is_a?(BigDecimal) then self!=Float::INFINITY && !(self.nan?) else true end}
 
-  type :-, '() -> Float'
+  type :-@, '() -> Float'
+
+  type :+@, '() -> Float'
 
   type :/, '(%integer x {{ x != 0 }}) -> Float'
   type :/, '(Float x {{ x != 0 }}) -> Float'

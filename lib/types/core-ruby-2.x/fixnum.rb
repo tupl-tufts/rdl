@@ -37,7 +37,9 @@ class Fixnum < Integer
   type :-, '(BigDecimal) -> BigDecimal'
   type :-, '(Complex) -> Complex'
 
-  type :-, '() -> Fixnum'
+  type :-@, '() -> %integer'
+
+  type :+@, '() -> Fixnum'
 
   type :/, '(%integer x {{ x!=0 }}) -> %integer'
   type :/, '(Float x {{ x!=0 }}) -> Float'

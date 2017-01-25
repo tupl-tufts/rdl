@@ -5,6 +5,8 @@ class Numeric
   pre(:%) { |x| x!=0}
   type :+, '(%numeric) -> %numeric'
   type :-, '() -> %numeric'
+  type :-@, '() -> %numeric'
+  type :+@, '() -> %numeric'
   type :<=>, '(%numeric) -> Object'
   post(:<=>) { |r,x| r == -1 || r==0 || r==1 || r==nil}
   type :abs, '() -> %numeric'
