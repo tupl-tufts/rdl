@@ -37,7 +37,9 @@ class Integer < Numeric
   type :-, '(BigDecimal) -> BigDecimal'
   type :-, '(Complex) -> Complex'
 
-  type :-, '() -> %integer'
+  type :-@, '() -> %integer'
+
+  type :+@, '() -> %integer'
 
   type :/, '(%integer x {{ x!=0 }}) -> %integer'
   type :/, '(Float x {{ x!=0 }}) -> Float'

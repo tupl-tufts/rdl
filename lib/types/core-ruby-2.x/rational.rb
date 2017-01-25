@@ -29,7 +29,9 @@ class Rational < Numeric
   type :-, '(BigDecimal) -> BigDecimal'
   type :-, '(Complex) -> Complex'
 
-  type :-, '() -> Rational'
+  type :-@, '() -> Rational'
+
+  type :+@, '() -> Rational'
 
   type :**, '(%integer) -> %numeric'
   type :**, '(Float) -> %numeric'

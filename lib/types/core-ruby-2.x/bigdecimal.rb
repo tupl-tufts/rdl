@@ -18,7 +18,9 @@ class BigDecimal < Numeric
   type :-, '(Complex) -> Complex'
   pre(:-) { |x| if x.real.is_a?(Float) then x.real!=Float::INFINITY && !(x.real.nan?) else true end}
 
-  type :-, '() -> BigDecimal'
+  type :-@, '() -> BigDecimal'
+
+  type :+@, '() -> BigDecimal'
 
   type :*, '(%integer) -> BigDecimal'
   type :*, '(Float x {{ !x.infinite? && !x.nan? }}) -> BigDecimal'
