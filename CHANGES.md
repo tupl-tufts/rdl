@@ -5,6 +5,7 @@
 ### Fixed
 - Typechecking bug in const expressions when env[:self] is SingletonType
 - Type for unary minus in numeric type files (changed :- to :-@)
+- Typechecking initialize method bug
 
 ### Added
 - Support operator assignment when left-hand side has method args
