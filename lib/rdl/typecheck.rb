@@ -1062,7 +1062,14 @@ RUBY
     case trecv
     when RDL::Type::SingletonType
       if trecv.val.is_a? Class or trecv.val.is_a? Module
-        ts = lookup(scope, RDL::Util.add_singleton_marker(trecv.val.to_s), meth, e)
+        if meth == :new then
+          meth_lookup = :initialize
+          trecv_lookup = trecv.val.to_s
+        else
+          meth_lookup = meth
+          trecv_lookup = RDL::Util.add_singleton_marker(trecv.val.to_s)
+        end
+        ts = lookup(scope, trecv_lookup, meth_lookup, e)
         ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] if (meth == :new) && (ts.nil?) # there's always a nullary new if initialize is undefined
         error :no_singleton_method_type, [trecv.val, meth], e unless ts
         inst = {self: trecv}
