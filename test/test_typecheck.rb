@@ -13,6 +13,20 @@ end
 class TestTypecheckD
 end
 
+class TestTypecheckE
+  type '(Fixnum) -> self', typecheck: :einit
+  def initialize(x)
+    x
+  end
+end
+
+class TestTypecheckF
+  type '(Fixnum) -> F', typecheck: :finit
+  def initialize(x)
+    x
+  end
+end
+
 module TestTypecheckM
   type 'self.foo', '() -> :B'
 end
@@ -1325,11 +1339,15 @@ class TestTypecheck < Minitest::Test
       self.class.class_eval {
         type '(Fixnum) -> Fixnum', typecheck: :now
         def self.def_bad_new_call(x)
-          c = TestTypecheckC.new()
+          TestTypecheckC.new()
           x
         end
       }
     }
+
+    rdl_do_typecheck :einit
+
+    assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :finit }
       
     t = do_tc("TestTypecheckD.new", env: @env)
     t2 = RDL::Type::NominalType.new TestTypecheckD
