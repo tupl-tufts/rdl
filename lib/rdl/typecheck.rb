@@ -225,6 +225,10 @@ module RDL::Typecheck
       else
         self_type = RDL::Type::NominalType.new(klass)
       end
+      if meth == :initialize
+        # initialize method must always return "self"
+        error :bad_initialize_type, [], ast unless type.ret.is_a?(RDL::Type::VarType) && type.ret.name == :self
+      end
       inst = {self: self_type}
       type = type.instantiate inst
       _, targs = args_hash({}, Env.new, type, args, ast, 'method')
@@ -238,7 +242,7 @@ module RDL::Typecheck
           _, body_type = tc(scope, Env.new(targs.merge(scope[:captured])), body)
         end
       end until old_captured == scope[:captured]
-      error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || body_type <= type.ret
+      error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || meth == :initialize || body_type <= type.ret
     }
     RDL.info.set(klass, meth, :typechecked, true)
   end
@@ -1313,6 +1317,7 @@ class Diagnostic < Parser::Diagnostic
 
   RDL_MESSAGES = {
     bad_return_type: "got type `%s' where return type `%s' expected",
+    bad_initialize_type: 'initialize method must always be annotated to return type "self"',
     undefined_local_or_method: "undefined local variable or method `%s'",
     nonmatching_range_type: "attempt to construct range with non-matching types `%s' and `%s'",
     no_instance_method_type: "no type information for instance method `%s#%s'",
