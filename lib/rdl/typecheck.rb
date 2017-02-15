@@ -1135,7 +1135,11 @@ RUBY
           tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)
           if tmeth_inst
             tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
-            trets_tmp << tmeth.ret.instantiate(tmeth_inst) # found a match for this subunion; add its return type to trets_tmp
+            if trecv.is_a?(RDL::Type::SingletonType) && meth == :new
+              trets_tmp << RDL::Type::NominalType.new(trecv.val)
+            else
+              trets_tmp << tmeth.ret.instantiate(tmeth_inst) # found a match for this subunion; add its return type to trets_tmp
+            end
           end
         end
       }

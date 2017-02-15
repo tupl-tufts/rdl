@@ -6,7 +6,8 @@ require 'types/core'
 class TestTypecheckC
   type 'self.bar', '() -> Fixnum or String ret'
   type 'self.foo', '() -> :A'
-  type '(Fixnum) -> C'
+  type 'foo', '() -> Fixnum'
+  type '(Fixnum) -> self'
   def initialize(x); end
 end
 
@@ -1333,7 +1334,8 @@ class TestTypecheck < Minitest::Test
 
   def test_constructor
     t = do_tc("TestTypecheckC.new(1)", env: @env)
-    assert_equal 'C', t.to_s
+    assert_equal 'TestTypecheckC', t.to_s
+
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
@@ -1352,6 +1354,14 @@ class TestTypecheck < Minitest::Test
     t = do_tc("TestTypecheckD.new", env: @env)
     t2 = RDL::Type::NominalType.new TestTypecheckD
     assert_equal t2, t
+
+    self.class.class_eval {
+      type '(Fixnum) -> Fixnum', typecheck: :now
+      def self.def_call_to_initialize(x)
+        c = TestTypecheckC.new(x)
+        c.foo
+      end
+    }
   end
 
   def test_nil_return
