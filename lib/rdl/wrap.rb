@@ -152,7 +152,7 @@ RUBY
 
   def self.class_to_string(klass)
     case klass
-    when Class
+    when Class, Module
       return klass.to_s
     when String
       return klass
@@ -218,13 +218,13 @@ RUBY
     # Wrap method if there was a prior contract for it.
     if RDL.to_wrap.member? [klass, meth]
       RDL.to_wrap.delete [klass, meth]
-      RDL::Wrap.wrap(klass, meth)
       if sing
         loc = the_self.singleton_method(meth).source_location
       else
         loc = the_self.instance_method(meth).source_location
       end
       RDL.info.set(klass, meth, :source_location, loc)
+      RDL::Wrap.wrap(klass, meth)
     end
 
     # Type check method if requested
@@ -327,7 +327,12 @@ class Object
       if wrap || typecheck == :now
         if RDL::Util.method_defined?(klass, meth) || meth == :initialize
           RDL.info.set(klass, meth, :source_location, RDL::Util.to_class(klass).instance_method(meth).source_location)
-          RDL::Typecheck.typecheck(klass, meth) if typecheck == :now
+          if typecheck == :now
+            RDL::Typecheck.typecheck(klass, meth)
+          elsif typecheck && (typecheck != :call)
+            RDL.to_typecheck[typecheck] = Set.new unless RDL.to_typecheck[typecheck]
+            RDL.to_typecheck[typecheck].add([klass, meth])
+          end
           RDL::Wrap.wrap(klass, meth) if wrap
         else
           if wrap
@@ -391,21 +396,6 @@ class Object
       var_type ("@" + name.to_s), typ
       type name.to_s + "=", "(#{typ}) -> #{typ}"
     }
-    nil
-  end
-
-  def self.method_added(meth)
-    klass = self.to_s
-    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-    RDL::Wrap.do_method_added(self, false, klass, meth)
-    nil
-  end
-
-  def self.singleton_method_added(meth)
-    klass = self.to_s
-    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-    sklass = RDL::Util.add_singleton_marker(klass)
-    RDL::Wrap.do_method_added(self, true, sklass, meth)
     nil
   end
 
@@ -571,13 +561,20 @@ class Object
 
 end
 
-# method_added for Object doesn't get called on module methods...bug?
-# class Module
-#   def method_added(meth)
-#     RDL.contract_switch.off {
-#       klass = self.to_s
-#       RDL::Wrap.do_method_added(self, false, klass, meth)
-#       nil
-#     }
-#   end
-# end
+class Module
+  def method_added(meth)
+    klass = self.to_s
+    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
+    RDL::Wrap.do_method_added(self, false, klass, meth)
+    nil
+  end
+
+  def singleton_method_added(meth)
+    klass = self.to_s
+    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
+    sklass = RDL::Util.add_singleton_marker(klass)
+    RDL::Wrap.do_method_added(self, true, sklass, meth)
+    nil
+  end
+end
+
