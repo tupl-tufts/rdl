@@ -145,47 +145,49 @@ class TestGeneric < Minitest::Test
 
     # Array<String>
     assert (A.new([]).instantiate!('String'))
-    assert (A.new(["a", "b", "c"]).instantiate!(RDL.types[:string]))
-    assert (A.new(["a", "b", "c"]).instantiate!('String'))
-    assert_raises(RDL::Type::TypeError) { A.new([1, 2, 3]).instantiate!('String') }
+    assert (A.new(["a", "b", "c"]).instantiate!(RDL.types[:string], check: true))
+    assert (A.new(["a", "b", "c"]).instantiate!('String', check: true))
+    assert_raises(RDL::Type::TypeError) { A.new([1, 2, 3]).instantiate!('String', check: true) }
+    assert (A.new([1, 2, 3]).instantiate!('String', check: false))
 
     # Array<Object>
-    assert (A.new([])).instantiate!('Object')
-    assert (A.new(["a", "b", "c"]).instantiate!(RDL.types[:object]))
-    assert (A.new(["a", "b", "c"]).instantiate!('Object'))
-    assert (A.new([1, 2, 3]).instantiate!('Object'))
+    assert (A.new([])).instantiate!('Object', check: true)
+    assert (A.new(["a", "b", "c"]).instantiate!(RDL.types[:object], check: true))
+    assert (A.new(["a", "b", "c"]).instantiate!('Object', check: true))
+    assert (A.new([1, 2, 3]).instantiate!('Object', check: true))
 
     # Hash<String, Fixnum>
-    assert (H.new({}).instantiate!('String', 'Fixnum'))
-    assert (H.new({"one"=>1, "two"=>2}).instantiate!('String', 'Fixnum'))
+    assert (H.new({}).instantiate!('String', 'Fixnum', check: true))
+    assert (H.new({"one"=>1, "two"=>2}).instantiate!('String', 'Fixnum', check: true))
     assert_raises(RDL::Type::TypeError) {
-      H.new(one: 1, two: 2).instantiate!('String', 'Fixnum')
+      H.new(one: 1, two: 2).instantiate!('String', 'Fixnum', check: true)
     }
+    assert (H.new(one: 1, two: 2).instantiate!('String', 'Fixnum', check: false))
     assert_raises(RDL::Type::TypeError){
-      H.new({"one"=>:one, "two"=>:two}).instantiate!('String', 'Fixnum')
+      H.new({"one"=>:one, "two"=>:two}).instantiate!('String', 'Fixnum', check: true)
     }
 
     # Hash<Object, Object>
-    assert (H.new({}).instantiate!('Object', 'Object'))
-    assert (H.new({"one"=>1, "two"=>2}).instantiate!('Object', 'Object'))
-    assert (H.new(one: 1, two: 2).instantiate!('Object', 'Object'))
-    assert (H.new({"one"=>:one, "two"=>:two}).instantiate!('Object', 'Object'))
+    assert (H.new({}).instantiate!('Object', 'Object', check: true))
+    assert (H.new({"one"=>1, "two"=>2}).instantiate!('Object', 'Object', check: true))
+    assert (H.new(one: 1, two: 2).instantiate!('Object', 'Object', check: true))
+    assert (H.new({"one"=>:one, "two"=>:two}).instantiate!('Object', 'Object', check: true))
 
     # A<A<String>>
-    assert (A.new([A.new(["a", "b"]).instantiate!('String'),
-                   A.new(["c"]).instantiate!('String')]).instantiate!('TestGeneric::A<String>'))
+    assert (A.new([A.new(["a", "b"]).instantiate!('String', check: true),
+                   A.new(["c"]).instantiate!('String', check: true)]).instantiate!('TestGeneric::A<String>', check: true))
     assert_raises(RDL::Type::TypeError) {
       # Must instantiate all members
-      A.new([A.new(["a", "b"]).instantiate!('String'), A.new([])]).instantiate!('TestGeneric::A<String>')
+      A.new([A.new(["a", "b"]).instantiate!('String', check: true), A.new([])]).instantiate!('TestGeneric::A<String>', check: true)
     }
     assert_raises(RDL::Type::TypeError) {
       # All members must be of same type
-      A.new([A.new(["a", "b"]).instantiate!('String'), "A"]).instantiate!('TestGeneric::A<String>')
+      A.new([A.new(["a", "b"]).instantiate!('String', check: true), "A"]).instantiate!('TestGeneric::A<String>', check: true)
     }
     assert_raises(RDL::Type::TypeError) {
       # All members must be instantiated and of same type
-      A.new([A.new(["a", "b"]).instantiate!('String'),
-             H.new({a: 1, b: 2}).instantiate!('Object', 'Object')]).instantiate!('TestGeneric::A<String>')
+      A.new([A.new(["a", "b"]).instantiate!('String', check: true),
+             H.new({a: 1, b: 2}).instantiate!('Object', 'Object', check: true)]).instantiate!('TestGeneric::A<String>', check: true)
     }
   end
 
