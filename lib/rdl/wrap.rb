@@ -49,7 +49,6 @@ class RDL::Wrap
           RDL.wrap_switch.off {
             RDL.wrapped_calls["#{full_method_name}"] += 1 if RDL::Config.instance.gather_stats
             inst = nil
-            inst = @__rdl_inst if defined? @__rdl_inst
             inst = @__rdl_type.to_inst if ((defined? @__rdl_type) && @__rdl_type.is_a?(RDL::Type::GenericType))
             inst = Hash[RDL.type_params[klass][0].zip []] if (not(inst) && RDL.type_params[klass])
             inst = {} if not inst

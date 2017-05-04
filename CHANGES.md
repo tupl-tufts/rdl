@@ -15,7 +15,7 @@
 - Support nested class names
 - Type for unary plus in numeric type files
 - Support for instantiate! for binding type parameters during static type checking
-- New "check" flag for calls to instantiate! incicating whether we want to check type of receiving object on call
+- New "check" flag for calls to instantiate! indicating whether we want to check type of receiving object on call
 
 ### Fixed
 - Parsing bug with `or`
