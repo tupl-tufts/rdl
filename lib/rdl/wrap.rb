@@ -49,7 +49,7 @@ class RDL::Wrap
           RDL.wrap_switch.off {
             RDL.wrapped_calls["#{full_method_name}"] += 1 if RDL::Config.instance.gather_stats
             inst = nil
-            inst = @__rdl_inst if defined? @__rdl_inst
+            inst = @__rdl_type.to_inst if ((defined? @__rdl_type) && @__rdl_type.is_a?(RDL::Type::GenericType))
             inst = Hash[RDL.type_params[klass][0].zip []] if (not(inst) && RDL.type_params[klass])
             inst = {} if not inst
             #{if not(is_singleton_method) then "inst[:self] = RDL::Type::NominalType.new(self.class)" end}
@@ -463,37 +463,41 @@ class Object
   # [+typs+] is an array of types, classes, symbols, or strings to instantiate
   # the type parameters. If a class, symbol, or string is given, it is
   # converted to a NominalType.
-  def instantiate!(*typs)
+  def instantiate!(*typs, check: false)
     klass = self.class.to_s
     klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
     formals, _, all = RDL.type_params[klass]
     raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
-    raise RuntimeError, "Expecting #{params.size} type parameters, got #{typs.size}" unless formals.size == typs.size
-    raise RuntimeError, "Instance already has type instantiation" if (defined? @__rdl_type) && @rdl_type
+    raise RuntimeError, "Expecting #{formals.size} type parameters, got #{typs.size}" unless formals.size == typs.size
+    raise RuntimeError, "Instance already has type instantiation" if ((defined? @__rdl_type) && @rdl_type)
     new_typs = typs.map { |t| if t.is_a? RDL::Type::Type then t else RDL.parser.scan_str "#T #{t}" end }
     t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *new_typs)
-    if all.instance_of? Symbol
-      self.send(all) { |*objs|
-        new_typs.zip(objs).each { |nt, obj|
-          if nt.instance_of? RDL::Type::GenericType # require obj to be instantiated
-            t_obj = RDL::Util.rdl_type(obj)
-            raise RDL::Type::TypeError, "Expecting element of type #{nt.to_s}, but got uninstantiated object #{obj.inspect}" unless t_obj
-            raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got type #{t_obj.to_s}" unless t_obj <= nt
-          else
-            raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got #{obj.inspect}" unless nt.member? obj
-          end
+    if check
+      if all.instance_of? Symbol
+        self.send(all) { |*objs|
+          new_typs.zip(objs).each { |nt, obj|
+            if nt.instance_of? RDL::Type::GenericType # require obj to be instantiated
+              t_obj = RDL::Util.rdl_type(obj)
+              raise RDL::Type::TypeError, "Expecting element of type #{nt.to_s}, but got uninstantiated object #{obj.inspect}" unless t_obj
+              raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got type #{t_obj.to_s}" unless t_obj <= nt
+            else
+              raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got #{obj.inspect}" unless nt.member? obj
+            end
+          }
         }
-      }
-    else
-      raise RDL::Type::TypeError, "Not an instance of #{t}" unless instance_exec(*new_typs, &all)
+      else
+        raise RDL::Type::TypeError, "Not an instance of #{t}" unless instance_exec(*new_typs, &all)
+      end
     end
     @__rdl_type = t
     self
   end
 
   def deinstantiate!
+    klass = self.class.to_s
+    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
     raise RuntimeError, "Class #{self.to_s} is not parameterized" unless RDL.type_params[klass]
-    raise RuntimeError, "Instance is not instantiated" unless @__rdl_type && @@__rdl_type.instance_of?(RDL::Type::GenericType)
+    raise RuntimeError, "Instance is not instantiated" unless @__rdl_type && @__rdl_type.instance_of?(RDL::Type::GenericType)
     @__rdl_type = nil
     self
   end
