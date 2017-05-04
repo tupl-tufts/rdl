@@ -530,7 +530,7 @@ y = x
 y.push("three") # also a type error
 ```
 
-When RDL instantiates an object with type parameters, it needs to ensure the object's contents are consistent with the type. Currently this is enforced using the second parameter to `type_params`, which must name a method that behaves like `Array#all?`, i.e., it iterates through the contents, checking that a block argument is satisfied. As seen above, for `Array` we call `type_params(:t, :all?)`. Then at the call `x.instantiate('Fixnum')`, RDL will call `Array#all?` to iterate through the contents of `x` to check they have type `Fixnum`.
+Calls to instantiate! may also come with a `check` flag. By default, `check` is set to false. When `check` is set to true, we ensure that the receiving object's contents are consistent with the given type *at the time of the call to instantiate!*. Currently this is enforced using the second parameter to `type_params`, which must name a method that behaves like `Array#all?`, i.e., it iterates through the contents, checking that a block argument is satisfied. As seen above, for `Array` we call `type_params(:t, :all?)`. Then at the call `x.instantiate('Fixnum', check: true)`, RDL will call `Array#all?` to iterate through the contents of `x` to check they have type `Fixnum`. A simple call to `x.instantiate!('Fixnum')`, on the other hand, will not check the types of the elements of `x`. The `check` flag thus leaves to the programmer this choice between dynamic type safety and performance.
 
 RDL also includes a `deinstantiate!` method to remove the type instantiation from an object:
 ```ruby
@@ -574,6 +574,8 @@ In this method, `a` is a `Fixnum`, `b` is a `String`, and any number (zero or mo
 ## Type Casts
 
 Sometimes RDL does not have precise information about an object's type (this is most useful during static type checking). For these cases, RDL supports type casts of the form `o.type_cast(t)`. This call returns a new object that delegates all methods to `o` but that will be treated by RDL as if it had type `t`. If `force: true` is passed to `type_cast`, RDL will perform the cast without checking whether `o` is actually a member of the given type. For example, `x = "a".type_cast('nil', force: true)` will make RDL treat `x` as if it had type `nil`, even though it's a `String`.
+
+Similarly, if an object's type is parameterized (see [Generic Types](#generic-class-types) above), RDL might not statically know the correct instantiation of the object's type parameters. In this case, we can use `instantiate!` to provide the proper type parameter bindings. For instance, if `a` has type `Array`, but we want RDL to know that `a`'s elements are all `Fixnum`s or `String`s, we can call `a.instantiate!("Fixnum or String")`.
 
 ## Bottom Type (%bot)
 

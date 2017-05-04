@@ -607,6 +607,7 @@ module RDL::Typecheck
       return tc_var_type(scope, env, e) if e.children[1] == :var_type && e.children[0].nil?
       return tc_type_cast(scope, env, e) if e.children[1] == :type_cast && scope[:block].nil?
       return tc_note_type(scope, env, e) if e.children[1] == :rdl_note_type && e.children[0].nil?
+      return tc_instantiate!(scope, env, e) if e.children[1] == :instantiate!
       envi = env
       tactuals = []
       block = scope[:block]
@@ -1035,6 +1036,62 @@ RUBY
     [env, typ]
   end
 
+  def self.tc_instantiate!(scope, env, e)
+    rec, _, *args = *e
+    env, rec_typ = tc(scope, env, rec)
+    case rec_typ
+    when RDL::Type::GenericType
+      klass = rec_typ.base.name.to_s
+    when RDL::Type::NominalType
+      klass = rec_typ.name.to_s
+    when RDL::Type::TupleType
+      klass = "Array"
+    when RDL::Type::FiniteHashType
+      klass = "Hash"
+    when RDL::Type::SingletonType
+      klass = if rec_typ.val.is_a?(Class) then rec_typ.val.to_s else rec_typ.val.class.to_s end
+    else
+      error :bad_inst_type, [obj_typ], e
+    end
+
+    formals, _, _ = RDL.type_params[klass]
+
+    error :instantiate_format, [], e if args.size == 0
+    if args.last.type == :hash
+      *typ_args, _ = *args
+    else
+      typ_args = args
+    end
+    error :inst_not_param, [klass], e unless formals
+    error :inst_num_args, [formals.size, typ_args.size], e unless formals.size == typ_args.size
+
+    new_typs = []
+    typ_args.each { |a|
+      env, arg_typ = tc(scope, env, a)
+      case arg_typ
+      when RDL::Type::SingletonType
+        error :instantiate_format, [], a unless arg_typ.val.is_a?(Class)
+        new_typs << RDL.parser.scan_str("#T #{arg_typ.val}")
+      else
+        error :instantiate_format, [], a unless (a.type == :str) || (a.type == :string) || (a.type == :sym)
+        new_typs << RDL.parser.scan_str("#T #{a.children[0]}")
+      end
+    }
+
+    t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *new_typs)
+    case rec.type
+    when :lvar
+      var_name = rec.children[0]
+    else
+      raise RuntimeError, "instantiate! expects local variable as receiver"
+      error :inst_lvar, [], e
+    end
+    
+    env = env.bind(var_name, t)
+    [env, t]
+
+  end
+
   # Type check a send
   # [+ scope +] is the scope; used only for checking block arguments
   # [+ env +] is the environment; used only for checking block arguments.
@@ -1321,6 +1378,10 @@ class Diagnostic < Parser::Diagnostic
 
   RDL_MESSAGES = {
     bad_return_type: "got type `%s' where return type `%s' expected",
+    bad_inst_type: "instantiate! called on object of type `%s' where Generic Type was expected",
+    inst_not_param: "instantiate! receiver is of class `%s' which is not parameterized",
+    inst_num_args: "instantiate! expecting `%s' type parameters, got `%s' parameters",
+    inst_lvar: "instantiate! expects local variable as receiver",
     bad_initialize_type: 'initialize method must always be annotated to return type "self"',
     undefined_local_or_method: "undefined local variable or method `%s'",
     nonmatching_range_type: "attempt to construct range with non-matching types `%s' and `%s'",
@@ -1343,6 +1404,7 @@ class Diagnostic < Parser::Diagnostic
     block_type_error: "argument type error for block\n%s",
     missing_ancestor_type: "ancestor `%s' of `%s' has method `%s' but no type for it",
     type_cast_format: "type_cast must be called as `type_cast type-string' or `type_cast type-string, force: expr'",
+    instantiate_format: "instantiate! must be called as `instantiate! type*' or `instantiate! type*, check: bool' where type is a string, symbol, or class for static type checking.",
     var_type_format: "var_type must be called as `var_type :var-name, type-string'",
     puts_type_format: "puts_type must be called as `puts_type e'",
     generic_error: "%s",

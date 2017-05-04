@@ -7,12 +7,15 @@
 - Type for unary minus in numeric type files (changed :- to :-@)
 - Type checking initialize method bugs
 - Type checking of Module methods
-- Typec checking method when class name is included in type annotation
+- Type checking method when class name is included in type annotation
+- Dynamic type checks after calls to instantiate!
 
 ### Added
 - Support operator assignment when left-hand side has method args
 - Support nested class names
 - Type for unary plus in numeric type files
+- Support for instantiate! for binding type parameters during static type checking
+- New "check" flag for calls to instantiate! indicating whether we want to check type of receiving object on call
 
 ### Fixed
 - Parsing bug with `or`

@@ -1018,6 +1018,52 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(1 + 2).type_cast('Fluffy Bunny')") }
   end
 
+  def test_instantiate
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(%integer, %integer) -> Array<%integer>", typecheck: :now
+        def def_inst_fail(x, y) a = Array.new(x,y); a; end
+      }
+    }
+    assert (
+      self.class.class_eval {
+        type "(%integer, %integer) -> Array<%integer>", typecheck: :now
+        def def_inst_pass(x, y) a = Array.new(x,y); a.instantiate! "%integer"; a; end
+      }
+    )
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum) -> Fixnum", typecheck: :now
+        def def_inst_hash_fail(x) hash = {}; hash["test"] = x; hash["test"]; end
+      }
+    }
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum) -> Fixnum", typecheck: :now
+        def def_inst_hash_fail2(x) hash = {}; hash.instantiate("Fixnum", "String") ; hash["test"] = x; hash["test"]; end
+      }
+    }
+    assert(
+      self.class.class_eval {
+        type "(Fixnum) -> Fixnum", typecheck: :now
+        def def_inst_hash_pass(x) hash = {}; hash.instantiate!(String, Fixnum); hash["test"] = x; hash["test"]; end
+      }
+    )
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum) -> Fixnum", typecheck: :now
+        def def_inst_no_param(x) x.instantiate!(Fixnum); end
+      }
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "(Fixnum) -> Fixnum", typecheck: :now
+        def def_inst_num_args(x) a = Array.new(x, x); a.instantiate!(Fixnum, Fixnum, Fixnum); end
+      }
+    }
+  end
+
   def test_rescue_ensure
     assert_equal @t3, do_tc("begin 3; rescue; 4; end") # rescue clause can never be executed
     assert_equal @t34, do_tc("begin puts 'foo'; 3; rescue; 4; end", env: @env)
