@@ -1368,6 +1368,25 @@ class TestTypecheck < Minitest::Test
 
   end
 
+  def test_class_call
+    TestTypecheckE.class_eval {
+      type '(Fixnum) -> Class', typecheck: :now
+      def call_class1(x)
+        x.class
+      end
+      type '() -> TestTypecheckE', typecheck: :now
+      def call_class2
+        self.class.new(1)
+      end
+    }
+    t = do_tc("1.class", env: @env)
+    assert_equal RDL::Type::SingletonType.new(Fixnum), t
+    t2 = do_tc("TestTypecheckE.class", env: @env)
+    assert_equal RDL::Type::SingletonType.new(Class), t2
+    t3 = do_tc("[1,2,3].class", env: @env)
+    assert_equal RDL::Type::SingletonType.new(Array), t3
+  end
+
   def test_singleton
     assert_equal ':A', do_tc("TestTypecheckC.foo", env: @env).to_s
     assert_equal ':B', do_tc("TestTypecheckM.foo", env: @env).to_s
