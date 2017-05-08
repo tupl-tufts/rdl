@@ -1119,6 +1119,7 @@ RUBY
   # Like tc_send but trecv should never be a union type
   # Returns array of possible return types, or throws exception if there are none
   def self.tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e)
+    return tc_send_class(trecv, e) if (meth == :class) && (tactuals.empty?)
     tmeth_inter = [] # Array<MethodType>, i.e., an intersection types
     case trecv
     when RDL::Type::SingletonType
@@ -1231,6 +1232,33 @@ RUBY
     end
     # TODO: issue warning if trets.size > 1 ?
     return trets
+  end
+
+  def self.tc_send_class(trecv, e)
+    case trecv
+    when RDL::Type::SingletonType
+      if trecv.val.is_a? Class
+        [RDL::Type::SingletonType.new(Class)]
+      elsif trecv.val.is_a? Module
+        [RDL::Type::SingletonType.new(Module)]
+      else
+        [RDL::Type::SingletonType.new(trecv.val.class)]
+      end
+    when RDL::Type::NominalType
+      [RDL::Type::SingletonType.new(trecv.klass)]
+    when RDL::Type::GenericType
+      [RDL::Type::SingletonType.new(trecv.base.klass)]
+    when RDL::Type::TupleType
+      [RDL::Type::SingletonType.new(Array)]
+    when RDL::Type::FiniteHashType
+      [RDL::Type::SingletonType.new(Hash)]
+    when RDL::Type::VarType
+      error :recv_var_type, [trecv], e
+    when RDL::Type::MethodType
+      [RDL::Type::SingletonType.new(Proc)]
+    else
+      raise RuntimeError, "Unexpected receiver type #{trecv}"
+    end
   end
 
   # [+ tmeth +] is MethodType
