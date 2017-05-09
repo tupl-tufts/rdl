@@ -16,6 +16,7 @@
 - Type for unary plus in numeric type files
 - Support for instantiate! for binding type parameters during static type checking
 - New "check" flag for calls to instantiate! indicating whether we want to check type of receiving object on call
+- More precise static type checking for `Object#class` method
 
 ### Fixed
 - Parsing bug with `or`

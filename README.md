@@ -737,6 +737,7 @@ RDL's static type checker makes some assumptions that should hold unless your Ru
 
 * `Class#===` is not redefined
 * `Proc#call` is not redefined
+* `Object#class` is not redefined
 
 (More assumptions will be added here as they are added to RDL...)
 
