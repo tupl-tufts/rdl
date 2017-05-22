@@ -68,4 +68,11 @@ class TestRDLType < Minitest::Test
     assert_raises(RDL::Type::TypeError) { TestRDLType::NI_B.new("3") }
   end
 
+  def test_version
+    type "TestRDLType::TestVersion", "m1", "() -> nil", version: Gem.ruby_version.to_s
+    assert (RDL.info.has? "TestRDLType::TestVersion", "m1", :type)
+    type "TestRDLType::TestVersion", "m2", "() -> nil", version: Gem.ruby_version.bump.to_s
+    assert !(RDL.info.has? "TestRDLType::TestVersion", "m2", :type)
+  end
+
 end

@@ -196,6 +196,8 @@ The `post` method can be called in the same ways as `pre`.
 
 Methods can have no contracts, `pre` by itself, `post` by itself, both, or multiple instances of either. If there are multiple contracts, RDL checks that *all* contracts are satisfied, in the order that the contracts were bound to the method.
 
+Both `pre` and `post` accept an optional named argument `version` that takes a rubygems version requirement string or array of version requirement students. If the current Ruby version does not match the requirement, then the call to `pre` and `post` is ignored.
+
 ## Type Annotations
 
 The `type` method adds a type contract to a method. It supports the same calling patterns as `pre` and `post`, except rather than a block, it takes a string argument describing the type. More specifically, `type` can be called as:
@@ -213,6 +215,8 @@ type :=~, '(Object) -> Fixnum or nil', wrap: false # Wrapping this messes up $1 
 ```
 
 For consistency, `pre` and `post` can also be called with `wrap: false`, but this is generally not as useful.
+
+The `type` method also accepts an optional `version` named argument.
 
 # RDL Types
 

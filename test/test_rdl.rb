@@ -374,4 +374,15 @@ RUBY
     assert_equal 42, remove1 # shouldn't raise type error with contract removed
   end
 
+  def test_version
+    pre("TestRDL::TestVersion", "m1", version: Gem.ruby_version.to_s) { true }
+    assert (RDL.info.has? "TestRDL::TestVersion", "m1", :pre)
+    pre("TestRDL::TestVersion", "m2", version: Gem.ruby_version.bump.to_s) { true }
+    assert !(RDL.info.has? "TestRDL::TestVersion", "m2", :pre)
+    post("TestRDL::TestVersion", "m3", version: Gem.ruby_version.to_s) { true }
+    assert (RDL.info.has? "TestRDL::TestVersion", "m3", :post)
+    pre("TestRDL::TestVersion", "m4", version: Gem.ruby_version.bump.to_s) { true }
+    assert !(RDL.info.has? "TestRDL::TestVersion", "m4", :post)
+  end
+
 end

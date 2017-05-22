@@ -246,6 +246,8 @@ class Object
   # [+method+] may be Symbol or String
   # [+contract+] must be a Contract
   # [+wrap+] indicates whether the contract should be enforced (true) or just recorded (false)
+  # [+ version +] is a rubygems version requirement string (or array of such requirement strings)
+  #    if the current Ruby version does not satisfy the version, the type call will be ignored
   #
   # Add a precondition to a method. Possible invocations:
   # pre(klass, meth, contract)
@@ -254,7 +256,8 @@ class Object
   # pre(meth) { block } = pre(self, meth, FlatContract.new { block })
   # pre(contract) = pre(self, next method, contract)
   # pre { block } = pre(self, next method, FlatContract.new { block })
-  def pre(*args, wrap: RDL::Config.instance.pre_defaults[:wrap], &blk)
+  def pre(*args, wrap: RDL::Config.instance.pre_defaults[:wrap], version: nil, &blk)
+    return if version && !(Gem::Requirement.new(version).satisfied_by? Gem.ruby_version)
     klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Precondition", *args, &blk)
     if meth
       RDL.info.add(klass, meth, :pre, contract)
@@ -272,7 +275,8 @@ class Object
   end
 
   # Add a postcondition to a method. Same possible invocations as pre.
-  def post(*args, wrap: RDL::Config.instance.post_defaults[:wrap], &blk)
+  def post(*args, wrap: RDL::Config.instance.post_defaults[:wrap], version: nil, &blk)
+    return if version && !(Gem::Requirement.new(version).satisfied_by? Gem.ruby_version)
     klass, meth, contract = RDL::Wrap.process_pre_post_args(self, "Postcondition", *args, &blk)
     if meth
       RDL.info.add(klass, meth, :post, contract)
@@ -297,12 +301,15 @@ class Object
   #    if :call, indicates method should be typechecked when called
   #    if :now, indicates method should be typechecked immediately
   #    if other-symbol, indicates method should be typechecked when rdl_do_typecheck(other-symbol) is called
+  # [+ version +] is a rubygems version requirement string (or array of such requirement strings)
+  #    if the current Ruby version does not satisfy the version, the type call will be ignored
   #
   # Set a method's type. Possible invocations:
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
-  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck])
+  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil)
+    return if version && !(Gem::Requirement.new(version).satisfied_by? Gem.ruby_version)
     klass, meth, type = begin
                           RDL::Wrap.process_type_args(self, *args)
                         rescue Racc::ParseError => err
@@ -581,4 +588,3 @@ class Module
     nil
   end
 end
-
