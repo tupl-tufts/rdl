@@ -11,6 +11,7 @@ class Array
   type :*, '(%integer) -> Array<t>'
   type :*, '(String) -> String'
   type :+, '(Enumerable<u>) -> Array<u or t>'
+  type :+, '(Array<u>) -> Array<u or t>'
   type :-, '(Array<u>) -> Array<u or t>'
   type :slice, '(Range<%integer>) -> Array<t>'
   type :slice, '(%integer) -> t'
