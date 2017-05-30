@@ -35,11 +35,17 @@ class RDL::Config
   end
 
   def add_nowrap(*klasses)
-    klasses.each { |klass| @nowrap.add klass.to_s.to_sym }
+    klasses.each { |klass|
+      @nowrap.add klass.to_s.to_sym
+      @nowrap.add RDL::Util.add_singleton_marker(klass.to_s).to_sym
+    }
   end
 
   def remove_nowrap(*klasses)
-    klasses.each { |klass| @nowrap.delete klass.to_s.to_sym }
+    klasses.each { |klass|
+      @nowrap.delete klass.to_s.to_sym
+      @nowrap.delete RDL::Util.add_singleton_marker(klass.to_s).to_sym
+    }
   end
 
   # To use, copy these 3 lines to the test file of a gem

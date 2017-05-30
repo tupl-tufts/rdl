@@ -1,17 +1,13 @@
-require_relative 'range.rb'
+rdl_nowrap :Random
 
-class Random
-  rdl_nowrap
+type :'Random', 'self.new', '(?Integer seed) -> Random' # Floats can be passed also, but just truncated to int?
+type :'Random', 'self.new_seed', '() -> Integer'
+type :'Random', 'self.rand', '(?Integer max) -> Numeric'
+type :'Random', 'self.srand', '(?Integer number) -> Numeric old_seed'
 
-  type 'self.new', '(?Integer seed) -> Random' # Floats can be passed also, but just truncated to int?
-  type 'self.new_seed', '() -> Integer'
-  type 'self.rand', '(?Integer max) -> Numeric'
-  type 'self.srand', '(?Integer number) -> Numeric old_seed'
-
-  type :==, '(%any) -> %bool'
-  type :bytes, '(Fixnum size) -> String'
-  type :rand, '(?(Integer or Range<Integer>) max) -> Integer'
-  type :rand, '(?(Float or Range<Float>) max) -> Float'
-  pre(:rand) { |max| max > 0 }
-  type :seed, '() -> Integer'
-end
+type :'Random', :==, '(%any) -> %bool'
+type :'Random', :bytes, '(Fixnum size) -> String'
+type :'Random', :rand, '(?(Integer or Range<Integer>) max) -> Integer'
+type :'Random', :rand, '(?(Float or Range<Float>) max) -> Float'
+pre(:Random, :rand) { |max| max > 0 }
+type :'Random', :seed, '() -> Integer'

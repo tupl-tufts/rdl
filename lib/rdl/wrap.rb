@@ -463,10 +463,7 @@ class Object
   end
 
   def rdl_nowrap(klass=self)
-    RDL.config { |config|
-      config.add_nowrap(klass)
-      config.add_nowrap(RDL::Util.add_singleton_marker(klass.to_s)) if klass.class == Class
-    }
+    RDL.config { |config| config.add_nowrap(klass) }
     nil
   end
 

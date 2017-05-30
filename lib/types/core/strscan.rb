@@ -1,7 +1,5 @@
-class StringScanner
-  rdl_nowrap
+rdl_nowrap :StringScanner
 
-  type :eos?, '() -> %bool'
-  type :scan, '(Regexp) -> String'
-  type :getch, '() -> String'
-end
+type :StringScanner, :eos?, '() -> %bool'
+type :StringScanner, :scan, '(Regexp) -> String'
+type :StringScanner, :getch, '() -> String'
