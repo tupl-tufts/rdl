@@ -1,12 +1,20 @@
-if defined? BigDecimal
-  type_alias '%real', 'Fixnum or Bignum or Float or Rational or BigDecimal'
-  type_alias '%numeric', 'Fixnum or Bignum or Float or Rational or BigDecimal or Complex'
+module RDL
+  PRE_INTMERGE_VERSIONS = ['>= 2.0.0', '< 2.4.0']
+end
+
+if defined? Fixnum
+  type_alias '%integer', 'Fixnum or Bignum'
 else
-  type_alias '%real', 'Fixnum or Bignum or Float or Rational'
-  type_alias '%numeric', 'Fixnum or Bignum or Float or Rational'
+  type_alias '%integer', 'Integer'
+end
+if defined? BigDecimal
+  type_alias '%real', '%integer or Float or Rational or BigDecimal'
+  type_alias '%numeric', '%integer or Float or Rational or BigDecimal or Complex'
+else
+  type_alias '%real', '%integer or Float or Rational'
+  type_alias '%numeric', '%integer or Float or Rational'
 end
 type_alias '%string', '[to_str: () -> String]'
-type_alias '%integer', 'Fixnum or Bignum'
 if defined? Pathname
   type_alias '%path', '%string or Pathname'
 else
