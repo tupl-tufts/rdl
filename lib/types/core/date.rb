@@ -1,6 +1,4 @@
-class Date
-  rdl_nowrap
+rdl_nowrap :Date
 
-  type 'self.now', '() -> DateTime'
-  type :strftime, '(String) -> String'
-end
+type :Date, 'self.now', '() -> DateTime'
+type :Date, :strftime, '(String) -> String'

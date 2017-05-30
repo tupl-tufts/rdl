@@ -1,26 +1,26 @@
+rdl_nowrap :Enumerator
+
 class Enumerator
-  rdl_nowrap
-
   type_params [:t], :all?
-
-  type 'self.new', '(?Fixnum) { (Array<u>) -> %any } -> Enumerator<u>'
-  type 'self.new', '(?Proc) { (Array<u>) -> %any } -> Enumerator<u>' # TODO Proc
-  # TODO: deprecated form of new
-  type :each, '() { (t) -> %any } -> %any' # is there a better type?
-  type :each, '() -> self'
-  # TODO: args
-  type :each_with_index, '() { (t, Fixnum) -> %any } -> %any' # TODO args
-  type :each_with_index, '() -> Enumerator<[t, Fixnum]>' # TODO args
-  type :each_with_object, '(u) { (t, u) -> %any } -> %any' # TODO args
-  type :each_with_object, '(u) -> Enumerator<[t, u]>' # TODO args
-  type :feed, '(t) -> nil'
-  type :inspect, '() -> String'
-  type :next, '() -> t'
-  type :next_values, '() -> Array<t>'
-  type :peek, '() -> t'
-  type :peek_values, '() -> Array<t>'
-  type :rewrind, '() -> self'
-  type :size, '() -> Fixnum or Float or nil'
-  rdl_alias :with_index, :each_with_index
-  rdl_alias :with_object, :each_with_object
 end
+
+type :Enumerator, 'self.new', '(?Fixnum) { (Array<u>) -> %any } -> Enumerator<u>'
+type :Enumerator, 'self.new', '(?Proc) { (Array<u>) -> %any } -> Enumerator<u>' # TODO Proc
+# TODO: deprecated form of new
+type :Enumerator, :each, '() { (t) -> %any } -> %any' # is there a better type?
+type :Enumerator, :each, '() -> self'
+# TODO: args
+type :Enumerator, :each_with_index, '() { (t, Fixnum) -> %any } -> %any' # TODO args
+type :Enumerator, :each_with_index, '() -> Enumerator<[t, Fixnum]>' # TODO args
+type :Enumerator, :each_with_object, '(u) { (t, u) -> %any } -> %any' # TODO args
+type :Enumerator, :each_with_object, '(u) -> Enumerator<[t, u]>' # TODO args
+type :Enumerator, :feed, '(t) -> nil'
+type :Enumerator, :inspect, '() -> String'
+type :Enumerator, :next, '() -> t'
+type :Enumerator, :next_values, '() -> Array<t>'
+type :Enumerator, :peek, '() -> t'
+type :Enumerator, :peek_values, '() -> Array<t>'
+type :Enumerator, :rewrind, '() -> self'
+type :Enumerator, :size, '() -> Fixnum or Float or nil'
+rdl_alias :Enumerator, :with_index, :each_with_index
+rdl_alias :Enumerator, :with_object, :each_with_object
