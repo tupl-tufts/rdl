@@ -1,6 +1,4 @@
-module Coverage
-  rdl_nowrap
+rdl_nowrap :Coverage
 
-  type 'self.start', '() -> nil'
-  type 'self.result', '() -> Hash<String,Array<Fixnum or nil>>'
-end
+type :Coverage, 'self.start', '() -> nil'
+type :Coverage, 'self.result', '() -> Hash<String,Array<Fixnum or nil>>'

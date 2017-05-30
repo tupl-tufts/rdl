@@ -1,23 +1,21 @@
-class Encoding
-  rdl_nowrap
+rdl_nowrap :Encoding
 
-  type 'self.aliases', '() -> Hash<String, String>'
-  type 'self.compatible?', '(%any obj1, %any obj2) -> Encoding or nil'
-  type 'self.default_external', '() -> Encoding'
-  type 'self.default_external=', '(String) -> String'
-  type 'self.default_external=', '(Encoding) -> Encoding'
-  type 'self.default_internal', '() -> Encoding'
-  type 'self.default_internal=', '(String) -> String or nil'
-  type 'self.default_internal=', '(Encoding) -> Encoding or nil'
-  type 'self.find', '(String or Encoding) -> Encoding'
-  type 'self.list', '() -> Array<Encoding>'
-  type 'self.name_list', '() -> Array<String>'
+type :Encoding, 'self.aliases', '() -> Hash<String, String>'
+type :Encoding, 'self.compatible?', '(%any obj1, %any obj2) -> Encoding or nil'
+type :Encoding, 'self.default_external', '() -> Encoding'
+type :Encoding, 'self.default_external=', '(String) -> String'
+type :Encoding, 'self.default_external=', '(Encoding) -> Encoding'
+type :Encoding, 'self.default_internal', '() -> Encoding'
+type :Encoding, 'self.default_internal=', '(String) -> String or nil'
+type :Encoding, 'self.default_internal=', '(Encoding) -> Encoding or nil'
+type :Encoding, 'self.find', '(String or Encoding) -> Encoding'
+type :Encoding, 'self.list', '() -> Array<Encoding>'
+type :Encoding, 'self.name_list', '() -> Array<String>'
 
-  type :ascii_compatible?, '() -> %bool'
-  type :dummy?, '() -> %bool'
-  type :inspect, '() -> String'
-  type :name, '() -> String'
-  type :names, '() -> Array<String>'
-  type :replicate, '(String name) -> Encoding'
-  rdl_alias :to_s, :name
-end
+type :Encoding, :ascii_compatible?, '() -> %bool'
+type :Encoding, :dummy?, '() -> %bool'
+type :Encoding, :inspect, '() -> String'
+type :Encoding, :name, '() -> String'
+type :Encoding, :names, '() -> Array<String>'
+type :Encoding, :replicate, '(String name) -> Encoding'
+rdl_alias :Encoding, :to_s, :name
