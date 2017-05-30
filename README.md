@@ -749,9 +749,9 @@ RDL's static type checker makes some assumptions that should hold unless your Ru
 
 RDL also includes a few other useful methods:
 
-* `rdl_alias new_name, old_name` tells RDL that method `new_name` is an alias for method `old_name`, and therefore they should have the same contracts and types. This method is only needed when adding contracts and types to method that have already been aliased; it's not needed if the method is aliased after the contract or type has been added.
+* `rdl_alias [klass], new_name, old_name` tells RDL that method `new_name` of `klass` is an alias for method `old_name` (of the same class), and therefore they should have the same contracts and types. This method is only needed when adding contracts and types to method that have already been aliased; it's not needed if the method is aliased after the contract or type has been added. If the `klass` argument is omitted it's assumed to be `self`.
 
-* `rdl_nowrap`, if called at the top-level of a class, causes RDL to behave as if `wrap: false` were passed to all `type`, `pre`, and `post` calls in the class. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead.
+* `rdl_nowrap [klass]`, if called at the top-level of a class, causes RDL to behave as if `wrap: false` were passed to all `type`, `pre`, and `post` calls in `klass`. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead. If `klass` is omitted it's assumed to be `self`.
 
 * `rdl_remove_type klass, meth` removes the type annotation for meth in klass. Fails if meth does not have a type annotation.
 

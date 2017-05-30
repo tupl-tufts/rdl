@@ -30,7 +30,7 @@ class RDL::Wrap
       klass_str = klass_str.to_s
       klass = RDL::Util.to_class klass_str
       return if wrapped? klass, meth
-      return if RDL::Config.instance.nowrap.member? klass
+      return if RDL::Config.instance.nowrap.member? klass_str.to_sym
       raise ArgumentError, "Attempt to wrap #{RDL::Util.pp_klass_method(klass, meth)}" if klass.to_s =~ /^RDL::/
       meth_old = wrapped_name(klass, meth) # meth_old is a symbol
       # return if (klass.method_defined? meth_old) # now checked above by wrapped? call
@@ -409,8 +409,8 @@ class Object
   # Aliases contracts for meth_old and meth_new. Currently, this must
   # be called for any aliases or they will not be wrapped with
   # contracts. Only creates aliases in the current class.
-  def rdl_alias(new_name, old_name)
-    klass = self.to_s
+  def rdl_alias(klass=self, new_name, old_name)
+    klass = klass.to_s
     klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
     RDL.aliases[klass] = {} unless RDL.aliases[klass]
     if RDL.aliases[klass][new_name]
@@ -419,7 +419,7 @@ class Object
     end
     RDL.aliases[klass][new_name] = old_name
 
-    if self.method_defined? new_name
+    if Module.const_defined?(klass) && RDL::Util.to_class(klass).method_defined?(new_name)
       RDL::Wrap.wrap(klass, new_name)
     else
       RDL.to_wrap << [klass, old_name]
@@ -462,8 +462,11 @@ class Object
     nil
   end
 
-  def rdl_nowrap
-    RDL.config { |config| config.add_nowrap(self, self.singleton_class) }
+  def rdl_nowrap(klass=self)
+    RDL.config { |config|
+      config.add_nowrap(klass)
+      config.add_nowrap(RDL::Util.add_singleton_marker(klass.to_s)) if klass.class == Class
+    }
     nil
   end
 
