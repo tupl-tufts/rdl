@@ -1,5 +1,3 @@
-module YAML
-  rdl_nowrap
+rdl_nowrap :YAML
 
-  type 'self.load_file', '(String) -> Array<String>'
-end
+type :YAML, 'self.load_file', '(String) -> Array<String>'

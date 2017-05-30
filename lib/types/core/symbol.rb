@@ -1,29 +1,27 @@
-class Symbol
-  rdl_nowrap
+rdl_nowrap :Symbol
 
-  type 'self.all_symbols', '() -> Array<Symbol>'
-  type :<=>, '(Symbol other) -> Fixnum or nil'
-  type :==, '(%any obj) -> %bool'
-  type :=~, '(%any obj) -> Fixnum or nil'
-  type :[], '(Fixnum idx) -> String'
-  type :[], '(Fixnum b, Fixnum n) -> String'
-  type :[], '(Range<Fixnum>) -> String'
-  type :capitalize, '() -> Symbol'
-  type :casecmp, '(Symbol other) -> Fixnum or nil'
-  type :downcase, '() -> Symbol'
-  type :empty?, '() -> %bool'
-  type :encoding, '() -> Encoding'
-  type :id2name, '() -> String'
-  type :inspect, '() -> String'
-  type :intern, '() -> self'
-  type :length, '() -> Fixnum'
-  type :match, '(%any obj) -> Fixnum or nil'
-  type :succ, '() -> Symbol'
-  rdl_alias :size, :length
-  rdl_alias :slice, :[]
-  type :swapcase, '() -> Symbol'
-  type :to_proc, '() -> Proc' # TODO proc
-  rdl_alias :to_s, :id2name
-  rdl_alias :to_sym, :intern
-  type :upcase, '() -> Symbol'
-end
+type :Symbol, 'self.all_symbols', '() -> Array<Symbol>'
+type :Symbol, :<=>, '(Symbol other) -> Fixnum or nil'
+type :Symbol, :==, '(%any obj) -> %bool'
+type :Symbol, :=~, '(%any obj) -> Fixnum or nil'
+type :Symbol, :[], '(Fixnum idx) -> String'
+type :Symbol, :[], '(Fixnum b, Fixnum n) -> String'
+type :Symbol, :[], '(Range<Fixnum>) -> String'
+type :Symbol, :capitalize, '() -> Symbol'
+type :Symbol, :casecmp, '(Symbol other) -> Fixnum or nil'
+type :Symbol, :downcase, '() -> Symbol'
+type :Symbol, :empty?, '() -> %bool'
+type :Symbol, :encoding, '() -> Encoding'
+type :Symbol, :id2name, '() -> String'
+type :Symbol, :inspect, '() -> String'
+type :Symbol, :intern, '() -> self'
+type :Symbol, :length, '() -> Fixnum'
+type :Symbol, :match, '(%any obj) -> Fixnum or nil'
+type :Symbol, :succ, '() -> Symbol'
+rdl_alias :Symbol, :size, :length
+rdl_alias :Symbol, :slice, :[]
+type :Symbol, :swapcase, '() -> Symbol'
+type :Symbol, :to_proc, '() -> Proc' # TODO proc
+rdl_alias :Symbol, :to_s, :id2name
+rdl_alias :Symbol, :to_sym, :intern
+type :Symbol, :upcase, '() -> Symbol'

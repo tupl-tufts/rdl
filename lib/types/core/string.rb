@@ -50,8 +50,8 @@ type :String, :each_codepoint, '() -> Enumerator'
 type :String, :each_line, '(?String) {(Fixnum) -> %any} -> String'
 type :String, :each_line, '(?String) -> Enumerator'
 type :String,  :empty?, '() -> %bool'
-#  type :String, :encode, '(?Encoding, ?Encoding, *Symbol) -> String' # TODO: fix Hash arg:String, 
-#  type :String, :encode!, '(Encoding, ?Encoding, *Symbol) -> String'
+# type :String, :encode, '(?Encoding, ?Encoding, *Symbol) -> String' # TODO: fix Hash arg:String,
+# type :String, :encode!, '(Encoding, ?Encoding, *Symbol) -> String'
 type :String, :encoding, '() -> Encoding'
 type :String, :end_with?, '(*String) -> %bool'
 type :String, :eql?, '(String) -> %bool'

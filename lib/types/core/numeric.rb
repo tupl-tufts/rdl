@@ -1,58 +1,56 @@
-class Numeric
-  rdl_nowrap
+rdl_nowrap :Numeric
 
-  type :%, '(%numeric) -> %numeric'
-  pre(:%) { |x| x!=0}
-  type :+, '(%numeric) -> %numeric'
-  type :-, '() -> %numeric'
-  type :-@, '() -> %numeric'
-  type :+@, '() -> %numeric'
-  type :<=>, '(%numeric) -> Object'
-  post(:<=>) { |r,x| r == -1 || r==0 || r==1 || r==nil}
-  type :abs, '() -> %numeric'
-  post(:abs) { |r,x| r >= 0 }
-  type :abs2, '() -> %numeric'
-  post(:abs2) { |r,x| r >= 0 }
-  type :angle, '() -> %numeric'
-  type :arg, '() -> %numeric'
-  type :ceil, '() -> %integer'
-  type :coerce, '(%numeric) -> [%numeric, %numeric]'
-  type :conj, '() -> %numeric'
-  type :conjugate, '() -> %numeric'
-  type :denominator, '() -> %integer'
-  post(:denominator) { |r,x| r >= 0 }
-  type :div, '(%numeric) -> %integer'
-  pre(:div) { |x| x!=0}
-  type :divmod, '(%numeric) -> [%numeric, %numeric]'
-  pre(:divmod) { |x| x!=0 }
-  type :eql?, '(%numeric) -> %bool'
-  type :fdiv, '(%numeric) -> %numeric'
-  type :floor, '() -> %integer'
-  type :i, '() -> Complex'
-  type :imag, '() -> %numeric'
-  type :imaginary, '() -> %numeric'
-  type :integer?, '() -> %bool'
-  type :magnitude, '() -> %numeric'
-  type :modulo, '(%numeric) -> %real'
-  pre(:modulo) { |x| x!=0 }
-  type :nonzero?, '() -> self or nil'
-  type :numerator, '() -> %integer'
-  type :phase, '() -> %numeric'
-  type :polar, '() -> [%numeric, %numeric]'
-  type :quo, '(%numeric) -> %numeric'
-  type :real, '() -> %numeric'
-  type :real?, '() -> %numeric'
-  type :rect, '() -> [%numeric, %numeric]'
-  type :rectangular, '() -> [%numeric, %numeric]'
-  type :remainder, '(%numeric) -> %real'
-  type :round, '(%numeric) -> %numeric'
-  type :singleton_method_added, '(Symbol) -> TypeError'
-  type :step, '(%numeric) { (%numeric) -> %any } -> %numeric'
-  type :step, '(%numeric) -> Enumerator<%numeric>'
-  type :step, '(%numeric, %numeric) { (%numeric) -> %any } -> %numeric'
-  type :step, '(%numeric, %numeric) -> Enumerator<%numeric>'
-  type :to_c, '() -> Complex'
-  type :to_int, '() -> %integer'
-  type :truncate, '() -> %integer'
-  type :zero?, '() -> %bool'
-end
+type :Numeric, :%, '(%numeric) -> %numeric'
+pre(:Numeric, :%) { |x| x!=0}
+type :Numeric, :+, '(%numeric) -> %numeric'
+type :Numeric, :-, '() -> %numeric'
+type :Numeric, :-@, '() -> %numeric'
+type :Numeric, :+@, '() -> %numeric'
+type :Numeric, :<=>, '(%numeric) -> Object'
+post(:Numeric, :<=>) { |r,x| r == -1 || r==0 || r==1 || r==nil}
+type :Numeric, :abs, '() -> %numeric'
+post(:Numeric, :abs) { |r,x| r >= 0 }
+type :Numeric, :abs2, '() -> %numeric'
+post(:Numeric, :abs2) { |r,x| r >= 0 }
+type :Numeric, :angle, '() -> %numeric'
+type :Numeric, :arg, '() -> %numeric'
+type :Numeric, :ceil, '() -> %integer'
+type :Numeric, :coerce, '(%numeric) -> [%numeric, %numeric]'
+type :Numeric, :conj, '() -> %numeric'
+type :Numeric, :conjugate, '() -> %numeric'
+type :Numeric, :denominator, '() -> %integer'
+post(:Numeric, :denominator) { |r,x| r >= 0 }
+type :Numeric, :div, '(%numeric) -> %integer'
+pre(:Numeric, :div) { |x| x!=0}
+type :Numeric, :divmod, '(%numeric) -> [%numeric, %numeric]'
+pre(:Numeric, :divmod) { |x| x!=0 }
+type :Numeric, :eql?, '(%numeric) -> %bool'
+type :Numeric, :fdiv, '(%numeric) -> %numeric'
+type :Numeric, :floor, '() -> %integer'
+type :Numeric, :i, '() -> Complex'
+type :Numeric, :imag, '() -> %numeric'
+type :Numeric, :imaginary, '() -> %numeric'
+type :Numeric, :integer?, '() -> %bool'
+type :Numeric, :magnitude, '() -> %numeric'
+type :Numeric, :modulo, '(%numeric) -> %real'
+pre(:Numeric, :modulo) { |x| x!=0 }
+type :Numeric, :nonzero?, '() -> self or nil'
+type :Numeric, :numerator, '() -> %integer'
+type :Numeric, :phase, '() -> %numeric'
+type :Numeric, :polar, '() -> [%numeric, %numeric]'
+type :Numeric, :quo, '(%numeric) -> %numeric'
+type :Numeric, :real, '() -> %numeric'
+type :Numeric, :real?, '() -> %numeric'
+type :Numeric, :rect, '() -> [%numeric, %numeric]'
+type :Numeric, :rectangular, '() -> [%numeric, %numeric]'
+type :Numeric, :remainder, '(%numeric) -> %real'
+type :Numeric, :round, '(%numeric) -> %numeric'
+type :Numeric, :singleton_method_added, '(Symbol) -> TypeError'
+type :Numeric, :step, '(%numeric) { (%numeric) -> %any } -> %numeric'
+type :Numeric, :step, '(%numeric) -> Enumerator<%numeric>'
+type :Numeric, :step, '(%numeric, %numeric) { (%numeric) -> %any } -> %numeric'
+type :Numeric, :step, '(%numeric, %numeric) -> Enumerator<%numeric>'
+type :Numeric, :to_c, '() -> Complex'
+type :Numeric, :to_int, '() -> %integer'
+type :Numeric, :truncate, '() -> %integer'
+type :Numeric, :zero?, '() -> %bool'

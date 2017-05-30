@@ -1,12 +1,11 @@
-class NilClass
-  rdl_nowrap
-  type :&, '(%any obj) -> false'
-  type :'^', '(%any obj) -> %bool'
-  type :|, '(%any obj) -> %bool'
-  type :rationalize, '() -> Rational'
-  type :to_a, '() -> []'
-  type :to_c, '() -> Complex'
-  type :to_f, '() -> 0.0'
-  type :to_h, '() -> {}'
-  type :to_r, '() -> Rational'
-end
+rdl_nowrap :NilClass
+
+type :NilClass, :&, '(%any obj) -> false'
+type :NilClass, :'^', '(%any obj) -> %bool'
+type :NilClass, :|, '(%any obj) -> %bool'
+type :NilClass, :rationalize, '() -> Rational'
+type :NilClass, :to_a, '() -> []'
+type :NilClass, :to_c, '() -> Complex'
+type :NilClass, :to_f, '() -> 0.0'
+type :NilClass, :to_h, '() -> {}'
+type :NilClass, :to_r, '() -> Rational'
