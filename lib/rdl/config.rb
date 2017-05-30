@@ -9,7 +9,7 @@ class RDL::Config
   attr_accessor :type_defaults, :pre_defaults, :post_defaults
 
   def initialize
-    @nowrap = Set.new
+    @nowrap = Set.new # Set of symbols
     @gather_stats = false
     @report = false # if this is enabled by default, modify @at_exit_installed
     @guess_types = [] # same as above
@@ -35,11 +35,11 @@ class RDL::Config
   end
 
   def add_nowrap(*klasses)
-    klasses.each { |klass| @nowrap.add klass }
+    klasses.each { |klass| @nowrap.add klass.to_s.to_sym }
   end
 
   def remove_nowrap(*klasses)
-    klasses.each { |klass| @nowrap.delete klass }
+    klasses.each { |klass| @nowrap.delete klass.to_s.to_sym }
   end
 
   # To use, copy these 3 lines to the test file of a gem
