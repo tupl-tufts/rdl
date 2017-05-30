@@ -133,12 +133,16 @@ module RDL
   @types[:true] = RDL::Type::NominalType.new TrueClass # actually creates singleton type
   @types[:false] = RDL::Type::NominalType.new FalseClass # also singleton type
   @types[:bool] = RDL::Type::UnionType.new(@types[:true], @types[:false])
-  @types[:fixnum] = RDL::Type::NominalType.new Fixnum
-  @types[:bignum] = RDL::Type::NominalType.new Bignum
   @types[:float] = RDL::Type::NominalType.new Float
   @types[:complex] = RDL::Type::NominalType.new Complex
   @types[:rational] = RDL::Type::NominalType.new Rational
-  @types[:integer] = RDL::Type::UnionType.new(@types[:fixnum], @types[:bignum])
+  if defined? Fixnum
+    @types[:fixnum] = RDL::Type::NominalType.new :Fixnum
+    @types[:bignum] = RDL::Type::NominalType.new :Bignum
+    @types[:integer] = RDL::Type::UnionType.new(@types[:fixnum], @types[:bignum])
+  else
+    @types[:integer] = RDL::Type::NominalType.new Integer
+  end
   @types[:numeric] = RDL::Type::NominalType.new Numeric
   @types[:string] = RDL::Type::NominalType.new String
   @types[:array] = RDL::Type::NominalType.new Array
