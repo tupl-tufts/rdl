@@ -331,7 +331,7 @@ class Object
       unless RDL.info.set(klass, meth, :typecheck, typecheck)
         raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
       end
-      if wrap || typecheck == :now
+      if wrap || typecheck
         if RDL::Util.method_defined?(klass, meth) || meth == :initialize
           RDL.info.set(klass, meth, :source_location, RDL::Util.to_class(klass).instance_method(meth).source_location)
           if typecheck == :now
