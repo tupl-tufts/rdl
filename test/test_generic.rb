@@ -156,15 +156,15 @@ class TestGeneric < Minitest::Test
     assert (A.new(["a", "b", "c"]).instantiate!('Object', check: true))
     assert (A.new([1, 2, 3]).instantiate!('Object', check: true))
 
-    # Hash<String, Fixnum>
-    assert (H.new({}).instantiate!('String', 'Fixnum', check: true))
-    assert (H.new({"one"=>1, "two"=>2}).instantiate!('String', 'Fixnum', check: true))
+    # Hash<String, Integer>
+    assert (H.new({}).instantiate!('String', 'Integer', check: true))
+    assert (H.new({"one"=>1, "two"=>2}).instantiate!('String', 'Integer', check: true))
     assert_raises(RDL::Type::TypeError) {
-      H.new(one: 1, two: 2).instantiate!('String', 'Fixnum', check: true)
+      H.new(one: 1, two: 2).instantiate!('String', 'Integer', check: true)
     }
-    assert (H.new(one: 1, two: 2).instantiate!('String', 'Fixnum', check: false))
+    assert (H.new(one: 1, two: 2).instantiate!('String', 'Integer', check: false))
     assert_raises(RDL::Type::TypeError){
-      H.new({"one"=>:one, "two"=>:two}).instantiate!('String', 'Fixnum', check: true)
+      H.new({"one"=>:one, "two"=>:two}).instantiate!('String', 'Integer', check: true)
     }
 
     # Hash<Object, Object>

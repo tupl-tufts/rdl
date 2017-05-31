@@ -591,10 +591,6 @@ module RDL::Typecheck
       case c
       when TrueClass, FalseClass, Complex, Rational, Integer, Float, Symbol, Class
         [env, RDL::Type::SingletonType.new(c)]
-      when (defined? Fixnum ? Fixnum : Integer) # backward compatibility
-        [env, RDL::Type::SingletonType.new(c)]
-      when (defined? Bignum ? Bignum : Integer)
-        [env, RDL::Type::SingletonType.new(c)]
       when Module
         t = RDL::Type::SingletonType.new(const_get(e.children[1]))
         [env, t]

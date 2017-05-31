@@ -259,7 +259,6 @@ class TestTypecheck < Minitest::Test
 
   def test_const
     assert do_tc("String", env: @env) <= tt("${String}")
-    assert do_tc("NIL", env: @env) <= RDL.types[:nil]
 
     t = RDL::Type::SingletonType.new(TestTypecheckOuter)
     assert_equal t, do_tc("TestTypecheckOuter", env: @env)

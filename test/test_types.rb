@@ -166,7 +166,7 @@ class TestTypes < Minitest::Test
     tinterAB = IntersectionType.new(tA, tB)
     tsyma = SingletonType.new(:a)
     tstring = NominalType.new :String
-    tfixnum = NominalType.new :Fixnum
+    tinteger = NominalType.new :Integer
     ta = VarType.new :a
     tb = VarType.new :b
     tc = VarType.new :c
@@ -174,19 +174,19 @@ class TestTypes < Minitest::Test
     thash = NominalType.new :Hash
     thashAB = GenericType.new(thash, tA, tB)
     thashab = GenericType.new(thash, ta, tb)
-    thashstringfixnum = GenericType.new(thash, tstring, tfixnum)
-    inst = {a: tstring, b: tfixnum, d: tsyma}
+    thashstringfixnum = GenericType.new(thash, tstring, tinteger)
+    inst = {a: tstring, b: tinteger, d: tsyma}
     ttupleAB = TupleType.new(tA, tB)
     ttupleab = TupleType.new(ta, tb)
-    ttuplestringfixnum = TupleType.new(tstring, tfixnum)
+    ttuplestringfixnum = TupleType.new(tstring, tinteger)
     tfinitehashaAbB = FiniteHashType.new({a: tA, b: tB}, nil)
     tfinitehashaabb = FiniteHashType.new({a: ta, b: tb}, nil)
-    tfinitehashastringbfixnum = FiniteHashType.new({a: tstring, b: tfixnum}, nil)
+    tfinitehashastringbfixnum = FiniteHashType.new({a: tstring, b: tinteger}, nil)
     tfinitehashaabbrd = FiniteHashType.new({a: ta, b: tb}, td)
-    tfinitehashastringbfixnumrsyma = FiniteHashType.new({a: tstring, b: tfixnum}, tsyma)
+    tfinitehashastringbfixnumrsyma = FiniteHashType.new({a: tstring, b: tinteger}, tsyma)
     tmethAAB = MethodType.new([tA, tA], nil, tB)
     tmethaab = MethodType.new([ta, ta], nil, tb)
-    tmethstringstringfixnum = MethodType.new([tstring, tstring], nil, tfixnum)
+    tmethstringstringfixnum = MethodType.new([tstring, tstring], nil, tinteger)
     tmethbAABn = MethodType.new([], tmethAAB, RDL.types[:nil])
     tmethbaabn = MethodType.new([], tmethaab, RDL.types[:nil])
     tmethbssfn = MethodType.new([], tmethstringstringfixnum, RDL.types[:nil])
@@ -205,7 +205,7 @@ class TestTypes < Minitest::Test
     assert_equal tinterAB, tinterAB.instantiate(inst)
     assert_equal tsyma, tsyma.instantiate(inst)
     assert_equal tstring, ta.instantiate(inst)
-    assert_equal tfixnum, tb.instantiate(inst)
+    assert_equal tinteger, tb.instantiate(inst)
     assert_equal tc, tc.instantiate(inst)
     assert_equal thashAB, thashAB.instantiate(inst)
     assert_equal thashstringfixnum, thashab.instantiate(inst)

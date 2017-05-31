@@ -14,7 +14,7 @@ class TestTypeContract < Minitest::Test
     cnil = RDL.types[:nil].to_contract
     assert (cnil.check self, nil)
     assert_raises(TypeError) { cnil.check self, true }
-    tfixnum = NominalType.new :Fixnum
+    tfixnum = NominalType.new :Integer
     cfixnum = tfixnum.to_contract
     assert (cfixnum.check self, 42)
     assert (cfixnum.check self, nil)
@@ -29,7 +29,7 @@ class TestTypeContract < Minitest::Test
     p1b = t1.to_contract.wrap(self) { |x| 42 }
     assert_raises(TypeError) { p1b.call(nil) }
 
-    t2 = @p.scan_str "(Fixnum, Fixnum) -> Fixnum"
+    t2 = @p.scan_str "(Integer, Integer) -> Integer"
     p2 = t2.to_contract.wrap(self) { |x, y| x }
     assert_equal 42, p2.call(42, 43)
     assert_equal 42, p2.call(42, nil)
@@ -43,14 +43,14 @@ class TestTypeContract < Minitest::Test
     assert_nil p3.call
     assert_raises(TypeError) { p3.call(42) }
 
-    t4 = @p.scan_str "(Fixnum, ?Fixnum) -> Fixnum"
+    t4 = @p.scan_str "(Integer, ?Integer) -> Integer"
     p4 = t4.to_contract.wrap(self) { |x| x }
     assert_equal 42, p4.call(42)
     assert_equal 42, p4.call(42, 43)
     assert_raises(TypeError) { p4.call(42, 43, 44) }
     assert_raises(TypeError) { p4.call }
 
-    t5 = @p.scan_str "(Fixnum, *Fixnum) -> Fixnum"
+    t5 = @p.scan_str "(Integer, *Integer) -> Integer"
     p5 = t5.to_contract.wrap(self) { |x| x }
     assert_equal 42, p5.call(42)
     assert_equal 42, p5.call(42, 43)
@@ -62,7 +62,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p5.call(42, 43, "44") }
     assert_raises(TypeError) { p5.call(42, 43, 44, "45") }
 
-    t6 = @p.scan_str "(Fixnum, ?Fixnum, ?Fixnum, *Fixnum) -> Fixnum"
+    t6 = @p.scan_str "(Integer, ?Integer, ?Integer, *Integer) -> Integer"
     p6 = t6.to_contract.wrap(self) { |x| x }
     assert_equal 42, p6.call(42)
     assert_equal 42, p6.call(42, 43)
@@ -76,7 +76,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p6.call(42, 43, 44, "45") }
     assert_raises(TypeError) { p6.call(42, 43, 44, 45, "46") }
 
-    t7 = @p.scan_str "(?Fixnum) -> nil"
+    t7 = @p.scan_str "(?Integer) -> nil"
     p7 = t7.to_contract.wrap(self) { nil }
     assert_nil p7.call
     assert_nil p7.call(42)
@@ -84,7 +84,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p7.call(42, 43) }
     assert_raises(TypeError) { p7.call(42, 43, 44) }
 
-    t8 = @p.scan_str "(*Fixnum) -> nil"
+    t8 = @p.scan_str "(*Integer) -> nil"
     p8 = t8.to_contract.wrap(self) { nil }
     assert_nil p8.call
     assert_nil p8.call(42)
@@ -94,26 +94,26 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p8.call(42, "43") }
     assert_raises(TypeError) { p8.call(42, 43, "44") }
 
-    t9 = @p.scan_str "(Fixnum arg1, ?Fixnum arg2) -> Fixnum"
+    t9 = @p.scan_str "(Integer arg1, ?Integer arg2) -> Integer"
     p9 = t9.to_contract.wrap(self) { |x| x }
     assert_equal 42, p9.call(42)
     assert_equal 42, p9.call(42, 43)
     assert_raises(TypeError) { p9.call(42, 43, 44) }
     assert_raises(TypeError) { p9.call }
 
-    t10 = @p.scan_str "(?Fixnum, String) -> Fixnum"
+    t10 = @p.scan_str "(?Integer, String) -> Integer"
     p10 = t10.to_contract.wrap(self) { |*args| 42 }
     assert_equal 42, p10.call("44")
     assert_equal 42, p10.call(43, "44")
     assert_raises(TypeError) { p10.call() }
     assert_raises(TypeError) { p10.call(43, "44", 45) }
 
-    t11 = @p.scan_str "(Fixnum x {{ x > 42 }}) -> Fixnum"
+    t11 = @p.scan_str "(Integer x {{ x > 42 }}) -> Integer"
     p11 = t11.to_contract.wrap(self) { |x| x }
     assert_equal 43, p11.call(43)
     assert_raises(TypeError) { p11.call(42) }
 
-    t12 = @p.scan_str "(Fixnum x {{ x>10 }}, Fixnum y {{ y > x }}) -> Fixnum z {{z > (x+y) }}"
+    t12 = @p.scan_str "(Integer x {{ x>10 }}, Integer y {{ y > x }}) -> Integer z {{z > (x+y) }}"
     p12 = t12.to_contract.wrap(self) { |x,y| x+y+1 }
     assert_equal 30, p12.call(14, 15)
     assert_equal 50, p12.call(24, 25)
@@ -124,7 +124,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p12b.call(11, 10) }
     assert_raises(TypeError) { p12b.call(9, 10) }
 
-    t13 = @p.scan_str "(Fixnum, {(Fixnum x {{x>10}}) -> Fixnum}) -> Float"
+    t13 = @p.scan_str "(Integer, {(Integer x {{x>10}}) -> Integer}) -> Float"
     p13 = t13.to_higher_contract(self) { |x,y| x+y.call(11)+0.5 }
     assert_equal 53.5, p13.call(42, Proc.new { |x| x })
     assert_raises(TypeError) { p13.call(42.5, Proc.new { |x| x} ) }
@@ -136,7 +136,7 @@ class TestTypeContract < Minitest::Test
     p13d = t13.to_higher_contract(self) { |x,y| x+y.call(42) }
     assert_raises(TypeError) { p13d.call(42, Proc.new { |x| x } ) }
 
-    t14 = @p.scan_str "(Fixnum, Fixnum) -> {(Fixnum) -> Fixnum}"
+    t14 = @p.scan_str "(Integer, Integer) -> {(Integer) -> Integer}"
     p14 = t14.to_higher_contract(self) { |x,y| Proc.new {|z| x+y+z} }
     assert_raises(TypeError) { p14.call(42.5, 42) }
     p14b = p14.call(42,42)
@@ -157,16 +157,16 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { block_contract_test4(40.5) }
     assert_raises(TypeError) { block_contract_test4(42) {|x| x+1.5} }
 
-    t15 = @p.scan_str "(Fixnum x {{x>y}}, Fixnum y) -> Fixnum"
+    t15 = @p.scan_str "(Integer x {{x>y}}, Integer y) -> Integer"
     p15 = t15.to_contract.wrap(self) { |x, y| x+y }
     assert_equal 21, p15.call(11, 10)
     assert_raises(TypeError) { p15.call(10, 11) }
 
-    t16 = @p.scan_str "(Fixnum x {{x > undefvar}}, Fixnum) -> Fixnum"
+    t16 = @p.scan_str "(Integer x {{x > undefvar}}, Integer) -> Integer"
     p16 = t16.to_contract.wrap(self) { |x,y| x }
     assert_raises(NameError) { p16.call(10,10) }
 
-    t17 = @p.scan_str "(Fixnum, *String, Fixnum) -> Fixnum"
+    t17 = @p.scan_str "(Integer, *String, Integer) -> Integer"
     p17 = t17.to_contract.wrap(self) { |x| x }
     assert_equal 42, p17.call(42, 43)
     assert_equal 42, p17.call(42, 'foo', 43)
@@ -177,7 +177,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p17.call(42, '43') }
     assert_raises(TypeError) { p17.call(42, 43, '44') }
 
-    t18 = @p.scan_str "(Fixnum, ?{(Fixnum) -> Fixnum}) -> Fixnum"
+    t18 = @p.scan_str "(Integer, ?{(Integer) -> Integer}) -> Integer"
     p18 = t18.to_higher_contract(self) { |x,p=nil| if p then p.call(x) else x end }
     assert_equal 42, p18.call(41, Proc.new {|x| x+1})
     assert_equal 42, p18.call(42)
@@ -190,29 +190,29 @@ class TestTypeContract < Minitest::Test
 
   end
 
-  type '(Fixnum) { (Fixnum) -> Fixnum } -> Fixnum'
+  type '(Integer) { (Integer) -> Integer } -> Integer'
   def block_contract_test1(x)
     x+yield(5)
   end
 
-  type '(Fixnum) { (Fixnum) -> Fixnum } -> Float'
+  type '(Integer) { (Integer) -> Integer } -> Float'
   def block_contract_test2(x)
     x+yield(4.5)
   end
 
-  type '(Fixnum) -> Fixnum'
+  type '(Integer) -> Integer'
   def block_contract_test3(x)
     42
   end
 
-  type '(Fixnum) ?{(Fixnum) -> Fixnum} -> Fixnum'
+  type '(Integer) ?{(Integer) -> Integer} -> Integer'
   def block_contract_test4(x,&blk)
     return yield(x) if blk
     return x
   end
 
   def test_proc_names
-    t1 = @p.scan_str "(x: Fixnum) -> Fixnum"
+    t1 = @p.scan_str "(x: Integer) -> Integer"
     p1 = t1.to_contract.wrap(self) { |x:| x }
     assert_equal 42, p1.call(x: 42)
     assert_raises(TypeError) { p1.call(x: "42") }
@@ -221,7 +221,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p1.call(y: 42) }
     assert_raises(TypeError) { p1.call(42) }
     assert_raises(TypeError) { p1.call(42, x: 42) }
-    t2 = @p.scan_str "(x: Fixnum, y: String) -> Fixnum"
+    t2 = @p.scan_str "(x: Integer, y: String) -> Integer"
     p2 = t2.to_contract.wrap(self) { |x:,y:| x }
     assert_equal 42, p2.call(x: 42, y: "33")
     assert_raises(TypeError) { p2.call() }
@@ -230,7 +230,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p2.call(42, "43") }
     assert_raises(TypeError) { p2.call(42, x: 42, y: "33") }
     assert_raises(TypeError) { p2.call(x: 42, y: "33", z: 44) }
-    t3 = @p.scan_str "(Fixnum, y: String) -> Fixnum"
+    t3 = @p.scan_str "(Integer, y: String) -> Integer"
     p3 = t3.to_contract.wrap(self) { |x, y:| x }
     assert_equal 42, p3.call(42, y:"43")
     assert_raises(TypeError) { p3.call(42) }
@@ -238,7 +238,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p3.call() }
     assert_raises(TypeError) { p3.call(42, 43, y: 44) }
     assert_raises(TypeError) { p3.call(42, y: 43, z: 44) }
-    t4 = @p.scan_str "(Fixnum, x: Fixnum, y: String) -> Fixnum"
+    t4 = @p.scan_str "(Integer, x: Integer, y: String) -> Integer"
     p4 = t4.to_contract.wrap(self) { |a, x:, y:| a }
     assert_equal 42, p4.call(42, x: 43, y: "44")
     assert_raises(TypeError) { p4.call(42, x: 43) }
@@ -246,7 +246,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p4.call() }
     assert_raises(TypeError) { p4.call(42, 43, x: 44, y: "45") }
     assert_raises(TypeError) { p4.call(42, x: 43, y: "44", z: 45) }
-    t5 = @p.scan_str "(x: Fixnum, y: ?String) -> Fixnum"
+    t5 = @p.scan_str "(x: Integer, y: ?String) -> Integer"
     p5 = t5.to_contract.wrap(self) { |x:, **ys| x }
     assert_equal 42, p5.call(x: 42, y: "43")
     assert_equal 42, p5.call(x: 42)
@@ -255,7 +255,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p5.call(x: 42, y: 43, z: 44) }
     assert_raises(TypeError) { p5.call(3, x: 42, y: 43) }
     assert_raises(TypeError) { p5.call(3, x: 42) }
-    t6 = @p.scan_str "(x: ?Fixnum, y: String) -> Fixnum"
+    t6 = @p.scan_str "(x: ?Integer, y: String) -> Integer"
     p6 = t6.to_contract.wrap(self) { |y:, **xs| 42 }
     assert_equal 42, p6.call(x: 43, y: "44")
     assert_equal 42, p6.call(y: "44")
@@ -263,7 +263,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p6.call(x: "43", y: "44") }
     assert_raises(TypeError) { p6.call(42, x: 43, y: "44") }
     assert_raises(TypeError) { p6.call(x: 43, y: "44", z: 45) }
-    t7 = @p.scan_str "(x: ?Fixnum, y: ?String) -> Fixnum"
+    t7 = @p.scan_str "(x: ?Integer, y: ?String) -> Integer"
     p7 = t7.to_contract.wrap(self) { |**args| 42 }
     assert_equal 42, p7.call
     assert_equal 42, p7.call(x: 43)
@@ -272,7 +272,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p7.call(x: "43", y: "44") }
     assert_raises(TypeError) { p7.call(41, x: 43, y: "44") }
     assert_raises(TypeError) { p7.call(x: 43, y: "44", z: 45) }
-    t8 = @p.scan_str "(?Fixnum, x: ?Symbol, y: ?String) -> Fixnum"
+    t8 = @p.scan_str "(?Integer, x: ?Symbol, y: ?String) -> Integer"
     p8 = t8.to_contract.wrap(self) { |*args| 42 }
     assert_equal 42, p8.call
     assert_equal 42, p8.call(43)
@@ -285,7 +285,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p8.call(43, 44, x: :foo, y: "foo") }
     assert_raises(TypeError) { p8.call(43, x: "foo", y: "foo") }
     assert_raises(TypeError) { p8.call(43, x: :foo, y: "foo", z: 44) }
-    t9 = @p.scan_str "(Fixnum, x: String, y: Fixnum, **Float) -> Fixnum"
+    t9 = @p.scan_str "(Integer, x: String, y: Integer, **Float) -> Integer"
     p9 = t9.to_contract.wrap(self) { |*args| 42 }
     assert_raises(TypeError) { p9.call }
     assert_raises(TypeError) { p9.call(43) }
