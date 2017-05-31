@@ -9,6 +9,7 @@
 - Type checking of Module methods
 - Type checking method when class name is included in type annotation
 - Dynamic type checks after calls to instantiate!
+- Ruby 2.4 compatibility!
 
 ### Added
 - Support operator assignment when left-hand side has method args
