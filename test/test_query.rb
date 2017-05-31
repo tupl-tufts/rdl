@@ -7,7 +7,7 @@ class TestQuery < Minitest::Test
 
   def setup
     @p = Parser.new
-    @tfixnum = NominalType.new Fixnum
+    @tinteger = NominalType.new Integer
     @tarray = NominalType.new Array
     @qwild = WildQuery.new
     @qwildopt = OptionalType.new @qwild
@@ -19,94 +19,94 @@ class TestQuery < Minitest::Test
   def test_parse
     q1 = @p.scan_str "#Q (.) -> ."
     assert_equal (MethodType.new [@qwild], nil, @qwild), q1
-    q2 = @p.scan_str "#Q (., Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [@qwild, @tfixnum], nil, @tfixnum), q2
-    q3 = @p.scan_str "#Q (Fixnum, ?.) -> Fixnum"
-    assert_equal (MethodType.new [@tfixnum, @qwildopt], nil, @tfixnum), q3
-    q4 = @p.scan_str "#Q (*.) -> Fixnum"
-    assert_equal (MethodType.new [@qwildvararg], nil, @tfixnum), q4
-    q5 = @p.scan_str "#Q (. or Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [UnionType.new(@qwild, @tfixnum)], nil, @tfixnum), q5
-    q6 = @p.scan_str "#Q (. x, Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [@qwildx, @tfixnum], nil, @tfixnum), q6
-    q7 = @p.scan_str "#Q (Array<.>) -> Fixnum"
-    assert_equal (MethodType.new [GenericType.new(@tarray, @qwild)], nil, @tfixnum), q7
-#    q8 = @p.scan_str "#Q (.<Fixnum>) -> Fixnum"
-#    assert_equal (MethodType.new [GenericType.new(@twild, @tfixnum)], nil, @tfixnum), q8
-    q9 = @p.scan_str "#Q ([Fixnum, .]) -> Fixnum"
-    assert_equal (MethodType.new [TupleType.new(@tfixnum, @qwild)], nil, @tfixnum), q9
-    q10 = @p.scan_str "#Q ([to_str: () -> .]) -> Fixnum"
-    assert_equal (MethodType.new [StructuralType.new(to_str: (MethodType.new [], nil, @qwild))], nil, @tfixnum), q10
-    q11 = @p.scan_str "#Q ({a: Fixnum, b: .}) -> Fixnum"
-    assert_equal (MethodType.new [FiniteHashType.new({a: @tfixnum, b: @qwild}, nil)], nil, @tfixnum), q11
-    q12 = @p.scan_str "#Q (Fixnum, x: .) -> Fixnum"
-    assert_equal (MethodType.new [@tfixnum, FiniteHashType.new({x: @qwild}, nil)], nil, @tfixnum), q12
-    q13 = @p.scan_str "#Q (Fixnum, ..., Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [@tfixnum, @qdots, @tfixnum], nil, @tfixnum), q13
-    q14 = @p.scan_str "#Q (Fixnum, ...) -> Fixnum"
-    assert_equal (MethodType.new [@tfixnum, @qdots], nil, @tfixnum), q14
-    q15 = @p.scan_str "#Q (...) -> Fixnum"
-    assert_equal (MethodType.new [@qdots], nil, @tfixnum), q15
+    q2 = @p.scan_str "#Q (., Integer) -> Integer"
+    assert_equal (MethodType.new [@qwild, @tinteger], nil, @tinteger), q2
+    q3 = @p.scan_str "#Q (Integer, ?.) -> Integer"
+    assert_equal (MethodType.new [@tinteger, @qwildopt], nil, @tinteger), q3
+    q4 = @p.scan_str "#Q (*.) -> Integer"
+    assert_equal (MethodType.new [@qwildvararg], nil, @tinteger), q4
+    q5 = @p.scan_str "#Q (. or Integer) -> Integer"
+    assert_equal (MethodType.new [UnionType.new(@qwild, @tinteger)], nil, @tinteger), q5
+    q6 = @p.scan_str "#Q (. x, Integer) -> Integer"
+    assert_equal (MethodType.new [@qwildx, @tinteger], nil, @tinteger), q6
+    q7 = @p.scan_str "#Q (Array<.>) -> Integer"
+    assert_equal (MethodType.new [GenericType.new(@tarray, @qwild)], nil, @tinteger), q7
+#    q8 = @p.scan_str "#Q (.<Integer>) -> Integer"
+#    assert_equal (MethodType.new [GenericType.new(@twild, @tinteger)], nil, @tinteger), q8
+    q9 = @p.scan_str "#Q ([Integer, .]) -> Integer"
+    assert_equal (MethodType.new [TupleType.new(@tinteger, @qwild)], nil, @tinteger), q9
+    q10 = @p.scan_str "#Q ([to_str: () -> .]) -> Integer"
+    assert_equal (MethodType.new [StructuralType.new(to_str: (MethodType.new [], nil, @qwild))], nil, @tinteger), q10
+    q11 = @p.scan_str "#Q ({a: Integer, b: .}) -> Integer"
+    assert_equal (MethodType.new [FiniteHashType.new({a: @tinteger, b: @qwild}, nil)], nil, @tinteger), q11
+    q12 = @p.scan_str "#Q (Integer, x: .) -> Integer"
+    assert_equal (MethodType.new [@tinteger, FiniteHashType.new({x: @qwild}, nil)], nil, @tinteger), q12
+    q13 = @p.scan_str "#Q (Integer, ..., Integer) -> Integer"
+    assert_equal (MethodType.new [@tinteger, @qdots, @tinteger], nil, @tinteger), q13
+    q14 = @p.scan_str "#Q (Integer, ...) -> Integer"
+    assert_equal (MethodType.new [@tinteger, @qdots], nil, @tinteger), q14
+    q15 = @p.scan_str "#Q (...) -> Integer"
+    assert_equal (MethodType.new [@qdots], nil, @tinteger), q15
   end
 
   def test_match
-    t1 = @p.scan_str "(Fixnum, Fixnum) -> Fixnum"
-    assert (@p.scan_str "#Q (Fixnum, Fixnum) -> Fixnum").match(t1)
+    t1 = @p.scan_str "(Integer, Integer) -> Integer"
+    assert (@p.scan_str "#Q (Integer, Integer) -> Integer").match(t1)
     assert (@p.scan_str "#Q (., .) -> .").match(t1)
-    assert (@p.scan_str "#Q (..., Fixnum) -> Fixnum").match(t1)
-    assert (@p.scan_str "#Q (Fixnum, ...) -> Fixnum").match(t1)
-    assert (@p.scan_str "#Q (...) -> Fixnum").match(t1)
-    assert (not (@p.scan_str "#Q (Fixnum, String) -> Fixnum").match(t1))
-    assert (not (@p.scan_str "#Q (String, Fixnum) -> Fixnum").match(t1))
-    assert (not (@p.scan_str "#Q (Fixnum, String) -> String").match(t1))
+    assert (@p.scan_str "#Q (..., Integer) -> Integer").match(t1)
+    assert (@p.scan_str "#Q (Integer, ...) -> Integer").match(t1)
+    assert (@p.scan_str "#Q (...) -> Integer").match(t1)
+    assert (not (@p.scan_str "#Q (Integer, String) -> Integer").match(t1))
+    assert (not (@p.scan_str "#Q (String, Integer) -> Integer").match(t1))
+    assert (not (@p.scan_str "#Q (Integer, String) -> String").match(t1))
     assert (not (@p.scan_str "#Q (..., String) -> String").match(t1))
     assert (not (@p.scan_str "#Q (String, ...) -> String").match(t1))
-    t2 = @p.scan_str "(String or Fixnum) -> Fixnum"
-    assert (@p.scan_str "#Q (String or Fixnum) -> Fixnum").match(t2)
-    assert (@p.scan_str "#Q (String or .) -> Fixnum").match(t2)
-    assert (@p.scan_str "#Q (. or Fixnum) -> Fixnum").match(t2)
-    assert (@p.scan_str "#Q (Fixnum or String) -> Fixnum").match(t2)
-    assert (@p.scan_str "#Q (Fixnum or .) -> Fixnum").match(t2)
-    assert (@p.scan_str "#Q (. or String) -> Fixnum").match(t2)
-    t3 = @p.scan_str "(Array<Fixnum>) -> Fixnum"
-    assert (@p.scan_str "#Q (Array<Fixnum>) -> Fixnum").match(t3)
-    assert (@p.scan_str "#Q (Array<.>) -> Fixnum").match(t3)
-    t4 = @p.scan_str "([Fixnum, String]) -> Fixnum"
-    assert (@p.scan_str "#Q ([Fixnum, String]) -> Fixnum").match(t4)
-    assert (@p.scan_str "#Q ([Fixnum, .]) -> Fixnum").match(t4)
-    assert (@p.scan_str "#Q ([., String]) -> Fixnum").match(t4)
-    t5 = @p.scan_str "([to_str: () -> Fixnum]) -> Fixnum"
-    assert (@p.scan_str "#Q ([to_str: () -> Fixnum]) -> Fixnum").match(t5)
-    assert (@p.scan_str "#Q ([to_str: () -> .]) -> Fixnum").match(t5)
-    t6 = @p.scan_str "(Fixnum, ?Fixnum) -> Fixnum"
-    assert (@p.scan_str "#Q (Fixnum, ?Fixnum) -> Fixnum").match(t6)
-    assert (@p.scan_str "#Q (Fixnum, ?.) -> Fixnum").match(t6)
-    assert (@p.scan_str "#Q (Fixnum, .) -> Fixnum").match(t6)
-    t7 = @p.scan_str "(*Fixnum) -> Fixnum"
-    assert (@p.scan_str "#Q (*Fixnum) -> Fixnum").match(t7)
-    assert (@p.scan_str "#Q (*.) -> Fixnum").match(t7)
-    assert (@p.scan_str "#Q (.) -> Fixnum").match(t7)
-    t8 = @p.scan_str "({a: Fixnum, b: String}) -> Fixnum"
-    assert (@p.scan_str "#Q ({a: Fixnum, b: String}) -> Fixnum").match(t8)
-    assert (@p.scan_str "#Q ({a: Fixnum, b: .}) -> Fixnum").match(t8)
-    assert (@p.scan_str "#Q ({a: ., b: String}) -> Fixnum").match(t8)
-    assert (@p.scan_str "#Q ({a: ., b: .}) -> Fixnum").match(t8)
-    assert (@p.scan_str "#Q ({b: String, a: Fixnum}) -> Fixnum").match(t8)
-    assert (@p.scan_str "#Q ({b: ., a: Fixnum}) -> Fixnum").match(t8)
-    assert (@p.scan_str "#Q ({b: String, a: .}) -> Fixnum").match(t8)
-    assert (@p.scan_str "#Q ({b: ., a: .}) -> Fixnum").match(t8)
-    assert (@p.scan_str "#Q (.) -> Fixnum").match(t8)
-    t9 = @p.scan_str "(Fixnum, x: String) -> Fixnum"
-    assert (@p.scan_str "#Q (Fixnum, x: String) -> Fixnum").match(t9)
-    assert (@p.scan_str "#Q (Fixnum, x: .) -> Fixnum").match(t9)
-    assert (@p.scan_str "#Q (Fixnum, .) -> Fixnum").match(t9)
-    t10 = @p.scan_str "(String x, Fixnum) -> Fixnum"
-    assert (@p.scan_str "#Q (String x, Fixnum) -> Fixnum").match(t10)
-    assert (@p.scan_str "#Q (. x, Fixnum) -> Fixnum").match(t10)
-    assert (@p.scan_str "#Q (String, Fixnum) -> Fixnum").match(t10)
-    assert (@p.scan_str "#Q (., Fixnum) -> Fixnum").match(t10)
-    t11 = @p.scan_str "(Fixnum, x: String, **Float) -> Fixnum"
-    assert (@p.scan_str "#Q (Fixnum, x: String, **Float) -> Fixnum").match(t11)
-    assert (@p.scan_str "#Q (Fixnum, x: String, **.) -> Fixnum").match(t11)
+    t2 = @p.scan_str "(String or Integer) -> Integer"
+    assert (@p.scan_str "#Q (String or Integer) -> Integer").match(t2)
+    assert (@p.scan_str "#Q (String or .) -> Integer").match(t2)
+    assert (@p.scan_str "#Q (. or Integer) -> Integer").match(t2)
+    assert (@p.scan_str "#Q (Integer or String) -> Integer").match(t2)
+    assert (@p.scan_str "#Q (Integer or .) -> Integer").match(t2)
+    assert (@p.scan_str "#Q (. or String) -> Integer").match(t2)
+    t3 = @p.scan_str "(Array<Integer>) -> Integer"
+    assert (@p.scan_str "#Q (Array<Integer>) -> Integer").match(t3)
+    assert (@p.scan_str "#Q (Array<.>) -> Integer").match(t3)
+    t4 = @p.scan_str "([Integer, String]) -> Integer"
+    assert (@p.scan_str "#Q ([Integer, String]) -> Integer").match(t4)
+    assert (@p.scan_str "#Q ([Integer, .]) -> Integer").match(t4)
+    assert (@p.scan_str "#Q ([., String]) -> Integer").match(t4)
+    t5 = @p.scan_str "([to_str: () -> Integer]) -> Integer"
+    assert (@p.scan_str "#Q ([to_str: () -> Integer]) -> Integer").match(t5)
+    assert (@p.scan_str "#Q ([to_str: () -> .]) -> Integer").match(t5)
+    t6 = @p.scan_str "(Integer, ?Integer) -> Integer"
+    assert (@p.scan_str "#Q (Integer, ?Integer) -> Integer").match(t6)
+    assert (@p.scan_str "#Q (Integer, ?.) -> Integer").match(t6)
+    assert (@p.scan_str "#Q (Integer, .) -> Integer").match(t6)
+    t7 = @p.scan_str "(*Integer) -> Integer"
+    assert (@p.scan_str "#Q (*Integer) -> Integer").match(t7)
+    assert (@p.scan_str "#Q (*.) -> Integer").match(t7)
+    assert (@p.scan_str "#Q (.) -> Integer").match(t7)
+    t8 = @p.scan_str "({a: Integer, b: String}) -> Integer"
+    assert (@p.scan_str "#Q ({a: Integer, b: String}) -> Integer").match(t8)
+    assert (@p.scan_str "#Q ({a: Integer, b: .}) -> Integer").match(t8)
+    assert (@p.scan_str "#Q ({a: ., b: String}) -> Integer").match(t8)
+    assert (@p.scan_str "#Q ({a: ., b: .}) -> Integer").match(t8)
+    assert (@p.scan_str "#Q ({b: String, a: Integer}) -> Integer").match(t8)
+    assert (@p.scan_str "#Q ({b: ., a: Integer}) -> Integer").match(t8)
+    assert (@p.scan_str "#Q ({b: String, a: .}) -> Integer").match(t8)
+    assert (@p.scan_str "#Q ({b: ., a: .}) -> Integer").match(t8)
+    assert (@p.scan_str "#Q (.) -> Integer").match(t8)
+    t9 = @p.scan_str "(Integer, x: String) -> Integer"
+    assert (@p.scan_str "#Q (Integer, x: String) -> Integer").match(t9)
+    assert (@p.scan_str "#Q (Integer, x: .) -> Integer").match(t9)
+    assert (@p.scan_str "#Q (Integer, .) -> Integer").match(t9)
+    t10 = @p.scan_str "(String x, Integer) -> Integer"
+    assert (@p.scan_str "#Q (String x, Integer) -> Integer").match(t10)
+    assert (@p.scan_str "#Q (. x, Integer) -> Integer").match(t10)
+    assert (@p.scan_str "#Q (String, Integer) -> Integer").match(t10)
+    assert (@p.scan_str "#Q (., Integer) -> Integer").match(t10)
+    t11 = @p.scan_str "(Integer, x: String, **Float) -> Integer"
+    assert (@p.scan_str "#Q (Integer, x: String, **Float) -> Integer").match(t11)
+    assert (@p.scan_str "#Q (Integer, x: String, **.) -> Integer").match(t11)
   end
 end

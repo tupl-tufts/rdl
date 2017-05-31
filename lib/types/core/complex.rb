@@ -1,6 +1,6 @@
 rdl_nowrap :Complex
 
-type :Complex, :*, '(%integer) -> Complex'
+type :Complex, :*, '(Integer) -> Complex'
 type :Complex, :*, '(Float) -> Complex'
 pre(:Complex, :*) { |x| if x.infinite?||x.nan? then !self.imaginary.is_a?(BigDecimal)&&!self.real.is_a?(BigDecimal) else true end}
 type :Complex, :*, '(Rational) -> Complex'
@@ -9,14 +9,14 @@ pre(:Complex, :*) {if x.real.is_a?(Float) then !x.real.infinite? && !x.real.nan?
 type :Complex, :*, '(Complex) -> Complex'
 pre(:Complex, :*) { |x| if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end}
 
-type :Complex, :**, '(%integer) -> Complex'
+type :Complex, :**, '(Integer) -> Complex'
 type :Complex, :**, '(Float) -> Complex'
 type :Complex, :**, '(Rational) -> Complex'
 type :Complex, :**, '(BigDecimal x {{ !x.infinite? && !x.nan? && x>=0 }}) -> Complex'
 type :Complex, :**, '(Complex) -> Complex'
 pre(:Complex, :**) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end}
 
-type :Complex, :+, '(%integer) -> Complex'
+type :Complex, :+, '(Integer) -> Complex'
 type :Complex, :+, '(Float) -> Complex'
 pre(:Complex, :+) { |x| if x.infinite?||x.nan? then !self.real.is_a?(BigDecimal) else true end}
 type :Complex, :+, '(Rational) -> Complex'
@@ -25,7 +25,7 @@ pre(:Complex, :+) {if x.real.is_a?(Float) then !x.real.infinite? && !x.real.nan?
 type :Complex, :+, '(Complex) -> Complex'
 pre(:Complex, :+) { |x| if (x.real.is_a?(BigDecimal) && self.real.is_a?(Float)) then !(self.real.infinite?||self.real.nan?) elsif x.real.is_a?(Float)&&self.real.is_a?(BigDecimal) then !(x.real.infinite?||x.real.nan?) elsif (x.imaginary.is_a?(BigDecimal) && self.imaginary.is_a?(Float)) then !(self.imaginary.infinite?||self.imaginary.nan?) elsif x.imaginary.is_a?(Float)&&self.imaginary.is_a?(BigDecimal) then !(x.imaginary.infinite?||x.imaginary.nan?) else true end}
 
-type :Complex, :-, '(%integer) -> Complex'
+type :Complex, :-, '(Integer) -> Complex'
 type :Complex, :-, '(Float) -> Complex'
 pre(:Complex, :-) { |x| if x.infinite?||x.nan? then !self.real.is_a?(BigDecimal) else true end}
 type :Complex, :-, '(Rational) -> Complex'
@@ -38,7 +38,7 @@ type :Complex, :-@, '() -> Complex'
 
 type :Complex, :+@, '() -> Complex'
 
-type :Complex, :/, '(%integer x {{ x!=0 }}) -> Complex'
+type :Complex, :/, '(Integer x {{ x!=0 }}) -> Complex'
 type :Complex, :/, '(Float x {{ x!=0 }}) -> Complex'
 pre(:Complex, :/) { |x| if x.infinte?||x.nan? then !self.real.is_a?(BigDecimal) && !self.imaginary.is_a?(BigDecimal) else true end}
 type :Complex, :/, '(Rational x {{ x!=0 }}) -> Complex'
@@ -60,7 +60,7 @@ type :Complex, :arg, '() -> Float'
 type :Complex, :conj, '() -> Complex'
 type :Complex, :conjugate, '() -> Complex'
 
-type :Complex, :denominator, '() -> %integer'
+type :Complex, :denominator, '() -> Integer'
 
 type :Complex, :equal?, '(Object) -> %bool'
 type :Complex, :eql?, '(Object) -> %bool'
@@ -68,7 +68,7 @@ type :Complex, :eql?, '(Object) -> %bool'
 type :Complex, :fdiv, '(%numeric) -> Complex'
 pre(:Complex, :fdiv) { |x| if (self.real.is_a?(Float) && (self.real.infinite? || self.real.nan?))||(self.imaginary.is_a?(Float) && (self.imaginary.infinite? || self.imaginary.nan?)) then !x.is_a?(BigDecimal) && (if x.is_a?(Complex) then !x.real.is_a?(BigDecimal) && !x.imaginary.is_a?(BigDecimal) else true end) else true end}
 
-type :Complex, :hash, '() -> %integer'
+type :Complex, :hash, '() -> Integer'
 
 type :Complex, :imag, '() -> %real'
 type :Complex, :imaginary, '() -> %real'
@@ -83,7 +83,7 @@ type :Complex, :phase, '() -> Float'
 
 type :Complex, :polar, '() -> [%real, %real]'
 
-type :Complex, :quo, '(%integer x {{ x!=0 }}) -> Complex'
+type :Complex, :quo, '(Integer x {{ x!=0 }}) -> Complex'
 type :Complex, :quo, '(Float x {{ x!=0 }}) -> Complex'
 pre(:Complex, :quo) { |x| if self.real.is_a?(BigDecimal)||self.imaginary.is_a?(BigDecimal) then !x.infinite? && !x.nan? else true end}
 type :Complex, :quo, '(Rational x {{ x!=0 }}) -> Complex'
@@ -110,7 +110,7 @@ type :Complex, :to_c, '() -> Complex'
 type :Complex, :to_f, '() -> Float'
 pre(:Complex, :to_f) { self.imaginary==0}
 
-type :Complex, :to_i, '() -> %integer'
+type :Complex, :to_i, '() -> Integer'
 pre(:Complex, :to_i) { self.imaginary==0 && if self.real.is_a?(Float)||self.real.is_a?(BigDecimal) then !self.real.infinite? && !self.real.nan? else true end}
 
 type :Complex, :to_r, '() -> Rational'

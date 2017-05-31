@@ -11,10 +11,10 @@
 # type :RUBY_COPYRIGHT, 'String'
 # type :RUBY_DESCRIPTION, 'String'
 # type :RUBY_ENGINE, 'String'
-# type :RUBY_PATCHLEVEL, Fixnum
+# type :RUBY_PATCHLEVEL, Integer
 # type :RUBY_PLATFORM, 'String'
 # type :RUBY_RELEASE_DATE, 'String'
-# type :RUBY_REVISION, Fixnum
+# type :RUBY_REVISION, Integer
 # type :RUBY_VERSION, 'String'
 # type :STDERR, 'IO'
 # type :STDIN, 'IO'
@@ -23,7 +23,7 @@
 # type :TRUE, '%true'
 
 type :Object, :!~, '(%any other) -> %bool', wrap: false
-type :Object, :<=>, '(%any other) -> Fixnum or nil', wrap: false
+type :Object, :<=>, '(%any other) -> Integer or nil', wrap: false
 type :Object, :===, '(%any other) -> %bool', wrap: false
 type :Object, :=~, '(%any other) -> nil', wrap: false
 type :Object, :class, '() -> Class', wrap: false
@@ -37,7 +37,7 @@ type :Object, :eql?, '(%any other) -> %bool', wrap: false
 # type :Object, :extend, '(XXXX : *XXXX)') # TODO
 type :Object, :freeze, '() -> self', wrap: false
 type :Object, :frozen?, '() -> %bool', wrap: false
-type :Object, :hash, '() -> Fixnum', wrap: false
+type :Object, :hash, '() -> Integer', wrap: false
 type :Object, :inspect, '() -> String', wrap: false
 type :Object, :instance_of?, '(Class) -> %bool', wrap: false
 type :Object, :instance_variable_defined?, '(Symbol or String) -> %bool', wrap: false

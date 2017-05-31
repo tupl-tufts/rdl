@@ -48,7 +48,7 @@ type :Set, :proper_superset?, '(Set<t> set) -> %bool'
 type :Set, :reject!, '() { (t) -> %bool } -> self or nil'
 type :Set, :replace, '(Enumerable<u> enum) -> Set<u>' # !! Fix, actually changes type!
 type :Set, :select!, '() { (t) -> %bool } -> self or nil'
-type :Set, :size, '() -> Fixnum'
+type :Set, :size, '() -> Integer'
 type :Set, :subset?, '(Set<t> set) -> %bool'
 type :Set, :subtract, '(Enumerable<t> enum) -> self'
 type :Set, :superset?, '(Set<t> set) -> %bool'

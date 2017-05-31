@@ -98,41 +98,41 @@ class TestLe < Minitest::Test
     assert (not (t2 <= t1))
     assert (not (tarray <= t1))
     assert (t1 <= t2) # covariant subtyping since tuples are *immutable*
-    assert (tt("[1, 2, 3]") <= tt("[Fixnum, Fixnum, Fixnum]")) # covariant subtyping with singletons
-    assert (tt("[Fixnum, Fixnum, Fixnum]") <= tt("[Object, Object, Object]"))
+    assert (tt("[1, 2, 3]") <= tt("[Integer, Integer, Integer]")) # covariant subtyping with singletons
+    assert (tt("[Integer, Integer, Integer]") <= tt("[Object, Object, Object]"))
     assert (tt("[1, 2, 3]") <= tt("[Object, Object, Object]"))
 
     # subtyping of tuples and arrays
-    tfs_1 = tt "[Fixnum, String]"
-    tafs_1 = tt "Array<Fixnum or String>"
+    tfs_1 = tt "[Integer, String]"
+    tafs_1 = tt "Array<Integer or String>"
     assert (tfs_1 <= tafs_1) # subtyping allowed by tfs_1 promoted to array
-    tfs2_1 = tt "[Fixnum, String]"
+    tfs2_1 = tt "[Integer, String]"
     assert (not (tfs_1 <= tfs2_1)) # t12 has been promoted to array, no longer subtype
 
-    tfs_2 = tt "[Fixnum, String]"
-    tfs2_2 = tt "[Fixnum, String]"
+    tfs_2 = tt "[Integer, String]"
+    tfs2_2 = tt "[Integer, String]"
     assert (tfs_2 <= tfs2_2) # this is allowed here because tfs_2 is still a tuple
-    tafs_2 = tt "Array<Fixnum or String>"
+    tafs_2 = tt "Array<Integer or String>"
     assert (not (tfs_2 <= tafs_2)) # subtyping not allowed because tfs_2 <= tfs2_2 unsatisfiable after tfs_2 promoted
 
-    tfs_3 = tt "[Fixnum, String]"
+    tfs_3 = tt "[Integer, String]"
     tfs2_3 = tt "[Object, Object]"
     assert (tfs_3 <= tfs2_3) # this is allowed here because t12a is still a tuple
     tafs_3 = tt "Array<Object>"
     assert (not (tfs2_3 <= tafs_3)) # subtyping not allowed because tfs_3 <= tfs2_3 unsatisfiable after tfs2_3 promoted
 
-    tfs_4 = tt "[Fixnum, String]"
-    tfs2_4 = tt "[Fixnum, String]"
+    tfs_4 = tt "[Integer, String]"
+    tfs2_4 = tt "[Integer, String]"
     assert (tfs_4 <= tfs2_4) # allowed, types are the same
-    tafs_4 = tt "Array<Fixnum or String>"
+    tafs_4 = tt "Array<Integer or String>"
     assert (tfs2_4 <= tafs_4) # allowed, both tfs2_4 and tfs_4 promoted to array
-    tfs3_4 = tt "[Fixnum, String]"
+    tfs3_4 = tt "[Integer, String]"
     assert (not(tfs_4 <= tfs3_4)) # not allowed, tfs_4 has been promoted
   end
 
   def test_finite_hash
     t12 = tt "{a: 1, b: 2}"
-    tfs = tt "{a: Fixnum, b: Fixnum}"
+    tfs = tt "{a: Integer, b: Integer}"
     too = tt "{a: Object, b: Object}"
     assert (t12 <= tfs)
     assert (t12 <= too)
@@ -143,36 +143,36 @@ class TestLe < Minitest::Test
 
     # subtyping of finite hashes and hashes; same pattern as tuples
     # subtyping of tuples and arrays
-    tfs_1 = tt "{x: Fixnum, y: String}"
-    thfs_1 = tt "Hash<Symbol, Fixnum or String>"
+    tfs_1 = tt "{x: Integer, y: String}"
+    thfs_1 = tt "Hash<Symbol, Integer or String>"
     assert (tfs_1 <= thfs_1) # subtyping allowed because tfs_1 promoted to hash
-    tfs2_1 = tt "{x: Fixnum, y: String}"
+    tfs2_1 = tt "{x: Integer, y: String}"
     assert (not (tfs_1 <= tfs2_1)) # t12 has been promoted to hash, no longer subtype
 
-    tfs_2 = tt "{x: Fixnum, y: String}"
-    tfs2_2 = tt "{x: Fixnum, y: String}"
+    tfs_2 = tt "{x: Integer, y: String}"
+    tfs2_2 = tt "{x: Integer, y: String}"
     assert (tfs_2 <= tfs2_2) # this is allowed here because tfs_2 is still finite
-    thfs_2 = tt "Hash<Symbol, Fixnum or String>"
+    thfs_2 = tt "Hash<Symbol, Integer or String>"
     assert (not (tfs_2 <= thfs_2)) # subtyping not allowed because tfs_2 <= tfs2_2 unsatisfiable after tfs_2 promoted
 
-    tfs_3 = tt "{x: Fixnum, y: String}"
+    tfs_3 = tt "{x: Integer, y: String}"
     tfs2_3 = tt "{x: Object, y: Object}"
     assert (tfs_3 <= tfs2_3) # this is allowed here because t12a is still finite
     thfs_3 = tt "Hash<Symbol, Object>"
     assert (not (tfs2_3 <= thfs_3)) # subtyping not allowed because tfs_3 <= tfs2_3 unsatisfiable after tfs2_3 promoted
 
-    tfs_4 = tt "{x: Fixnum, y: String}"
-    tfs2_4 = tt "{x: Fixnum, y: String}"
+    tfs_4 = tt "{x: Integer, y: String}"
+    tfs2_4 = tt "{x: Integer, y: String}"
     assert (tfs_4 <= tfs2_4) # allowed, types are the same
-    thfs_4 = tt "Hash<Symbol, Fixnum or String>"
+    thfs_4 = tt "Hash<Symbol, Integer or String>"
     assert (tfs2_4 <= thfs_4) # allowed, both tfs2_4 and tfs_4 promoted to hash
-    tfs3_4 = tt "{x: Fixnum, y: String}"
+    tfs3_4 = tt "{x: Integer, y: String}"
     assert (not(tfs_4 <= tfs3_4)) # not allowed, tfs_4 has been promoted
 
-    tfss_5 = tt "{x: Fixnum, y: String, **Symbol}"
-    tfns_5 = tt "{x: Fixnum, **Symbol}"
-    tfsn_5 = tt "{x: Fixnum, y: String}"
-    tftn_5 = tt "{x: Fixnum, z: Symbol}"
+    tfss_5 = tt "{x: Integer, y: String, **Symbol}"
+    tfns_5 = tt "{x: Integer, **Symbol}"
+    tfsn_5 = tt "{x: Integer, y: String}"
+    tftn_5 = tt "{x: Integer, z: Symbol}"
     tooo_5 = tt "{x: Object, y: Object, **Object}"
     tono_5 = tt "{x: Object, **Object}"
     assert (tfss_5 <= tooo_5)
@@ -190,7 +190,7 @@ class TestLe < Minitest::Test
     assert (tftn_5 <= tfns_5)
     assert (not (tftn_5 <= tfsn_5))
 
-    assert (not (tt("{x: ?Fixnum}") <= tt("{x: Fixnum}")))
+    assert (not (tt("{x: ?Integer}") <= tt("{x: Integer}")))
   end
 
   def test_method
@@ -262,7 +262,7 @@ class TestLe < Minitest::Test
     tnom = NominalType.new(Nom)
     tnomt = NominalType.new(NomT)
     tma = MethodType.new([], nil, RDL.types[:nil])
-    tmb = MethodType.new([RDL.types[:fixnum]], nil, RDL.types[:nil])
+    tmb = MethodType.new([RDL.types[:integer]], nil, RDL.types[:nil])
     ts1 = StructuralType.new(m1: tma)
     assert (tnom <= ts1)
     assert (tnomt <= ts1)
@@ -291,14 +291,14 @@ class TestLe < Minitest::Test
     assert_equal false, do_leq(tt("t or u"), @ta, false)[0]
     assert_equal false, do_leq(tt("3"), tt("t"), true)[0]
     assert_equal [true, {t: tt("3")}], do_leq(tt("3"), tt("t"), false)
-    assert_equal [true, {t: RDL.types[:fixnum]}], do_leq(tt("Array<t>"), tt("Array<Fixnum>"), true)
-    assert_equal false, do_leq(tt("Array<t>"), tt("Array<Fixnum>"), false)[0]
-    assert_equal [true, {t: RDL.types[:fixnum]}], do_leq(tt("Array<Fixnum>"), tt("Array<t>"), false)
-    assert_equal false, do_leq(tt("Array<Fixnum>"), tt("Array<t>"), true)[0]
-    assert_equal [true, {t: RDL.types[:fixnum], u: RDL.types[:string]}], do_leq(tt("Hash<t,u>"), tt("Hash<Fixnum,String>"), true)
-    assert_equal [true, {t: RDL.types[:fixnum]}], do_leq(tt("Hash<t,t>"), tt("Hash<Fixnum,Fixnum>"), true)
-    assert_equal false, do_leq(tt("Hash<t,t>"), tt("Hash<Fixnum,String>"), true)[0]
-    assert_equal false, do_leq(tt("[m:()->t]"), tt("[m:()->Fixnum]"), true)[0] # no inst inside structural types
+    assert_equal [true, {t: RDL.types[:integer]}], do_leq(tt("Array<t>"), tt("Array<Integer>"), true)
+    assert_equal false, do_leq(tt("Array<t>"), tt("Array<Integer>"), false)[0]
+    assert_equal [true, {t: RDL.types[:integer]}], do_leq(tt("Array<Integer>"), tt("Array<t>"), false)
+    assert_equal false, do_leq(tt("Array<Integer>"), tt("Array<t>"), true)[0]
+    assert_equal [true, {t: RDL.types[:integer], u: RDL.types[:string]}], do_leq(tt("Hash<t,u>"), tt("Hash<Integer,String>"), true)
+    assert_equal [true, {t: RDL.types[:integer]}], do_leq(tt("Hash<t,t>"), tt("Hash<Integer,Integer>"), true)
+    assert_equal false, do_leq(tt("Hash<t,t>"), tt("Hash<Integer,String>"), true)[0]
+    assert_equal false, do_leq(tt("[m:()->t]"), tt("[m:()->Integer]"), true)[0] # no inst inside structural types
   end
 
   def do_leq(tleft, tright, ileft)
@@ -309,12 +309,12 @@ class TestLe < Minitest::Test
 
   # nonnull annotation is simply removed! so doesn't matter
   def test_leq_nonnull
-    assert tt("!Fixnum") <= tt("!Fixnum")
-    assert tt("!Fixnum") <= tt("Fixnum")
-    assert tt("Fixnum") <= tt("!Fixnum")
-    assert tt("!Fixnum") <= tt("!Object")
-    assert tt("!Fixnum") <= tt("Object")
-    assert tt("Fixnum") <= tt("!Object")
+    assert tt("!Integer") <= tt("!Integer")
+    assert tt("!Integer") <= tt("Integer")
+    assert tt("Integer") <= tt("!Integer")
+    assert tt("!Integer") <= tt("!Object")
+    assert tt("!Integer") <= tt("Object")
+    assert tt("Integer") <= tt("!Object")
   end
 
   # def test_intersection

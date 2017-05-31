@@ -314,20 +314,20 @@ RUBY
     def nwrap4(x) return x; end
     assert(not(RDL::Wrap.wrapped?(TestRDL, :nwrap4)))
 
-    type TestRDL, :nwrap5, "(Fixnum) -> Fixnum"
+    type TestRDL, :nwrap5, "(Integer) -> Integer"
     def nwrap5(x) return x; end
     assert(RDL::Wrap.wrapped?(TestRDL, :nwrap5))
-    type TestRDL, :nwrap6, "(Fixnum) -> Fixnum", wrap: false
+    type TestRDL, :nwrap6, "(Integer) -> Integer", wrap: false
     def nwrap6(x) return x; end
     assert(not(RDL::Wrap.wrapped?(TestRDL, :nwrap6)))
 
     self.class.class_eval {
-      type "(Fixnum) -> Fixnum"
+      type "(Integer) -> Integer"
       def nwrap7(x) return x; end
     }
     assert(RDL::Wrap.wrapped?(TestRDL, :nwrap7))
     self.class.class_eval {
-      type "(Fixnum) -> Fixnum", wrap: false
+      type "(Integer) -> Integer", wrap: false
       def nwrap8(x) return x; end
     }
     assert(not(RDL::Wrap.wrapped?(TestRDL, :nwrap8)))
@@ -335,18 +335,18 @@ RUBY
 
   def test_var_type
     self.class.class_eval {
-      var_type :@foo, "Fixnum"
+      var_type :@foo, "Integer"
       var_type :@@foo, "String"
       var_type :$foo, "Symbol"
     }
-    assert_equal RDL.types[:fixnum], RDL.info.get(TestRDL, :@foo, :type)
+    assert_equal RDL.types[:integer], RDL.info.get(TestRDL, :@foo, :type)
     assert_equal RDL.types[:string], RDL.info.get(TestRDL, :@@foo, :type)
     assert_equal RDL.types[:symbol], RDL.info.get(RDL::Util::GLOBAL_NAME, :$foo, :type)
     assert_raises(RuntimeError) {
       self.class.class_eval { var_type :@foo, "String" }
     }
     assert_raises(RuntimeError) {
-      self.class.class_eval { var_type :@@foo, "Fixnum" }
+      self.class.class_eval { var_type :@@foo, "Integer" }
     }
     assert_raises(RuntimeError) {
       self.class.class_eval { var_type :Foo, "String" }
@@ -358,7 +358,7 @@ RUBY
 
   def test_inconsistent
     self.class.class_eval {
-      type "(Fixnum) -> Fixnum"
+      type "(Integer) -> Integer"
       pre { |x| true }
       def inconsistent1(y) return y; end
     }

@@ -10,18 +10,18 @@ class TestParser < Minitest::Test
   class C; end
 
   def setup
-    @tfixnumopt = OptionalType.new RDL.types[:fixnum]
-    @tfixnumvararg = VarargType.new RDL.types[:fixnum]
+    @tintegeropt = OptionalType.new RDL.types[:integer]
+    @tintegervararg = VarargType.new RDL.types[:integer]
     @tstringopt = OptionalType.new RDL.types[:string]
     @tenum = NominalType.new :Enumerator
     @ta = NominalType.new :A
     @tb = NominalType.new :B
     @tc = NominalType.new :C
-    @tfixnumx = AnnotatedArgType.new("x", RDL.types[:fixnum])
-    @tfixnumy = AnnotatedArgType.new("y", RDL.types[:fixnum])
-    @tfixnumret = AnnotatedArgType.new("ret", RDL.types[:fixnum])
-    @tfixnumoptx = AnnotatedArgType.new("x", @tfixnumopt)
-    @tfixnumvarargx = AnnotatedArgType.new("x", @tfixnumvararg)
+    @tintegerx = AnnotatedArgType.new("x", RDL.types[:integer])
+    @tintegery = AnnotatedArgType.new("y", RDL.types[:integer])
+    @tintegerret = AnnotatedArgType.new("ret", RDL.types[:integer])
+    @tintegeroptx = AnnotatedArgType.new("x", @tintegeropt)
+    @tintegervarargx = AnnotatedArgType.new("x", @tintegervararg)
     @tsymbol = SingletonType.new(:symbol)
     @tsymbolx = AnnotatedArgType.new("x", @tsymbol)
   end
@@ -37,45 +37,45 @@ class TestParser < Minitest::Test
   def test_basic
     t1 = tm "(nil) -> nil"
     assert_equal (MethodType.new [RDL.types[:nil]], nil, RDL.types[:nil]), t1
-    t2 = tm "(Fixnum, Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [RDL.types[:fixnum], RDL.types[:fixnum]], nil, RDL.types[:fixnum]), t2
+    t2 = tm "(Integer, Integer) -> Integer"
+    assert_equal (MethodType.new [RDL.types[:integer], RDL.types[:integer]], nil, RDL.types[:integer]), t2
     t3 = tm "() -> Enumerator"
     assert_equal (MethodType.new [], nil, @tenum), t3
     t4 = tm "(%any) -> nil"
     assert_equal (MethodType.new [RDL.types[:top]], nil, RDL.types[:nil]), t4
-    t5 = tm "(%bool) -> Fixnum"
-    assert_equal (MethodType.new [RDL.types[:bool]], nil, RDL.types[:fixnum]), t5
+    t5 = tm "(%bool) -> Integer"
+    assert_equal (MethodType.new [RDL.types[:bool]], nil, RDL.types[:integer]), t5
     assert_raises(RuntimeError) { tm "(%foo) -> nil" }
     t6 = tm "(A) -> nil"
     assert_equal (MethodType.new [@ta], nil, RDL.types[:nil]), t6
     t7 = tm "(TestParser::A) -> nil"
     assert_equal (MethodType.new [NominalType.new("TestParser::A")], nil, RDL.types[:nil]), t7
-    t8 = tm "(Fixnum) { (%any, String) -> nil } -> :symbol"
-    assert_equal (MethodType.new [RDL.types[:fixnum]], MethodType.new([RDL.types[:top], RDL.types[:string]], nil, RDL.types[:nil]), @tsymbol), t8
+    t8 = tm "(Integer) { (%any, String) -> nil } -> :symbol"
+    assert_equal (MethodType.new [RDL.types[:integer]], MethodType.new([RDL.types[:top], RDL.types[:string]], nil, RDL.types[:nil]), @tsymbol), t8
     t9 = tm "(true) -> false"
     assert_equal (MethodType.new [RDL.types[:true]], nil, RDL.types[:false]), t9
   end
 
   def test_opt_vararg
-    t1 = tm "(Fixnum, ?Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [RDL.types[:fixnum], @tfixnumopt], nil, RDL.types[:fixnum]), t1
-    t2 = tm "(Fixnum, *Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [RDL.types[:fixnum], @tfixnumvararg], nil, RDL.types[:fixnum]), t2
-    t3 = tm "(Fixnum, ?Fixnum, ?Fixnum, *Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [RDL.types[:fixnum], @tfixnumopt, @tfixnumopt, @tfixnumvararg], nil, RDL.types[:fixnum]), t3
-    t4 = tm "(?Fixnum) -> nil"
-    assert_equal (MethodType.new [@tfixnumopt], nil, RDL.types[:nil]), t4
-    t5 = tm "(*Fixnum) -> nil"
-    assert_equal (MethodType.new [@tfixnumvararg], nil, RDL.types[:nil]), t5
+    t1 = tm "(Integer, ?Integer) -> Integer"
+    assert_equal (MethodType.new [RDL.types[:integer], @tintegeropt], nil, RDL.types[:integer]), t1
+    t2 = tm "(Integer, *Integer) -> Integer"
+    assert_equal (MethodType.new [RDL.types[:integer], @tintegervararg], nil, RDL.types[:integer]), t2
+    t3 = tm "(Integer, ?Integer, ?Integer, *Integer) -> Integer"
+    assert_equal (MethodType.new [RDL.types[:integer], @tintegeropt, @tintegeropt, @tintegervararg], nil, RDL.types[:integer]), t3
+    t4 = tm "(?Integer) -> nil"
+    assert_equal (MethodType.new [@tintegeropt], nil, RDL.types[:nil]), t4
+    t5 = tm "(*Integer) -> nil"
+    assert_equal (MethodType.new [@tintegervararg], nil, RDL.types[:nil]), t5
   end
 
   def test_union
-    t1 = tm "(Fixnum or String) -> nil"
-    assert_equal (MethodType.new [UnionType.new(RDL.types[:fixnum], RDL.types[:string])], nil, RDL.types[:nil]), t1
-    t2 = tm "(Fixnum or String or Symbol) -> nil"
-    assert_equal (MethodType.new [UnionType.new(RDL.types[:fixnum], RDL.types[:string], RDL.types[:symbol])], nil, RDL.types[:nil]), t2
-    t3 = tm "() -> Fixnum or String or Symbol"
-    assert_equal (MethodType.new [], nil, UnionType.new(RDL.types[:fixnum], RDL.types[:string], RDL.types[:symbol])), t3
+    t1 = tm "(Integer or String) -> nil"
+    assert_equal (MethodType.new [UnionType.new(RDL.types[:integer], RDL.types[:string])], nil, RDL.types[:nil]), t1
+    t2 = tm "(Integer or String or Symbol) -> nil"
+    assert_equal (MethodType.new [UnionType.new(RDL.types[:integer], RDL.types[:string], RDL.types[:symbol])], nil, RDL.types[:nil]), t2
+    t3 = tm "() -> Integer or String or Symbol"
+    assert_equal (MethodType.new [], nil, UnionType.new(RDL.types[:integer], RDL.types[:string], RDL.types[:symbol])), t3
   end
 
   def test_bare
@@ -93,26 +93,26 @@ class TestParser < Minitest::Test
   end
 
   def test_annotated_params
-    t1 = tm "(Fixnum x, Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [@tfixnumx, RDL.types[:fixnum]], nil, RDL.types[:fixnum]), t1
-    t2 = tm "(Fixnum, ?Fixnum x) -> Fixnum"
-    assert_equal (MethodType.new [RDL.types[:fixnum], @tfixnumoptx], nil, RDL.types[:fixnum]), t2
-    t3 = tm "(Fixnum, *Fixnum x) -> Fixnum"
-    assert_equal (MethodType.new [RDL.types[:fixnum], @tfixnumvarargx], nil, RDL.types[:fixnum]), t3
-    t4 = tm "(Fixnum, Fixnum y) -> Fixnum"
-    assert_equal (MethodType.new [RDL.types[:fixnum], @tfixnumy], nil, RDL.types[:fixnum]), t4
-    t5 = tm "(Fixnum x, Fixnum y) -> Fixnum"
-    assert_equal (MethodType.new [@tfixnumx, @tfixnumy], nil, RDL.types[:fixnum]), t5
-    t6 = tm "(Fixnum, Fixnum) -> Fixnum ret"
-    assert_equal (MethodType.new [RDL.types[:fixnum], RDL.types[:fixnum]], nil, @tfixnumret), t6
-    t7 = tm "(Fixnum x, Fixnum) -> Fixnum ret"
-    assert_equal (MethodType.new [@tfixnumx, RDL.types[:fixnum]], nil, @tfixnumret), t7
-    t8 = tm "(Fixnum, Fixnum y) -> Fixnum ret"
-    assert_equal (MethodType.new [RDL.types[:fixnum], @tfixnumy], nil, @tfixnumret), t8
-    t9 = tm "(Fixnum x, Fixnum y) -> Fixnum ret"
-    assert_equal (MethodType.new [@tfixnumx, @tfixnumy], nil, @tfixnumret), t9
-    t10 = tm "(:symbol x) -> Fixnum"
-    assert_equal (MethodType.new [@tsymbolx], nil, RDL.types[:fixnum]), t10
+    t1 = tm "(Integer x, Integer) -> Integer"
+    assert_equal (MethodType.new [@tintegerx, RDL.types[:integer]], nil, RDL.types[:integer]), t1
+    t2 = tm "(Integer, ?Integer x) -> Integer"
+    assert_equal (MethodType.new [RDL.types[:integer], @tintegeroptx], nil, RDL.types[:integer]), t2
+    t3 = tm "(Integer, *Integer x) -> Integer"
+    assert_equal (MethodType.new [RDL.types[:integer], @tintegervarargx], nil, RDL.types[:integer]), t3
+    t4 = tm "(Integer, Integer y) -> Integer"
+    assert_equal (MethodType.new [RDL.types[:integer], @tintegery], nil, RDL.types[:integer]), t4
+    t5 = tm "(Integer x, Integer y) -> Integer"
+    assert_equal (MethodType.new [@tintegerx, @tintegery], nil, RDL.types[:integer]), t5
+    t6 = tm "(Integer, Integer) -> Integer ret"
+    assert_equal (MethodType.new [RDL.types[:integer], RDL.types[:integer]], nil, @tintegerret), t6
+    t7 = tm "(Integer x, Integer) -> Integer ret"
+    assert_equal (MethodType.new [@tintegerx, RDL.types[:integer]], nil, @tintegerret), t7
+    t8 = tm "(Integer, Integer y) -> Integer ret"
+    assert_equal (MethodType.new [RDL.types[:integer], @tintegery], nil, @tintegerret), t8
+    t9 = tm "(Integer x, Integer y) -> Integer ret"
+    assert_equal (MethodType.new [@tintegerx, @tintegery], nil, @tintegerret), t9
+    t10 = tm "(:symbol x) -> Integer"
+    assert_equal (MethodType.new [@tsymbolx], nil, RDL.types[:integer]), t10
   end
 
   def test_generic
@@ -133,13 +133,13 @@ class TestParser < Minitest::Test
   end
 
   def test_tuple
-    t1 = tt "[Fixnum, String]"
-    assert_equal (TupleType.new(RDL.types[:fixnum], RDL.types[:string])), t1
+    t1 = tt "[Integer, String]"
+    assert_equal (TupleType.new(RDL.types[:integer], RDL.types[:string])), t1
     t2 = tt "[String]"
     assert_equal (TupleType.new(RDL.types[:string])), t2
   end
 
-  def test_fixnum
+  def test_integer
     t1 = tt "42"
     assert_equal (SingletonType.new(42)), t1
     t2 = tt "-42"
@@ -173,31 +173,31 @@ class TestParser < Minitest::Test
   end
 
   def test_finite_hash
-    t1 = tt "{a: Fixnum, b: String}"
-    assert_equal (FiniteHashType.new({a: RDL.types[:fixnum], b: RDL.types[:string]}, nil)), t1
-    t2 = tt "{'a'=>Fixnum, 2=>String}"
-    assert_equal (FiniteHashType.new({"a"=>RDL.types[:fixnum], 2=>RDL.types[:string]}, nil)), t2
+    t1 = tt "{a: Integer, b: String}"
+    assert_equal (FiniteHashType.new({a: RDL.types[:integer], b: RDL.types[:string]}, nil)), t1
+    t2 = tt "{'a'=>Integer, 2=>String}"
+    assert_equal (FiniteHashType.new({"a"=>RDL.types[:integer], 2=>RDL.types[:string]}, nil)), t2
   end
 
   def test_named_params
-    t1 = tm "(Fixnum, x: Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [RDL.types[:fixnum], FiniteHashType.new({x: RDL.types[:fixnum]}, nil)], nil, RDL.types[:fixnum]), t1
-    t2 = tm "(Fixnum, x: Fixnum, y: String) -> Fixnum"
-    assert_equal (MethodType.new [RDL.types[:fixnum], FiniteHashType.new({x: RDL.types[:fixnum], y: RDL.types[:string]}, nil)], nil, RDL.types[:fixnum]), t2
-    t3 = tm "(Fixnum, y: String, x: Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [RDL.types[:fixnum], FiniteHashType.new({x: RDL.types[:fixnum], y: RDL.types[:string]}, nil)], nil, RDL.types[:fixnum]), t3
-    t4 = tm "(Fixnum, y: String, x: ?Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [RDL.types[:fixnum], FiniteHashType.new({x: @tfixnumopt, y: RDL.types[:string]}, nil)], nil, RDL.types[:fixnum]), t4
-    t4 = tm "(Fixnum, y: ?String, x: Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [RDL.types[:fixnum], FiniteHashType.new({x: RDL.types[:fixnum], y: @tstringopt}, nil)], nil, RDL.types[:fixnum]), t4
-    t5 = tm "(Fixnum x, x: Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [@tfixnumx, FiniteHashType.new({x: RDL.types[:fixnum]}, nil)], nil, RDL.types[:fixnum]), t5
-    t6 = tm "(x: Fixnum) -> Fixnum"
-    assert_equal (MethodType.new [FiniteHashType.new({x: RDL.types[:fixnum]}, nil)], nil, RDL.types[:fixnum]), t6
-    t7 = tm "(x: Fixnum) { (%any, String) -> nil } -> :symbol"
-    assert_equal (MethodType.new [FiniteHashType.new({x: RDL.types[:fixnum]}, nil)], MethodType.new([RDL.types[:top], RDL.types[:string]], nil, RDL.types[:nil]), @tsymbol), t7
-    t8 = tm "(Fixnum, x: Fixnum, **String) -> Fixnum"
-    assert_equal (MethodType.new [RDL.types[:fixnum], FiniteHashType.new({x: RDL.types[:fixnum]}, RDL.types[:string])], nil, RDL.types[:fixnum]), t8
+    t1 = tm "(Integer, x: Integer) -> Integer"
+    assert_equal (MethodType.new [RDL.types[:integer], FiniteHashType.new({x: RDL.types[:integer]}, nil)], nil, RDL.types[:integer]), t1
+    t2 = tm "(Integer, x: Integer, y: String) -> Integer"
+    assert_equal (MethodType.new [RDL.types[:integer], FiniteHashType.new({x: RDL.types[:integer], y: RDL.types[:string]}, nil)], nil, RDL.types[:integer]), t2
+    t3 = tm "(Integer, y: String, x: Integer) -> Integer"
+    assert_equal (MethodType.new [RDL.types[:integer], FiniteHashType.new({x: RDL.types[:integer], y: RDL.types[:string]}, nil)], nil, RDL.types[:integer]), t3
+    t4 = tm "(Integer, y: String, x: ?Integer) -> Integer"
+    assert_equal (MethodType.new [RDL.types[:integer], FiniteHashType.new({x: @tintegeropt, y: RDL.types[:string]}, nil)], nil, RDL.types[:integer]), t4
+    t4 = tm "(Integer, y: ?String, x: Integer) -> Integer"
+    assert_equal (MethodType.new [RDL.types[:integer], FiniteHashType.new({x: RDL.types[:integer], y: @tstringopt}, nil)], nil, RDL.types[:integer]), t4
+    t5 = tm "(Integer x, x: Integer) -> Integer"
+    assert_equal (MethodType.new [@tintegerx, FiniteHashType.new({x: RDL.types[:integer]}, nil)], nil, RDL.types[:integer]), t5
+    t6 = tm "(x: Integer) -> Integer"
+    assert_equal (MethodType.new [FiniteHashType.new({x: RDL.types[:integer]}, nil)], nil, RDL.types[:integer]), t6
+    t7 = tm "(x: Integer) { (%any, String) -> nil } -> :symbol"
+    assert_equal (MethodType.new [FiniteHashType.new({x: RDL.types[:integer]}, nil)], MethodType.new([RDL.types[:top], RDL.types[:string]], nil, RDL.types[:nil]), @tsymbol), t7
+    t8 = tm "(Integer, x: Integer, **String) -> Integer"
+    assert_equal (MethodType.new [RDL.types[:integer], FiniteHashType.new({x: RDL.types[:integer]}, RDL.types[:string])], nil, RDL.types[:integer]), t8
   end
 
   def test_nonnull

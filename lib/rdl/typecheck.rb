@@ -589,7 +589,11 @@ module RDL::Typecheck
         raise "const other not implemented yet"
       end
       case c
-      when TrueClass, FalseClass, Complex, Rational, Fixnum, Bignum, Float, Symbol, Class
+      when TrueClass, FalseClass, Complex, Rational, Integer, Float, Symbol, Class
+        [env, RDL::Type::SingletonType.new(c)]
+      when (defined? Fixnum ? Fixnum : Integer) # backward compatibility
+        [env, RDL::Type::SingletonType.new(c)]
+      when (defined? Bignum ? Bignum : Integer)
         [env, RDL::Type::SingletonType.new(c)]
       when Module
         t = RDL::Type::SingletonType.new(const_get(e.children[1]))
@@ -1086,7 +1090,7 @@ RUBY
       raise RuntimeError, "instantiate! expects local variable as receiver"
       error :inst_lvar, [], e
     end
-    
+
     env = env.bind(var_name, t)
     [env, t]
 

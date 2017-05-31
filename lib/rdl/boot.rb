@@ -116,6 +116,9 @@ require 'rdl/typecheck.rb'
 #require_relative 'rdl/stats.rb'
 
 module RDL
+  PRE_INTMERGE_VERSIONS = ['>= 2.0.0', '< 2.4.0']
+  POST_INTMERGE_VERSIONS = '>= 2.4.0'
+
   @parser = RDL::Type::Parser.new
 
   # Map from file names to [digest, cache] where 2nd elt maps
@@ -136,13 +139,7 @@ module RDL
   @types[:float] = RDL::Type::NominalType.new Float
   @types[:complex] = RDL::Type::NominalType.new Complex
   @types[:rational] = RDL::Type::NominalType.new Rational
-  if defined? Fixnum
-    @types[:fixnum] = RDL::Type::NominalType.new :Fixnum
-    @types[:bignum] = RDL::Type::NominalType.new :Bignum
-    @types[:integer] = RDL::Type::UnionType.new(@types[:fixnum], @types[:bignum])
-  else
-    @types[:integer] = RDL::Type::NominalType.new Integer
-  end
+  @types[:integer] = RDL::Type::NominalType.new Integer
   @types[:numeric] = RDL::Type::NominalType.new Numeric
   @types[:string] = RDL::Type::NominalType.new String
   @types[:array] = RDL::Type::NominalType.new Array
