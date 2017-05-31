@@ -115,11 +115,50 @@ class TestTypecheck < Minitest::Test
     }
 
     self.class.class_eval {
-      type "(Integer) -> Integer", typecheck: :later
+      type "(Integer) -> Integer", typecheck: :later1
       def def_ff4(x, y) 42; end
     }
 
-    assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :later }
+    assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :later1 }
+  end
+
+  def test_def_post
+    self.class.class_eval {
+      def def_ffp(x) x; end
+      type :def_ffp, "(Integer) -> Integer", typecheck: :now, wrap: false
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        def def_fsp(x) "42"; end
+        type :def_fsp, "(Integer) -> Integer", typecheck: :now, wrap: false
+      }
+    }
+
+    self.class.class_eval {
+      def def_ff2p(x) x; end
+      type :def_ff2p, "(Integer) -> Integer", typecheck: :now, wrap: false
+    }
+    assert_equal 42, def_ff2p(42)
+
+    self.class.class_eval {
+      def def_fs2p(x) "42"; end
+      type :def_fs2p, "(Integer) -> Integer", typecheck: :call
+    }
+    assert_raises(RDL::Typecheck::StaticTypeError) { def_fs2p(42) }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        def def_ff3p(x, y) 42; end
+        type :def_ff3p, "(Integer) -> Integer", typecheck: :now, wrap: false
+      }
+    }
+
+    self.class.class_eval {
+      def def_ff4p(x, y) 42; end
+      type :def_ff4p, "(Integer) -> Integer", typecheck: :later2, wrap: false
+    }
+    assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :later2 }
   end
 
   def test_defs
@@ -141,11 +180,11 @@ class TestTypecheck < Minitest::Test
     }
 
     self.class.class_eval {
-      type "(Integer) -> Integer", typecheck: :later
+      type "(Integer) -> Integer", typecheck: :later4
       def self.defs_ff2(x, y) 42; end
     }
 
-    assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :later }
+    assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :later4 }
   end
 
   def test_singleton_method_const
@@ -154,10 +193,10 @@ class TestTypecheck < Minitest::Test
       def foo(x) x; end
     }
     Y.class_eval {
-      type '(Integer) -> Integer', typecheck: :later2
+      type '(Integer) -> Integer', typecheck: :later5
       def self.bar(x) a = X.new; a.foo(x); end
     }
-    self.class.class_eval { rdl_do_typecheck :later2 }
+    self.class.class_eval { rdl_do_typecheck :later5 }
   end
 
   def test_lits
@@ -1442,4 +1481,5 @@ class TestTypecheck < Minitest::Test
       end
     }
   end
+
 end
