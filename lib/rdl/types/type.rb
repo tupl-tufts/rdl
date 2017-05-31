@@ -237,8 +237,8 @@ module RDL::Type
 
 private
 
-  # [+ a +] is Array<Fixnum>
-  # returns Array<Array<Fixnum>> containing all combinations of 0..a[i] at index i
+  # [+ a +] is Array<Integer>
+  # returns Array<Array<Integer>> containing all combinations of 0..a[i] at index i
   # For example:
   #
   # combinations [0, 0]  #=> [[0, 0]]

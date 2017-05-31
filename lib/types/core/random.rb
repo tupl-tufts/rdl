@@ -6,7 +6,7 @@ type :Random, 'self.rand', '(?Integer max) -> Numeric'
 type :Random, 'self.srand', '(?Integer number) -> Numeric old_seed'
 
 type :Random, :==, '(%any) -> %bool'
-type :Random, :bytes, '(Fixnum size) -> String'
+type :Random, :bytes, '(Integer size) -> String'
 type :Random, :rand, '(?(Integer or Range<Integer>) max) -> Integer'
 type :Random, :rand, '(?(Float or Range<Float>) max) -> Float'
 pre(:Random, :rand) { |max| max > 0 }

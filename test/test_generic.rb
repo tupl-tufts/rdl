@@ -43,7 +43,7 @@ class TestGeneric < Minitest::Test
     @taao = RDL::Type::GenericType.new(@ta, @tao)
     @thss = RDL::Type::GenericType.new(@th, RDL.types[:string], RDL.types[:string])
     @thoo = RDL::Type::GenericType.new(@th, RDL.types[:object], RDL.types[:object])
-    @thsf = RDL::Type::GenericType.new(@th, RDL.types[:string], RDL.types[:fixnum])
+    @thsf = RDL::Type::GenericType.new(@th, RDL.types[:string], RDL.types[:integer])
     @tb = RDL::Type::NominalType.new "TestGeneric::B"
   end
 
@@ -94,7 +94,7 @@ class TestGeneric < Minitest::Test
     tbss = RDL::Type::GenericType.new(@tb, RDL.types[:string], RDL.types[:string])
     tma = RDL::Type::MethodType.new([], nil, RDL.types[:nil])
     tmb = RDL::Type::MethodType.new([RDL.types[:string]], nil, RDL.types[:nil])
-    tmc = RDL::Type::MethodType.new([RDL.types[:fixnum]], nil, RDL.types[:nil])
+    tmc = RDL::Type::MethodType.new([RDL.types[:integer]], nil, RDL.types[:nil])
     ts1 = RDL::Type::StructuralType.new(m2: tma)
     assert (tbss <= ts1)
     ts2 = RDL::Type::StructuralType.new(m1: tmb)

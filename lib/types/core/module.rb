@@ -1,6 +1,6 @@
 rdl_nowrap :Module
 
-type :Module, 'self.constants', '() -> Array<Fixnum>' # also constants(inherited), but undocumented
+type :Module, 'self.constants', '() -> Array<Integer>' # also constants(inherited), but undocumented
 type :Module, 'self.nesting', '() -> Array<Module>'
 type :Module, 'self.new', '() -> Module'
 type :Module, 'self.new', '() { (Module) -> %any } -> Module'
@@ -17,7 +17,7 @@ type :Module, :>=, '(Module other) -> %bool or nil'
 type :Module, :ancestors, '() -> Array<Module>'
 type :Module, :autoload, '(Symbol module, String filename) -> nil'
 type :Module, :autoload?, '(Symbol name) -> String or nil'
-type :Module, :class_eval, '(String, ?String filename, ?Fixnum lineno) -> %any'
+type :Module, :class_eval, '(String, ?String filename, ?Integer lineno) -> %any'
 type :Module, :class_exec, '(*%any args) { (*%any args) -> %any } -> %any'
 type :Module, :class_variable_defined?, '(Symbol or String) -> %bool'
 type :Module, :class_variable_get, '(Symbol or String) -> %any'
@@ -36,7 +36,7 @@ rdl_alias :Module, :inspect, :to_s
 type :Module, :instance_method, '(Symbol) -> UnboundMethod'
 type :Module, :instance_methods, '(?%bool include_super) -> Array<Symbol>'
 type :Module, :method_defined?, '(Symbol or String) -> %bool'
-type :Module, :module_eval, '(String, ?String filename, ?Fixnum lineno) -> %any' # matches rdoc example but not type
+type :Module, :module_eval, '(String, ?String filename, ?Integer lineno) -> %any' # matches rdoc example but not type
 type :Module, :module_exec, '(*%any args) { (*%any args) -> %any } -> %any'
 type :Module, :name, '() -> String'
 type :Module, :prepend, '(*Module) -> self'
