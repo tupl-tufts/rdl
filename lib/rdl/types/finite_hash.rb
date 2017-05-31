@@ -51,6 +51,7 @@ module RDL::Type
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
+      return false unless other.instance_of? FiniteHashType
       return false unless ((@rest.nil? && other.rest.nil?) ||
                            (!@rest.nil? && !other.rest.nil? && @rest.match(other.rest)))
       return (@elts.length == other.elts.length &&

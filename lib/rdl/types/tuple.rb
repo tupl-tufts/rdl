@@ -41,7 +41,7 @@ module RDL::Type
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
-      return @params.length == other.params.length && @params.zip(other.params).all? { |t,o| t.match(o) }
+      return (other.instance_of? TupleType) && (@params.length == other.params.length) && (@params.zip(other.params).all? { |t,o| t.match(o) })
     end
 
     def promote!

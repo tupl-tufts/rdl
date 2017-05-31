@@ -308,6 +308,7 @@ RUBY
     def match(other)
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
+      return false unless other.instance_of? MethodType
       return false unless @ret.match(other.ret)
       if @block == nil
         return false unless other.block == nil
