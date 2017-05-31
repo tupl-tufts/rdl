@@ -16,7 +16,7 @@ class TestWrap < Minitest::Test
   end
 
   def test_private_wrap
-    type C, :foo, '(Fixnum) -> Fixnum'
+    type C, :foo, '(Integer) -> Integer'
     c = C.new
 
     assert_raises RDL::Type::TypeError do
@@ -37,7 +37,7 @@ class TestWrap < Minitest::Test
   end
 
   def test_protected_wrap
-    type D, :foo, '(Fixnum) -> Fixnum'
+    type D, :foo, '(Integer) -> Integer'
     d = D.new
 
     assert_raises RDL::Type::TypeError do

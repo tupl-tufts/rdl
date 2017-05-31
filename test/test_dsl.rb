@@ -7,8 +7,8 @@ class TestDsl < Minitest::Test
   class Pair
 
     # dsl {
-    #   type :left, '(Fixnum) -> Fixnum'
-    #   type :right, '(Fixnum) -> Fixnum'
+    #   type :left, '(Integer) -> Integer'
+    #   type :right, '(Integer) -> Integer'
     # }
     def entry(&blk)
       instance_eval(&blk)
@@ -30,9 +30,9 @@ class TestDsl < Minitest::Test
   class Tree
 
     # dsl :tree { # recursive DSL
-    #   type :left, '(Fixnum) -> Fixnum'
+    #   type :left, '(Integer) -> Integer'
     #   dsl :left, :tree
-    #   type :right, '(Fixnum) -> Fixnum'
+    #   type :right, '(Integer) -> Integer'
     #   dsl :right, :tree
     # }
     def entry(val, &blk)

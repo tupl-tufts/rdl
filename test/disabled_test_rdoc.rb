@@ -14,9 +14,9 @@ class RdocTest < MiniTest::Test
 
   class TestClass
     extend RDL
-    
-    typesig :size, "()->Fixnum"
-    typesig :bytesize, "()->Fixnum"
+
+    typesig :size, "()->Integer"
+    typesig :bytesize, "()->Integer"
   end
 
   def test_rdoc_gen
@@ -35,25 +35,25 @@ class TestRDLRDoc
     @rdoc = RDoc::RDoc.new
     @rdoc.store = @store
     @rdoc.options = RDoc::Options.new
-    
+
     g = Object.new
     def g.class_dir() end
     def g.file_dir() end
     @rdoc.generator = g
-    
+
     @lib_dir = "#{@pwd}/lib"
     $LOAD_PATH.unshift @lib_dir # ensure we load from this RDoc
-    
+
     @options = RDoc::Options.new
     @options.option_parser = OptionParser.new
-    
+
     p Dir.tmpdir
     @tmpdir = File.join Dir.tmpdir, "test_rdoc_generator_darkfish_#{$$}"
     FileUtils.mkdir_p @tmpdir
     Dir.chdir @tmpdir
     @options.op_dir = @tmpdir
     @options.generator = RDoc::Generator::Darkfish
-    
+
     $LOAD_PATH.each do |path|
     darkfish_dir = File.join path, 'rdoc/generator/template/darkfish/'
         next unless File.directory? darkfish_dir
