@@ -31,6 +31,7 @@ module RDL::Type
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
+      return false unless other.instance_of? GenericType
       return @params.length == other.params.length && @params.zip(other.params).all? { |t,o| t.match(o) }
     end
 

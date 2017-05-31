@@ -80,6 +80,7 @@ module RDL::Type
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
+      return false unless other.instance_of? UnionType
       return false if @types.length != other.types.length
       @types.all? { |t| other.types.any? { |ot| t.match(ot) } }
     end
