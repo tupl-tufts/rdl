@@ -3,7 +3,7 @@ class ActiveModel::Errors
   type :delete, '(%symstr) -> %any'
   type :[], '(%symstr) -> Array<String>'
   type :each, '() { (%symstr, String) -> %any } -> %any'
-  type :size, '() -> %integer'
+  type :size, '() -> Integer'
   rdl_alias :count, :size
   type :values, '() -> Array<String>'
   type :keys, '() -> Array<Symbol>'
