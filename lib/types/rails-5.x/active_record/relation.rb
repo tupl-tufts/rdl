@@ -1,4 +1,4 @@
-lass ActiveRecord::Relation
+class ActiveRecord::Relation
   rdl_nowrap
   type_params [:t], :all?
 
