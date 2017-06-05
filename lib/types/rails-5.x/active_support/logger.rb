@@ -1,4 +1,3 @@
-class ActiveSupport::Logger
-  type :error, '(String) -> %bool'
-  type :debug, '(String) -> %bool'
-end
+rdl_nowrap :'ActiveSupport::Logger'
+type :'ActiveSupport::Logger', :error, '(String) -> %bool'
+type :'ActiveSupport::Logger', :debug, '(String) -> %bool'

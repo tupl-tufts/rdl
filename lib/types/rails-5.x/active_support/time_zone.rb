@@ -1,3 +1,2 @@
-class ActiveSupport::TimeZone
-  type :now, '() -> ActiveSupport::TimeWithZone'
-end
+rdl_nowrap :'ActiveSupport::TimeZone'
+type :'ActiveSupport::TimeZone', :now, '() -> ActiveSupport::TimeWithZone'

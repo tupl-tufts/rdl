@@ -1,10 +1,8 @@
-class ActionDispatch::Flash::FlashHash
-  type(:[], "(Symbol) -> String")
-  type(:[]=, "(Symbol, String) -> String")
-  type(:now, "() -> ActionDispatch::Flash::FlashNow")
-end
+rdl_nowrap :'ActionDispatch::Flash::FlashHash'
+type :'ActionDispatch::Flash::FlashHash', :[], '(Symbol) -> String'
+type :'ActionDispatch::Flash::FlashHash', :[]=, '(Symbol, String) -> String'
+type :'ActionDispatch::Flash::FlashHash', :now, '() -> ActionDispatch::Flash::FlashNow'
 
-class ActionDispatch::Flash::FlashNow
-  type(:[], "(Symbol) -> String")
-  type(:[]=, "(Symbol, String) -> String")
-end
+rdl_nowrap :'ActionDispatch::Flash::FlashNow'
+type :'ActionDispatch::Flash::FlashNow', :[], '(Symbol) -> String'
+type :'ActionDispatch::Flash::FlashNow', :[]=, '(Symbol, String) -> String'

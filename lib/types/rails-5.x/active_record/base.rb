@@ -1,3 +1,2 @@
-class ActiveRecord::Base
-  type :logger, '() -> ActiveSupport::Logger'
-end
+rdl_nowrap :'ActiveRecord::Base'
+type :'ActiveRecord::Base', :logger, '() -> ActiveSupport::Logger'

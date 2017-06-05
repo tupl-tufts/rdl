@@ -1,3 +1,2 @@
-module AbstractController::Translation
-  type :t, '(Symbol or String) -> String'
-end
+rdl_nowrap :'AbstractController::Translation'
+type :'AbstractController::Translation', :t, '(Symbol or String) -> String'

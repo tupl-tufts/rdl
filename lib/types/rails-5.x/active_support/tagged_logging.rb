@@ -1,3 +1,2 @@
-module ActiveSupport::TaggedLogging
-  type :info, '(String) -> %bool'
-end
+rdl_nowrap :'ActiveSupport::TaggedLogging'
+type :'ActiveSupport::TaggedLogging', :info, '(String) -> %bool'

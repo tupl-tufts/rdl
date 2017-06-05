@@ -1,64 +1,65 @@
 class ActiveRecord::Associations::CollectionProxy
   type_params [:t], :all?
-
-  type :<<, '(*(t or Array<t>)) -> self'
-  type :==, '(%any) -> %bool'
-  type :any?, '() ?{ (t) -> %bool } -> %bool'
-  rdl_alias :append, :<<
-  type :build, '(Hash<Symbol, %any> or Array<Hash<Symbol, %any>>) -> self'
-  type :clear, '() -> self'
-  type :concat, '(*t) -> self'
-  type :count, '() -> Integer'
-  type :create, '(Hash<Symbol, %any> or Array<Hash<Symbol, %any>>) -> self'
-  type :create!, '(Hash<Symbol, %any> or Array<Hash<Symbol, %any>>) -> self'
-  type :delete, '(*t) -> Array<t>'
-  type :delete_all, '(?Symbol dependent) -> Array<t>'
-  type :destroy, '(*t) -> Array<t>'
-  type :destroy_all, '() -> %any'
-  type :distinct, '() -> self'
-  type :empty?, '() -> %bool'
-  type :find, '(Integer) -> t'
-  type :find, '(Integer, Integer, *Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
-  type :include?, '(t) -> %bool'
-  type :length, '() -> Integer'
-  type :load_target, '() -> %any'
-  type :loaded?, '() -> %bool'
-  type :many?, '() ?{ (t) -> %bool } -> %bool'
-  rdl_alias :new, :build
-  rdl_alias :push, :<<
-  type :reload, '() -> self'
-  type :replace, '(Array<t>) -> %any'
-  type :reset, '() -> self'
-  type :scope, '() -> ActiveRecord::Relation' # TODO fix
-  type :select, '(*Symbol) -> t'
-  type :select, '() { (t) -> %bool } -> ActiveRecord::Associations::CollectionProxy<t>'
-  type :size, '() -> Integer'
-  rdl_alias :spawn, :scope
-  type :take, '() -> t or nil'
-  type :take, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
-  type :to_ary, '() -> Array<t>'
-  rdl_alias :to_a, :to_ary
-  rdl_alias :unique, :distinct
-
-  type :first, '() -> t or nil'
-  type :first, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
-  type :second, '() -> t or nil'
-  type :second, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
-  type :third, '() -> t or nil'
-  type :third, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
-  type :fourth, '() -> t or nil'
-  type :fourth, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
-  type :fifth, '() -> t or nil'
-  type :fifth, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
-  type :forty_two, '() -> t or nil'
-  type :forty_two, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
-  type :third_to_last, '() -> t or nil'
-  type :third_to_last, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
-  type :second_to_last, '() -> t or nil'
-  type :second_to_last, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
-  type :last, '() -> t or nil'
-  type :last, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
 end
+
+rdl_nowrap :'ActiveRecord::Associations::CollectionProxy'
+type :'ActiveRecord::Associations::CollectionProxy', :<<, '(*(t or Array<t>)) -> self'
+type :'ActiveRecord::Associations::CollectionProxy', :==, '(%any) -> %bool'
+type :'ActiveRecord::Associations::CollectionProxy', :any?, '() ?{ (t) -> %bool } -> %bool'
+rdl_alias :'ActiveRecord::Associations::CollectionProxy', :append, :<<
+type :'ActiveRecord::Associations::CollectionProxy', :build, '(Hash<Symbol, %any> or Array<Hash<Symbol, %any>>) -> self'
+type :'ActiveRecord::Associations::CollectionProxy', :clear, '() -> self'
+type :'ActiveRecord::Associations::CollectionProxy', :concat, '(*t) -> self'
+type :'ActiveRecord::Associations::CollectionProxy', :count, '() -> Integer'
+type :'ActiveRecord::Associations::CollectionProxy', :create, '(Hash<Symbol, %any> or Array<Hash<Symbol, %any>>) -> self'
+type :'ActiveRecord::Associations::CollectionProxy', :create!, '(Hash<Symbol, %any> or Array<Hash<Symbol, %any>>) -> self'
+type :'ActiveRecord::Associations::CollectionProxy', :delete, '(*t) -> Array<t>'
+type :'ActiveRecord::Associations::CollectionProxy', :delete_all, '(?Symbol dependent) -> Array<t>'
+type :'ActiveRecord::Associations::CollectionProxy', :destroy, '(*t) -> Array<t>'
+type :'ActiveRecord::Associations::CollectionProxy', :destroy_all, '() -> %any'
+type :'ActiveRecord::Associations::CollectionProxy', :distinct, '() -> self'
+type :'ActiveRecord::Associations::CollectionProxy', :empty?, '() -> %bool'
+type :'ActiveRecord::Associations::CollectionProxy', :find, '(Integer) -> t'
+type :'ActiveRecord::Associations::CollectionProxy', :find, '(Integer, Integer, *Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+type :'ActiveRecord::Associations::CollectionProxy', :include?, '(t) -> %bool'
+type :'ActiveRecord::Associations::CollectionProxy', :length, '() -> Integer'
+type :'ActiveRecord::Associations::CollectionProxy', :load_target, '() -> %any'
+type :'ActiveRecord::Associations::CollectionProxy', :loaded?, '() -> %bool'
+type :'ActiveRecord::Associations::CollectionProxy', :many?, '() ?{ (t) -> %bool } -> %bool'
+rdl_alias :'ActiveRecord::Associations::CollectionProxy', :new, :build
+rdl_alias :'ActiveRecord::Associations::CollectionProxy', :push, :<<
+type :'ActiveRecord::Associations::CollectionProxy', :reload, '() -> self'
+type :'ActiveRecord::Associations::CollectionProxy', :replace, '(Array<t>) -> %any'
+type :'ActiveRecord::Associations::CollectionProxy', :reset, '() -> self'
+type :'ActiveRecord::Associations::CollectionProxy', :scope, '() -> ActiveRecord::Relation' # TODO fix
+type :'ActiveRecord::Associations::CollectionProxy', :select, '(*Symbol) -> t'
+type :'ActiveRecord::Associations::CollectionProxy', :select, '() { (t) -> %bool } -> ActiveRecord::Associations::CollectionProxy<t>'
+type :'ActiveRecord::Associations::CollectionProxy', :size, '() -> Integer'
+rdl_alias :'ActiveRecord::Associations::CollectionProxy', :spawn, :scope
+type :'ActiveRecord::Associations::CollectionProxy', :take, '() -> t or nil'
+type :'ActiveRecord::Associations::CollectionProxy', :take, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+type :'ActiveRecord::Associations::CollectionProxy', :to_ary, '() -> Array<t>'
+rdl_alias :'ActiveRecord::Associations::CollectionProxy', :to_a, :to_ary
+rdl_alias :'ActiveRecord::Associations::CollectionProxy', :unique, :distinct
+
+type :'ActiveRecord::Associations::CollectionProxy', :first, '() -> t or nil'
+type :'ActiveRecord::Associations::CollectionProxy', :first, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+type :'ActiveRecord::Associations::CollectionProxy', :second, '() -> t or nil'
+type :'ActiveRecord::Associations::CollectionProxy', :second, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+type :'ActiveRecord::Associations::CollectionProxy', :third, '() -> t or nil'
+type :'ActiveRecord::Associations::CollectionProxy', :third, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+type :'ActiveRecord::Associations::CollectionProxy', :fourth, '() -> t or nil'
+type :'ActiveRecord::Associations::CollectionProxy', :fourth, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+type :'ActiveRecord::Associations::CollectionProxy', :fifth, '() -> t or nil'
+type :'ActiveRecord::Associations::CollectionProxy', :fifth, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+type :'ActiveRecord::Associations::CollectionProxy', :forty_two, '() -> t or nil'
+type :'ActiveRecord::Associations::CollectionProxy', :forty_two, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+type :'ActiveRecord::Associations::CollectionProxy', :third_to_last, '() -> t or nil'
+type :'ActiveRecord::Associations::CollectionProxy', :third_to_last, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+type :'ActiveRecord::Associations::CollectionProxy', :second_to_last, '() -> t or nil'
+type :'ActiveRecord::Associations::CollectionProxy', :second_to_last, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
+type :'ActiveRecord::Associations::CollectionProxy', :last, '() -> t or nil'
+type :'ActiveRecord::Associations::CollectionProxy', :last, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
 
 module ActiveRecord::Associations::ClassMethods
 

@@ -1,3 +1,2 @@
-module ActiveRecord::Core
-  type :==, '(%any) -> %bool'
-end
+rdl_nowrap :'ActiveRecord::Core'
+type :'ActiveRecord::Core', :==, '(%any) -> %bool'

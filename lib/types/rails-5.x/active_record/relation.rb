@@ -1,12 +1,13 @@
-class ActiveRecord::Relation
-  rdl_nowrap
-  type_params [:t], :all?
+rdl_nowrap :'ActiveRecord::Relation'
 
-  type :[], '(Fixnum) -> t'
-  type :empty?, '() -> %bool'
-  type :first, '() -> t'
-  type :length, '() -> Fixnum'
-  type :sort, '() {(t, t) -> Fixnum} -> Array<t>'
-  type :each, '() -> Enumerator<t>'
-  type :each, '() { (t) -> %any } -> Array<t>'
+class ActiveRecord::Relation
+  type_params [:t], :all?
 end
+
+type :'ActiveRecord::Relation', :[], '(Fixnum) -> t'
+type :'ActiveRecord::Relation', :empty?, '() -> %bool'
+type :'ActiveRecord::Relation', :first, '() -> t'
+type :'ActiveRecord::Relation', :length, '() -> Fixnum'
+type :'ActiveRecord::Relation', :sort, '() {(t, t) -> Fixnum} -> Array<t>'
+type :'ActiveRecord::Relation', :each, '() -> Enumerator<t>'
+type :'ActiveRecord::Relation', :each, '() { (t) -> %any } -> Array<t>'

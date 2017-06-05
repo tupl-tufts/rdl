@@ -1,3 +1,1 @@
-class Time
-  type 'self.zone', '() -> ActiveSupport::TimeZone'
-end
+type :Time, 'self.zone', '() -> ActiveSupport::TimeZone'
