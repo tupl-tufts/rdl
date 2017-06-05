@@ -1,4 +1,3 @@
-
 require 'minitest/autorun'
 $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
@@ -46,6 +45,31 @@ class X
 end
 class Y
 end
+
+class MethodMissing1
+  type '() -> String', typecheck: :later_mm1
+  def foo()
+    bar()
+  end
+
+  type '(Symbol, *%any) -> String', typecheck: :later_mm1
+  def method_missing(name, *_)
+    name.to_s
+  end
+end
+
+class MethodMissing2
+  type '() -> Integer', typecheck: :later_mm2
+  def foo()
+    bar()
+  end
+
+  type '(Symbol, *%any) -> String', typecheck: :later_mm2
+  def method_missing(name, *_)
+    name.to_s
+  end
+end
+
 
 class TestTypecheck < Minitest::Test
   type :_any_object, "() -> Object" # a method that could return true or false
@@ -1480,6 +1504,12 @@ class TestTypecheck < Minitest::Test
         end
       end
     }
+  end
+
+  def test_method_missing
+    skip "method_missing not supported yet"
+    rdl_do_typecheck :later_mm1
+    assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :later_mm2 }
   end
 
 end
