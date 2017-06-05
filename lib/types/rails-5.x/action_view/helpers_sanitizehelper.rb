@@ -1,3 +1,2 @@
-module ActionView::Helpers::SanitizeHelper
-  type :strip_tags, '(String) -> String'
-end
+rdl_nowrap :'ActionView::Helpers::SanitizeHelper'
+type :'ActionView::Helpers::SanitizeHelper', :strip_tags, '(String) -> String'

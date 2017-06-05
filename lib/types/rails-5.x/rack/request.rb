@@ -1,3 +1,2 @@
-class Rack::Request
-  type :env, '() -> Hash<String, %any>'
-end
+rdl_nowrap :'Rack::Request'
+type :'Rack::Request', :env, '() -> Hash<String, %any>'

@@ -1,5 +1,3 @@
-class String
-  type :truncate, '(Fixnum) -> String'
-  type :strftime, '(String) -> String'
-  type :sanitize, '() -> String'
-end
+type :String, :truncate, '(Fixnum) -> String'
+type :String, :strftime, '(String) -> String'
+type :String, :sanitize, '() -> String'

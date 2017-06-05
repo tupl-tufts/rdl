@@ -1,5 +1,2 @@
-module ActiveModel
-  module Validations
-    type :errors, '() -> ActiveModel::Errors'
-  end
-end
+rdl_nowrap :'ActiveModel::Validations'
+type :'ActiveModel::Validations', :errors, '() -> ActiveModel::Errors'

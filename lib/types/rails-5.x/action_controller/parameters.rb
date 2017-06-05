@@ -1,4 +1,3 @@
-class ActionController::Parameters
-  type :require, '(*Symbol) -> ActionController::Parameters'
-  type :permit, '(*Symbol) -> ActionController::Parameters'
-end
+rdl_nowrap :'ActionController::Parameters'
+type :'ActionController::Parameters', :require, '(*Symbol) -> ActionController::Parameters'
+type :'ActionController::Parameters', :permit, '(*Symbol) -> ActionController::Parameters'
