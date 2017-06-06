@@ -4,7 +4,7 @@ class Hash
   type_params [:k, :v], :all?
 end
 
-type :Hash, 'self.[]', '(Array<Array<u>>) -> Hash<u, u>'
+type :Hash, 'self.[]', '(%any) -> Hash<a, b>'
 
 type :Hash, :[], '(k) -> v'
 type :Hash, :[]=, '(k, v) -> v'
