@@ -611,7 +611,7 @@ module RDL::Typecheck
       envi = env
       tactuals = []
       block = scope[:block]
-      scope_merge(scope, block: nil) { |sscope|
+      scope_merge(scope, block: nil, break: env, next: env) { |sscope|
         e.children[2..-1].each { |ei|
           if ei.type == :splat
             envi, ti = tc(sscope, envi, ei.children[0])
