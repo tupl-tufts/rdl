@@ -64,10 +64,10 @@ module RDL::Type
       domain_type = UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }))
       range_type = UnionType.new(*@elts.values)
       if @rest
-        domain_type = UnionType.new(domain_type, RDL.types[:symbol])
+        domain_type = UnionType.new(domain_type, RDL::Globals.types[:symbol])
         range_type = UnionType.new(range_type, @rest)
       end
-      @the_hash = GenericType.new(RDL.types[:hash], domain_type, range_type)
+      @the_hash = GenericType.new(RDL::Globals.types[:hash], domain_type, range_type)
       # same logic as Tuple
       return (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
     end

@@ -82,13 +82,13 @@ class TestTypecheck < Minitest::Test
     @t45 = RDL::Type::UnionType.new(@t4, @t5)
     @t35 = RDL::Type::UnionType.new(@t3, @t5)
     @t345 = RDL::Type::UnionType.new(@t34, @t5)
-    @ts3 = RDL::Type::UnionType.new(RDL.types[:string], @t3)
+    @ts3 = RDL::Type::UnionType.new(RDL::Globals.types[:string], @t3)
     @ts34 = RDL::Type::UnionType.new(@ts3, @t4)
-    @t3n = RDL::Type::UnionType.new(@t3, RDL.types[:nil])
-    @t4n = RDL::Type::UnionType.new(@t4, RDL.types[:nil])
+    @t3n = RDL::Type::UnionType.new(@t3, RDL::Globals.types[:nil])
+    @t4n = RDL::Type::UnionType.new(@t4, RDL::Globals.types[:nil])
     @env = RDL::Typecheck::Env.new(self: tt("TestTypecheck"))
-    @scopef = { tret: RDL.types[:integer] }
-    @tfs = RDL::Type::UnionType.new(RDL.types[:integer], RDL.types[:string])
+    @scopef = { tret: RDL::Globals.types[:integer] }
+    @tfs = RDL::Type::UnionType.new(RDL::Globals.types[:integer], RDL::Globals.types[:string])
     @scopefs = { tret: @tfs, tblock: nil }
   end
 
@@ -103,7 +103,7 @@ class TestTypecheck < Minitest::Test
 
   # convert arg string to a type
   def tt(t)
-    RDL.parser.scan_str('#T ' + t)
+    RDL::Globals.parser.scan_str('#T ' + t)
   end
 
   def test_def
@@ -224,16 +224,16 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_lits
-    assert do_tc("nil") <= RDL.types[:nil]
-    assert do_tc("true") <= RDL.types[:true]
-    assert do_tc("false") <= RDL.types[:false]
+    assert do_tc("nil") <= RDL::Globals.types[:nil]
+    assert do_tc("true") <= RDL::Globals.types[:true]
+    assert do_tc("false") <= RDL::Globals.types[:false]
     assert do_tc("42") <= tt("42")
-    assert do_tc("123456789123456789123456789") <= RDL.types[:integer]
+    assert do_tc("123456789123456789123456789") <= RDL::Globals.types[:integer]
     assert do_tc("3.14") <= tt("3.14")
-    assert do_tc("1i") <= RDL.types[:complex]
-    assert do_tc("2.0r") <= RDL.types[:rational]
-    assert do_tc("'42'") <= RDL.types[:string]
-    assert do_tc("\"42\"") <= RDL.types[:string]
+    assert do_tc("1i") <= RDL::Globals.types[:complex]
+    assert do_tc("2.0r") <= RDL::Globals.types[:rational]
+    assert do_tc("'42'") <= RDL::Globals.types[:string]
+    assert do_tc("\"42\"") <= RDL::Globals.types[:string]
     assert do_tc(":foo") <= tt(":foo")
   end
 
@@ -256,7 +256,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_seq
-    assert do_tc("_ = 42; _ = 43; 'foo'") <= RDL.types[:string]
+    assert do_tc("_ = 42; _ = 43; 'foo'") <= RDL::Globals.types[:string]
   end
 
   def test_dsym
@@ -268,7 +268,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_regexp
-    assert do_tc("/foo/") <= RDL.types[:regexp]
+    assert do_tc("/foo/") <= RDL::Globals.types[:regexp]
 
     self.class.class_eval {
       # Hard to read if these are inside of strings, so leave like this
@@ -316,8 +316,8 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_nth_back
-    assert do_tc("$4") <= RDL.types[:string]
-    assert do_tc("$+") <= RDL.types[:string]
+    assert do_tc("$4") <= RDL::Globals.types[:string]
+    assert do_tc("$+") <= RDL::Globals.types[:string]
   end
 
   def test_const
@@ -332,7 +332,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_defined
-    assert do_tc("defined?(x)") <= RDL.types[:string]
+    assert do_tc("defined?(x)") <= RDL::Globals.types[:string]
   end
 
   def test_lvar
@@ -359,7 +359,7 @@ class TestTypecheck < Minitest::Test
     assert do_tc("x = 42; x") <=  tt("42")
     assert do_tc("x = 42; y = x; y") <=  tt("42")
     assert do_tc("x = y = 42; x") <=  tt("42")
-    assert do_tc("x = x") <= RDL.types[:nil] # weird behavior - lhs bound to nil always before assignment!
+    assert do_tc("x = x") <= RDL::Globals.types[:nil] # weird behavior - lhs bound to nil always before assignment!
   end
 
   def test_lvar_type
@@ -370,7 +370,7 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :@x, 'Integer'", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :x, 'Fluffy Bunny'", env: @env) }
 
-    assert do_tc("var_type :x, 'Integer'; x = 3; x", env: @env) <= RDL.types[:integer]
+    assert do_tc("var_type :x, 'Integer'; x = 3; x", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :x, 'Integer'; x = 'three'", env: @env) }
     self.class.class_eval {
       type "(Integer) -> nil", typecheck: :now
@@ -392,9 +392,9 @@ class TestTypecheck < Minitest::Test
       var_type :@object, "Object"
     }
 
-    assert do_tc("@foo", env: @env) <= RDL.types[:integer]
-    assert do_tc("@@foo", env: @env) <= RDL.types[:integer]
-    assert do_tc("$test_ivar_ivasgn_global") <= RDL.types[:integer]
+    assert do_tc("@foo", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("@@foo", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("$test_ivar_ivasgn_global") <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@bar", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@bar", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@@bar", env: @env) }
@@ -421,15 +421,15 @@ class TestTypecheck < Minitest::Test
     }
 
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("z", env: @env) }
-    assert do_tc("_send_basic2", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_basic3(42)", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_basic2", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_basic3(42)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_basic3('42')", env: @env) }
-    assert do_tc("_send_basic4(42, '42')", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_basic4(42, '42')", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_basic4(42, 43)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_basic4('42', '43')", env: @env) }
-    assert do_tc("TestTypecheck._send_basic5(42)", env: @env) <= RDL.types[:integer]
+    assert do_tc("TestTypecheck._send_basic5(42)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("TestTypecheck._send_basic5('42')", env: @env) }
-    assert do_tc("puts 42", env: @env) <= RDL.types[:nil]
+    assert do_tc("puts 42", env: @env) <= RDL::Globals.types[:nil]
   end
 
   class A
@@ -449,7 +449,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_send_inherit
-    assert do_tc("B.new._send_inherit1", env: @env) <= RDL.types[:integer]
+    assert do_tc("B.new._send_inherit1", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("A3.new._send_inherit2", env: @env) }
   end
 
@@ -458,8 +458,8 @@ class TestTypecheck < Minitest::Test
       type :_send_inter1, "(Integer) -> Integer"
       type :_send_inter1, "(String) -> String"
     }
-    assert do_tc("_send_inter1(42)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_inter1('42')", env: @env) <= RDL.types[:string]
+    assert do_tc("_send_inter1(42)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_inter1('42')", env: @env) <= RDL::Globals.types[:string]
 
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_inter1(:forty_two)", env: @env) }
   end
@@ -475,49 +475,49 @@ class TestTypecheck < Minitest::Test
       type :_send_opt_varargs6, "(?Integer, String) -> Integer"
       type :_send_opt_varargs7, "(Integer, *String, Integer) -> Integer"
     }
-    assert do_tc("_send_opt_varargs1(42)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs1(42, 43)", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_opt_varargs1(42)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs1(42, 43)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs1()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs1(42, 43, 44)", env: @env) }
-    assert do_tc("_send_opt_varargs2(42)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs2(42, 43)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs2(42, 43, 44)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs2(42, 43, 44, 45)", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_opt_varargs2(42)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs2(42, 43)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs2(42, 43, 44)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs2(42, 43, 44, 45)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs2()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs2('42')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs2(42, '43')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs2(42, 43, '44')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs2(42, 43, 44, '45')", env: @env) }
-    assert do_tc("_send_opt_varargs3(42)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs3(42, 43)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs3(42, 43, 44)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs3(42, 43, 45)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs3(42, 43, 46)", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_opt_varargs3(42)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs3(42, 43)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs3(42, 43, 44)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs3(42, 43, 45)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs3(42, 43, 46)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs3()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs3('42')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs3(42, '43')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs3(42, 43, '44')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs3(42, 43, 44, '45')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs3(42, 43, 44, 45, '46')", env: @env) }
-    assert do_tc("_send_opt_varargs4()", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs4(42)", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_opt_varargs4()", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs4(42)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs4('42')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs4(42, 43)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs4(42, 43, 44)", env: @env) }
-    assert do_tc("_send_opt_varargs5()", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs5(42)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs5(42, 43)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs5(42, 43, 44)", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_opt_varargs5()", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs5(42)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs5(42, 43)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs5(42, 43, 44)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs5('42')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs5(42, '43')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs5(42, 43, '44')", env: @env) }
-    assert do_tc("_send_opt_varargs6('44')", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs6(43, '44')", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_opt_varargs6('44')", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs6(43, '44')", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs6()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs6(43, '44', 45)", env: @env) }
-    assert do_tc("_send_opt_varargs7(42, 43)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs7(42, 'foo', 43)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_opt_varargs7(42, 'foo', 'bar', 43)", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_opt_varargs7(42, 43)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs7(42, 'foo', 43)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_opt_varargs7(42, 'foo', 'bar', 43)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_opt_varargs7", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_opt_varargs7('42')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_opt_varargs7(42)", env: @env) }
@@ -538,87 +538,87 @@ class TestTypecheck < Minitest::Test
       type :_send_named_args8, "(?Integer, x: ?Symbol, y: ?String) -> Integer"
       type :_send_named_args9, "(Integer, x: String, y: Integer, **Float) -> Integer"
     }
-    assert do_tc("_send_named_args1(x: 42)", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_named_args1(x: 42)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args1(x: '42')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args1()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args1(x: 42, y: 42)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args1(y: 42)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args1(42)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args1(42, x: '42')", env: @env) }
-    assert do_tc("_send_named_args2(x: 42, y: '43')", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_named_args2(x: 42, y: '43')", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args2()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args2(x: 42)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args2(x: '42', y: '43')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args2(42, '43')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args2(42, x: 42, y: '43')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args2(x: 42, y: '43', z: 44)", env: @env) }
-    assert do_tc("_send_named_args3(42, y: '43')", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_named_args3(42, y: '43')", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args3(42, y: 43)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args3()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args3(42, 43, y: 44)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args3(42, y: 43, z: 44)", env: @env) }
-    assert do_tc("_send_named_args4(42, x: 43, y: '44')", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_named_args4(42, x: 43, y: '44')", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args4(42, x: 43)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args4(42, y: '43')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args4()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args4(42, 43, x: 44, y: '45')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args4(42, x: 43, y: '44', z: 45)", env: @env) }
-    assert do_tc("_send_named_args5(x: 42, y: '43')", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_named_args5(x: 42)", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_named_args5(x: 42, y: '43')", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_named_args5(x: 42)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args5()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args5(x: 42, y: 43)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args5(x: 42, y: 43, z: 44)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args5(3, x: 42, y: 43)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args5(3, x: 42)", env: @env) }
-    assert do_tc("_send_named_args6(x: 43, y: '44')", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_named_args6(y: '44')", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_named_args6(x: 43, y: '44')", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_named_args6(y: '44')", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args6()", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args6(x: '43', y: '44')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args6(42, x: 43, y: '44')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args6(x: 43, y: '44', z: 45)", env: @env) }
-    assert do_tc("_send_named_args7()", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_named_args7(x: 43)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_named_args7(y: '44')", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_named_args7(x: 43, y: '44')", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_named_args7()", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_named_args7(x: 43)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_named_args7(y: '44')", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_named_args7(x: 43, y: '44')", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args7(x: '43', y: '44')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args7(41, x: 43, y: '44')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args7(x: 43, y: '44', z: 45)", env: @env) }
-    assert do_tc("_send_named_args8()", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_named_args8(43)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_named_args8(x: :foo)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_named_args8(43, x: :foo)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_named_args8(y: 'foo')", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_named_args8(43, y: 'foo')", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_named_args8(x: :foo, y: 'foo')", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_named_args8(43, x: :foo, y: 'foo')", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_named_args8()", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_named_args8(43)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_named_args8(x: :foo)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_named_args8(43, x: :foo)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_named_args8(y: 'foo')", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_named_args8(43, y: 'foo')", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_named_args8(x: :foo, y: 'foo')", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_named_args8(43, x: :foo, y: 'foo')", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args8(43, 44, x: :foo, y: 'foo')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args8(43, x: 'foo', y: 'foo')", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args8(43, x: :foo, y: 'foo', z: 44)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args9", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args9(43)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args9(43, x: 'foo')", env: @env) }
-    assert do_tc("_send_named_args9(43, x:'foo', y: 44)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_named_args9(43, x:'foo', y: 44, pi: 3.14)", env: @env) <= RDL.types[:integer]
-    assert do_tc("_send_named_args9(43, x:'foo', y: 44, pi: 3.14, e: 2.72)", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_named_args9(43, x:'foo', y: 44)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_named_args9(43, x:'foo', y: 44, pi: 3.14)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("_send_named_args9(43, x:'foo', y: 44, pi: 3.14, e: 2.72)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args9(43, x: 'foo', y: 44, pi: 3)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_named_args9(43, x: 'foo', y: 44, pi: 3.14, e: 3)", env: @env) }
   end
 
   def test_send_singleton
     type Integer, :_send_singleton, "() -> String"
-    assert do_tc("3._send_singleton", env: @env) <= RDL.types[:string]
+    assert do_tc("3._send_singleton", env: @env) <= RDL::Globals.types[:string]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("3._send_singleton_nexists", env: @env) }
   end
 
   def test_send_generic
-    assert do_tc("[1,2,3].length", env: @env) <= RDL.types[:integer]
-    assert do_tc("{a:1, b:2}.length", env: @env) <= RDL.types[:integer]
-    assert do_tc("String.new.clone", env: @env) <= RDL.types[:string]
+    assert do_tc("[1,2,3].length", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("{a:1, b:2}.length", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("String.new.clone", env: @env) <= RDL::Globals.types[:string]
     # TODO test case with other generic
   end
 
   def test_send_alias
-    assert do_tc("[1,2,3].size", env: @env) <= RDL.types[:integer]
+    assert do_tc("[1,2,3].size", env: @env) <= RDL::Globals.types[:integer]
   end
 
   def test_send_block
@@ -629,7 +629,7 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block2(42) { |x| x + 1 }", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42) { |x, y| x + y }", env: @env) }
-    assert do_tc("_send_block1(42) { |x| x }", env: @env) <= RDL.types[:integer]
+    assert do_tc("_send_block1(42) { |x| x }", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42) { |x| 'forty-two' }", env: @env) }
     self.class.class_eval {
       type "() -> 1", typecheck: :now
@@ -661,14 +661,14 @@ class TestTypecheck < Minitest::Test
       type :_send_method_generic6, '() { (Integer) -> u } -> u'
     }
     assert do_tc('_send_method_generic1 3', env: @env) <= @t3
-    assert do_tc('_send_method_generic1 "foo"', env: @env) <= RDL.types[:string]
+    assert do_tc('_send_method_generic1 "foo"', env: @env) <= RDL::Globals.types[:string]
     assert do_tc('_send_method_generic2 3, "foo"', env: @env) <= tt("3 or String")
-    assert do_tc('_send_method_generic3 { |x| 42 }', env: @env) <= RDL.types[:integer]
+    assert do_tc('_send_method_generic3 { |x| 42 }', env: @env) <= RDL::Globals.types[:integer]
     assert do_tc('_send_method_generic4(42) { |x| x }', env: @env) <= tt("42")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc('_send_method_generic4(42) { |x| "foo" }', env: @env) }
     assert do_tc('_send_method_generic5 { |x| x }', env: @env) <= tt("u") # not possible to implement _send_method_generic5!
     assert do_tc('_send_method_generic5 { |x| 3 }', env: @env) <= tt("3") # weird example, but can pick u=3
-    assert do_tc('_send_method_generic6 { |x| "foo" }', env: @env) <= RDL.types[:string]
+    assert do_tc('_send_method_generic6 { |x| "foo" }', env: @env) <= RDL::Globals.types[:string]
     assert do_tc('[1,2,3].index(Object.new)', env: @env) <= tt("Integer")
     assert do_tc('[1, 2, 3].map { |y| y.to_s }', env: @env) <= tt("Array<String>")
   end
@@ -678,7 +678,7 @@ class TestTypecheck < Minitest::Test
       type :_send_union1, "(Integer) -> Float"
       type :_send_union1, "(String) -> Rational"
     }
-    assert do_tc("(if _any_object then Integer.new else String.new end) * 2", env: @env) <= RDL::Type::UnionType.new(@tfs, RDL.types[:integer])
+    assert do_tc("(if _any_object then Integer.new else String.new end) * 2", env: @env) <= RDL::Type::UnionType.new(@tfs, RDL::Globals.types[:integer])
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(if _any_object then Object.new else Integer.new end) + 2", env: @env) }
     assert do_tc("if _any_object then x = Integer.new else x = String.new end; _send_union1(x)", env: @env) <= tt("Float or Rational")
   end
@@ -689,8 +689,8 @@ class TestTypecheck < Minitest::Test
       type :_send_splat2, "(String, *Integer, Float) -> Integer"
       type :_send_splat_fa, "() -> Array<Integer>"
     }
-    assert do_tc("x = ['foo', 42]; _send_splat1(1, *x, 'bar')", env: @env) <= RDL.types[:integer]
-    assert do_tc("x = _send_splat_fa; _send_splat2('foo', *x, 3.14)", env: @env) <= RDL.types[:integer]
+    assert do_tc("x = ['foo', 42]; _send_splat1(1, *x, 'bar')", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("x = _send_splat_fa; _send_splat2('foo', *x, 3.14)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = _send_splat_fa; _send_splat1(*x, 'foo', 2, 'bar')", env: @env) }
   end
 
@@ -814,7 +814,7 @@ class TestTypecheck < Minitest::Test
       type :_block_arg10, "(Integer) -> Integer"
       type :_block_arg11, "(Integer) -> String"
     }
-    assert do_tc("_block_arg6(42, &:_block_arg10)", env: @env) <= RDL.types[:integer]
+    assert do_tc("_block_arg6(42, &:_block_arg10)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_block_arg6(42, &:_block_arg11)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_block_arg6(42, &:_block_arg_does_not_exist)", env: @env) }
   end
@@ -853,8 +853,8 @@ class TestTypecheck < Minitest::Test
     assert do_tc("3 unless _any_object", env: @env) <= @t3n
     assert do_tc("if true then 3 else 'three' end", env: @env) <= @t3
     assert do_tc("if :foo then 3 else 'three' end", env: @env) <= @t3
-    assert do_tc("if false then 3 else 'three' end", env: @env) <= RDL.types[:string]
-    assert do_tc("if nil then 3 else 'three' end", env: @env) <= RDL.types[:string]
+    assert do_tc("if false then 3 else 'three' end", env: @env) <= RDL::Globals.types[:string]
+    assert do_tc("if nil then 3 else 'three' end", env: @env) <= RDL::Globals.types[:string]
 
     assert do_tc("x = 'three'; if _any_object then x = 4 else x = 5 end; x", env: @env) <= @t45
     assert do_tc("x = 'three'; if _any_object then x = 3 end; x", env: @env) <= @ts3
@@ -867,13 +867,13 @@ class TestTypecheck < Minitest::Test
   def test_and_or
     assert do_tc("'foo' and 3") <= @ts3
     assert do_tc("'foo' && 3") <= @ts3
-    assert do_tc("3 and 'foo'") <= RDL.types[:string]
-    assert do_tc("nil and 'foo'") <= RDL.types[:nil]
-    assert do_tc("false and 'foo'") <= RDL.types[:false]
+    assert do_tc("3 and 'foo'") <= RDL::Globals.types[:string]
+    assert do_tc("nil and 'foo'") <= RDL::Globals.types[:nil]
+    assert do_tc("false and 'foo'") <= RDL::Globals.types[:false]
     assert do_tc("(x = 'foo') and (x = 3); x") <= @ts3
-    assert do_tc("(x = 3) and (x = 'foo'); x") <= RDL.types[:string]
-    assert do_tc("(x = nil) and (x = 'foo'); x") <= RDL.types[:nil]
-    assert do_tc("(x = false) and (x = 'foo'); x") <= RDL.types[:false]
+    assert do_tc("(x = 3) and (x = 'foo'); x") <= RDL::Globals.types[:string]
+    assert do_tc("(x = nil) and (x = 'foo'); x") <= RDL::Globals.types[:nil]
+    assert do_tc("(x = false) and (x = 'foo'); x") <= RDL::Globals.types[:false]
 
     assert do_tc("'foo' or 3") <= @ts3
     assert do_tc("'foo' || 3") <= @ts3
@@ -900,7 +900,7 @@ class TestTypecheck < Minitest::Test
     assert do_tc("case when _any_object then 3 else 'foo' end", env: @env) <= @ts3
     assert do_tc("x = 4; case when _any_object then x = 3 else x = 'foo' end; x", env: @env) <= @ts3
 
-    assert do_tc("case _any_object when C.new then 'foo' end", env: @env) <= RDL.types[:string]
+    assert do_tc("case _any_object when C.new then 'foo' end", env: @env) <= RDL::Globals.types[:string]
     assert do_tc("x = 3; case _any_object when C.new then x = 'foo' end; x", env: @env) <= @ts3
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("case _any_object when D.new then 'foo' end", env: @env) }
     assert do_tc("case _any_object when C.new then 'foo' else 3 end", env: @env) <= @ts3
@@ -918,28 +918,28 @@ class TestTypecheck < Minitest::Test
 
   def test_while_until
     # TODO these don't do a great job checking control flow
-    assert do_tc("while true do end") <= RDL.types[:nil]
-    assert do_tc("until false do end") <= RDL.types[:nil]
-    assert do_tc("begin end while true") <= RDL.types[:nil]
-    assert do_tc("begin end until false") <= RDL.types[:nil]
-    assert do_tc("i = 0; while i < 5 do i = 1 + i end; i") <= RDL.types[:integer]
-    assert do_tc("i = 0; while i < 5 do i = i + 1 end; i") <= RDL.types[:integer]
-    assert do_tc("i = 0; until i >= 5 do i = 1 + i end; i") <= RDL.types[:integer]
-    assert do_tc("i = 0; until i >= 5 do i = i + 1 end; i") <= RDL.types[:integer]
-    assert do_tc("i = 0; begin i = 1 + i end while i < 5; i") <= RDL.types[:integer]
-    assert do_tc("i = 0; begin i = i + 1 end while i < 5; i") <= RDL.types[:integer]
-    assert do_tc("i = 0; begin i = 1 + i end until i >= 5; i") <= RDL.types[:integer]
-    assert do_tc("i = 0; begin i = i + 1 end until i >= 5; i") <= RDL.types[:integer]
+    assert do_tc("while true do end") <= RDL::Globals.types[:nil]
+    assert do_tc("until false do end") <= RDL::Globals.types[:nil]
+    assert do_tc("begin end while true") <= RDL::Globals.types[:nil]
+    assert do_tc("begin end until false") <= RDL::Globals.types[:nil]
+    assert do_tc("i = 0; while i < 5 do i = 1 + i end; i") <= RDL::Globals.types[:integer]
+    assert do_tc("i = 0; while i < 5 do i = i + 1 end; i") <= RDL::Globals.types[:integer]
+    assert do_tc("i = 0; until i >= 5 do i = 1 + i end; i") <= RDL::Globals.types[:integer]
+    assert do_tc("i = 0; until i >= 5 do i = i + 1 end; i") <= RDL::Globals.types[:integer]
+    assert do_tc("i = 0; begin i = 1 + i end while i < 5; i") <= RDL::Globals.types[:integer]
+    assert do_tc("i = 0; begin i = i + 1 end while i < 5; i") <= RDL::Globals.types[:integer]
+    assert do_tc("i = 0; begin i = 1 + i end until i >= 5; i") <= RDL::Globals.types[:integer]
+    assert do_tc("i = 0; begin i = i + 1 end until i >= 5; i") <= RDL::Globals.types[:integer]
 
     # break, redo, next, no args
-    assert do_tc("i = 0; while i < 5 do if i > 2 then break end; i = 1 + i end; i") <= RDL.types[:integer]
+    assert do_tc("i = 0; while i < 5 do if i > 2 then break end; i = 1 + i end; i") <= RDL::Globals.types[:integer]
     assert do_tc("i = 0; while i < 5 do break end; i") <= tt("0")
     assert do_tc("i = 0; while i < 5 do redo end; i") # infinite loop, ok for typing <= tt("0")
     assert do_tc("i = 0; while i < 5 do next end; i") # infinite loop, ok for typing <= tt("0")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("i = 0; while i < 5 do retry end; i") }
-    assert do_tc("i = 0; begin i = i + 1; break if i > 2; end while i < 5; i") <= RDL.types[:integer]
-    assert do_tc("i = 0; begin i = i + 1; redo if i > 2; end while i < 5; i") <= RDL.types[:integer]
-    assert do_tc("i = 0; begin i = i + 1; next if i > 2; end while i < 5; i") <= RDL.types[:integer]
+    assert do_tc("i = 0; begin i = i + 1; break if i > 2; end while i < 5; i") <= RDL::Globals.types[:integer]
+    assert do_tc("i = 0; begin i = i + 1; redo if i > 2; end while i < 5; i") <= RDL::Globals.types[:integer]
+    assert do_tc("i = 0; begin i = i + 1; next if i > 2; end while i < 5; i") <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("i = 0; begin i = i + 1; retry if i > 2; end while i < 5; i") }
 
     # break w/arg, next can't take arg
@@ -950,7 +950,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_for
-    assert do_tc("for i in 1..5 do end; i") <= RDL.types[:integer]
+    assert do_tc("for i in 1..5 do end; i") <= RDL::Globals.types[:integer]
     assert do_tc("for i in [1,2,3,4,5] do end; i") <= tt("1 or 2 or 3 or 4 or 5")
     assert do_tc("for i in 1..5 do break end", env: @env) <= tt("Range<Integer>")
     assert do_tc("for i in 1..5 do next end", env: @env) <= tt("Range<Integer>")
@@ -976,10 +976,10 @@ class TestTypecheck < Minitest::Test
       }
     }
 
-    assert do_tc("return 42", scope: @scopefs) <= RDL.types[:bot]
-    assert do_tc("if _any_object then return 42 else return 'forty-two' end", env: @env, scope: @scopefs) <= RDL.types[:bot]
+    assert do_tc("return 42", scope: @scopefs) <= RDL::Globals.types[:bot]
+    assert do_tc("if _any_object then return 42 else return 'forty-two' end", env: @env, scope: @scopefs) <= RDL::Globals.types[:bot]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("if _any_object then return 42 else return 'forty-two' end", env: @env, scope: @scopef) }
-    assert do_tc("return 42 if _any_object; 'forty-two'", env: @env, scope: @scopef) <= RDL.types[:string]
+    assert do_tc("return 42 if _any_object; 'forty-two'", env: @env, scope: @scopef) <= RDL::Globals.types[:string]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("return 'forty-two' if _any_object; 42", env: @env, scope: @scopef) }
   end
 
@@ -989,12 +989,12 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_op_asgn
-    assert RDL.types[:integer], do_tc("x = 0; x += 1")
+    assert RDL::Globals.types[:integer], do_tc("x = 0; x += 1")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x += 1") }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = Object.new; x += 1", env: @env) }
-    assert do_tc("e = E.new; e.f += 1", env: @env) <= RDL.types[:nil] # return type of f=
-    assert do_tc("x &= false") <= RDL.types[:false] # weird
-    assert do_tc("h = {}; h = h.type_cast('Hash<Symbol, String>', force: true); h[:a] = ''; h[:a] += 's'", env: @env) <= RDL.types[:string]
+    assert do_tc("e = E.new; e.f += 1", env: @env) <= RDL::Globals.types[:nil] # return type of f=
+    assert do_tc("x &= false") <= RDL::Globals.types[:false] # weird
+    assert do_tc("h = {}; h = h.type_cast('Hash<Symbol, String>', force: true); h[:a] = ''; h[:a] += 's'", env: @env) <= RDL::Globals.types[:string]
   end
 
   def test_and_or_asgn
@@ -1002,12 +1002,12 @@ class TestTypecheck < Minitest::Test
       var_type :@f_and_or_asgn, "Integer"
     }
     assert do_tc("x ||= 3") <= @t3 # weird
-    assert do_tc("x &&= 3") <= RDL.types[:nil] # weirder
-    assert do_tc("@f_and_or_asgn &&= 4", env: @env) <= RDL.types[:integer]
+    assert do_tc("x &&= 3") <= RDL::Globals.types[:nil] # weirder
+    assert do_tc("@f_and_or_asgn &&= 4", env: @env) <= RDL::Globals.types[:integer]
     assert do_tc("x = 3; x ||= 'three'") <= @t3
     assert do_tc("x = 'three'; x ||= 3") <= @ts3
-    assert do_tc("e = E.new; e.f ||= 3", env: @env) <= RDL.types[:nil] # return type of f=
-    assert do_tc("e = E.new; e.f &&= 3", env: @env) <= RDL.types[:nil] # return type of f=
+    assert do_tc("e = E.new; e.f ||= 3", env: @env) <= RDL::Globals.types[:nil] # return type of f=
+    assert do_tc("e = E.new; e.f &&= 3", env: @env) <= RDL::Globals.types[:nil] # return type of f=
   end
 
   def test_masgn
@@ -1016,19 +1016,19 @@ class TestTypecheck < Minitest::Test
     }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x, y = 3") } # allowed in Ruby but probably has surprising behavior
     assert do_tc("a, b = @f_masgn", env: @env) <= tt("Array<Integer>")
-    assert do_tc("a, b = @f_masgn; a", env: @env) <= RDL.types[:integer]
-    assert do_tc("a, b = @f_masgn; b", env: @env) <= RDL.types[:integer]
+    assert do_tc("a, b = @f_masgn; a", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("a, b = @f_masgn; b", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :a, 'String'; a, b = @f_masgn", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("a, b = 1, 2, 3") }
     assert do_tc("a, b = 3, 'two'; a") <= @t3
-    assert do_tc("a, b = 3, 'two'; b") <= RDL.types[:string]
+    assert do_tc("a, b = 3, 'two'; b") <= RDL::Globals.types[:string]
     assert do_tc("a = [3, 'two']; x, y = a; x") <= @t3
-    assert do_tc("a = [3, 'two']; x, y = a; y") <= RDL.types[:string]
+    assert do_tc("a = [3, 'two']; x, y = a; y") <= RDL::Globals.types[:string]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("a = [3, 'two']; x, y = a; a.length", env: @env) }
 
     # w/send
     assert do_tc("e = E.new; e.f, b = 1, 2; b", env: @env) <= tt("2")
-    assert do_tc("e = E.new; e.f, b = @f_masgn; b", env: @env) <= RDL.types[:integer]
+    assert do_tc("e = E.new; e.f, b = @f_masgn; b", env: @env) <= RDL::Globals.types[:integer]
     assert do_tc("@f_masgn[3], y = 1, 2", env: @env) <= tt("[1, 2]")
 
     # w/splat
@@ -1041,7 +1041,7 @@ class TestTypecheck < Minitest::Test
     assert do_tc("x, *y = [1]; x") <= tt("1")
     assert do_tc("x, *y = [1]; y") <= tt("[]")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x, *y = 1") } # allowed in Ruby, but hard to justify, so RDL error
-    assert do_tc("x, *y = @f_masgn; x", env: @env) <= RDL.types[:integer]
+    assert do_tc("x, *y = @f_masgn; x", env: @env) <= RDL::Globals.types[:integer]
     assert do_tc("x, *y = @f_masgn; y", env: @env) <= tt("Array<Integer>")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x, y, *z = [1]") } # works in Ruby, but confusing so RDL reports error
 
@@ -1052,7 +1052,7 @@ class TestTypecheck < Minitest::Test
     assert do_tc("*x, y = [1]; y") <= tt("1")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("*x, y = 1") } # as above
     assert do_tc("*x, y = @f_masgn; x", env: @env) <= tt("Array<Integer>")
-    assert do_tc("*x, y = @f_masgn; y", env: @env) <= RDL.types[:integer]
+    assert do_tc("*x, y = @f_masgn; y", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("*x, y, z = [1]") } # as above
 
     # w/splat in middle
@@ -1063,18 +1063,18 @@ class TestTypecheck < Minitest::Test
     assert do_tc("x, *y, z = [1, 2, 3, 4]; y") <= tt("[2, 3]")
     assert do_tc("x, *y, z = [1, 2, 3, 4]; z") <= tt("4")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x, *y, z = 1") } # as above
-    assert do_tc("x, *y, z = @f_masgn; x", env: @env) <= RDL.types[:integer]
+    assert do_tc("x, *y, z = @f_masgn; x", env: @env) <= RDL::Globals.types[:integer]
     assert do_tc("x, *y, z = @f_masgn; y", env: @env) <= tt("Array<Integer>")
-    assert do_tc("x, *y, z = @f_masgn; z", env: @env) <= RDL.types[:integer]
+    assert do_tc("x, *y, z = @f_masgn; z", env: @env) <= RDL::Globals.types[:integer]
   end
 
   def test_cast
-    assert do_tc("(1 + 2).type_cast('Integer')", env: @env) <= RDL.types[:integer]
+    assert do_tc("(1 + 2).type_cast('Integer')", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("1.type_cast('Integer', 42)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("1.type_cast(Integer)", env: @env) }
-    assert do_tc("(1 + 2).type_cast('Integer', force: true)", env: @env) <= RDL.types[:integer]
-    assert do_tc("(1 + 2).type_cast('Integer', force: false)", env: @env) <= RDL.types[:integer]
-    assert do_tc("(1 + 2).type_cast('Integer', force: :blah)", env: @env) <= RDL.types[:integer]
+    assert do_tc("(1 + 2).type_cast('Integer', force: true)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("(1 + 2).type_cast('Integer', force: false)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("(1 + 2).type_cast('Integer', force: :blah)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(1 + 2).type_cast('Integer', forc: true)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(1 + 2).type_cast('Fluffy Bunny')") }
   end
@@ -1213,29 +1213,29 @@ class TestTypecheck < Minitest::Test
       attr_type :f_attr, "Integer"
       attr_accessor_type :f_attr_accessor, "Integer"
     }
-    assert do_tc("@f_attr_reader", env: @env) <= RDL.types[:integer]
-    assert do_tc("TestTypecheck.new.f_attr_reader", env: @env) <= RDL.types[:integer]
+    assert do_tc("@f_attr_reader", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("TestTypecheck.new.f_attr_reader", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("TestTypecheck.new.f_attr_reader = 4", env: @env) }
-    assert do_tc("@f_attr_reader2", env: @env) <= RDL.types[:string]
-    assert do_tc("TestTypecheck.new.f_attr_reader2", env: @env) <= RDL.types[:string]
+    assert do_tc("@f_attr_reader2", env: @env) <= RDL::Globals.types[:string]
+    assert do_tc("TestTypecheck.new.f_attr_reader2", env: @env) <= RDL::Globals.types[:string]
 
-    assert do_tc("@f_attr", env: @env) # same as attr_reader <= RDL.types[:integer]
-    assert do_tc("TestTypecheck.new.f_attr", env: @env) <= RDL.types[:integer]
+    assert do_tc("@f_attr", env: @env) # same as attr_reader <= RDL::Globals.types[:integer]
+    assert do_tc("TestTypecheck.new.f_attr", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("TestTypecheck.new.f_attr = 42", env: @env) }
 
     assert do_tc("@f_attr_writer = 3", env: @env) <= @t3
-    assert do_tc("TestTypecheck.new.f_attr_writer = 3", env: @env) <= RDL.types[:integer]
+    assert do_tc("TestTypecheck.new.f_attr_writer = 3", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("TestTypecheck.new.f_attr_writer", env: @env) }
 
-    assert do_tc("@f_attr_accessor", env: @env) <= RDL.types[:integer]
-    assert do_tc("TestTypecheck.new.f_attr_accessor", env: @env) <= RDL.types[:integer]
-    assert do_tc("TestTypecheck.new.f_attr_accessor = 42", env: @env) <= RDL.types[:integer]
+    assert do_tc("@f_attr_accessor", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("TestTypecheck.new.f_attr_accessor", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("TestTypecheck.new.f_attr_accessor = 42", env: @env) <= RDL::Globals.types[:integer]
   end
 
   # test code where we know different stuff about types on difference branches
   def test_typeful_branches
-    assert do_tc("x = Object.new; case x when String; x.length; end", env: @env) <= RDL.types[:integer]
-    assert do_tc("x = Object.new; case x when String, Array; x.length; end", env: @env) <= RDL.types[:integer]
+    assert do_tc("x = Object.new; case x when String; x.length; end", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("x = Object.new; case x when String, Array; x.length; end", env: @env) <= RDL::Globals.types[:integer]
     assert do_tc("x = String.new; case x when String; 3; when Integer; 4; end", env: @env) <= @t3
   end
 
@@ -1248,7 +1248,7 @@ class TestTypecheck < Minitest::Test
         end
       }
     }
-    RDL.info.add(self.class, :context_typecheck2, :context_types, [self.class, :context_tc_in_context2, RDL.parser.scan_str('() -> Integer')])
+    RDL::Globals.info.add(self.class, :context_typecheck2, :context_types, [self.class, :context_tc_in_context2, RDL::Globals.parser.scan_str('() -> Integer')])
     self.class.class_eval {
       type '() -> Integer', typecheck: :now
       def context_typecheck2

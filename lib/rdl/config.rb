@@ -60,7 +60,7 @@ RDL::Config.instance.profile_stats
 
     at_exit do
       Profiler__.stop_profile
-      RDL.contract_switch.off {
+      RDL::Globals.contract_switch.off {
         puts "START."
         puts "Performing Profile Analysis"
         # Class Name => [Times Contract Called | Times Called | Time | Time | Class Profile]
@@ -96,7 +96,7 @@ RDL::Config.instance.profile_stats
         }
 
         p "Scanning RDL Contract Log"
-        RDL.wrapped_calls.each{ |mname,ct|
+        RDL::Globals.wrapped_calls.each{ |mname,ct|
           if (totals[mname]) then
             if (totals[mname][0]) then
               totals[mname][0] = ct
@@ -153,7 +153,7 @@ RDL::Config.instance.profile_stats
     puts "------------------------------"
     typechecked = []
     missing = []
-    RDL.info.info.each_pair { |klass, meths|
+    RDL::Globals.info.info.each_pair { |klass, meths|
       meths.each { |meth, kinds|
         if kinds[:typecheck]
           if kinds[:typechecked]
@@ -207,16 +207,16 @@ RDL::Config.instance.profile_stats
     puts " -> XXXX'"
 
     # next print based on observed types
-    otypes = RDL.info.get(klass, meth, :otype) if RDL.info.has?(klass, meth, :otype) # observed types
+    otypes = RDL::Globals.info.get(klass, meth, :otype) if RDL::Globals.info.has?(klass, meth, :otype) # observed types
     return if otypes.nil?
     first = true
     print "  type #{if is_sing then '\'self.' + meth + '\'' else ':' + meth end}, '("
     otargs = []
-    otret = RDL.types[:bot]
+    otret = RDL::Globals.types[:bot]
     otblock = false
     otypes.each { |ot|
       ot[:args].each_with_index { |t, i|
-        otargs[i] = RDL.types[:bot] if otargs[i].nil?
+        otargs[i] = RDL::Globals.types[:bot] if otargs[i].nil?
         otargs[i] = RDL::Type::UnionType.new(otargs[i], RDL::Type::NominalType.new(t)).canonical
       }
       otret = RDL::Type::UnionType.new(otret, RDL::Type::NominalType.new(ot[:ret])).canonical

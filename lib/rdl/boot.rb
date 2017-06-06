@@ -12,7 +12,7 @@ def RDL.config
 end
 require 'rdl/info.rb'
 
-module RDL
+module RDL::Globals
   # Method/variable info table with kinds:
   # For methods
   #   :pre to array of precondition contracts
@@ -54,7 +54,7 @@ module RDL
   @deferred = []
 end
 
-class << RDL # add accessors and readers for module variables
+class << RDL::Globals # add accessors and readers for module variables
   attr_accessor :info
   attr_accessor :wrapped_calls
   attr_accessor :type_params
@@ -69,12 +69,12 @@ end
 # contracts are checked. These need to be created before rdl/wrap.rb
 # is loaded.
 require 'rdl/switch.rb'
-module RDL
+module RDL::Globals
   @wrap_switch = RDL::Switch.new
   @contract_switch = RDL::Switch.new
 end
 
-class << RDL
+class << RDL::Globals
   attr_reader :wrap_switch
   attr_reader :contract_switch
 end
@@ -115,9 +115,9 @@ require 'rdl/query.rb'
 require 'rdl/typecheck.rb'
 #require_relative 'rdl/stats.rb'
 
-module RDL
-  PRE_INTMERGE_VERSIONS = ['>= 2.0.0', '< 2.4.0']
-  POST_INTMERGE_VERSIONS = '>= 2.4.0'
+module RDL::Globals
+  FIXBIG_VERSIONS = ['>= 2.0.0', '< 2.4.0']
+  # INTEGER_VERSIONS = '>= 2.4.0'
 
   @parser = RDL::Type::Parser.new
 
@@ -156,7 +156,7 @@ module RDL
                     '%bool' => @types[:bool]}
 end
 
-class << RDL
+class << RDL::Globals
   attr_reader :parser
   attr_accessor :parser_cache
   attr_reader :types

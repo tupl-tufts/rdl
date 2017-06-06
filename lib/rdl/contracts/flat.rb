@@ -8,7 +8,7 @@ module RDL::Contract
     end
 
     def check(slf, *v, &blk)
-      RDL.contract_switch.off {
+      RDL::Globals.contract_switch.off {
         if @pred && v.length >= @pred.arity
           unless blk ? slf.instance_exec(*v, blk, &@pred) : slf.instance_exec(*v, &@pred) # TODO: Fix blk
 #          unless blk ? pred.call(*v, &blk) : pred.call(*v)

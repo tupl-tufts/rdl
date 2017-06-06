@@ -10,6 +10,8 @@
 - Type checking method when class name is included in type annotation
 - Dynamic type checks after calls to instantiate!
 - Ruby 2.4 compatibility!
+- Various core and standard library types
+- Parsing bug with `or`
 
 ### Added
 - Support operator assignment when left-hand side has method args
@@ -19,12 +21,10 @@
 - New "check" flag for calls to instantiate! indicating whether we want to check type of receiving object on call
 - More precise static type checking for `Object#class` method
 - Klass argument to rdl_nowrap, rdl_alias
-
-### Fixed
-- Parsing bug with `or`
+- Some more support for Rails
 
 ### Changed
-- Global variables are now module variables of RDL
+- Global variables are now module variables of RDL::Globals
 - at_exit handler only installed if `Config.report` or `.guess_types` are accessed
 - Subclass Parser::Diagnostic instead of monkey patching it
 

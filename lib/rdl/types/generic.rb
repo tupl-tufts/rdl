@@ -40,8 +40,8 @@ module RDL::Type
     end
 
     def member?(obj, *args)
-      raise "No type parameters defined for #{base.name}" unless RDL.type_params[base.name]
-#      formals = RDL.type_params[base.name][0]
+      raise "No type parameters defined for #{base.name}" unless RDL::Globals.type_params[base.name]
+#      formals = RDL::Globals.type_params[base.name][0]
       t = RDL::Util.rdl_type obj
       return t <= self if t
       return false unless base.member?(obj, *args)
@@ -57,7 +57,7 @@ module RDL::Type
     end
 
     def to_inst
-      return RDL.type_params[base.name][0].zip(@params).to_h
+      return RDL::Globals.type_params[base.name][0].zip(@params).to_h
     end
   end
 end

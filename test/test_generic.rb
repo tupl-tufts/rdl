@@ -37,13 +37,13 @@ class TestGeneric < Minitest::Test
   def setup
     @ta = RDL::Type::NominalType.new "TestGeneric::A"
     @th = RDL::Type::NominalType.new "TestGeneric::H"
-    @tas = RDL::Type::GenericType.new(@ta, RDL.types[:string])
-    @tao = RDL::Type::GenericType.new(@ta, RDL.types[:object])
+    @tas = RDL::Type::GenericType.new(@ta, RDL::Globals.types[:string])
+    @tao = RDL::Type::GenericType.new(@ta, RDL::Globals.types[:object])
     @taas = RDL::Type::GenericType.new(@ta, @tas)
     @taao = RDL::Type::GenericType.new(@ta, @tao)
-    @thss = RDL::Type::GenericType.new(@th, RDL.types[:string], RDL.types[:string])
-    @thoo = RDL::Type::GenericType.new(@th, RDL.types[:object], RDL.types[:object])
-    @thsf = RDL::Type::GenericType.new(@th, RDL.types[:string], RDL.types[:integer])
+    @thss = RDL::Type::GenericType.new(@th, RDL::Globals.types[:string], RDL::Globals.types[:string])
+    @thoo = RDL::Type::GenericType.new(@th, RDL::Globals.types[:object], RDL::Globals.types[:object])
+    @thsf = RDL::Type::GenericType.new(@th, RDL::Globals.types[:string], RDL::Globals.types[:integer])
     @tb = RDL::Type::NominalType.new "TestGeneric::B"
   end
 
@@ -68,10 +68,10 @@ class TestGeneric < Minitest::Test
     assert (not (@thss <= @th))
 
     # Check co- and contravariance using B
-    tbss = RDL::Type::GenericType.new(@tb, RDL.types[:string], RDL.types[:string])
-    tbso = RDL::Type::GenericType.new(@tb, RDL.types[:string], RDL.types[:object])
-    tbos = RDL::Type::GenericType.new(@tb, RDL.types[:object], RDL.types[:string])
-    tboo = RDL::Type::GenericType.new(@tb, RDL.types[:object], RDL.types[:object])
+    tbss = RDL::Type::GenericType.new(@tb, RDL::Globals.types[:string], RDL::Globals.types[:string])
+    tbso = RDL::Type::GenericType.new(@tb, RDL::Globals.types[:string], RDL::Globals.types[:object])
+    tbos = RDL::Type::GenericType.new(@tb, RDL::Globals.types[:object], RDL::Globals.types[:string])
+    tboo = RDL::Type::GenericType.new(@tb, RDL::Globals.types[:object], RDL::Globals.types[:object])
     assert (tbss <= tbss)
     assert (not (tbss <= tbso))
     assert (tbss <= tbos)
@@ -91,10 +91,10 @@ class TestGeneric < Minitest::Test
   end
 
   def test_le_structural
-    tbss = RDL::Type::GenericType.new(@tb, RDL.types[:string], RDL.types[:string])
-    tma = RDL::Type::MethodType.new([], nil, RDL.types[:nil])
-    tmb = RDL::Type::MethodType.new([RDL.types[:string]], nil, RDL.types[:nil])
-    tmc = RDL::Type::MethodType.new([RDL.types[:integer]], nil, RDL.types[:nil])
+    tbss = RDL::Type::GenericType.new(@tb, RDL::Globals.types[:string], RDL::Globals.types[:string])
+    tma = RDL::Type::MethodType.new([], nil, RDL::Globals.types[:nil])
+    tmb = RDL::Type::MethodType.new([RDL::Globals.types[:string]], nil, RDL::Globals.types[:nil])
+    tmc = RDL::Type::MethodType.new([RDL::Globals.types[:integer]], nil, RDL::Globals.types[:nil])
     ts1 = RDL::Type::StructuralType.new(m2: tma)
     assert (tbss <= ts1)
     ts2 = RDL::Type::StructuralType.new(m1: tmb)
@@ -141,18 +141,18 @@ class TestGeneric < Minitest::Test
   end
 
   def test_instantiate
-    assert_raises(RuntimeError) { Object.new.instantiate!(RDL.types[:string]) }
+    assert_raises(RuntimeError) { Object.new.instantiate!(RDL::Globals.types[:string]) }
 
     # Array<String>
     assert (A.new([]).instantiate!('String'))
-    assert (A.new(["a", "b", "c"]).instantiate!(RDL.types[:string], check: true))
+    assert (A.new(["a", "b", "c"]).instantiate!(RDL::Globals.types[:string], check: true))
     assert (A.new(["a", "b", "c"]).instantiate!('String', check: true))
     assert_raises(RDL::Type::TypeError) { A.new([1, 2, 3]).instantiate!('String', check: true) }
     assert (A.new([1, 2, 3]).instantiate!('String', check: false))
 
     # Array<Object>
     assert (A.new([])).instantiate!('Object', check: true)
-    assert (A.new(["a", "b", "c"]).instantiate!(RDL.types[:object], check: true))
+    assert (A.new(["a", "b", "c"]).instantiate!(RDL::Globals.types[:object], check: true))
     assert (A.new(["a", "b", "c"]).instantiate!('Object', check: true))
     assert (A.new([1, 2, 3]).instantiate!('Object', check: true))
 

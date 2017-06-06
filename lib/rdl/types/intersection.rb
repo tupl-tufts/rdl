@@ -13,7 +13,7 @@ module RDL::Type
     def self.new(*types)
       ts = []
       types.each { |t|
-        if t == RDL.types[:bot]
+        if t == RDL::Globals.types[:bot]
           next
         elsif t.instance_of? IntersectionType
           ts.concat t.types
@@ -25,7 +25,7 @@ module RDL::Type
       ts.sort! { |a,b| a.object_id <=> b.object_id }
       ts.uniq!
 
-      return RDL.types[:bot] if ts.size == 0
+      return RDL::Globals.types[:bot] if ts.size == 0
       return ts[0] if ts.size == 1
 
       t = @@cache[ts]

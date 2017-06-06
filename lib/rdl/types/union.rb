@@ -7,7 +7,7 @@ module RDL::Type
     end
 
     def self.new(*types)
-      return RDL.types[:bot] if types.size == 0
+      return RDL::Globals.types[:bot] if types.size == 0
       ts = []
       # flatten nested unions, check that all args are types
       types.each { |t|

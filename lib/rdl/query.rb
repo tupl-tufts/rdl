@@ -17,25 +17,25 @@ class RDL::Query
 #      klass = self.class.to_s
 #      meth = q.to_sym
     end
-    return RDL.info.get(klass, meth, :type)
+    return RDL::Globals.info.get(klass, meth, :type)
   end
 
   # Return an ordered list of all method types of a class. The query should be a class name.
   def self.class_query(q)
     klass = q.to_s
-    return nil unless RDL.info.info.has_key? klass
+    return nil unless RDL::Globals.info.info.has_key? klass
     cls_meths = []
     cls_klass = RDL::Util.add_singleton_marker(klass)
-    if RDL.info.info.has_key? cls_klass then
-      RDL.info.info[cls_klass].each { |meth, kinds|
+    if RDL::Globals.info.info.has_key? cls_klass then
+      RDL::Globals.info.info[cls_klass].each { |meth, kinds|
         if kinds.has_key? :type then
           kinds[:type].each { |t| cls_meths << [meth.to_s, t] }
         end
       }
     end
     inst_meths = []
-    if RDL.info.info.has_key? klass then
-      RDL.info.info[klass].each { |meth, kinds|
+    if RDL::Globals.info.info.has_key? klass then
+      RDL::Globals.info.info[klass].each { |meth, kinds|
         if kinds.has_key? :type then
           kinds[:type].each { |t| inst_meths << [meth.to_s, t] }
         end
@@ -49,9 +49,9 @@ class RDL::Query
 
   # Returns sorted list of pairs [method name, type] matching query. The query should be a string containing a method type query.
   def self.method_type_query(q)
-    q = RDL.parser.scan_str "#Q #{q}"
+    q = RDL::Globals.parser.scan_str "#Q #{q}"
     result = []
-    RDL.info.info.each { |klass, meths|
+    RDL::Globals.info.info.each { |klass, meths|
       meths.each { |meth, kinds|
         if kinds.has_key? :type then
           kinds[:type].each { |t|
@@ -70,7 +70,7 @@ end
 class Object
 
   def rdl_query(q)
-    RDL.contract_switch.off {
+    RDL::Globals.contract_switch.off {
       if q =~ /^[A-Z]\w*(#|\.)([a-z_]\w*(!|\?|=)?|!|~|\+|\*\*|-|\*|\/|%|<<|>>|&|\||\^|<|<=|=>|>|==|===|!=|=~|!~|<=>|\[\]|\[\]=)$/
         typs = RDL::Query.method_query(q)
         if typs.nil? then

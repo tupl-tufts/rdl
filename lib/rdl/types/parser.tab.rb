@@ -698,11 +698,11 @@ module_eval(<<'.,.,', 'parser.racc', 109)
 module_eval(<<'.,.,', 'parser.racc', 111)
   def _reduce_51(val, _values, result)
           if val[0] == 'nil' then
-        result = RDL.types[:nil]
+        result = RDL::Globals.types[:nil]
       elsif val[0] == 'true' then
-        result = RDL.types[:true]
+        result = RDL::Globals.types[:true]
       elsif val[0] == 'false'
-        result = RDL.types[:false]
+        result = RDL::Globals.types[:false]
       elsif val[0] =~ /^[a-z_]+\w*\'?/ then
         result = RDL::Type::VarType.new(val[0].to_sym)
       else
@@ -715,8 +715,8 @@ module_eval(<<'.,.,', 'parser.racc', 111)
 
 module_eval(<<'.,.,', 'parser.racc', 124)
   def _reduce_52(val, _values, result)
-          if RDL.special_types.has_key? val[0] then
-        result = RDL.special_types[val[0]]
+          if RDL::Globals.special_types.has_key? val[0] then
+        result = RDL::Globals.special_types[val[0]]
       else
         fail "Unexpected special type identifier #{val[0]}"
       end

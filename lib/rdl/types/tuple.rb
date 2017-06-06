@@ -46,7 +46,7 @@ module RDL::Type
 
     def promote!
       return false if @cant_promote
-      @array = GenericType.new(RDL.types[:array], UnionType.new(*@params))
+      @array = GenericType.new(RDL::Globals.types[:array], UnionType.new(*@params))
       # note since we promoted this, lbounds and ubounds will be ignored in future constraints, which
       # is good because otherwise we'd get infinite loops
       return (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
