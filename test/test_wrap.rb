@@ -3,6 +3,7 @@ $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
 
 class TestWrap < Minitest::Test
+  extend RDL::Annotate
   class C
     def foo_public(x)
       foo(x)
@@ -16,7 +17,7 @@ class TestWrap < Minitest::Test
   end
 
   def test_private_wrap
-    type C, :foo, '(Integer) -> Integer'
+    RDL.type C, :foo, '(Integer) -> Integer'
     c = C.new
 
     assert_raises RDL::Type::TypeError do
@@ -37,7 +38,7 @@ class TestWrap < Minitest::Test
   end
 
   def test_protected_wrap
-    type D, :foo, '(Integer) -> Integer'
+    RDL.type D, :foo, '(Integer) -> Integer'
     d = D.new
 
     assert_raises RDL::Type::TypeError do

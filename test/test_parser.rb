@@ -157,11 +157,11 @@ class TestParser < Minitest::Test
   end
 
   def test_type_alias
-    type_alias '%foobarbaz', RDL::Globals.types[:nil]
+    RDL.type_alias '%foobarbaz', RDL::Globals.types[:nil]
     assert_equal RDL::Globals.types[:nil], (tt "%foobarbaz")
-    type_alias '%quxquxqux', 'nil'
+    RDL.type_alias '%quxquxqux', 'nil'
     assert_equal RDL::Globals.types[:nil], (tt "%quxquxqux")
-    assert_raises(RuntimeError) { type_alias '%quxquxqux', 'nil' }
+    assert_raises(RuntimeError) { RDL.type_alias '%quxquxqux', 'nil' }
     assert_raises(RuntimeError) { tt "%qux" }
   end
 

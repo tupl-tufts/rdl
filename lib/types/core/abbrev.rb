@@ -1,4 +1,3 @@
-rdl_nowrap :Abbrev
+RDL.nowrap :Abbrev
 
-type :Abbrev, 'self.abbrev', '(Array<String>) -> Hash<String,String>'
-
+RDL.type :Abbrev, 'self.abbrev', '(Array<String>) -> Hash<String,String>'

@@ -3,10 +3,12 @@ $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
 
 class TestGeneric < Minitest::Test
+  extend RDL::Annotate
 
   # Make two classes that wrap Array and Hash, so we don't mess with their
   # implementations in test case evaluation.
   class A
+    extend RDL::Annotate
     type_params [:t], :all?
     def initialize(a); @a = a end
     def all?(&blk)
@@ -15,6 +17,7 @@ class TestGeneric < Minitest::Test
   end
 
   class H
+    extend RDL::Annotate
     type_params [:k, :v], :all?
     def initialize(h); @h = h end
     def all?(&blk)
@@ -23,6 +26,7 @@ class TestGeneric < Minitest::Test
   end
 
   class B
+    extend RDL::Annotate
     # class for checking other variance annotations
     type_params [:a, :b], nil, variance: [:+, :-] { |a, b| true }
     type "(a) -> nil"
@@ -108,6 +112,7 @@ class TestGeneric < Minitest::Test
   end
 
   class C
+    extend RDL::Annotate
     type "() -> self"
     def m1() return self; end
     type "() -> self"
@@ -141,53 +146,53 @@ class TestGeneric < Minitest::Test
   end
 
   def test_instantiate
-    assert_raises(RuntimeError) { Object.new.instantiate!(RDL::Globals.types[:string]) }
+    assert_raises(RuntimeError) { Object.new.rdl_instantiate!(RDL::Globals.types[:string]) }
 
     # Array<String>
-    assert (A.new([]).instantiate!('String'))
-    assert (A.new(["a", "b", "c"]).instantiate!(RDL::Globals.types[:string], check: true))
-    assert (A.new(["a", "b", "c"]).instantiate!('String', check: true))
-    assert_raises(RDL::Type::TypeError) { A.new([1, 2, 3]).instantiate!('String', check: true) }
-    assert (A.new([1, 2, 3]).instantiate!('String', check: false))
+    assert (A.new([]).rdl_instantiate!('String'))
+    assert (A.new(["a", "b", "c"]).rdl_instantiate!(RDL::Globals.types[:string], check: true))
+    assert (A.new(["a", "b", "c"]).rdl_instantiate!('String', check: true))
+    assert_raises(RDL::Type::TypeError) { A.new([1, 2, 3]).rdl_instantiate!('String', check: true) }
+    assert (A.new([1, 2, 3]).rdl_instantiate!('String', check: false))
 
     # Array<Object>
-    assert (A.new([])).instantiate!('Object', check: true)
-    assert (A.new(["a", "b", "c"]).instantiate!(RDL::Globals.types[:object], check: true))
-    assert (A.new(["a", "b", "c"]).instantiate!('Object', check: true))
-    assert (A.new([1, 2, 3]).instantiate!('Object', check: true))
+    assert (A.new([])).rdl_instantiate!('Object', check: true)
+    assert (A.new(["a", "b", "c"]).rdl_instantiate!(RDL::Globals.types[:object], check: true))
+    assert (A.new(["a", "b", "c"]).rdl_instantiate!('Object', check: true))
+    assert (A.new([1, 2, 3]).rdl_instantiate!('Object', check: true))
 
     # Hash<String, Integer>
-    assert (H.new({}).instantiate!('String', 'Integer', check: true))
-    assert (H.new({"one"=>1, "two"=>2}).instantiate!('String', 'Integer', check: true))
+    assert (H.new({}).rdl_instantiate!('String', 'Integer', check: true))
+    assert (H.new({"one"=>1, "two"=>2}).rdl_instantiate!('String', 'Integer', check: true))
     assert_raises(RDL::Type::TypeError) {
-      H.new(one: 1, two: 2).instantiate!('String', 'Integer', check: true)
+      H.new(one: 1, two: 2).rdl_instantiate!('String', 'Integer', check: true)
     }
-    assert (H.new(one: 1, two: 2).instantiate!('String', 'Integer', check: false))
+    assert (H.new(one: 1, two: 2).rdl_instantiate!('String', 'Integer', check: false))
     assert_raises(RDL::Type::TypeError){
-      H.new({"one"=>:one, "two"=>:two}).instantiate!('String', 'Integer', check: true)
+      H.new({"one"=>:one, "two"=>:two}).rdl_instantiate!('String', 'Integer', check: true)
     }
 
     # Hash<Object, Object>
-    assert (H.new({}).instantiate!('Object', 'Object', check: true))
-    assert (H.new({"one"=>1, "two"=>2}).instantiate!('Object', 'Object', check: true))
-    assert (H.new(one: 1, two: 2).instantiate!('Object', 'Object', check: true))
-    assert (H.new({"one"=>:one, "two"=>:two}).instantiate!('Object', 'Object', check: true))
+    assert (H.new({}).rdl_instantiate!('Object', 'Object', check: true))
+    assert (H.new({"one"=>1, "two"=>2}).rdl_instantiate!('Object', 'Object', check: true))
+    assert (H.new(one: 1, two: 2).rdl_instantiate!('Object', 'Object', check: true))
+    assert (H.new({"one"=>:one, "two"=>:two}).rdl_instantiate!('Object', 'Object', check: true))
 
     # A<A<String>>
-    assert (A.new([A.new(["a", "b"]).instantiate!('String', check: true),
-                   A.new(["c"]).instantiate!('String', check: true)]).instantiate!('TestGeneric::A<String>', check: true))
+    assert (A.new([A.new(["a", "b"]).rdl_instantiate!('String', check: true),
+                   A.new(["c"]).rdl_instantiate!('String', check: true)]).rdl_instantiate!('TestGeneric::A<String>', check: true))
     assert_raises(RDL::Type::TypeError) {
       # Must instantiate all members
-      A.new([A.new(["a", "b"]).instantiate!('String', check: true), A.new([])]).instantiate!('TestGeneric::A<String>', check: true)
+      A.new([A.new(["a", "b"]).rdl_instantiate!('String', check: true), A.new([])]).rdl_instantiate!('TestGeneric::A<String>', check: true)
     }
     assert_raises(RDL::Type::TypeError) {
       # All members must be of same type
-      A.new([A.new(["a", "b"]).instantiate!('String', check: true), "A"]).instantiate!('TestGeneric::A<String>', check: true)
+      A.new([A.new(["a", "b"]).rdl_instantiate!('String', check: true), "A"]).rdl_instantiate!('TestGeneric::A<String>', check: true)
     }
     assert_raises(RDL::Type::TypeError) {
       # All members must be instantiated and of same type
-      A.new([A.new(["a", "b"]).instantiate!('String', check: true),
-             H.new({a: 1, b: 2}).instantiate!('Object', 'Object', check: true)]).instantiate!('TestGeneric::A<String>', check: true)
+      A.new([A.new(["a", "b"]).rdl_instantiate!('String', check: true),
+             H.new({a: 1, b: 2}).rdl_instantiate!('Object', 'Object', check: true)]).rdl_instantiate!('TestGeneric::A<String>', check: true)
     }
   end
 

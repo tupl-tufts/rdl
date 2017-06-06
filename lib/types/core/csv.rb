@@ -1,3 +1,3 @@
-rdl_nowrap :CSV
+RDL.nowrap :CSV
 
-type :CSV, 'self.foreach', '(String or File, ?Hash<Symbol, u>) {(Array<String>) -> %any} -> NilClass'
+RDL.type :CSV, 'self.foreach', '(String or File, ?Hash<Symbol, u>) {(Array<String>) -> %any} -> NilClass'

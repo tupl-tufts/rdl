@@ -5,6 +5,7 @@ require 'rdl'
 class TestTypeContract < Minitest::Test
   include RDL::Type
   include RDL::Contract
+  extend RDL::Annotate
 
   def setup
     @p = Parser.new

@@ -1,15 +1,15 @@
-rdl_nowrap :Exception
+RDL.nowrap :Exception
 
-type :Exception, :==, '(%any) -> %bool'
-type :Exception, :backtrace, '() -> Array<String>'
-type :Exception, :backtrace_locations, '() -> Array<Thread::Backtrace::Location>'
-type :Exception, :cause, '() -> nil' # TODO exception is proper postcondition
-type :Exception, :exception, '(?String) -> Exception' # or error
-# type :Exception, :initialize, '() -> '
-type :Exception, :inspect, '() -> String'
-type :Exception, :message, '() -> String'
-# type :Exception, :method_missing, '() -> '
-# type :Exception, :respond_to?, '() -> '
-# type :Exception, :respond_to_missing?, '() -> '
-type :Exception, :set_backtrace, '(String or Array<String>) -> Array<String>'
-type :Exception, :to_s, '() -> String'
+RDL.type :Exception, :==, '(%any) -> %bool'
+RDL.type :Exception, :backtrace, '() -> Array<String>'
+RDL.type :Exception, :backtrace_locations, '() -> Array<Thread::Backtrace::Location>'
+RDL.type :Exception, :cause, '() -> nil' # TODO exception is proper postcondition
+RDL.type :Exception, :exception, '(?String) -> Exception' # or error
+# RDL.type :Exception, :initialize, '() -> '
+RDL.type :Exception, :inspect, '() -> String'
+RDL.type :Exception, :message, '() -> String'
+# RDL.type :Exception, :method_missing, '() -> '
+# RDL.type :Exception, :respond_to?, '() -> '
+# RDL.type :Exception, :respond_to_missing?, '() -> '
+RDL.type :Exception, :set_backtrace, '(String or Array<String>) -> Array<String>'
+RDL.type :Exception, :to_s, '() -> String'

@@ -1,27 +1,27 @@
-rdl_nowrap :Symbol
+RDL.nowrap :Symbol
 
-type :Symbol, 'self.all_symbols', '() -> Array<Symbol>'
-type :Symbol, :<=>, '(Symbol other) -> Integer or nil'
-type :Symbol, :==, '(%any obj) -> %bool'
-type :Symbol, :=~, '(%any obj) -> Integer or nil'
-type :Symbol, :[], '(Integer idx) -> String'
-type :Symbol, :[], '(Integer b, Integer n) -> String'
-type :Symbol, :[], '(Range<Integer>) -> String'
-type :Symbol, :capitalize, '() -> Symbol'
-type :Symbol, :casecmp, '(Symbol other) -> Integer or nil'
-type :Symbol, :downcase, '() -> Symbol'
-type :Symbol, :empty?, '() -> %bool'
-type :Symbol, :encoding, '() -> Encoding'
-type :Symbol, :id2name, '() -> String'
-type :Symbol, :inspect, '() -> String'
-type :Symbol, :intern, '() -> self'
-type :Symbol, :length, '() -> Integer'
-type :Symbol, :match, '(%any obj) -> Integer or nil'
-type :Symbol, :succ, '() -> Symbol'
-rdl_alias :Symbol, :size, :length
-rdl_alias :Symbol, :slice, :[]
-type :Symbol, :swapcase, '() -> Symbol'
-type :Symbol, :to_proc, '() -> Proc' # TODO proc
-rdl_alias :Symbol, :to_s, :id2name
-rdl_alias :Symbol, :to_sym, :intern
-type :Symbol, :upcase, '() -> Symbol'
+RDL.type :Symbol, 'self.all_symbols', '() -> Array<Symbol>'
+RDL.type :Symbol, :<=>, '(Symbol other) -> Integer or nil'
+RDL.type :Symbol, :==, '(%any obj) -> %bool'
+RDL.type :Symbol, :=~, '(%any obj) -> Integer or nil'
+RDL.type :Symbol, :[], '(Integer idx) -> String'
+RDL.type :Symbol, :[], '(Integer b, Integer n) -> String'
+RDL.type :Symbol, :[], '(Range<Integer>) -> String'
+RDL.type :Symbol, :capitalize, '() -> Symbol'
+RDL.type :Symbol, :casecmp, '(Symbol other) -> Integer or nil'
+RDL.type :Symbol, :downcase, '() -> Symbol'
+RDL.type :Symbol, :empty?, '() -> %bool'
+RDL.type :Symbol, :encoding, '() -> Encoding'
+RDL.type :Symbol, :id2name, '() -> String'
+RDL.type :Symbol, :inspect, '() -> String'
+RDL.type :Symbol, :intern, '() -> self'
+RDL.type :Symbol, :length, '() -> Integer'
+RDL.type :Symbol, :match, '(%any obj) -> Integer or nil'
+RDL.type :Symbol, :succ, '() -> Symbol'
+RDL.rdl_alias :Symbol, :size, :length
+RDL.rdl_alias :Symbol, :slice, :[]
+RDL.type :Symbol, :swapcase, '() -> Symbol'
+RDL.type :Symbol, :to_proc, '() -> Proc' # TODO proc
+RDL.rdl_alias :Symbol, :to_s, :id2name
+RDL.rdl_alias :Symbol, :to_sym, :intern
+RDL.type :Symbol, :upcase, '() -> Symbol'

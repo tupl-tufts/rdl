@@ -3,9 +3,11 @@ $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
 
 class TestRDLType < Minitest::Test
+  extend RDL::Annotate
+
   def test_single_type_contract
     def m1(x) return x; end
-    type TestRDLType, :m1, "(Integer) -> Integer"
+    RDL.type TestRDLType, :m1, "(Integer) -> Integer"
     assert_equal 5, m1(5)
     assert_raises(RDL::Type::TypeError) { m1("foo") }
 
@@ -63,15 +65,15 @@ class TestRDLType < Minitest::Test
 
   def test_wrap_new_inherited
     self.class.class_eval "class NI_A; def initialize(x); @x = x; end; end; class NI_B < NI_A; end"
-    type "TestRDLType::NI_A", "self.new", "(Integer) -> TestRDLType::NI_A"
+    RDL.type "TestRDLType::NI_A", "self.new", "(Integer) -> TestRDLType::NI_A"
     assert (TestRDLType::NI_B.new(3))
     assert_raises(RDL::Type::TypeError) { TestRDLType::NI_B.new("3") }
   end
 
   def test_version
-    type "TestRDLType::TestVersion", "m1", "() -> nil", version: Gem.ruby_version.to_s
+    RDL.type "TestRDLType::TestVersion", "m1", "() -> nil", version: Gem.ruby_version.to_s
     assert (RDL::Globals.info.has? "TestRDLType::TestVersion", "m1", :type)
-    type "TestRDLType::TestVersion", "m2", "() -> nil", version: Gem.ruby_version.bump.to_s
+    RDL.type "TestRDLType::TestVersion", "m2", "() -> nil", version: Gem.ruby_version.bump.to_s
     assert !(RDL::Globals.info.has? "TestRDLType::TestVersion", "m2", :type)
   end
 

@@ -1,26 +1,24 @@
-rdl_nowrap :Enumerator
+RDL.nowrap :Enumerator
 
-class Enumerator
-  type_params [:t], :all?
-end
+RDL.type_params :Enumerator, [:t], :all?
 
-type :Enumerator, 'self.new', '(?Integer) { (Array<u>) -> %any } -> Enumerator<u>'
-type :Enumerator, 'self.new', '(?Proc) { (Array<u>) -> %any } -> Enumerator<u>' # TODO Proc
+RDL.type :Enumerator, 'self.new', '(?Integer) { (Array<u>) -> %any } -> Enumerator<u>'
+RDL.type :Enumerator, 'self.new', '(?Proc) { (Array<u>) -> %any } -> Enumerator<u>' # TODO Proc
 # TODO: deprecated form of new
-type :Enumerator, :each, '() { (t) -> %any } -> %any' # is there a better type?
-type :Enumerator, :each, '() -> self'
+RDL.type :Enumerator, :each, '() { (t) -> %any } -> %any' # is there a better RDL.type?
+RDL.type :Enumerator, :each, '() -> self'
 # TODO: args
-type :Enumerator, :each_with_index, '() { (t, Integer) -> %any } -> %any' # TODO args
-type :Enumerator, :each_with_index, '() -> Enumerator<[t, Integer]>' # TODO args
-type :Enumerator, :each_with_object, '(u) { (t, u) -> %any } -> %any' # TODO args
-type :Enumerator, :each_with_object, '(u) -> Enumerator<[t, u]>' # TODO args
-type :Enumerator, :feed, '(t) -> nil'
-type :Enumerator, :inspect, '() -> String'
-type :Enumerator, :next, '() -> t'
-type :Enumerator, :next_values, '() -> Array<t>'
-type :Enumerator, :peek, '() -> t'
-type :Enumerator, :peek_values, '() -> Array<t>'
-type :Enumerator, :rewrind, '() -> self'
-type :Enumerator, :size, '() -> Integer or Float or nil'
-rdl_alias :Enumerator, :with_index, :each_with_index
-rdl_alias :Enumerator, :with_object, :each_with_object
+RDL.type :Enumerator, :each_with_index, '() { (t, Integer) -> %any } -> %any' # TODO args
+RDL.type :Enumerator, :each_with_index, '() -> Enumerator<[t, Integer]>' # TODO args
+RDL.type :Enumerator, :each_with_object, '(u) { (t, u) -> %any } -> %any' # TODO args
+RDL.type :Enumerator, :each_with_object, '(u) -> Enumerator<[t, u]>' # TODO args
+RDL.type :Enumerator, :feed, '(t) -> nil'
+RDL.type :Enumerator, :inspect, '() -> String'
+RDL.type :Enumerator, :next, '() -> t'
+RDL.type :Enumerator, :next_values, '() -> Array<t>'
+RDL.type :Enumerator, :peek, '() -> t'
+RDL.type :Enumerator, :peek_values, '() -> Array<t>'
+RDL.type :Enumerator, :rewrind, '() -> self'
+RDL.type :Enumerator, :size, '() -> Integer or Float or nil'
+RDL.rdl_alias :Enumerator, :with_index, :each_with_index
+RDL.rdl_alias :Enumerator, :with_object, :each_with_object

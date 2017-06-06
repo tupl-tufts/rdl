@@ -1,4 +1,4 @@
-rdl_nowrap :Coverage
+RDL.nowrap :Coverage
 
-type :Coverage, 'self.start', '() -> nil'
-type :Coverage, 'self.result', '() -> Hash<String,Array<Integer or nil>>'
+RDL.type :Coverage, 'self.start', '() -> nil'
+RDL.type :Coverage, 'self.result', '() -> Hash<String,Array<Integer or nil>>'

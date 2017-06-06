@@ -240,8 +240,7 @@ RUBY
   end
 end
 
-class Object
-
+module RDL::Annotate
   # [+klass+] may be Class, Symbol, or String
   # [+method+] may be Symbol or String
   # [+contract+] must be a Contract
@@ -427,6 +426,7 @@ class Object
     nil
   end
 
+  # [+ klass +] is the class whose type parameters to set; self if omitted
   # [+params+] is an array of symbols or strings that are the
   # parameters of this (generic) type
   # [+variance+] is an array of the corresponding variances, :+ for
@@ -439,10 +439,10 @@ class Object
   # block will be passed an array typs corresponding to the type
   # parameters of the class, and the block should return true if and
   # only if self is a member of self.class<typs>.
-  def type_params(params, all, variance: nil, &blk)
+  def type_params(klass=self, params, all, variance: nil, &blk)
     raise RuntimeError, "Empty type parameters not allowed" if params.empty?
-    klass = self.to_s
     klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
+    klass = klass.to_s
     if RDL::Globals.type_params[klass]
       raise RuntimeError, "#{klass} already has type parameters #{RDL::Globals.type_params[klass]}"
     end
@@ -462,15 +462,83 @@ class Object
     nil
   end
 
-  def rdl_nowrap(klass=self)
+  # Add a new type alias.
+  # [+name+] must be a string beginning with %.
+  # [+typ+] can be either a string, in which case it will be parsed
+  # into a type, or a Type.
+  def type_alias(name, typ)
+    raise RuntimeError, "Attempt to redefine type #{name}" if RDL::Globals.special_types[name]
+    case typ
+    when String
+      t = RDL::Globals.parser.scan_str "#T #{typ}"
+      RDL::Globals.special_types[name] = t
+    when RDL::Type::Type
+      RDL::Globals.special_types[name] = typ
+    else
+      raise RuntimeError, "Unexpected typ argument #{typ.inspect}"
+    end
+    nil
+  end
+end
+
+module RDL
+  extend RDL::Annotate
+
+  def self.nowrap(klass=self)
     RDL.config { |config| config.add_nowrap(klass) }
     nil
+  end
+
+  # Register [+ blk +] to be executed when `rdl_do_typecheck [+ sym +]` is called.
+  # The blk will be called with sym as its argument. The order
+  # in which multiple blks for the same sym will be executed is unspecified
+  def self.at(sym, &blk)
+    RDL::Globals.to_do_at[sym] = [] unless RDL::Globals.to_do_at[sym]
+    RDL::Globals.to_do_at[sym] << blk
+  end
+
+  # Invokes all callbacks from rdl_at(sym), in unspecified order.
+  # Afterwards, type checks all methods that had annotation `typecheck: sym' at type call, in unspecified order.
+  def self.do_typecheck(sym)
+    if RDL::Globals.to_do_at[sym]
+      RDL::Globals.to_do_at[sym].each { |blk| blk.call(sym) }
+    end
+    RDL::Globals.to_do_at[sym] = Array.new
+    return unless RDL::Globals.to_typecheck[sym]
+    RDL::Globals.to_typecheck[sym].each { |klass, meth|
+      RDL::Typecheck.typecheck(klass, meth)
+    }
+    RDL::Globals.to_typecheck[sym] = Set.new
+    nil
+  end
+
+  # Does nothing at run time
+  def self.note_type(x)
+    return x
+  end
+
+  def self.remove_type(klass, meth)
+    raise RuntimeError, "No existing type for #{RDL::Util.pp_klass_method(klass, meth)}" unless RDL::Globals.info.has? klass, meth, :type
+    RDL::Globals.info.remove klass, meth, :type
+    nil
+  end
+end
+
+class Object
+
+  # Returns a new object that wraps self in a type cast. If force is true this cast is *unchecked*, so use with caution
+  def rdl_type_cast(typ, force: false)
+    new_typ = if typ.is_a? RDL::Type::Type then typ else RDL::Globals.parser.scan_str "#T #{typ}" end
+    raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || typ.member?(self)
+    obj = SimpleDelegator.new(self)
+    obj.instance_variable_set('@__rdl_type', new_typ)
+    obj
   end
 
   # [+typs+] is an array of types, classes, symbols, or strings to instantiate
   # the type parameters. If a class, symbol, or string is given, it is
   # converted to a NominalType.
-  def instantiate!(*typs, check: false)
+  def rdl_instantiate!(*typs, check: false)
     klass = self.class.to_s
     klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
     formals, _, all = RDL::Globals.type_params[klass]
@@ -500,7 +568,7 @@ class Object
     self
   end
 
-  def deinstantiate!
+  def rdl_deinstantiate!
     klass = self.class.to_s
     klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
     raise RuntimeError, "Class #{self.to_s} is not parameterized" unless RDL::Globals.type_params[klass]
@@ -508,68 +576,6 @@ class Object
     @__rdl_type = nil
     self
   end
-
-  # Returns a new object that wraps self in a type cast. If force is true this cast is *unchecked*, so use with caution
-  def type_cast(typ, force: false)
-    new_typ = if typ.is_a? RDL::Type::Type then typ else RDL::Globals.parser.scan_str "#T #{typ}" end
-    raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || typ.member?(self)
-    obj = SimpleDelegator.new(self)
-    obj.instance_variable_set('@__rdl_type', new_typ)
-    obj
-  end
-
-  # Add a new type alias.
-  # [+name+] must be a string beginning with %.
-  # [+typ+] can be either a string, in which case it will be parsed
-  # into a type, or a Type.
-  def type_alias(name, typ)
-    raise RuntimeError, "Attempt to redefine type #{name}" if RDL::Globals.special_types[name]
-    case typ
-    when String
-      t = RDL::Globals.parser.scan_str "#T #{typ}"
-      RDL::Globals.special_types[name] = t
-    when RDL::Type::Type
-      RDL::Globals.special_types[name] = typ
-    else
-      raise RuntimeError, "Unexpected typ argument #{typ.inspect}"
-    end
-    nil
-  end
-
-  # Register [+ blk +] to be executed when `rdl_do_typecheck [+ sym +]` is called.
-  # The blk will be called with sym as its argument. The order
-  # in which multiple blks for the same sym will be executed is unspecified
-  def rdl_at(sym, &blk)
-    RDL::Globals.to_do_at[sym] = [] unless RDL::Globals.to_do_at[sym]
-    RDL::Globals.to_do_at[sym] << blk
-  end
-
-  # Invokes all callbacks from rdl_at(sym), in unspecified order.
-  # Afterwards, type checks all methods that had annotation `typecheck: sym' at type call, in unspecified order.
-  def rdl_do_typecheck(sym)
-    if RDL::Globals.to_do_at[sym]
-      RDL::Globals.to_do_at[sym].each { |blk| blk.call(sym) }
-    end
-    RDL::Globals.to_do_at[sym] = Array.new
-    return unless RDL::Globals.to_typecheck[sym]
-    RDL::Globals.to_typecheck[sym].each { |klass, meth|
-      RDL::Typecheck.typecheck(klass, meth)
-    }
-    RDL::Globals.to_typecheck[sym] = Set.new
-    nil
-  end
-
-  # Does nothing at run time
-  def rdl_note_type(x)
-    return x
-  end
-
-  def rdl_remove_type(klass, meth)
-    raise RuntimeError, "No existing type for #{RDL::Util.pp_klass_method(klass, meth)}" unless RDL::Globals.info.has? klass, meth, :type
-    RDL::Globals.info.remove klass, meth, :type
-    nil
-  end
-
 end
 
 class Module

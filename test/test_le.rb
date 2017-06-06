@@ -248,6 +248,7 @@ class TestLe < Minitest::Test
   end
 
   class NomT
+    extend RDL::Annotate
     type "() -> nil"
     def m1()
       nil

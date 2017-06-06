@@ -4,6 +4,7 @@ require 'rdl'
 require 'types/core'
 
 class TestTypecheckC
+  extend RDL::Annotate
   type 'self.bar', '() -> Integer or String ret'
   type 'self.foo', '() -> :A'
   type 'foo', '() -> Integer'
@@ -15,6 +16,7 @@ class TestTypecheckD
 end
 
 class TestTypecheckE
+  extend RDL::Annotate
   type '(Integer) -> self', typecheck: :einit
   def initialize(x)
     x
@@ -22,6 +24,7 @@ class TestTypecheckE
 end
 
 class TestTypecheckF
+  extend RDL::Annotate
   type '(Integer) -> F', typecheck: :finit
   def initialize(x)
     x
@@ -29,6 +32,7 @@ class TestTypecheckF
 end
 
 module TestTypecheckM
+  extend RDL::Annotate
   type 'self.foo', '() -> :B'
 end
 
@@ -42,11 +46,14 @@ class TestTypecheckOuter
 end
 
 class X
+  extend RDL::Annotate
 end
 class Y
+  extend RDL::Annotate
 end
 
 class MethodMissing1
+  extend RDL::Annotate
   type '() -> String', typecheck: :later_mm1
   def foo()
     bar()
@@ -59,6 +66,7 @@ class MethodMissing1
 end
 
 class MethodMissing2
+  extend RDL::Annotate
   type '() -> Integer', typecheck: :later_mm2
   def foo()
     bar()
@@ -72,6 +80,7 @@ end
 
 
 class TestTypecheck < Minitest::Test
+  extend RDL::Annotate
   type :_any_object, "() -> Object" # a method that could return true or false
 
   def setup
@@ -143,7 +152,7 @@ class TestTypecheck < Minitest::Test
       def def_ff4(x, y) 42; end
     }
 
-    assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :later1 }
+    assert_raises(RDL::Typecheck::StaticTypeError) { RDL.do_typecheck :later1 }
   end
 
   def test_def_post
@@ -182,7 +191,7 @@ class TestTypecheck < Minitest::Test
       def def_ff4p(x, y) 42; end
       type :def_ff4p, "(Integer) -> Integer", typecheck: :later2, wrap: false
     }
-    assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :later2 }
+    assert_raises(RDL::Typecheck::StaticTypeError) { RDL.do_typecheck :later2 }
   end
 
   def test_defs
@@ -208,7 +217,7 @@ class TestTypecheck < Minitest::Test
       def self.defs_ff2(x, y) 42; end
     }
 
-    assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :later4 }
+    assert_raises(RDL::Typecheck::StaticTypeError) { RDL.do_typecheck :later4 }
   end
 
   def test_singleton_method_const
@@ -220,7 +229,7 @@ class TestTypecheck < Minitest::Test
       type '(Integer) -> Integer', typecheck: :later5
       def self.bar(x) a = X.new; a.foo(x); end
     }
-    self.class.class_eval { rdl_do_typecheck :later5 }
+    self.class.class_eval { RDL.do_typecheck :later5 }
   end
 
   def test_lits
@@ -433,12 +442,14 @@ class TestTypecheck < Minitest::Test
   end
 
   class A
+    extend RDL::Annotate
     type :_send_inherit1, "() -> Integer"
   end
   class B < A
   end
 
   class A1
+    extend RDL::Annotate
     type "() -> nil"
     def _send_inherit2; end
   end
@@ -605,7 +616,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_send_singleton
-    type Integer, :_send_singleton, "() -> String"
+    RDL.type Integer, :_send_singleton, "() -> String"
     assert do_tc("3._send_singleton", env: @env) <= RDL::Globals.types[:string]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("3._send_singleton_nexists", env: @env) }
   end
@@ -887,10 +898,12 @@ class TestTypecheck < Minitest::Test
   end
 
   class C
+    extend RDL::Annotate
     type :===, "(Object) -> %bool"
   end
 
   class D
+    extend RDL::Annotate
     type :===, "(String) -> %bool"
   end
 
@@ -984,6 +997,7 @@ class TestTypecheck < Minitest::Test
   end
 
   class E
+    extend RDL::Annotate
     type :f, '() -> Integer'
     type :f=, '(Integer) -> nil'
   end
@@ -1472,9 +1486,9 @@ class TestTypecheck < Minitest::Test
       }
     }
 
-    rdl_do_typecheck :einit
+    RDL.do_typecheck :einit
 
-    assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :finit }
+    assert_raises(RDL::Typecheck::StaticTypeError) { RDL.do_typecheck :finit }
 
     t = do_tc("TestTypecheckD.new", env: @env)
     t2 = RDL::Type::NominalType.new TestTypecheckD
@@ -1508,8 +1522,8 @@ class TestTypecheck < Minitest::Test
 
   def test_method_missing
     skip "method_missing not supported yet"
-    rdl_do_typecheck :later_mm1
-    assert_raises(RDL::Typecheck::StaticTypeError) { rdl_do_typecheck :later_mm2 }
+    RDL.do_typecheck :later_mm1
+    assert_raises(RDL::Typecheck::StaticTypeError) { RDL.do_typecheck :later_mm2 }
   end
 
 end
