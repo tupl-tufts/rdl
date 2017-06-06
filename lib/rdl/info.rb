@@ -73,8 +73,8 @@ class RDL::Info
   end
 
   def get_with_aliases(klass, label, kind)
-    while RDL.aliases[klass] && RDL.aliases[klass][label]
-      label = RDL.aliases[klass][label]
+    while RDL::Globals.aliases[klass] && RDL::Globals.aliases[klass][label]
+      label = RDL::Globals.aliases[klass][label]
     end
     get(klass, label, kind)
   end

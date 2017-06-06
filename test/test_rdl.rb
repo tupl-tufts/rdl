@@ -283,11 +283,11 @@ RUBY
   end
 
   def test_cast
-    obj1 = 3.type_cast(RDL.types[:nil], force: true)
-    assert (RDL.types[:nil].member? obj1)
+    obj1 = 3.type_cast(RDL::Globals.types[:nil], force: true)
+    assert (RDL::Globals.types[:nil].member? obj1)
     obj2 = 3.type_cast('nil', force: true)
-    assert (RDL.types[:nil].member? obj2)
-    assert_raises(RuntimeError) { 3.type_cast(RDL.types[:nil]) }
+    assert (RDL::Globals.types[:nil].member? obj2)
+    assert_raises(RuntimeError) { 3.type_cast(RDL::Globals.types[:nil]) }
   end
 
   def test_pre_post_self
@@ -339,9 +339,9 @@ RUBY
       var_type :@@foo, "String"
       var_type :$foo, "Symbol"
     }
-    assert_equal RDL.types[:integer], RDL.info.get(TestRDL, :@foo, :type)
-    assert_equal RDL.types[:string], RDL.info.get(TestRDL, :@@foo, :type)
-    assert_equal RDL.types[:symbol], RDL.info.get(RDL::Util::GLOBAL_NAME, :$foo, :type)
+    assert_equal RDL::Globals.types[:integer], RDL::Globals.info.get(TestRDL, :@foo, :type)
+    assert_equal RDL::Globals.types[:string], RDL::Globals.info.get(TestRDL, :@@foo, :type)
+    assert_equal RDL::Globals.types[:symbol], RDL::Globals.info.get(RDL::Util::GLOBAL_NAME, :$foo, :type)
     assert_raises(RuntimeError) {
       self.class.class_eval { var_type :@foo, "String" }
     }
@@ -376,13 +376,13 @@ RUBY
 
   def test_version
     pre("TestRDL::TestVersion", "m1", version: Gem.ruby_version.to_s) { true }
-    assert (RDL.info.has? "TestRDL::TestVersion", "m1", :pre)
+    assert (RDL::Globals.info.has? "TestRDL::TestVersion", "m1", :pre)
     pre("TestRDL::TestVersion", "m2", version: Gem.ruby_version.bump.to_s) { true }
-    assert !(RDL.info.has? "TestRDL::TestVersion", "m2", :pre)
+    assert !(RDL::Globals.info.has? "TestRDL::TestVersion", "m2", :pre)
     post("TestRDL::TestVersion", "m3", version: Gem.ruby_version.to_s) { true }
-    assert (RDL.info.has? "TestRDL::TestVersion", "m3", :post)
+    assert (RDL::Globals.info.has? "TestRDL::TestVersion", "m3", :post)
     pre("TestRDL::TestVersion", "m4", version: Gem.ruby_version.bump.to_s) { true }
-    assert !(RDL.info.has? "TestRDL::TestVersion", "m4", :post)
+    assert !(RDL::Globals.info.has? "TestRDL::TestVersion", "m4", :post)
   end
 
 end

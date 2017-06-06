@@ -124,7 +124,7 @@ module RDL::Typecheck
           error :inconsistent_var_type_type, [var.to_s, (first_typ + neq).map { |t| t.to_s }.join(' and ')], e unless neq.empty?
           env.env[var] = {type: h[:type], fixed: true}
         else
-          typ = RDL::Type::UnionType.new(first_typ, *rest.map { |other| ((other.has_key? var) && other[var]) || RDL.types[:nil] })
+          typ = RDL::Type::UnionType.new(first_typ, *rest.map { |other| ((other.has_key? var) && other[var]) || RDL::Globals.types[:nil] })
           typ = typ.canonical
           env.env[var] = {type: typ, fixed: false}
         end
@@ -174,7 +174,7 @@ module RDL::Typecheck
   end
 
   def self.get_ast(klass, meth)
-    file, line = RDL.info.get(klass, meth, :source_location)
+    file, line = RDL::Globals.info.get(klass, meth, :source_location)
     raise RuntimeError, "No file for #{RDL::Util.pp_klass_method(klass, meth)}" if file.nil?
     raise RuntimeError, "static type checking in irb not supported" if file == "(irb)"
     if file == "(pry)"
@@ -190,23 +190,23 @@ module RDL::Typecheck
     end
 
     digest = Digest::MD5.file file
-    cache_hit = ((RDL.parser_cache.has_key? file) &&
-                 (RDL.parser_cache[file][0] == digest))
+    cache_hit = ((RDL::Globals.parser_cache.has_key? file) &&
+                 (RDL::Globals.parser_cache[file][0] == digest))
     unless cache_hit
       file_ast = Parser::CurrentRuby.parse_file file
       mapper = ASTMapper.new(file)
       mapper.process(file_ast)
       cache = {ast: file_ast, line_defs: mapper.line_defs}
-      RDL.parser_cache[file] = [digest, cache]
+      RDL::Globals.parser_cache[file] = [digest, cache]
     end
-    ast = RDL.parser_cache[file][1][:line_defs][line]
+    ast = RDL::Globals.parser_cache[file][1][:line_defs][line]
     raise RuntimeError, "Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}" if ast.nil?
     return ast
   end
 
   def self.typecheck(klass, meth)
     ast = get_ast(klass, meth)
-    types = RDL.info.get(klass, meth, :type)
+    types = RDL::Globals.info.get(klass, meth, :type)
     raise RuntimeError, "Can't typecheck method with no types?!" if types.nil? or types == []
 
     if ast.type == :def
@@ -217,7 +217,7 @@ module RDL::Typecheck
       raise RuntimeError, "Unexpected ast type #{ast.type}"
     end
     raise RuntimeError, "Method #{name} defined where method #{meth} expected" if name.to_sym != meth
-    context_types = RDL.info.get(klass, meth, :context_types)
+    context_types = RDL::Globals.info.get(klass, meth, :context_types)
     types.each { |type|
       if RDL::Util.has_singleton_marker(klass)
         # to_class gets the class object itself, so remove singleton marker to get class rather than singleton class
@@ -237,14 +237,14 @@ module RDL::Typecheck
       begin
         old_captured = scope[:captured].dup
         if body.nil?
-          body_type = RDL.types[:nil]
+          body_type = RDL::Globals.types[:nil]
         else
           _, body_type = tc(scope, Env.new(targs.merge(scope[:captured])), body)
         end
       end until old_captured == scope[:captured]
       error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || meth == :initialize || body_type <= type.ret
     }
-    RDL.info.set(klass, meth, :typechecked, true)
+    RDL::Globals.info.set(klass, meth, :typechecked, true)
   end
 
   # [+ scope +] is used to typecheck default values for optional arguments
@@ -277,7 +277,7 @@ module RDL::Typecheck
       elsif arg.type == :restarg
         error :type_arg_kind_mismatch, [kind, 'optional', 'vararg'], arg if targ.optional?
         error :type_arg_kind_mismatch, [kind, 'required', 'vararg'], arg if !targ.vararg?
-        targs[arg.children[0]] = RDL::Type::GenericType.new(RDL.types[:array], targ.type)
+        targs[arg.children[0]] = RDL::Type::GenericType.new(RDL::Globals.types[:array], targ.type)
         tpos += 1
       elsif arg.type == :kwarg
         error :type_args_no_kws, [kind], arg unless targ.is_a?(RDL::Type::FiniteHashType)
@@ -300,7 +300,7 @@ module RDL::Typecheck
       elsif arg.type == :kwrestarg
         error :type_args_no_kws, [kind], e unless targ.is_a?(RDL::Type::FiniteHashType)
         error :type_args_no_kw_rest, [kind], arg if targ.rest.nil?
-        targs[arg.children[0]] = RDL::Type::GenericType.new(RDL.types[:hash], RDL.types[:symbol], targ.rest)
+        targs[arg.children[0]] = RDL::Type::GenericType.new(RDL::Globals.types[:hash], RDL::Globals.types[:symbol], targ.rest)
         kw_rest_matched = true
       elsif arg.type == :blockarg
         error :type_arg_block, [kind, kind], arg unless type.block
@@ -329,11 +329,11 @@ module RDL::Typecheck
   def self.tc(scope, env, e)
     case e.type
     when :nil
-      [env, RDL.types[:nil]]
+      [env, RDL::Globals.types[:nil]]
     when :true
-      [env, RDL.types[:true]]
+      [env, RDL::Globals.types[:true]]
     when :false
-      [env, RDL.types[:false]]
+      [env, RDL::Globals.types[:false]]
     when :complex, :rational, :str, :string # constants
       [env, RDL::Type::NominalType.new(e.children[0].class)]
     when :int, :float, :sym # singletons
@@ -341,15 +341,15 @@ module RDL::Typecheck
     when :dstr, :xstr # string (or execute-string) with interpolation
       envi = env
       e.children.each { |ei| envi, _ = tc(scope, envi, ei) }
-      [envi, RDL.types[:string]]
+      [envi, RDL::Globals.types[:string]]
     when :dsym # symbol with interpolation
       envi = env
       e.children.each { |ei| envi, _ = tc(scope, envi, ei) }
-      [envi, RDL.types[:symbol]]
+      [envi, RDL::Globals.types[:symbol]]
     when :regexp
       envi = env
       e.children.each { |ei| envi, _ = tc(scope, envi, ei) unless ei.type == :regopt }
-      [envi, RDL.types[:regexp]]
+      [envi, RDL::Globals.types[:regexp]]
     when :array
       envi = env
       tis = []
@@ -365,16 +365,16 @@ module RDL::Typecheck
             ti.elts.each_pair { |k, t|
               tis << RDL::Type::TupleType.new(RDL::Type::SingletonType.new(k), t)
             }
-          elsif ti.is_a?(RDL::Type::GenericType) && ti.base == RDL.types[:array]
+          elsif ti.is_a?(RDL::Type::GenericType) && ti.base == RDL::Globals.types[:array]
             is_array = true
             tis << ti.params[0]
-          elsif ti.is_a?(RDL::Type::GenericType) && ti.base == RDL.types[:hash]
+          elsif ti.is_a?(RDL::Type::GenericType) && ti.base == RDL::Globals.types[:hash]
             is_array = true
             tis << RDL::Type::TupleType.new(*ti.params)
           elsif ti.is_a?(RDL::Type::SingletonType) && ti.val.nil?
             # nil gets thrown out
-          elsif (RDL.types[:array] <= ti) || (ti <= RDL.types[:array]) ||
-                (RDL.types[:hash] <= ti) || (ti <= RDL.types[:hash])
+          elsif (RDL::Globals.types[:array] <= ti) || (ti <= RDL::Globals.types[:array]) ||
+                (RDL::Globals.types[:hash] <= ti) || (ti <= RDL::Globals.types[:hash])
             # might or might not be array...can't splat...
             error :cant_splat, [ti], ei
           else
@@ -386,7 +386,7 @@ module RDL::Typecheck
         end
       }
       if is_array
-        [envi, RDL::Type::GenericType.new(RDL.types[:array], RDL::Type::UnionType.new(*tis).canonical)]
+        [envi, RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::UnionType.new(*tis).canonical)]
       else
         [envi, RDL::Type::TupleType.new(*tis)]
       end
@@ -409,7 +409,7 @@ module RDL::Typecheck
             tkwsplat.cant_promote! # must remain finite hash
             tlefts.concat(tkwsplat.elts.keys.map { |k| RDL::Type::SingletonType.new(k) })
             trights.concat(tkwsplat.elts.values)
-          elsif tkwsplat.is_a?(RDL::Type::GenericType) && tkwsplat.base == RDL.types[:hash]
+          elsif tkwsplat.is_a?(RDL::Type::GenericType) && tkwsplat.base == RDL::Globals.types[:hash]
             is_fh = false
             tlefts << tkwsplat.params[0]
             trights << tkwsplat.params[1]
@@ -427,7 +427,7 @@ module RDL::Typecheck
       else
         tleft = RDL::Type::UnionType.new(*tlefts)
         tright = RDL::Type::UnionType.new(*trights)
-        [envi, RDL::Type::GenericType.new(RDL.types[:hash], tleft, tright)]
+        [envi, RDL::Type::GenericType.new(RDL::Globals.types[:hash], tleft, tright)]
       end
       #TODO test!
 #    when :kwsplat # TODO!
@@ -438,7 +438,7 @@ module RDL::Typecheck
       t1 = RDL::Type::NominalType.new(t1.val.class) if t1.is_a? RDL::Type::SingletonType
       t2 = RDL::Type::NominalType.new(t2.val.class) if t2.is_a? RDL::Type::SingletonType
       error :nonmatching_range_type, [t1, t2], e unless t1 <= t2 || t2 <= t1
-      [env2, RDL::Type::GenericType.new(RDL.types[:range], t1)]
+      [env2, RDL::Type::GenericType.new(RDL::Globals.types[:range], t1)]
     when :self
       [env, env[:self]]
     when :lvar, :ivar, :cvar, :gvar
@@ -446,7 +446,7 @@ module RDL::Typecheck
     when :lvasgn, :ivasgn, :cvasgn, :gvasgn
       x = e.children[0]
       # if local var, lhs is bound to nil before assignment is executed! only matters in type checking for locals
-      env = env.bind(x, RDL.types[:nil]) if ((e.type == :lvasgn) && (not (env.has_key? x)))
+      env = env.bind(x, RDL::Globals.types[:nil]) if ((e.type == :lvasgn) && (not (env.has_key? x)))
       envright, tright = tc(scope, env, e.children[1])
       tc_vasgn(scope, envright, e.type, x, tright, e)
     when :masgn
@@ -454,7 +454,7 @@ module RDL::Typecheck
       e.children[0].children.each { |asgn|
         next unless asgn.type == :lvasgn
         x = e.children[0]
-        env = env.bind(x, RDL.types[:nil]) if (not (env.has_key? x)) # see lvasgn
+        env = env.bind(x, RDL::Globals.types[:nil]) if (not (env.has_key? x)) # see lvasgn
         # Note don't need to check outer_env here because will be checked by tc_vasgn below
       }
       envi, tright = tc(scope, env, e.children[1])
@@ -486,7 +486,7 @@ module RDL::Typecheck
           }
           [envi, tright]
         end
-      elsif (tright.is_a? RDL::Type::GenericType) && (tright.base == RDL.types[:array])
+      elsif (tright.is_a? RDL::Type::GenericType) && (tright.base == RDL::Globals.types[:array])
         tasgn = tright.params[0]
         lhs.each { |asgn|
           if asgn.type == :splat
@@ -524,7 +524,7 @@ module RDL::Typecheck
       else
         # (op-asgn (Xvasgn var-name) :op operand)
         x = e.children[0].children[0] # Note don't need to check outer_env here because will be checked by tc_vasgn below
-        env = env.bind(x, RDL.types[:nil]) if ((e.children[0].type == :lvasgn) && (not (env.has_key? x))) # see :lvasgn
+        env = env.bind(x, RDL::Globals.types[:nil]) if ((e.children[0].type == :lvasgn) && (not (env.has_key? x))) # see :lvasgn
         envi, trecv = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
         envright, tright = tc(scope, envi, e.children[2]) # operand
         trhs = tc_send(scope, envright, trecv, e.children[1], [tright], nil, e)
@@ -539,7 +539,7 @@ module RDL::Typecheck
         envright, tright = tc(scope, envleft, e.children[1]) # operand
       else
         x = e.children[0].children[0] # Note don't need to check outer_env here because will be checked by tc_var below
-        env = env.bind(x, RDL.types[:nil]) if ((e.children[0].type == :lvasgn) && (not (env.has_key? x))) # see :lvasgn
+        env = env.bind(x, RDL::Globals.types[:nil]) if ((e.children[0].type == :lvasgn) && (not (env.has_key? x))) # see :lvasgn
         envleft, tleft = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
         envright, tright = tc(scope, envleft, e.children[1])
       end
@@ -560,7 +560,7 @@ module RDL::Typecheck
         tc_vasgn(scope, envi, e.children[0].type, x, trhs, e)
       end
     when :nth_ref, :back_ref
-      [env, RDL.types[:string]]
+      [env, RDL::Globals.types[:string]]
     when :const
       c = nil
       if e.children[0].nil?
@@ -599,7 +599,7 @@ module RDL::Typecheck
       end
     when :defined?
       # do not type check subexpression, since it may not be type correct, e.g., undefined variable
-      [env, RDL.types[:string]]
+      [env, RDL::Globals.types[:string]]
     when :send, :csend
       # children[0] = receiver; if nil, receiver is self
       # children[1] = method name, a symbol
@@ -617,7 +617,7 @@ module RDL::Typecheck
             envi, ti = tc(sscope, envi, ei.children[0])
             if ti.is_a? RDL::Type::TupleType
               tactuals.concat ti.params
-            elsif ti.is_a?(RDL::Type::GenericType) && ti.base == RDL.types[:array]
+            elsif ti.is_a?(RDL::Type::GenericType) && ti.base == RDL::Globals.types[:array]
               tactuals << RDL::Type::VarargType.new(ti.params[0]) # Turn Array<t> into *t
             else
               error :cant_splat, [ti], ei.children[0]
@@ -674,15 +674,15 @@ RUBY
     # when :not # in latest Ruby, not is a method call that could be redefined, so can't count on its behavior
     #   a1, t1 = tc(scope, a, e.children[0])
     #   if t1.is_a? RDL::Type::SingletonType
-    #     if t1.val then [a1, RDL.types[:false]] else [a1, RDL.types[:true]] end
+    #     if t1.val then [a1, RDL::Globals.types[:false]] else [a1, RDL::Globals.types[:true]] end
     #   else
-    #     [a1, RDL.types[:bool]]
+    #     [a1, RDL::Globals.types[:bool]]
     #   end
     when :if
       envi, tguard = tc(scope, env, e.children[0]) # guard; any type allowed
       # always type check both sides
-      envleft, tleft = if e.children[1].nil? then [envi, RDL.types[:nil]] else tc(scope, envi, e.children[1]) end # then
-      envright, tright = if e.children[2].nil? then [envi, RDL.types[:nil]] else tc(scope, envi, e.children[2]) end # else
+      envleft, tleft = if e.children[1].nil? then [envi, RDL::Globals.types[:nil]] else tc(scope, envi, e.children[1]) end # then
+      envright, tright = if e.children[2].nil? then [envi, RDL::Globals.types[:nil]] else tc(scope, envi, e.children[2]) end # else
       if tguard.is_a? RDL::Type::SingletonType
         if tguard.val then [envleft, tleft] else [envright, tright] end
       else
@@ -748,7 +748,7 @@ RUBY
       # retry: not allowed
       # redo: after loop guard, which is same as break
       env_break, _ = tc(scope, env, e.children[0]) # guard can have any type, may exit after checking guard
-      scope_merge(scope, break: env_break, tbreak: RDL.types[:nil], next: env, redo: env_break) { |lscope|
+      scope_merge(scope, break: env_break, tbreak: RDL::Globals.types[:nil], next: env, redo: env_break) { |lscope|
         begin
           old_break = lscope[:break]
           old_next = lscope[:next]
@@ -767,7 +767,7 @@ RUBY
       # next: before loop guard; argument not allowed
       # retry: not allowed
       # redo: beginning of body, which is same as after guard, i.e., same as break
-      scope_merge(scope, break: nil, tbreak: RDL.types[:nil], next: nil, redo: nil) { |lscope|
+      scope_merge(scope, break: nil, tbreak: RDL::Globals.types[:nil], next: nil, redo: nil) { |lscope|
         if e.children[1]
           env_body, _ = tc(lscope, env, e.children[1])
           lscope[:next] = Env.join(e, lscope[:next], env_body)
@@ -850,16 +850,16 @@ RUBY
         scope[tkw_name] = RDL::Type::UnionType.new(scope[tkw_name], tkw)
       end
       scope[e.type] = Env.join(e, scope[e.type], env)
-      [env, RDL.types[:bot]]
+      [env, RDL::Globals.types[:bot]]
     when :return
       # TODO return in lambda returns from lambda and not outer scope
       if e.children[0]
          env1, t1 = tc(scope, env, e.children[0])
       else
-         env1, t1 = [env, RDL.types[:nil]]
+         env1, t1 = [env, RDL::Globals.types[:nil]]
       end
       error :bad_return_type, [t1.to_s, scope[:tret]], e unless t1 <= scope[:tret]
-      [env1, RDL.types[:bot]] # return is a void value expression
+      [env1, RDL::Globals.types[:bot]] # return is a void value expression
     when :begin, :kwbegin # sequencing
       envi = env
       ti = nil
@@ -911,7 +911,7 @@ RUBY
           texns << RDL::Type::NominalType.new(texn.val)
         }
       else
-        texns = [RDL.types[:standard_error]]
+        texns = [RDL::Globals.types[:standard_error]]
       end
       if e.children[1]
         envi, _ = tc_vasgn(scope, envi, :lvasgn, e.children[1].children[0], RDL::Type::UnionType.new(*texns), e.children[1])
@@ -937,13 +937,13 @@ RUBY
       end
     when :ivar, :cvar, :gvar
       klass = (if kind == :gvar then RDL::Util::GLOBAL_NAME else env[:self] end)
-      unless RDL.info.has?(klass, name, :type)
+      unless RDL::Globals.info.has?(klass, name, :type)
         kind_text = (if kind == :ivar then "instance"
                      elsif kind == :cvar then "class"
                      else "global" end)
         error :untyped_var, [kind_text, name], e
       end
-      [env, RDL.info.get(klass, name, :type).canonical]
+      [env, RDL::Globals.info.get(klass, name, :type).canonical]
     else
       raise RuntimeError, "unknown kind #{kind}"
     end
@@ -966,13 +966,13 @@ RUBY
       end
     when :ivasgn, :cvasgn, :gvasgn
       klass = (if kind == :gvasgn then RDL::Util::GLOBAL_NAME else env[:self] end)
-      unless RDL.info.has?(klass, name, :type)
+      unless RDL::Globals.info.has?(klass, name, :type)
         kind_text = (if kind == :ivasgn then "instance"
                     elsif kind == :cvasgn then "class"
                     else "global" end)
         error :untyped_var, [kind_text, name], e
       end
-      tleft = RDL.info.get(klass, name, :type)
+      tleft = RDL::Globals.info.get(klass, name, :type)
       error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless tright <= tleft
       [env, tright.canonical]
     when :send
@@ -1002,11 +1002,11 @@ RUBY
     typ_str = e.children[3].children[0] if (e.children[3].type == :str) || (e.children[3].type == :string)
     error :var_type_format, [], e.children[3] if typ_str.nil?
     begin
-      typ = RDL.parser.scan_str("#T " + typ_str)
+      typ = RDL::Globals.parser.scan_str("#T " + typ_str)
     rescue Racc::ParseError => err
       error :generic_error, [err.to_s[1..-1]], e.children[3] # remove initial newline
     end
-    [env.fix(var, typ), RDL.types[:nil]]
+    [env.fix(var, typ), RDL::Globals.types[:nil]]
   end
 
   def self.tc_type_cast(scope, env, e)
@@ -1014,7 +1014,7 @@ RUBY
     typ_str = e.children[2].children[0] if (e.children[2].type == :str) || (e.children[2].type == :string)
     error :type_cast_format, [], e.children[2] if typ_str.nil?
     begin
-      typ = RDL.parser.scan_str("#T " + typ_str)
+      typ = RDL::Globals.parser.scan_str("#T " + typ_str)
     rescue Racc::ParseError => err
       error :generic_error, [err.to_s[1..-1]], e.children[2] # remove initial newline
     end
@@ -1054,7 +1054,7 @@ RUBY
       error :bad_inst_type, [obj_typ], e
     end
 
-    formals, _, _ = RDL.type_params[klass]
+    formals, _, _ = RDL::Globals.type_params[klass]
 
     error :instantiate_format, [], e if args.size == 0
     if args.last.type == :hash
@@ -1071,10 +1071,10 @@ RUBY
       case arg_typ
       when RDL::Type::SingletonType
         error :instantiate_format, [], a unless arg_typ.val.is_a?(Class)
-        new_typs << RDL.parser.scan_str("#T #{arg_typ.val}")
+        new_typs << RDL::Globals.parser.scan_str("#T #{arg_typ.val}")
       else
         error :instantiate_format, [], a unless (a.type == :str) || (a.type == :string) || (a.type == :sym)
-        new_typs << RDL.parser.scan_str("#T #{a.children[0]}")
+        new_typs << RDL::Globals.parser.scan_str("#T #{a.children[0]}")
       end
     }
 
@@ -1175,7 +1175,7 @@ RUBY
         tmeth_inter = [trecv]
       else
         # treat as Proc
-        tc_send_one_recv(scope, env, RDL.types[:proc], meth, tactuals, block, e)
+        tc_send_one_recv(scope, env, RDL::Globals.types[:proc], meth, tactuals, block, e)
       end
     else
       raise RuntimeError, "receiver type #{trecv} not supported yet"
@@ -1336,7 +1336,7 @@ RUBY
       scope_merge(scope, outer_env: env) { |bscope|
         # note: okay if outer_env shadows, since nested scope will include outer scope by next line
         env = env.merge(Env.new(targs))
-        _, body_type = if body.nil? then [nil, RDL.types[:nil]] else tc(bscope, env.merge(Env.new(targs)), body) end
+        _, body_type = if body.nil? then [nil, RDL::Globals.types[:nil]] else tc(bscope, env.merge(Env.new(targs)), body) end
         error :bad_return_type, [body_type, tblock.ret], body unless body.nil? || RDL::Type::Type.leq(body_type, tblock.ret, inst, false)
         #
       }
@@ -1365,7 +1365,7 @@ RUBY
         return t if k == klass && m = name
       }
     end
-    t = RDL.info.get_with_aliases(klass, name, :type)
+    t = RDL::Globals.info.get_with_aliases(klass, name, :type)
     return t if t # simplest case, no need to walk inheritance hierarchy
     the_klass = RDL::Util.to_class(klass)
     is_singleton = RDL::Util.has_singleton_marker(the_klass.to_s)
@@ -1376,11 +1376,11 @@ RUBY
       next if (ancestor.instance_of? Module) && (included.member? ancestor) && is_singleton
       # extended (i.e., not included) modules' instance methods get added as singleton methods, so can't be in class
       next if (ancestor.instance_of? Module) && (not (included.member? ancestor)) && (not is_singleton)
-      tancestor = RDL.info.get_with_aliases(ancestor.to_s, name, :type)
+      tancestor = RDL::Globals.info.get_with_aliases(ancestor.to_s, name, :type)
       return tancestor if tancestor
       # special caes: Kernel's singleton methods are *also* added when included?!
       if ancestor == Kernel
-        tancestor = RDL.info.get_with_aliases(RDL::Util.add_singleton_marker('Kernel'), name, :type)
+        tancestor = RDL::Globals.info.get_with_aliases(RDL::Util.add_singleton_marker('Kernel'), name, :type)
         return tancestor if tancestor
       end
       if ancestor.instance_methods(false).member?(name)

@@ -11,13 +11,13 @@ class TestTypes < Minitest::Test
 
   def test_nil_top
     tnil = NominalType.new :NilClass
-    assert_equal RDL.types[:nil], tnil
+    assert_equal RDL::Globals.types[:nil], tnil
     tnil2 = SingletonType.new nil
-    assert_equal RDL.types[:nil], tnil2
+    assert_equal RDL::Globals.types[:nil], tnil2
     ttop = TopType.new
     ttop2 = TopType.new
     assert_equal ttop, ttop2
-    assert (RDL.types[:nil] != ttop)
+    assert (RDL::Globals.types[:nil] != ttop)
   end
 
   def test_nominal
@@ -63,31 +63,31 @@ class TestTypes < Minitest::Test
     assert_equal 2, t1.types.length
     t2 = c.new tb, ta
     assert_equal t1, t2
-    t3 = c.new RDL.types[:top], RDL.types[:top]
-    assert_equal RDL.types[:top], t3
-    t4 = c.new RDL.types[:nil], RDL.types[:nil]
-    assert_equal RDL.types[:nil], t4
+    t3 = c.new RDL::Globals.types[:top], RDL::Globals.types[:top]
+    assert_equal RDL::Globals.types[:top], t3
+    t4 = c.new RDL::Globals.types[:nil], RDL::Globals.types[:nil]
+    assert_equal RDL::Globals.types[:nil], t4
     t5 = c.new ta, tb, tc
     assert_equal 3, t5.types.length
     t6 = c.new ta, (c.new tb, tc)
     assert_equal t5, t6
     t7 = c.new (c.new tc, tb), (c.new ta)
     assert_equal t5, t7
-    assert (t1 != RDL.types[:nil])
+    assert (t1 != RDL::Globals.types[:nil])
   end
 
   def test_union_intersection
     u_or_i UnionType
     u_or_i IntersectionType
-    t = UnionType.new RDL.types[:top], RDL.types[:nil], RDL.types[:top], RDL.types[:nil]
-    assert_equal RDL.types[:top], t
+    t = UnionType.new RDL::Globals.types[:top], RDL::Globals.types[:nil], RDL::Globals.types[:top], RDL::Globals.types[:nil]
+    assert_equal RDL::Globals.types[:top], t
   end
 
   def test_optional
     ta = NominalType.new :A
-    t1 = OptionalType.new RDL.types[:nil]
-    assert_equal RDL.types[:nil], t1.type
-    t2 = OptionalType.new RDL.types[:nil]
+    t1 = OptionalType.new RDL::Globals.types[:nil]
+    assert_equal RDL::Globals.types[:nil], t1.type
+    t2 = OptionalType.new RDL::Globals.types[:nil]
     assert_equal t1, t2
     t3 = OptionalType.new ta
     assert (t1 != t3)
@@ -95,9 +95,9 @@ class TestTypes < Minitest::Test
 
   def test_vararg
     ta = NominalType.new :A
-    t1 = VarargType.new RDL.types[:nil]
-    assert_equal RDL.types[:nil], t1.type
-    t2 = VarargType.new RDL.types[:nil]
+    t1 = VarargType.new RDL::Globals.types[:nil]
+    assert_equal RDL::Globals.types[:nil], t1.type
+    t2 = VarargType.new RDL::Globals.types[:nil]
     assert_equal t1, t2
     t3 = VarargType.new ta
     assert (t1 != t3)
@@ -107,11 +107,11 @@ class TestTypes < Minitest::Test
     ta = NominalType.new :A
     tb = NominalType.new :B
     tc = NominalType.new :C
-    t1 = MethodType.new [ta, tb, tc], nil, RDL.types[:nil]
+    t1 = MethodType.new [ta, tb, tc], nil, RDL::Globals.types[:nil]
     assert_equal [ta, tb, tc], t1.args
     assert_nil t1.block
-    assert_equal RDL.types[:nil], t1.ret
-    t2 = MethodType.new [RDL.types[:nil]], t1, RDL.types[:nil]
+    assert_equal RDL::Globals.types[:nil], t1.ret
+    t2 = MethodType.new [RDL::Globals.types[:nil]], t1, RDL::Globals.types[:nil]
     assert_equal t1, t2.block
   end
 
@@ -136,7 +136,7 @@ class TestTypes < Minitest::Test
     ta = NominalType.new :A
     tb = NominalType.new :B
     tc = NominalType.new :C
-    tm1 = MethodType.new [ta, tb, tc], nil, RDL.types[:nil]
+    tm1 = MethodType.new [ta, tb, tc], nil, RDL::Globals.types[:nil]
     tm2 = MethodType.new [ta], tm1, tb
     t1 = StructuralType.new(m1: tm1, m2: tm2)
     assert_equal tm1, t1.methods[:m1]
@@ -187,15 +187,15 @@ class TestTypes < Minitest::Test
     tmethAAB = MethodType.new([tA, tA], nil, tB)
     tmethaab = MethodType.new([ta, ta], nil, tb)
     tmethstringstringfixnum = MethodType.new([tstring, tstring], nil, tinteger)
-    tmethbAABn = MethodType.new([], tmethAAB, RDL.types[:nil])
-    tmethbaabn = MethodType.new([], tmethaab, RDL.types[:nil])
-    tmethbssfn = MethodType.new([], tmethstringstringfixnum, RDL.types[:nil])
+    tmethbAABn = MethodType.new([], tmethAAB, RDL::Globals.types[:nil])
+    tmethbaabn = MethodType.new([], tmethaab, RDL::Globals.types[:nil])
+    tmethbssfn = MethodType.new([], tmethstringstringfixnum, RDL::Globals.types[:nil])
     tstructorig = StructuralType.new(m1: tmethAAB, m2: tmethaab,
                                      m3: tmethbAABn, m4: tmethbaabn)
     tstructinst = StructuralType.new(m1: tmethAAB, m2: tmethstringstringfixnum,
                                      m3: tmethbAABn, m4: tmethbssfn)
-    assert_equal RDL.types[:nil], RDL.types[:nil].instantiate(inst)
-    assert_equal RDL.types[:top], RDL.types[:top].instantiate(inst)
+    assert_equal RDL::Globals.types[:nil], RDL::Globals.types[:nil].instantiate(inst)
+    assert_equal RDL::Globals.types[:top], RDL::Globals.types[:top].instantiate(inst)
     assert_equal tA, tA.instantiate(inst)
     assert_equal toptionalA, toptionalA.instantiate(inst)
     assert_equal tvarargA, tvarargA.instantiate(inst)

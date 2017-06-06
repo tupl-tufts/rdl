@@ -234,7 +234,7 @@ RUBY
     # otherwise raises exception. Returns array of method types that
     # matched [+args+] and [+blk+]
     def self.check_arg_types(method_name, slf, bind, types, inst, *args, &blk)
-      RDL.contract_switch.off {
+      RDL::Globals.contract_switch.off {
         matches = [] # types that matched args
         types.each_with_index { |t, i|
           res, args, blk, bind = t.pre_cond?(blk, slf, inst, bind, *args)
@@ -255,7 +255,7 @@ RUBY
     end
 
     def self.check_ret_types(slf, method_name, types, inst, matches, ret, bind, *args, &blk)
-      RDL.contract_switch.off {
+      RDL::Globals.contract_switch.off {
         matches.each { |i| res,new_ret = types[i].post_cond?(slf, inst, ret, bind, *args)
           return new_ret if res
 	}
@@ -350,7 +350,7 @@ RUBY
     end
 
     def self.check_block_arg_types(slf, types, inst, bind, *args)
-      RDL.contract_switch.off {
+      RDL::Globals.contract_switch.off {
 	      res,args,blk,bind = types.pre_cond?(nil, slf, inst, bind, *args)
 	      return [true, args, blk, bind] if res
         raise TypeError, <<RUBY
@@ -366,7 +366,7 @@ RUBY
     end
 
     def self.check_block_ret_types(slf, types, inst, ret, bind, *args)
-      RDL.contract_switch.off {
+      RDL::Globals.contract_switch.off {
 	      res,new_ret = types.post_cond?(slf, inst, ret, bind, *args)
 	      return new_ret if res
         raise TypeError, <<RUBY

@@ -75,7 +75,7 @@ module RDL::Type
       if left.is_a?(NominalType) && right.is_a?(StructuralType)
         right.methods.each_pair { |m, t|
           return false unless left.klass.method_defined? m
-          types = RDL.info.get(left.klass, m, :type)
+          types = RDL::Globals.info.get(left.klass, m, :type)
           if types
             return false unless types.all? { |tlm| leq(tlm, t, nil, ileft) }
             # inst above is nil because the method types inside the class and
@@ -94,7 +94,7 @@ module RDL::Type
 
       # generic
       if left.is_a?(GenericType) && right.is_a?(GenericType)
-        formals, variance, _ = RDL.type_params[left.base.name]
+        formals, variance, _ = RDL::Globals.type_params[left.base.name]
         # do check here to avoid hiding errors if generic type written
         # with wrong number of parameters but never checked against
         # instantiated instances
@@ -115,13 +115,13 @@ module RDL::Type
       end
       if left.is_a?(GenericType) && right.is_a?(StructuralType)
         # similar to logic above for leq(NominalType, StructuralType, ...)
-        formals, variance, _ = RDL.type_params[left.base.name]
+        formals, variance, _ = RDL::Globals.type_params[left.base.name]
         raise TypeError, "No type parameters defined for #{base.name}" unless formals
         base_inst = Hash[*formals.zip(left.params).flatten] # instantiation for methods in base's class
         klass = left.base.klass
         right.methods.each_pair { |meth, t|
           return false unless klass.method_defined? meth
-          types = RDL.info.get(klass, meth, :type)
+          types = RDL::Globals.info.get(klass, meth, :type)
           if types
             return false unless types.all? { |tlm| leq(tlm.instantiate(base_inst), t, nil, ileft) }
           end
@@ -166,7 +166,7 @@ module RDL::Type
         right.lbounds << left
         return true
       end
-      if left.is_a?(TupleType) && right.is_a?(GenericType) && right.base == RDL.types[:array]
+      if left.is_a?(TupleType) && right.is_a?(GenericType) && right.base == RDL::Globals.types[:array]
         # TODO !ileft and right carries a free variable
         return false unless left.promote!
         return leq(left, right, inst, ileft) # recheck for promoted type
@@ -200,7 +200,7 @@ module RDL::Type
         right.lbounds << left
         return true
       end
-      if left.is_a?(FiniteHashType) && right.is_a?(GenericType) && right.base == RDL.types[:hash]
+      if left.is_a?(FiniteHashType) && right.is_a?(GenericType) && right.base == RDL::Globals.types[:hash]
         # TODO !ileft and right carries a free variable
         return false unless left.promote!
         return leq(left, right, inst, ileft) # recheck for promoted type
