@@ -32,6 +32,7 @@ type :Kernel, 'self.caller_locations', '(Range) -> Array<String> or nil'
 # type :Kernel, 'self.catch' # TODO
 type :Kernel, 'self.eval', '(String, ?Binding, ?String filename, ?Integer lineno) -> %any'
 # type :Kernel, 'self.exec' #TODO
+type :Kernel, 'self.exit', '() -> %bot'
 type :Kernel, 'self.exit', '(Integer or %bool status) -> %bot'
 type :Kernel, 'self.exit!', '(Integer or %bool status) -> %bot'
 type :Kernel, 'self.fail', '() -> %bot'
