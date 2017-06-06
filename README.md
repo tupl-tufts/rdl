@@ -504,7 +504,7 @@ class Array
 end
 ```
 
-Here the first argument to `type_params` is a list of symbols or strings that name the type parameters. In this case there is one parameter, `t`, and it is the return type of `shift`.
+Here the first argument to `type_params` is a list of symbols or strings that name the type parameters. In this case there is one parameter, `t`, and it is the return type of `shift`. The `type_params` method accepts an optional first argument, the class whose type parameters to set (this defaults to `self`).
 
 Generic types are applied to type arguments using `<...>` notation, e.g., `Array<Fixnum>` is an `Array` class where `t` is replaced by `Fixnum`. Thus, for example, if `o` is an `Array<Fixnum>`, then `o.shift` returns `Fixnum`. As another example, here is the type for the `[]` method of `Array`:
 

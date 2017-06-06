@@ -1,3 +1,3 @@
-rdl_nowrap :YAML
+RDL.nowrap :YAML
 
-type :YAML, 'self.load_file', '(String) -> Array<String>'
+RDL.type :YAML, 'self.load_file', '(String) -> Array<String>'

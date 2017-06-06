@@ -27,6 +27,7 @@
 - Global variables are now module variables of RDL::Globals
 - at_exit handler only installed if `Config.report` or `.guess_types` are accessed
 - Subclass Parser::Diagnostic instead of monkey patching it
+- Replaced `Fixnum` with `Integer` in README (suggested by https://github.com/Dorian)
 
 ## [2.0.1] - 2016-11-11
 

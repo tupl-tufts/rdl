@@ -1,13 +1,13 @@
-rdl_nowrap :Random
+RDL.nowrap :Random
 
-type :Random, 'self.new', '(?Integer seed) -> Random' # Floats can be passed also, but just truncated to int?
-type :Random, 'self.new_seed', '() -> Integer'
-type :Random, 'self.rand', '(?Integer max) -> Numeric'
-type :Random, 'self.srand', '(?Integer number) -> Numeric old_seed'
+RDL.type :Random, 'self.new', '(?Integer seed) -> Random' # Floats can be passed also, but just truncated to int?
+RDL.type :Random, 'self.new_seed', '() -> Integer'
+RDL.type :Random, 'self.rand', '(?Integer max) -> Numeric'
+RDL.type :Random, 'self.srand', '(?Integer number) -> Numeric old_seed'
 
-type :Random, :==, '(%any) -> %bool'
-type :Random, :bytes, '(Integer size) -> String'
-type :Random, :rand, '(?(Integer or Range<Integer>) max) -> Integer'
-type :Random, :rand, '(?(Float or Range<Float>) max) -> Float'
-pre(:Random, :rand) { |max| max > 0 }
-type :Random, :seed, '() -> Integer'
+RDL.type :Random, :==, '(%any) -> %bool'
+RDL.type :Random, :bytes, '(Integer size) -> String'
+RDL.type :Random, :rand, '(?(Integer or Range<Integer>) max) -> Integer'
+RDL.type :Random, :rand, '(?(Float or Range<Float>) max) -> Float'
+RDL.pre(:Random, :rand) { |max| max > 0 }
+RDL.type :Random, :seed, '() -> Integer'

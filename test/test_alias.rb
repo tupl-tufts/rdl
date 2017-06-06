@@ -3,6 +3,7 @@ $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
 
 class TestAlias < Minitest::Test
+  extend RDL::Annotate
 
   def test_alias_lookup
     self.class.class_eval {

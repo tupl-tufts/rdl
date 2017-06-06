@@ -1,3 +1,3 @@
-rdl_nowrap :Marshal
+RDL.nowrap :Marshal
 
-type :Marshal, 'self.load', '(String, ?Proc) -> Object'
+RDL.type :Marshal, 'self.load', '(String, ?Proc) -> Object'
