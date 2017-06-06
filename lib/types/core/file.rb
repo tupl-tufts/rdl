@@ -3,6 +3,9 @@ rdl_nowrap :File
 type :File, 'self.absolute_path', '(String file, ?String dir) -> String abs_file'
 type :File, 'self.atime', '(%path or IO file) -> Time'
 type :File, 'self.basename', '(String file, ?String suffix) -> String base_name'
+type :File, 'self.binread', '(String) -> String'
+type :File, 'self.binread', '(String, Fixnum) -> String'
+type :File, 'self.binread', '(String, Fixnum, Fixnum) -> String'
 type :File, 'self.birthtime', '(%path or IO file) -> Time'
 type :File, 'self.blockdev?', '(String or IO file) -> %bool'
 type :File, 'self.chardev?', '(String or IO file) -> %bool'
@@ -24,7 +27,7 @@ rdl_alias :File, :fnmatch?, :fnmatch
 type :File, 'self.ftype', '(String file) -> String' # TODO: return in set of strings
 type :File, 'self.grpowned?', '(String or IO file) -> %bool'
 type :File, 'self.identical?', '(String or IO file_1, String or IO file_2) -> %bool'
-type :File, 'self.join', '(*(%path or File)) -> String'
+type :File, 'self.join', '(*(%path or File or Array<String>)) -> String'
 type :File, 'self.lchmod', '(Integer mode, *String files) -> Integer'
 type :File, 'self.lchown', '(Integer owner, Integer group, *String files) -> Integer'
 type :File, 'self.link', '(String old, String new) -> 0'
