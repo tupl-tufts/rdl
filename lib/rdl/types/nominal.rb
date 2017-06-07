@@ -40,7 +40,7 @@ module RDL::Type
     end
 
     def to_s
-     if @name.start_with? '#<Class:'
+      if @name.start_with? '#<Class:'
         if @name['('] # Rails models such as Talk(:id, :name, ...)
           n = @name.split('(')[0] + '>'
         else
