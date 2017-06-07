@@ -941,7 +941,7 @@ RUBY
         kind_text = (if kind == :ivar then "instance"
                      elsif kind == :cvar then "class"
                      else "global" end)
-        error :untyped_var, [kind_text, name], e
+        error :untyped_var, [kind_text, name, klass], e
       end
       [env, RDL::Globals.info.get(klass, name, :type).canonical]
     else
@@ -970,7 +970,7 @@ RUBY
         kind_text = (if kind == :ivasgn then "instance"
                     elsif kind == :cvasgn then "class"
                     else "global" end)
-        error :untyped_var, [kind_text, name], e
+        error :untyped_var, [kind_text, name, klass], e
       end
       tleft = RDL::Globals.info.get(klass, name, :type)
       error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless tright <= tleft
@@ -1416,7 +1416,7 @@ class Diagnostic < Parser::Diagnostic
     no_instance_method_type: "no type information for instance method `%s#%s'",
     no_singleton_method_type: "no type information for class/singleton method `%s.%s'",
     arg_type_single_receiver_error: "argument type error for instance method `%s#%s'\n%s",
-    untyped_var: "no type for %s variable `%s'",
+    untyped_var: "no type for %s variable `%s' in class %s",
     vasgn_incompat: "incompatible types: `%s' can't be assigned to variable of type `%s'",
     inconsistent_var_type: "local variable `%s' has declared type on some paths but not all",
     inconsistent_var_type_type: "local variable `%s' declared with inconsistent types %s",
