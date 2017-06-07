@@ -40,7 +40,16 @@ module RDL::Type
     end
 
     def to_s
-      return @name
+     if @name.start_with? '#<Class:'
+        if @name['('] # Rails models such as Talk(:id, :name, ...)
+          n = @name.split('(')[0] + '>'
+        else
+          n = @name
+        end
+        return RDL::Util.add_singleton_marker(n[8..-2])
+      else
+        return @name
+      end
     end
 
     def klass
