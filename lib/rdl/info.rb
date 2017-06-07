@@ -23,7 +23,7 @@ class RDL::Info
   # if no prev info for kind, set to val and return true
   # if prev info for kind, return true if prev == val and false otherwise
   def set(klass, label, kind, val)
-    klass = klass.to_s
+    klass = RDL::Util.to_klass(klass)
     label = label.to_sym
     @info[klass] = {} unless @info[klass]
     @info[klass][label] = {} unless @info[klass][label]
