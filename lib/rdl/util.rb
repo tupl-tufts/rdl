@@ -15,6 +15,15 @@ class RDL::Util
     return c
   end
 
+  def self.to_klass(cls)
+    cls_str = cls.to_s
+    if cls_str.start_with? '#<Class:'
+      cls_str = cls_str.split('(')[0] + '>' if cls_str['(']
+      cls_str = RDL::Util.add_singleton_marker(cls_str[8..-2])
+    end
+    cls_str
+  end
+
   def self.has_singleton_marker(klass)
     return (klass =~ /^#{SINGLETON_MARKER_REGEXP}/)
   end
