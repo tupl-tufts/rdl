@@ -566,7 +566,15 @@ module RDL::Typecheck
       if e.children[0].nil?
         case env[:self]
         when RDL::Type::SingletonType
-          c = env[:self].nominal.klass.const_get(e.children[1])
+          self_klass_str = RDL::Util.to_klass(env[:self].val)
+          c1_str = RDL::Util.to_klass(e.children[1])
+          if self_klass_str.end_with?('::' + c1_str)
+            i = self_klass_str.rindex('::' + c1_str)
+            pc = RDL::Util.to_class self_klass_str[0..i-1]
+            c = pc.const_get(e.children[1])
+          else
+            c = env[:self].val.const_get(e.children[1])
+          end
         else
           c = env[:self].klass.const_get(e.children[1])
         end
@@ -577,7 +585,7 @@ module RDL::Typecheck
       elsif e.children[0].type == :const
         if env[:self]
           if env[:self].is_a?(RDL::Type::SingletonType)
-            raise "const not implemented when env[:self] is SingletonType"
+            ic = env[:self].val
           else
             ic = env[:self].class
           end
