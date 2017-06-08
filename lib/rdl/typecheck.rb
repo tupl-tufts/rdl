@@ -604,13 +604,11 @@ module RDL::Typecheck
         raise "const other not implemented yet"
       end
       case c
-      when TrueClass, FalseClass, Complex, Rational, Fixnum, Bignum, Float, Symbol, Class
+      when TrueClass, FalseClass, Complex, Rational, Integer, Float, Symbol, Class
         [env, RDL::Type::SingletonType.new(c)]
       when Module
         t = RDL::Type::SingletonType.new(const_get(e.children[1]))
         [env, t]
-      when Array
-        [env, RDL::Util.rdl_type2(c)]
       else
         [env, RDL::Type::NominalType.new(const_get(e.children[1]).class)]
       end
