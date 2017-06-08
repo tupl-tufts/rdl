@@ -1537,6 +1537,8 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_nested
-    N1::N2.foo
+    t = do_tc("N1::N2.foo", env: @env)
+    t2 = RDL::Type::NominalType.new N1::N2
+    assert_equal t2, t
   end
 end
