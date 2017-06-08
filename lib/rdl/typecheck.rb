@@ -566,17 +566,24 @@ module RDL::Typecheck
       if e.children[0].nil?
         case env[:self]
         when RDL::Type::SingletonType
-          self_klass_str = RDL::Util.to_klass(env[:self].val)
-          c1_str = RDL::Util.to_klass(e.children[1])
-          if self_klass_str.end_with?('::' + c1_str)
-            i = self_klass_str.rindex('::' + c1_str)
-            pc = RDL::Util.to_class self_klass_str[0..i-1]
-            c = pc.const_get(e.children[1])
-          else
-            c = env[:self].val.const_get(e.children[1])
-          end
+          sclass = env[:self].val
+        when RDL::Type::NominalType
+          sclass = env[:self].klass
         else
-          c = env[:self].klass.const_get(e.children[1])
+          raise Exception, "unsupported env[self]=#{env[:self]}"
+        end
+        c1_str = RDL::Util.to_klass(e.children[1])
+        self_klass_str = RDL::Util.to_klass(sclass)
+        if self_klass_str.end_with?('::' + c1_str)
+          i = self_klass_str.rindex('::' + c1_str)
+          pc = RDL::Util.to_class self_klass_str[0..i-1]
+          c = pc.const_get(e.children[1])
+        else
+          if self_klass_str['::']
+            i = self_klass_str.rindex('::')
+            sclass = RDL::Util.to_class self_klass_str[0..i-1]
+          end
+          c = sclass.const_get(e.children[1])
         end
       elsif e.children[0].type == :cbase
         raise "const cbase not implemented yet" # TODO!
@@ -597,11 +604,13 @@ module RDL::Typecheck
         raise "const other not implemented yet"
       end
       case c
-      when TrueClass, FalseClass, Complex, Rational, Integer, Float, Symbol, Class
+      when TrueClass, FalseClass, Complex, Rational, Fixnum, Bignum, Float, Symbol, Class
         [env, RDL::Type::SingletonType.new(c)]
       when Module
         t = RDL::Type::SingletonType.new(const_get(e.children[1]))
         [env, t]
+      when Array
+        [env, RDL::Util.rdl_type2(c)]
       else
         [env, RDL::Type::NominalType.new(const_get(e.children[1]).class)]
       end

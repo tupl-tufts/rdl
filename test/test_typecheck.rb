@@ -7,10 +7,62 @@ class N1
   class N2
     extend RDL::Annotate
     def self.foo
-      N1::N2.new
+      :sym
     end
-    type 'self.foo', '() -> N1::N2', typecheck: :now
+   type 'self.foo', '() -> :sym'
+
+    def self.foo2
+      :sym2
+    end
+    type 'self.foo2', '() -> :sym2'
+
+    def self.nf
+      N2.foo
+    end
+    type 'self.nf', '() -> :sym', typecheck: :call
+
+    def nf2
+      N2.foo2
+    end
+    type :nf2, '() -> :sym2', typecheck: :call
   end
+
+  class N3
+    extend RDL::Annotate
+    def nf3
+      N2.foo
+    end
+    type :nf3, '() -> :sym', typecheck: :call
+  end
+end
+
+class N4
+  extend RDL::Annotate
+  class N5
+    extend RDL::Annotate
+    type :bar, '() -> :B'
+    def bar
+      :B
+    end
+  end
+end
+
+class N5
+  extend RDL::Annotate
+  type :bar, '() -> :A'
+  def bar
+    :A
+  end
+end
+
+class N4
+  class << self
+    extend RDL::Annotate
+    def foo
+      N5.new.bar
+    end
+  end
+  type 'self.foo', '() -> :B', typecheck: :call
 end
 
 class TestTypecheckC
@@ -1537,8 +1589,19 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_nested
-    t = do_tc("N1::N2.foo", env: @env)
-    t2 = RDL::Type::NominalType.new N1::N2
-    assert_equal t2, t
+    r = N1::N2.foo
+    assert_equal :sym, r
+
+    r = N1::N2.nf
+    assert_equal :sym, r
+
+    r = N1::N2.foo2
+    assert_equal :sym2, r
+
+    r = N1::N3.new.nf3
+    assert_equal :sym, r
+
+    r = N4.foo
+    assert_equal :B, r
   end
 end
