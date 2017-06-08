@@ -3,6 +3,16 @@ $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
 require 'types/core'
 
+class N1
+  class N2
+    extend RDL::Annotate
+    def self.foo
+      N1::N2.new
+    end
+    type 'self.foo', '() -> N1::N2', typecheck: :now
+  end
+end
+
 class TestTypecheckC
   extend RDL::Annotate
   type 'self.bar', '() -> Integer or String ret'
@@ -1526,4 +1536,7 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { RDL.do_typecheck :later_mm2 }
   end
 
+  def test_nested
+    N1::N2.foo
+  end
 end
