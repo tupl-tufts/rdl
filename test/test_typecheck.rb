@@ -1652,7 +1652,6 @@ class TestTypecheck < Minitest::Test
       type(:foo, '(Symbol) -> NilClass', {:typecheck => :call})
     end
 
-    r = TestTypecheck::A5.new.foo(:a)
-#    assert_equal nil, r
+    assert_nil TestTypecheck::A5.new.foo(:a)
   end
 end
