@@ -147,7 +147,7 @@ RUBY
   private
 
   def self.wrapped_name(klass, meth)
-    klass_str = RDL::Util.to_klass(klass).hash
+    klass_str = RDL::Util.to_class_str(klass).hash
     "__rdl_#{meth.to_s}_old_#{klass_str}".to_sym
   end
 
@@ -155,7 +155,7 @@ RUBY
     if not s.start_with?('__rdl_') and s.include?('_old_')
       raise Exception, "cannot get unwrapped name for #{s}"
     end
-    klass_str = RDL::Util.to_klass(klass).hash.to_s
+    klass_str = RDL::Util.to_class_str(klass).hash.to_s
     s = klass_str.split("_#{klass_str}")
     s[6..-5]
   end
