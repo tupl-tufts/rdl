@@ -1277,7 +1277,7 @@ RUBY
         tc_send_one_recv(scope, env, RDL::Globals.types[:proc], meth, tactuals, block, e)
       end
     else
-      raise RuntimeError, "receiver type #{trecv} not supported yet"
+      raise RuntimeError, "receiver type #{trecv} not supported yet, meth=#{meth}"
     end
 
     trets = [] # all possible return types
