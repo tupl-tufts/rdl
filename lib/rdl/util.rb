@@ -21,7 +21,7 @@ class RDL::Util
     to_class cls_str[8..-2]
   end
 
-  def self.to_klass(cls)
+  def self.to_class_str(cls)
     cls_str = cls.to_s
     if cls_str.start_with? '#<Class:'
       cls_str = cls_str.split('(')[0] + '>' if cls_str['(']
@@ -65,7 +65,7 @@ class RDL::Util
     rescue NameError
       return false
     end
-    klass_str = RDL::Util.to_klass(klass).hash
+    klass_str = RDL::Util.to_class_str(klass).hash
     if mstr.start_with?('__rdl') and mstr.end_with?('_old_#{klass_str}')
       mstr0 = RDL::Wrap.unwrapped_name(klass, mstr)
       owner0 = sk.instance_method(mstr0).owner

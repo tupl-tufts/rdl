@@ -594,8 +594,8 @@ module RDL::Typecheck
         else
           raise Exception, "unsupported env[self]=#{env[:self]}"
         end
-        c1_str = RDL::Util.to_klass(e.children[1])
-        self_klass_str = RDL::Util.to_klass(sclass)
+        c1_str = RDL::Util.to_class_str(e.children[1])
+        self_klass_str = RDL::Util.to_class_str(sclass)
         if self_klass_str.end_with?('::' + c1_str)
           i = self_klass_str.rindex('::' + c1_str)
           pc = RDL::Util.to_class self_klass_str[0..i-1]
@@ -1006,7 +1006,7 @@ RUBY
       klass = RDL::Util.to_class @cur_meth[0]
       mname = @cur_meth[1]
       sklass = get_super_owner_from_class klass, mname
-      sklass_str = RDL::Util.to_klass sklass
+      sklass_str = RDL::Util.to_class_str sklass
       stype = RDL::Globals.info.get_with_aliases(sklass_str, mname, :type)
       error :no_instance_method_type, [sklass_str, mname], e unless stype
       raise Exception, "unsupported intersection type in super, e = #{e}" if stype.size > 1
