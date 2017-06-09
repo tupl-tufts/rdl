@@ -1637,4 +1637,22 @@ class TestTypecheck < Minitest::Test
     r = TestTypecheck::SA1.new.baz 1
     assert_equal 2, r
   end
+
+
+  def test_case_when_nil_body
+    self.class.class_eval "class A5; end"
+    TestTypecheck::A5.class_eval do
+      extend RDL::Annotate
+      def foo(x)
+        case x
+        when :a
+        when :b
+        end
+      end
+      type(:foo, '(Symbol) -> NilClass', {:typecheck => :call})
+    end
+
+    r = TestTypecheck::A5.new.foo(:a)
+#    assert_equal nil, r
+  end
 end
