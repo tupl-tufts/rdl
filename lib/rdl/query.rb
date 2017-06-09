@@ -67,9 +67,9 @@ class RDL::Query
   end
 end
 
-class Object
+module RDL
 
-  def rdl_query(q)
+  def self.query(q)
     RDL::Globals.contract_switch.off {
       if q =~ /^[A-Z]\w*(#|\.)([a-z_]\w*(!|\?|=)?|!|~|\+|\*\*|-|\*|\/|%|<<|>>|&|\||\^|<|<=|=>|>|==|===|!=|=~|!~|<=>|\[\]|\[\]=)$/
         typs = RDL::Query.method_query(q)
