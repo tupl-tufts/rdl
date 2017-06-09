@@ -21,4 +21,4 @@ EOF
   exit 0
 end
 
-rdl_query(ARGV[0])
+RDL.query(ARGV[0])
