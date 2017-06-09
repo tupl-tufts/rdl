@@ -150,6 +150,13 @@ RUBY
     "__rdl_#{meth.to_s}_old".to_sym
   end
 
+  def self.unwrapped_name(s)
+    if not s.start_with?('__rdl_') and s.end_with?('_old')
+      raise Exception, "cannot get unwrapped name for #{s}"
+    end
+    s[6..-5]
+  end
+
   def self.class_to_string(klass)
     case klass
     when Class, Module
