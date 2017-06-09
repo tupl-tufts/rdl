@@ -1604,4 +1604,37 @@ class TestTypecheck < Minitest::Test
     r = N4.foo
     assert_equal :B, r
   end
+
+  def test_super
+    self.class.class_eval "class SA0; end"
+    self.class.class_eval "class SA1 < SA0; end"
+
+    TestTypecheck::SA0.class_eval do
+      extend RDL::Annotate
+      def self.foo; :a0; end
+      def bar(x); 1 + x; end
+      def baz(x); 1 + x; end
+      type 'self.foo', '() -> :a0'
+      type 'bar', '(Fixnum) -> Fixnum'
+      type 'baz', '(Fixnum) -> Fixnum'
+    end
+    TestTypecheck::SA1.class_eval do
+      extend RDL::Annotate
+      def self.foo; super; end
+      def bar(x); super(x); end
+      def baz(x); super; end
+      type 'self.foo', '() -> :a0', typecheck: :call
+      type :bar, '(Fixnum) -> Fixnum', typecheck: :call
+      type :baz, '(Fixnum) -> Fixnum', typecheck: :call
+    end
+
+    r = TestTypecheck::SA1.foo
+    assert_equal :a0, r
+
+    r = TestTypecheck::SA1.new.bar 1
+    assert_equal 2, r
+
+    r = TestTypecheck::SA1.new.baz 1
+    assert_equal 2, r
+  end
 end
