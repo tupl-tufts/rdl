@@ -765,7 +765,13 @@ RUBY
             # previous, unrefined type
           end
         end
-        envbody, tbody = tc(scope, initial_env, wclause.children[-1]) # last wclause child is body
+        if wclause.children[-1] == nil
+          envbody = initial_env
+          tbody = RDL::Globals.types[:nil]
+        else
+          envbody, tbody = tc(scope, initial_env, wclause.children[-1]) # last wclause child is body
+        end
+
         tbodies << tbody
         envbodies << envbody
       }
