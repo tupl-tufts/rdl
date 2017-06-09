@@ -75,7 +75,7 @@ RDL.type :BigDecimal, :<=>, '(Float) -> Object'
 RDL.pre(:BigDecimal, :<=>) { |x| !x.nan? && x!=Float::INFINITY}
 RDL.post(:BigDecimal, :<=>) { |r,x| r == -1 || r==0 || r==1}
 RDL.type :BigDecimal, :<=>, '(Rational) -> Object'
-RDL.post(:BigDEcimal, :<=>) { |r,x| r == -1 || r==0 || r==1}
+RDL.post(:BigDecimal, :<=>) { |r,x| r == -1 || r==0 || r==1}
 RDL.type :BigDecimal, :<=>, '(BigDecimal) -> Object'
 RDL.post(:BigDecimal, :<=>) { |r,x| r == -1 || r==0 || r==1}
 
