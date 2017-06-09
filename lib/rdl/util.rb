@@ -52,12 +52,22 @@ class RDL::Util
 
   def self.method_defined?(klass, method)
     begin
-      (self.to_class klass).method_defined?(method.to_sym) ||
-        (self.to_class klass).private_instance_methods.include?(method.to_sym) ||
-        (self.to_class klass).protected_instance_methods.include?(method.to_sym)
+      sk = self.to_class klass
+      msym = method.to_sym
+      mstr = method.to_s
+      sk.instance_method msym
     rescue NameError
       return false
     end
+
+    if mstr.start_with?('__rdl') and mstr.end_with?('_old')
+      mstr0 = RDL::Wrap.unwrapped_name(mstr)
+      owner0 = sk.instance_method(mstr0).owner
+      owner = sk.instance_method(mstr).owner
+      return false if owner0 != owner
+    end
+
+    true
   end
 
   # Returns the @__rdl_type field of [+obj+]

@@ -77,4 +77,12 @@ class TestRDLType < Minitest::Test
     assert !(RDL::Globals.info.has? "TestRDLType::TestVersion", "m2", :type)
   end
 
+  def test_wrap_subclass_method
+    self.class.class_eval "class NI_C; def foo; :A; end; end"
+    self.class.class_eval "class NI_D < NI_C; def foo; :B; end; end"
+    RDL.type 'TestRDLType::NI_C', :foo, '() -> :A'
+    RDL.type 'TestRDLType::NI_D', :foo, '() -> :A'
+    assert TestRDLType::NI_C.new.foo
+    assert_raises(RDL::Type::TypeError) { TestRDLType::NI_D.new.foo}
+  end
 end
