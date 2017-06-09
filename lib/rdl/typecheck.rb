@@ -205,6 +205,7 @@ module RDL::Typecheck
   end
 
   def self.typecheck(klass, meth)
+    @cur_meth = [klass, meth]
     ast = get_ast(klass, meth)
     types = RDL::Globals.info.get(klass, meth, :type)
     raise RuntimeError, "Can't typecheck method with no types?!" if types.nil? or types == []
@@ -318,6 +319,27 @@ module RDL::Typecheck
       error :type_args_more, [kind, kind], (if args.children.empty? then ast else args end) if type.args.length != tpos
     end
     return [env, targs]
+  end
+
+  def self.get_super_owner(slf, m)
+    case slf
+    when RDL::Type::SingletonType
+      if slf.nominal.name == 'Class'
+        trecv_owner = get_super_owner_from_class(slf.val.singleton_class, m)
+        RDL::Type::SingletonType.new(RDL::Util.singleton_class_to_class(trecv_owner))
+      else
+        raise Exception, 'self is singleton class but nominal is not Class'
+      end
+    when RDL::Type::NominalType
+      RDL::Type::NominalType.new(get_super_owner_from_class(slf.klass, m))
+    else
+      raise Exception, 'unsupported self #{slf} in get_super_owner'
+    end
+  end
+
+  def self.get_super_owner_from_class(cls, m)
+    raise Exception, "cls #{cls} is not a Class" if cls.class != Class
+    cls.instance_method(m).super_method.owner
   end
 
   # The actual type checking logic.
@@ -932,6 +954,62 @@ RUBY
         envi, _ = tc_vasgn(scope, envi, :lvasgn, e.children[1].children[0], RDL::Type::UnionType.new(*texns), e.children[1])
       end
       tc(scope, envi, e.children[2])
+    when :super
+      envi = env
+      tactuals = []
+      block = scope[:block]
+
+      if block
+        raise Exception, 'block in super method with block not supported'
+      end
+
+      scope_merge(scope, block: nil, break: env, next: env) { |sscope|
+        e.children.each { |ei|
+          if ei.type == :splat
+            envi, ti = tc(sscope, envi, ei.children[0])
+            if ti.is_a? RDL::Type::TupleType
+              tactuals.concat ti.params
+            elsif ti.is_a?(RDL::Type::GenericType) && ti.base == $__rdl_array_type
+              tactuals << RDL::Type::VarargType.new(ti.params[0]) # Turn Array<t> into *t
+            else
+              error :cant_splat, [ti], ei.children[0]
+            end
+          elsif ei.type == :block_pass
+            raise RuntimeError, "impossible to pass block arg and literal block" if scope[:block]
+            envi, ti = tc(sscope, envi, ei.children[0])
+            # convert using to_proc if necessary
+            ti = tc_send(sscope, envi, ti, :to_proc, [], nil, ei) unless ti.is_a? RDL::Type::MethodType
+            block = [ti, ei]
+          else
+            envi, ti = tc(sscope, envi, ei)
+            tactuals << ti
+          end
+        }
+
+        trecv = get_super_owner(envi[:self], @cur_meth[1])
+        [envi, tc_send(sscope, envi, trecv, @cur_meth[1], tactuals, block, e).canonical]
+      }
+    when :zsuper
+      envi = env
+      block = scope[:block]
+
+      if block
+        raise Exception, 'super method not supported'
+      end
+
+      klass = RDL::Util.to_class @cur_meth[0]
+      mname = @cur_meth[1]
+      sklass = get_super_owner_from_class klass, mname
+      sklass_str = RDL::Util.to_klass sklass
+      stype = RDL::Globals.info.get_with_aliases(sklass_str, mname, :type)
+      error :no_instance_method_type, [sklass_str, mname], e unless stype
+      raise Exception, "unsupported intersection type in super, e = #{e}" if stype.size > 1
+      tactuals = stype[0].args
+
+      scope_merge(scope, block: nil, break: env, next: env) { |sscope|
+        trecv = get_super_owner(envi[:self], @cur_meth[1])
+        [envi, tc_send(sscope, envi, trecv, @cur_meth[1], tactuals, block, e).canonical]
+      }
     else
       raise RuntimeError, "Expression kind #{e.type} unsupported"
     end

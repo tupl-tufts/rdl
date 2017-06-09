@@ -15,6 +15,12 @@ class RDL::Util
     return c
   end
 
+  def self.singleton_class_to_class(cls)
+    cls_str = cls.to_s
+    cls_str = cls_str.split('(')[0] + '>' if cls_str['(']
+    to_class cls_str[8..-2]
+  end
+
   def self.to_klass(cls)
     cls_str = cls.to_s
     if cls_str.start_with? '#<Class:'
@@ -59,9 +65,9 @@ class RDL::Util
     rescue NameError
       return false
     end
-
-    if mstr.start_with?('__rdl') and mstr.end_with?('_old')
-      mstr0 = RDL::Wrap.unwrapped_name(mstr)
+    klass_str = RDL::Util.to_klass(klass).hash
+    if mstr.start_with?('__rdl') and mstr.end_with?('_old_#{klass_str}')
+      mstr0 = RDL::Wrap.unwrapped_name(klass, mstr)
       owner0 = sk.instance_method(mstr0).owner
       owner = sk.instance_method(mstr).owner
       return false if owner0 != owner
