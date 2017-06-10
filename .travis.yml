@@ -26,3 +26,9 @@ rvm:
   - 2.4.0
   - 2.4.1
 sudo: false
+notifications:
+  email:
+    recipients:
+      - rdl-devel@googlegroups.com
+    on_success: never # default: change
+    on_failure: always # default: always
