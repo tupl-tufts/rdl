@@ -339,7 +339,7 @@ module RDL::Typecheck
 
   def self.get_super_owner_from_class(cls, m)
     raise Exception, "cls #{cls} is not a Class" if cls.class != Class
-    cls.instance_method(m).super_method.owner
+    cls.superclass.instance_method(m).owner
   end
 
   # The actual type checking logic.
