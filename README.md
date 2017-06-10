@@ -83,7 +83,7 @@ $ ruby file.rb
 .../file.rb:6:   ^~~~~~~~~~~
 ```
 
-Passing `typecheck: :now` to `type` checks the method body immediately or as soon as it is defined. Passing `typecheck: :call` to `type` statically type checks the method body whenever it is called. Passing `typecheck: sym` for some other symbol statically type checks the method body when `rdl_do_typecheck sym` is called.
+Passing `typecheck: :now` to `type` checks the method body immediately or as soon as it is defined. Passing `typecheck: :call` to `type` statically type checks the method body whenever it is called. Passing `typecheck: sym` for some other symbol statically type checks the method body when `RDL.do_typecheck sym` is called.
 
 The `type` method can also be called with the class and method to be annotated, and it can also be invoked as `RDL.type` in case `extend RDL::Annotate` would cause namespace issues:
 
@@ -108,7 +108,7 @@ $ rdl_query "(..., Integer, ...) -> ." # print all methods that take an Integer 
 
 ```
 
-See below for more details of the query format. The `rdl_query` method performs the same function as long as the gem is loaded, so you can use this in `irb`.
+See below for more details of the query format. The `RDL.query` method performs the same function as long as the gem is loaded, so you can use this in `irb`.
 
 ```ruby
 $ irb
@@ -479,7 +479,7 @@ type String, :==, '(%any) -> %bool'
 
 Note it is not a bug that `==` is typed to allow any object. Though you would think that developers would generally only compare objects of the same class (since otherwise `==` almost always returns false), in practice a lot of code does compare objects of different classes.
 
-Method `type_alias(name, typ)` can be used to create a user-defined type alias, where `name` must begin with `%`:
+Method `type_alias(name, typ)` (part of `RDL::Annotate`) can be used to create a user-defined type alias, where `name` must begin with `%`:
 
 ```ruby
 type_alias '%real', 'Integer or Float or Rational'
@@ -491,7 +491,7 @@ Type aliases have to be created before they are used (so above, `%path` must be 
 
 ## Generic Class Types
 
-RDL supports *parametric polymorphism* for classes, a.k.a. *generics*. The `type_params` method names the type parameters of the class, and those parameters can then be used inside type signatures:
+RDL supports *parametric polymorphism* for classes, a.k.a. *generics*. The `type_params` method (part of `RDL::Annotate`) names the type parameters of the class, and those parameters can then be used inside type signatures:
 
 ```ruby
 class Array
@@ -594,7 +594,7 @@ Types can be prefixed with `!` to indicate the associated value is not `nil`. Fo
 
 As mentioned in the introduction, calling `type` with `typecheck: :now` statically type checks the body of the annotated method body against the given signature. If the method has already been defined, RDL will try to check the method immediately. Otherwise, RDL will statically type check the method as soon as it is loaded.
 
-Often method bodies cannot be type checked as soon as they are loaded because they refer to classes, methods, and variables that have not been created yet. To support these cases, some other symbol can be supplied as `typecheck: sym`. Then when `rdl_do_typecheck sym` is called, all methods typechecked at `sym` will be statically checked.
+Often method bodies cannot be type checked as soon as they are loaded because they refer to classes, methods, and variables that have not been created yet. To support these cases, some other symbol can be supplied as `typecheck: sym`. Then when `RDL.do_typecheck sym` is called, all methods typechecked at `sym` will be statically checked.
 
 Additionally, `type` can be called with `typecheck: :call`, which will delay checking the method's type until the method is called. Currently these checks are not cached, so expect a big performance hit for using this feature.
 
@@ -605,7 +605,7 @@ To perform type checking, RDL needs source code, which it gets by parsing the fi
 [3] pry(main)> require 'types/core'
 [4] pry(main)> type '() -> Integer', typecheck: :later    # note: typecheck: :now doesn't work in pry
 [5] pry(main)> def f; 'haha'; end
-[6] pry(main)> rdl_do_typecheck :later
+[6] pry(main)> RDL.do_typecheck :later
 RDL::Typecheck::StaticTypeError:
 (string):2:3: error: got type `String' where return type `Integer' expected
 (string):2:   'haha'
@@ -634,15 +634,15 @@ if (some condition) then x = 3 else x = "three" end
 # x has type `Integer or String`
 ```
 
-RDL also provides a method `var_type` that can be used to force a local variable to have a single type through a method body, i.e., to treat it *flow-insensitively* like a standard type system:
+RDL also provides a method `RDL.var_type` that can be used to force a local variable to have a single type through a method body, i.e., to treat it *flow-insensitively* like a standard type system:
 
 ```ruby
-var_type :x, 'Integer'
+RDL.var_type :x, 'Integer'
 x = 3       # okay
 x = "three" # type error
 ```
 
-The first argument to `var_type` is a symbol with the local variable name, and the second argument is a string containing the variable's type. Note that `var_type` is most useful at the beginning of method or code block. Using it elsewhere may result in surprising error messages, since RDL requires variables with fixed types to have the same type along all paths. Method parameters are treated as if `var_type` was called on them at the beginning of the method, fixing them to their declared type. This design choice may be revisited in the future.
+The first argument to `RDL.var_type` is a symbol with the local variable name, and the second argument is a string containing the variable's type. Note that `RDL.var_type` is most useful at the beginning of method or code block. Using it elsewhere may result in surprising error messages, since RDL requires variables with fixed types to have the same type along all paths. Method parameters are treated as if `RDL.var_type` was called on them at the beginning of the method, fixing them to their declared type. This design choice may be revisited in the future.
 
 There is one subtlety for local variables and code blocks. Consider the following code:
 ```ruby
@@ -652,10 +652,11 @@ m() { x = 'bar' }
 ```
 If `m` invokes the code block, `x` will be a `String` after the call. Otherwise `x` will be `1`. Since RDL can't tell whether the code block is ever called, it assigns `x` type `1 or String`. It's actually quite tricky to do very precise reasoning about code blocks. For example, `m` could (pathologically) store its block in a global variable and then only call it the second time `m` is invoked. To keep its reasoning simple, RDL treats any local variables captured (i.e., imported from an outer scope) by a code block flow-insensitively for the lifetime of the method. The type of any such local variable is the union of all types that are ever assigned to it.
 
-RDL always treats instance, class, and global variables flow-insensitively, hence their types must be defined with `var_type`:
+RDL always treats instance, class, and global variables flow-insensitively, hence their types must be defined with `var_type`. In this case, `var_type` can optionally be accessed without the `RDL` prefix by adding in the annotation syntax:
 
 ```ruby
 class A
+  extend RDL::Annotate
   var_type :@f, 'Integer'
   def m
     @f = 3       # type safe
@@ -667,7 +668,7 @@ end
 
 The `var_type` method may also be called as `var_type klass, :name, typ` to assign a type to an instance or class variable of class `klass`.
 
-As a short-hand, RDL defines methods `attr_accessor_type`, `attr_reader_type`, and `attr_writer_type` to behave like their corresponding non-`_type` analogs but  assign types to the attributes. For example, `attr_accessor_type :f, 'Integer', :g, 'String'` is equivalent to:
+As a short-hand, RDL defines methods `attr_accessor_type`, `attr_reader_type`, and `attr_writer_type` (also part of `RDL::Annotate`) to behave like their corresponding non-`_type` analogs but  assign types to the attributes. For example, `attr_accessor_type :f, 'Integer', :g, 'String'` is equivalent to:
 
 ```ruby
 var_type :@f, 'Integer'
@@ -746,15 +747,15 @@ RDL's static type checker makes some assumptions that should hold unless your Ru
 
 RDL also includes a few other useful methods:
 
-* `rdl_alias [klass], new_name, old_name` tells RDL that method `new_name` of `klass` is an alias for method `old_name` (of the same class), and therefore they should have the same contracts and types. This method is only needed when adding contracts and types to method that have already been aliased; it's not needed if the method is aliased after the contract or type has been added. If the `klass` argument is omitted it's assumed to be `self`.
+* `RDL.rdl_alias [klass], new_name, old_name` (part of `RDL::Annotate`) tells RDL that method `new_name` of `klass` is an alias for method `old_name` (of the same class), and therefore they should have the same contracts and types. This method is only needed when adding contracts and types to method that have already been aliased; it's not needed if the method is aliased after the contract or type has been added. If the `klass` argument is omitted it's assumed to be `self`.
 
-* `rdl_nowrap [klass]`, if called at the top-level of a class, causes RDL to behave as if `wrap: false` were passed to all `type`, `pre`, and `post` calls in `klass`. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead. If `klass` is omitted it's assumed to be `self`.
+* `RDL.nowrap [klass]`, if called at the top-level of a class, causes RDL to behave as if `wrap: false` were passed to all `type`, `pre`, and `post` calls in `klass`. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead. If `klass` is omitted it's assumed to be `self`.
 
-* `rdl_remove_type klass, meth` removes the type annotation for meth in klass. Fails if meth does not have a type annotation.
+* `RDL.remove_type klass, meth` removes the type annotation for meth in klass. Fails if meth does not have a type annotation.
 
-* `rdl_query` prints information about types; see below for details.
+* `RDL.query` prints information about types; see below for details.
 
-* `rdl_do_at(sym, &blk)` invokes `blk.call(sym)` when `rdl_do_typecheck(sym)` is called. Useful when type annotations need to be generated at some later time, e.g., because not all classes are loaded.
+* `RDL.do_at(sym, &blk)` invokes `blk.call(sym)` when `RDL.do_typecheck(sym)` is called. Useful when type annotations need to be generated at some later time, e.g., because not all classes are loaded.
 
 # Performance
 

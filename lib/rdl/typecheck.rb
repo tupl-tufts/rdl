@@ -645,7 +645,7 @@ module RDL::Typecheck
       # children[0] = receiver; if nil, receiver is self
       # children[1] = method name, a symbol
       # children [2..] = actual args
-      return tc_var_type(scope, env, e) if is_RDL(e.children[0]) && e.children[1] == :var_type
+      return tc_var_type(scope, env, e) if (e.children[0].nil? || is_RDL(e.children[0])) && e.children[1] == :var_type
       return tc_type_cast(scope, env, e) if is_RDL(e.children[0]) && e.children[1] == :type_cast && scope[:block].nil?
       return tc_note_type(scope, env, e) if is_RDL(e.children[0]) && e.children[1] == :rdl_note_type
       return tc_instantiate!(scope, env, e) if is_RDL(e.children[0]) && e.children[1] == :instantiate!
