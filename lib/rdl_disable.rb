@@ -1,11 +1,6 @@
 # Defines RDL methods that do nothing
 
 module RDL
-  def nowrap(*args); end
-  def at(*args); end
-  def do_typecheck(*args); end
-  def note_type(*args); end
-  def remove_type(*args); end
 end
 
 module RDL::Annotate
@@ -38,12 +33,14 @@ end
 
 module RDL
   extend RDL::Annotate
+  def self.nowrap(*args); end
+  def self.at(*args); end
+  def self.do_typecheck(*args); end
+  def self.note_type(*args); end
+  def self.remove_type(*args); end
+  def self.instantaite!(*args); self; end
+  def self.deinstantaite!(*args); self; end
+  def self.type_cast(*args); self; end
 end
 
 def RDL.config(*args); end
-
-class Object
-  def rdl_instantaite!(*args); self; end
-  def rdl_deinstantaite!(*args); self; end
-  def rdl_type_cast(*args); self; end
-end

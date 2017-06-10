@@ -32,6 +32,8 @@
 - at_exit handler only installed if `Config.report` or `.guess_types` are accessed
 - Subclass Parser::Diagnostic instead of monkey patching it
 - Replaced `Fixnum` with `Integer` in README (suggested by https://github.com/Dorian)
+- All annotations removed from `Object` and added to `RDL::Annotate`
+- `type_cast`, `instantiate!`, and `deinstantiate!` are now part of the `RDL` module to avoid adding them to `Object`
 
 ## [2.0.1] - 2016-11-11
 

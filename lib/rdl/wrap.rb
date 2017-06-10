@@ -489,6 +489,24 @@ module RDL::Annotate
     end
     nil
   end
+
+  # The following code attempts to warn about annotation methods already being defined on the class/module.
+  # But it doesn't work because `extended` gets called *after* the module's methods are already added...
+  # def self.extended(other)
+  #   [:pre,
+  #    :post,
+  #    :type,
+  #    :var_type,
+  #    :attr_accessor_type,
+  #    :attr_reader_type,
+  #    :attr_type,
+  #    :attr_writer_type,
+  #    :rdl_alias,
+  #    :type_params,
+  #    :type_alias].each { |a|
+  #      warn "RDL WARNING: #{other.to_s} extended RDL::Annotate but already has #{a} defined" if other.respond_to? a
+  #    }
+  # end
 end
 
 module RDL
@@ -532,41 +550,38 @@ module RDL
     RDL::Globals.info.remove klass, meth, :type
     nil
   end
-end
-
-class Object
 
   # Returns a new object that wraps self in a type cast. If force is true this cast is *unchecked*, so use with caution
-  def rdl_type_cast(typ, force: false)
+  def self.type_cast(obj, typ, force: false)
     new_typ = if typ.is_a? RDL::Type::Type then typ else RDL::Globals.parser.scan_str "#T #{typ}" end
-    raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || typ.member?(self)
-    obj = SimpleDelegator.new(self)
-    obj.instance_variable_set('@__rdl_type', new_typ)
-    obj
+    raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || typ.member?(obj)
+    new_obj = SimpleDelegator.new(obj)
+    new_obj.instance_variable_set('@__rdl_type', new_typ)
+    new_obj
   end
 
   # [+typs+] is an array of types, classes, symbols, or strings to instantiate
   # the type parameters. If a class, symbol, or string is given, it is
   # converted to a NominalType.
-  def rdl_instantiate!(*typs, check: false)
-    klass = self.class.to_s
+  def self.instantiate!(obj, *typs, check: false)
+    klass = obj.class.to_s
     klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
     formals, _, all = RDL::Globals.type_params[klass]
     raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
     raise RuntimeError, "Expecting #{formals.size} type parameters, got #{typs.size}" unless formals.size == typs.size
-    raise RuntimeError, "Instance already has type instantiation" if ((defined? @__rdl_type) && @rdl_type)
+    raise RuntimeError, "Instance already has type instantiation" if obj.instance_variable_get(:@__rdl_type)
     new_typs = typs.map { |t| if t.is_a? RDL::Type::Type then t else RDL::Globals.parser.scan_str "#T #{t}" end }
     t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *new_typs)
     if check
       if all.instance_of? Symbol
-        self.send(all) { |*objs|
-          new_typs.zip(objs).each { |nt, obj|
-            if nt.instance_of? RDL::Type::GenericType # require obj to be instantiated
-              t_obj = RDL::Util.rdl_type(obj)
-              raise RDL::Type::TypeError, "Expecting element of type #{nt.to_s}, but got uninstantiated object #{obj.inspect}" unless t_obj
-              raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got type #{t_obj.to_s}" unless t_obj <= nt
+        obj.send(all) { |*objs|
+          new_typs.zip(objs).each { |nt, o|
+            if nt.instance_of? RDL::Type::GenericType # require o to be instantiated
+              t_o = RDL::Util.rdl_type(o)
+              raise RDL::Type::TypeError, "Expecting element of type #{nt.to_s}, but got uninstantiated object #{o.inspect}" unless t_o
+              raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got type #{t_o.to_s}" unless t_o <= nt
             else
-              raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got #{obj.inspect}" unless nt.member? obj
+              raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got #{o.inspect}" unless nt.member? o
             end
           }
         }
@@ -574,17 +589,17 @@ class Object
         raise RDL::Type::TypeError, "Not an instance of #{t}" unless instance_exec(*new_typs, &all)
       end
     end
-    @__rdl_type = t
-    self
+    obj.instance_variable_set(:@__rdl_type, t)
+    obj
   end
 
-  def rdl_deinstantiate!
-    klass = self.class.to_s
+  def self.deinstantiate!(obj)
+    klass = obj.class.to_s
     klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
     raise RuntimeError, "Class #{self.to_s} is not parameterized" unless RDL::Globals.type_params[klass]
-    raise RuntimeError, "Instance is not instantiated" unless @__rdl_type && @__rdl_type.instance_of?(RDL::Type::GenericType)
-    @__rdl_type = nil
-    self
+    raise RuntimeError, "Instance is not instantiated" unless obj.instance_variable_get(:@__rdl_type).instance_of?(RDL::Type::GenericType)
+    obj.instance_variable_set(:@__rdl_type, nil)
+    obj
   end
 end
 
