@@ -12,6 +12,8 @@
 - Ruby 2.4 compatibility!
 - Various core and standard library types
 - Parsing bug with `or`
+- Sub-classes not wrapped bug
+- Exception from case/when branch with empty body
 
 ### Added
 - Support operator assignment when left-hand side has method args
@@ -22,6 +24,8 @@
 - More precise static type checking for `Object#class` method
 - Klass argument to rdl_nowrap, rdl_alias
 - Some more support for Rails
+- Support for next/break in block arguments
+- Support for super in static analysis
 
 ### Changed
 - Global variables are now module variables of RDL::Globals
