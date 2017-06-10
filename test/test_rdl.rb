@@ -285,11 +285,11 @@ RUBY
   end
 
   def test_cast
-    obj1 = 3.rdl_type_cast(RDL::Globals.types[:nil], force: true)
+    obj1 = RDL.type_cast(3, RDL::Globals.types[:nil], force: true)
     assert (RDL::Globals.types[:nil].member? obj1)
-    obj2 = 3.rdl_type_cast('nil', force: true)
+    obj2 = RDL.type_cast(3, 'nil', force: true)
     assert (RDL::Globals.types[:nil].member? obj2)
-    assert_raises(RuntimeError) { 3.rdl_type_cast(RDL::Globals.types[:nil]) }
+    assert_raises(RuntimeError) { RDL.type_cast(3, RDL::Globals.types[:nil]) }
   end
 
   def test_pre_post_self

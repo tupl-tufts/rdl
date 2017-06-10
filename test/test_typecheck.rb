@@ -1070,7 +1070,7 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = Object.new; x += 1", env: @env) }
     assert do_tc("e = E.new; e.f += 1", env: @env) <= RDL::Globals.types[:nil] # return type of f=
     assert do_tc("x &= false") <= RDL::Globals.types[:false] # weird
-    assert do_tc("h = {}; h = h.type_cast('Hash<Symbol, String>', force: true); h[:a] = ''; h[:a] += 's'", env: @env) <= RDL::Globals.types[:string]
+    assert do_tc("h = {}; h = RDL.type_cast(h, 'Hash<Symbol, String>', force: true); h[:a] = ''; h[:a] += 's'", env: @env) <= RDL::Globals.types[:string]
   end
 
   def test_and_or_asgn
@@ -1145,14 +1145,14 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_cast
-    assert do_tc("(1 + 2).type_cast('Integer')", env: @env) <= RDL::Globals.types[:integer]
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("1.type_cast('Integer', 42)", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("1.type_cast(Integer)", env: @env) }
-    assert do_tc("(1 + 2).type_cast('Integer', force: true)", env: @env) <= RDL::Globals.types[:integer]
-    assert do_tc("(1 + 2).type_cast('Integer', force: false)", env: @env) <= RDL::Globals.types[:integer]
-    assert do_tc("(1 + 2).type_cast('Integer', force: :blah)", env: @env) <= RDL::Globals.types[:integer]
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(1 + 2).type_cast('Integer', forc: true)", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(1 + 2).type_cast('Fluffy Bunny')") }
+    assert do_tc("RDL.type_cast(1 + 2, 'Integer')", env: @env) <= RDL::Globals.types[:integer]
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("RDL.type_cast(1, 'Integer', 42)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("RDL.type_cast(1, Integer)", env: @env) }
+    assert do_tc("RDL.type_cast(1 + 2, 'Integer', force: true)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("RDL.type_cast(1 + 2, 'Integer', force: false)", env: @env) <= RDL::Globals.types[:integer]
+    assert do_tc("RDL.type_cast(1 + 2, 'Integer', force: :blah)", env: @env) <= RDL::Globals.types[:integer]
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("RDL.type_cast(1 + 2, 'Integer', forc: true)", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("RDL.type_cast(1 + 2, 'Fluffy Bunny')") }
   end
 
   def test_instantiate
@@ -1165,7 +1165,7 @@ class TestTypecheck < Minitest::Test
     assert (
       self.class.class_eval {
         type "(Integer, Integer) -> Array<Integer>", typecheck: :now
-        def def_inst_pass(x, y) a = Array.new(x,y); a.instantiate! "Integer"; a; end
+        def def_inst_pass(x, y) a = Array.new(x,y); RDL.instantiate!(a, "Integer"); a; end
       }
     )
     assert_raises(RDL::Typecheck::StaticTypeError) {
@@ -1183,20 +1183,20 @@ class TestTypecheck < Minitest::Test
     assert(
       self.class.class_eval {
         type "(Integer) -> Integer", typecheck: :now
-        def def_inst_hash_pass(x) hash = {}; hash.instantiate!(String, Integer); hash["test"] = x; hash["test"]; end
+        def def_inst_hash_pass(x) hash = {}; RDL.instantiate!(hash, String, Integer); hash["test"] = x; hash["test"]; end
       }
     )
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "(Integer) -> Integer", typecheck: :now
-        def def_inst_no_param(x) x.instantiate!(Integer); end
+        def def_inst_no_param(x) RDL.instantiate!(x, Integer); end
       }
     }
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "(Integer) -> Integer", typecheck: :now
-        def def_inst_num_args(x) a = Array.new(x, x); a.instantiate!(Integer, Integer, Integer); end
+        def def_inst_num_args(x) a = Array.new(x, x); RDL.instantiate!(a, Integer, Integer, Integer); end
       }
     }
   end
