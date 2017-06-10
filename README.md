@@ -711,7 +711,7 @@ RDL uses the same approach for hashes: hash literals are treated as finite hashe
 
 ## Other Features and Limitations
 
-*Displaying types.* As an aid to debugging, the method `rdl_note_type e` will display the type of `e` during type checking. At run time, this method returns its argument. Note that in certain cases RDL may type check the same code repeatedly, in which case an expression's type could be printed multiple times.
+*Displaying types.* As an aid to debugging, the method `RDL.note_type e` will display the type of `e` during type checking. At run time, this method returns its argument. Note that in certain cases RDL may type check the same code repeatedly, in which case an expression's type could be printed multiple times.
 
 * *Conditional guards and singletons.* If an `if` or `unless` guard has a singleton type, RDL will typecheck both branches but not include types from the unrealizable branch in the expression type. For example, `if true then 1 else 'two' end` has type `1`. RDL behaves similarly for `&&` and `||`. However, RDL does not implement this logic for `case`.
 
