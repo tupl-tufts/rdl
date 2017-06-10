@@ -435,14 +435,14 @@ class TestTypecheck < Minitest::Test
 
   def test_lvar_type
     # var_type arg type and formattests
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :x", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :x, 3", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type 'x', 'Integer'", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :@x, 'Integer'", env: @env) }
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :x, 'Fluffy Bunny'", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("RDL.var_type :x", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("RDL.var_type :x, 3", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("RDL.var_type 'x', 'Integer'", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("RDL.var_type :@x, 'Integer'", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("RDL.var_type :x, 'Fluffy Bunny'", env: @env) }
 
-    assert do_tc("var_type :x, 'Integer'; x = 3; x", env: @env) <= RDL::Globals.types[:integer]
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("var_type :x, 'Integer'; x = 'three'", env: @env) }
+    assert do_tc("RDL.var_type :x, 'Integer'; x = 3; x", env: @env) <= RDL::Globals.types[:integer]
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("RDL.var_type :x, 'Integer'; x = 'three'", env: @env) }
     self.class.class_eval {
       type "(Integer) -> nil", typecheck: :now
       def lvar_type_ff(x) x = 42; nil; end
@@ -457,6 +457,7 @@ class TestTypecheck < Minitest::Test
 
   def test_ivar_ivasgn
     self.class.class_eval {
+      extend RDL::Annotate
       var_type :@foo, "Integer"
       var_type :@@foo, "Integer"
       var_type :$test_ivar_ivasgn_global, "Integer"
