@@ -1196,7 +1196,7 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "(Integer) -> Integer", typecheck: :now
-        def def_inst_num_args(x) a = Array.new(x, x); RDL.instantiate!(a, Integer, Integer, Integer); end
+        def def_inst_num_args(x) a = Array.new(x, x); RDL.instatntiate!(a, Integer, Integer, Integer); end
       }
     }
   end

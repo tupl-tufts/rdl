@@ -173,6 +173,10 @@ module RDL::Typecheck
     r
   end
 
+  def self.is_RDL(node)
+    return node&.type == :const && node.children[0] == nil && node.children[1] == :RDL
+  end
+
   def self.get_ast(klass, meth)
     file, line = RDL::Globals.info.get(klass, meth, :source_location)
     raise RuntimeError, "No file for #{RDL::Util.pp_klass_method(klass, meth)}" if file.nil?
@@ -641,10 +645,10 @@ module RDL::Typecheck
       # children[0] = receiver; if nil, receiver is self
       # children[1] = method name, a symbol
       # children [2..] = actual args
-      return tc_var_type(scope, env, e) if e.children[1] == :var_type && e.children[0].nil?
-      return tc_type_cast(scope, env, e) if e.children[1] == :type_cast && scope[:block].nil?
-      return tc_note_type(scope, env, e) if e.children[1] == :rdl_note_type && e.children[0].nil?
-      return tc_instantiate!(scope, env, e) if e.children[1] == :instantiate!
+      return tc_var_type(scope, env, e) if is_RDL(e.children[0]) && e.children[1] == :var_type
+      return tc_type_cast(scope, env, e) if is_RDL(e.children[0]) && e.children[1] == :type_cast && scope[:block].nil?
+      return tc_note_type(scope, env, e) if is_RDL(e.children[0]) && e.children[1] == :rdl_note_type
+      return tc_instantiate!(scope, env, e) if is_RDL(e.children[0]) && e.children[1] == :instantiate!
       envi = env
       tactuals = []
       block = scope[:block]
@@ -1109,16 +1113,16 @@ RUBY
   end
 
   def self.tc_type_cast(scope, env, e)
-    error :type_cast_format, [], e unless e.children.length <= 4
-    typ_str = e.children[2].children[0] if (e.children[2].type == :str) || (e.children[2].type == :string)
-    error :type_cast_format, [], e.children[2] if typ_str.nil?
+    error :type_cast_format, [], e unless e.children.length <= 5
+    typ_str = e.children[3].children[0] if (e.children[3].type == :str) || (e.children[3].type == :string)
+    error :type_cast_format, [], e.children[3] if typ_str.nil?
     begin
       typ = RDL::Globals.parser.scan_str("#T " + typ_str)
     rescue Racc::ParseError => err
-      error :generic_error, [err.to_s[1..-1]], e.children[2] # remove initial newline
+      error :generic_error, [err.to_s[1..-1]], e.children[3] # remove initial newline
     end
-    if e.children[3]
-      fh = e.children[3]
+    if e.children[4]
+      fh = e.children[4]
       error :type_cast_format, [], fh unless fh.type == :hash && fh.children.length == 1
       pair = fh.children[0]
       error :type_cast_format, [], fh unless pair.type == :pair && pair.children[0].type == :sym && pair.children[0].children[0] == :force
@@ -1129,37 +1133,36 @@ RUBY
   end
 
   def self.tc_note_type(scope, env, e)
-    error :note_type_format, [], e unless e.children.length == 3 && scope[:block].nil?
-    env, typ = tc(scope, env, e.children[2])
-    note :note_type, [typ], e.children[2]
+    error :note_type_format, [], e unless e.children.length == 4 && scope[:block].nil?
+    env, typ = tc(scope, env, e.children[3])
+    note :note_type, [typ], e.children[3]
     [env, typ]
   end
 
   def self.tc_instantiate!(scope, env, e)
-    rec, _, *args = *e
-    env, rec_typ = tc(scope, env, rec)
-    case rec_typ
+    error :instantiate_format, [], e if e.children.length < 4
+    env, obj_typ = tc(scope, env, e.children[2])
+    case obj_typ
     when RDL::Type::GenericType
-      klass = rec_typ.base.name.to_s
+      klass = obj_typ.base.name.to_s
     when RDL::Type::NominalType
-      klass = rec_typ.name.to_s
+      klass = obj_typ.name.to_s
     when RDL::Type::TupleType
       klass = "Array"
     when RDL::Type::FiniteHashType
       klass = "Hash"
     when RDL::Type::SingletonType
-      klass = if rec_typ.val.is_a?(Class) then rec_typ.val.to_s else rec_typ.val.class.to_s end
+      klass = if obj_typ.val.is_a?(Class) then obj_typ.val.to_s else obj_typ.val.class.to_s end
     else
       error :bad_inst_type, [obj_typ], e
     end
 
     formals, _, _ = RDL::Globals.type_params[klass]
 
-    error :instantiate_format, [], e if args.size == 0
-    if args.last.type == :hash
-      *typ_args, _ = *args
+    if e.children.last.type == :hash
+      typ_args = e.children[3..-2]
     else
-      typ_args = args
+      typ_args = e.children[3..-1]
     end
     error :inst_not_param, [klass], e unless formals
     error :inst_num_args, [formals.size, typ_args.size], e unless formals.size == typ_args.size
@@ -1178,9 +1181,9 @@ RUBY
     }
 
     t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *new_typs)
-    case rec.type
+    case e.children[2].type
     when :lvar
-      var_name = rec.children[0]
+      var_name = e.children[2].children[0]
     else
       raise RuntimeError, "instantiate! expects local variable as receiver"
       error :inst_lvar, [], e
@@ -1188,7 +1191,6 @@ RUBY
 
     env = env.bind(var_name, t)
     [env, t]
-
   end
 
   # Type check a send
@@ -1530,7 +1532,7 @@ class Diagnostic < Parser::Diagnostic
     block_block: "can't call yield on a block expecting another block argument",
     block_type_error: "argument type error for block\n%s",
     missing_ancestor_type: "ancestor `%s' of `%s' has method `%s' but no type for it",
-    type_cast_format: "type_cast must be called as `type_cast type-string' or `type_cast type-string, force: expr'",
+    type_cast_format: "type_cast must be called as `type_cast obj, type-string' or `type_cast obj, type-string, force: expr'",
     instantiate_format: "instantiate! must be called as `instantiate! type*' or `instantiate! type*, check: bool' where type is a string, symbol, or class for static type checking.",
     var_type_format: "var_type must be called as `var_type :var-name, type-string'",
     puts_type_format: "puts_type must be called as `puts_type e'",
