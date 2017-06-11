@@ -2,8 +2,8 @@ RDL.nowrap :Enumerator
 
 RDL.type_params :Enumerator, [:t], :all?
 
-RDL.type :Enumerator, 'self.new', '(?Integer) { (Array<u>) -> %any } -> Enumerator<u>'
-RDL.type :Enumerator, 'self.new', '(?Proc) { (Array<u>) -> %any } -> Enumerator<u>' # TODO Proc
+RDL.type :Enumerator, :initialize, '(?Integer) { (Array<u>) -> %any } -> self<u>'
+RDL.type :Enumerator, :initialize, '(?Proc) { (Array<u>) -> %any } -> self<u>' # TODO Proc
 # TODO: deprecated form of new
 RDL.type :Enumerator, :each, '() { (t) -> %any } -> %any' # is there a better RDL.type?
 RDL.type :Enumerator, :each, '() -> self'

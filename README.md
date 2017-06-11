@@ -593,7 +593,7 @@ Types can be prefixed with `!` to indicate the associated value is not `nil`. Fo
 
 ## Constructor Type
 
-Type signatures can be added to constructors by giving a type signature for `initialize` (not for `new` or `self.new`). The return type for `initialize` must always be `self`:
+Type signatures can be added to constructors by giving a type signature for `initialize` (not for `new` or `self.new`). The return type for `initialize` must always be `self` or a GenericType where the base is `self`:
 
 ```ruby
 type :initialize, '(String, Fixnum) -> self'
