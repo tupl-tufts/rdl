@@ -174,7 +174,7 @@ module RDL::Typecheck
   end
 
   def self.is_RDL(node)
-    return node&.type == :const && node.children[0] == nil && node.children[1] == :RDL
+    return node != nil && node.type == :const && node.children[0] == nil && node.children[1] == :RDL
   end
 
   def self.get_ast(klass, meth)
