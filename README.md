@@ -34,6 +34,7 @@
   * [Type Casts](#type-casts)
   * [Bottom Type (%bot)](#bottom-type-bot)
   * [Non-null Type](#non-null-type)
+  * [Constructor Type] (#constructor-type)
 * [Static Type Checking](#static-type-checking)
   * [Types for Variables](#types-for-variables)
   * [Tuples, Finite Hashes, and Subtyping](#tuples-finite-hashes-and-subtyping)
@@ -589,6 +590,14 @@ Types can be prefixed with `!` to indicate the associated value is not `nil`. Fo
 `type :x=, '(!Integer) -> !Integer'  # x's argument must not be nil`
 
 **Warning:** This is simply *documentation* of non-nullness, and **is not checked** by the static type checker. The contract checker might or might not enforce non-nullness. (For those who are curious: RDL has this annotation because it seems useful for descriptive purposes. However, it's quite challenging to build a practical analysis that enforces non-nilness without reporting too many false positives.)
+
+## Constructor Type
+
+Type signatures can be added to constructors by giving a type signature for `initialize` (not for `new` or `self.new`). The return type for `initialize` must always be `self`:
+
+```ruby
+type :initialize, '(String, Fixnum) -> self'
+```
 
 # Static Type Checking
 
