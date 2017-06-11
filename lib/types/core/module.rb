@@ -2,8 +2,8 @@ RDL.nowrap :Module
 
 RDL.type :Module, 'self.constants', '() -> Array<Integer>' # also constants(inherited), but undocumented
 RDL.type :Module, 'self.nesting', '() -> Array<Module>'
-RDL.type :Module, 'self.new', '() -> Module'
-RDL.type :Module, 'self.new', '() { (Module) -> %any } -> Module'
+RDL.type :Module, :initialize, '() -> self'
+RDL.type :Module, :initialize, '() { (Module) -> %any } -> self'
 
 RDL.type :Module, :<, '(Module other) -> %bool or nil'
 RDL.type :Module, :<=, '(Module other) -> %bool or nil'

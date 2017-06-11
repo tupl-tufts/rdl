@@ -3,8 +3,8 @@ RDL.nowrap :Regexp
 RDL.type :Regexp, 'self.escape', '(String or Symbol) -> String'
 RDL.type :Regexp, 'self.last_match', '() -> MatchData', wrap: false # Can't wrap or messes up MatchData
 RDL.type :Regexp, 'self.last_match', '(Integer) -> String', wrap: false
-RDL.type :Regexp, 'self.new', '(String, ?%any options, ?String kcode) -> Regexp'
-RDL.type :Regexp, 'self.new', '(Regexp) -> Regexp'
+RDL.type :Regexp, :initialize, '(String, ?%any options, ?String kcode) -> self'
+RDL.type :Regexp, :initialize, '(Regexp) -> self'
 RDL.rdl_alias :Regexp, 'self.compile', 'self.new'
 RDL.rdl_alias :Regexp, 'self.quote', 'self.escape'
 RDL.type :Regexp, 'self.try_convert', '(%any obj) -> Regexp or nil'
