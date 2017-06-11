@@ -401,12 +401,6 @@ type File, 'self.dirname', '(String file) -> String dir'
 
 (Notice also the use of a named return type, which we haven't seen before.)
 
-Type signatures can be added to `initialize` by giving a type signature for `self.new`:
-
-```ruby
-type File, 'self.new', '(String file, ?String mode, ?String perm, ?Integer opt) -> File'
-```
-
 ## Structural Types
 
 Some Ruby methods are intended to take any object that has certain methods. RDL uses *structural types* to denote such cases:
