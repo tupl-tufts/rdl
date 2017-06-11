@@ -1,12 +1,12 @@
 RDL.nowrap :IO # Do not wrap this class. Leads to mysterious errors.
 
+RDL.type :IO, :initialize, '(Integer fd, ?Integer mode, ?Integer opt) -> self'
 RDL.type :IO, 'self.binread', '(String name, ?Integer length, ?Integer offset) -> String'
 RDL.type :IO, 'self.binwrite', '(String name, String, ?Integer offset, %open_args) -> Integer'
 RDL.type :IO, 'self.copy_stream', '(String or IO src, String or IO dst, ?Integer copy_length, ?Integer src_offset) -> Integer'
-RDL.rdl_alias :IO, 'self.for_fd', 'self.new'
+RDL.rdl_alias :IO, 'self.for_fd', 'initialize'
 RDL.type :IO, 'self.foreach', '(String name, ?String sep, ?Integer limit, %open_args) { (String) -> %any } -> nil'
 RDL.type :IO, 'self.foreach', '(String name, ?String sep, ?Integer limit, %open_args) -> Enumerator<String>'
-RDL.type :IO, 'self.new', '(Integer fd, ?Integer mode, ?Integer opt) -> IO'
 RDL.type :IO, 'self.open', '(Integer fd, ?String mode, %open_args) -> IO'
 RDL.type :IO, 'self.open', '(Integer fd, ?String mode, %open_args) { (IO) -> t } -> t'
 RDL.type :IO, 'self.pipe', '(?String ext_or_ext_int_enc, %open_args) -> [IO, IO]'

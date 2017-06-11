@@ -231,8 +231,8 @@ module RDL::Typecheck
         self_type = RDL::Type::NominalType.new(klass)
       end
       if meth == :initialize
-        # initialize method must always return "self"
-        error :bad_initialize_type, [], ast unless type.ret.is_a?(RDL::Type::VarType) && type.ret.name == :self
+        # initialize method must always return "self" or GenericType where base is "self"
+        error :bad_initialize_type, [], ast unless ((type.ret.is_a?(RDL::Type::VarType) && type.ret.name == :self) || (type.ret.is_a?(RDL::Type::GenericType) && type.ret.base.is_a?(RDL::Type::VarType) && type.ret.base.name == :self))
       end
       inst = {self: self_type}
       type = type.instantiate inst
@@ -1228,14 +1228,16 @@ RUBY
         if meth == :new then
           meth_lookup = :initialize
           trecv_lookup = trecv.val.to_s
+          self_inst = RDL::Type::NominalType.new(trecv.val)
         else
           meth_lookup = meth
           trecv_lookup = RDL::Util.add_singleton_marker(trecv.val.to_s)
+          self_inst = trecv
         end
         ts = lookup(scope, trecv_lookup, meth_lookup, e)
         ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] if (meth == :new) && (ts.nil?) # there's always a nullary new if initialize is undefined
         error :no_singleton_method_type, [trecv.val, meth], e unless ts
-        inst = {self: trecv}
+        inst = {self: self_inst}
         tmeth_inter = ts.map { |t| t.instantiate(inst) }
       elsif trecv.val.is_a?(Symbol) && meth == :to_proc
         # Symbol#to_proc on a singleton symbol type produces a Proc for the method of the same name
@@ -1295,7 +1297,15 @@ RUBY
           if tmeth_inst
             tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
             if trecv.is_a?(RDL::Type::SingletonType) && meth == :new
-              trets_tmp << RDL::Type::NominalType.new(trecv.val)
+              init_typ = RDL::Type::NominalType.new(trecv.val)
+              if (tmeth.ret.instance_of?(RDL::Type::GenericType))
+                error :bad_initialize_type, [], e unless (tmeth.ret.base == init_typ)
+              elsif (tmeth.ret.instance_of?(RDL::Type::AnnotatedArgType) || tmeth.ret.instance_of?(RDL::Type::DependentArgType))
+                error :bad_initialize_type, [], e unless (tmeth.ret.type == init_typ)
+              else
+                error :bad_initialize_type, [], e unless (tmeth.ret == init_typ)
+              end
+              trets_tmp << init_typ
             else
               trets_tmp << tmeth.ret.instantiate(tmeth_inst) # found a match for this subunion; add its return type to trets_tmp
             end
@@ -1511,7 +1521,7 @@ class Diagnostic < Parser::Diagnostic
     inst_not_param: "instantiate! receiver is of class `%s' which is not parameterized",
     inst_num_args: "instantiate! expecting `%s' type parameters, got `%s' parameters",
     inst_lvar: "instantiate! expects local variable as receiver",
-    bad_initialize_type: 'initialize method must always be annotated to return type "self"',
+    bad_initialize_type: 'initialize method must always be annotated to return type "self" or a GenericType where the base is "self"',
     undefined_local_or_method: "undefined local variable or method `%s'",
     nonmatching_range_type: "attempt to construct range with non-matching types `%s' and `%s'",
     no_instance_method_type: "no type information for instance method `%s#%s'",

@@ -2,14 +2,14 @@ require_relative 'type'
 
 module RDL::Type
   # A type that is parameterized on one or more other types. The base type
-  # must be a NominalType, while the parameters should be strings or symbols
+  # must be a NominalType or self, while the parameters should be strings or symbols
   class GenericType < Type
     attr_reader :base
     attr_reader :params
 
     def initialize(base, *params)
       raise RuntimeError, "Attempt to create generic type with non-type param" unless params.all? { |p| p.is_a? Type }
-      raise "base must be NominalType" unless base.instance_of? NominalType
+      raise "base must be NominalType or self, got #{base} of type #{base.class}" unless ((base.instance_of? NominalType) || ((base.instance_of? VarType) && (base.name.to_s == "self")))
       @base = base
       @params = params
       super()
@@ -49,7 +49,7 @@ module RDL::Type
     end
 
     def instantiate(inst)
-      GenericType.new(base, *params.map { |t| t.instantiate(inst) })
+      GenericType.new(base.instantiate(inst), *params.map { |t| t.instantiate(inst) })
     end
 
     def hash

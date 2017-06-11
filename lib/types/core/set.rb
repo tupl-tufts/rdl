@@ -3,7 +3,7 @@ RDL.nowrap :Set
 RDL.type_params :Set, [:t], :all?
 
 RDL.type :Set, 'self.[]', '(*u) -> Set<u>'
-RDL.type :Set, 'self.new', '(?Enumerable<u> enum) -> Set<u>'
+RDL.type :Set, :initialize, '(?Enumerable<u> enum) -> self<u>'
 
 RDL.rdl_alias :Set, :&, :intersection
 RDL.type :Set, :+, '(Enumerable<t> enum) -> Set<t>'

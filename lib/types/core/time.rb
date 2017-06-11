@@ -6,7 +6,7 @@ RDL.type :Time, 'self.at', '(Numeric seconds, Numeric microseconds_with_frac) ->
 RDL.type :Time, 'self.gm', '(Integer year, ?(Integer or String) month, ?Integer day, ?Integer hour, ?Integer min, ?Numeric sec, ?Numeric usec_with_frac) -> Time'
 RDL.type :Time, 'self.local', '(Integer year, ?(Integer or String) month, ?Integer day, ?Integer hour, ?Integer min, ?Numeric sec, ?Numeric usec_with_frac) -> Time'
 RDL.rdl_alias :Time, 'self.mktime', 'self.local'
-RDL.type :Time, 'self.new', '(?Integer year, ?(Integer or String) month, ?Integer day, ?Integer hour, ?Integer min, ?Numeric sec, ?Numeric usec_with_frac) -> Time'
+RDL.type :Time, :initialize, '(?Integer year, ?(Integer or String) month, ?Integer day, ?Integer hour, ?Integer min, ?Numeric sec, ?Numeric usec_with_frac) -> self'
 RDL.type :Time, 'self.now', '() -> Time'
 RDL.type :Time, 'self.utc', '(Integer year, ?(Integer or String) month, ?Integer day, ?Integer hour, ?Integer min, ?Numeric sec, ?Numeric usec_with_frac) -> Time'
 

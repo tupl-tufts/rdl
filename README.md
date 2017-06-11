@@ -34,6 +34,7 @@
   * [Type Casts](#type-casts)
   * [Bottom Type (%bot)](#bottom-type-bot)
   * [Non-null Type](#non-null-type)
+  * [Constructor Type] (#constructor-type)
 * [Static Type Checking](#static-type-checking)
   * [Types for Variables](#types-for-variables)
   * [Tuples, Finite Hashes, and Subtyping](#tuples-finite-hashes-and-subtyping)
@@ -400,12 +401,6 @@ type File, 'self.dirname', '(String file) -> String dir'
 
 (Notice also the use of a named return type, which we haven't seen before.)
 
-Type signatures can be added to `initialize` by giving a type signature for `self.new`:
-
-```ruby
-type File, 'self.new', '(String file, ?String mode, ?String perm, ?Integer opt) -> File'
-```
-
 ## Structural Types
 
 Some Ruby methods are intended to take any object that has certain methods. RDL uses *structural types* to denote such cases:
@@ -531,7 +526,7 @@ y = x
 y.push("three") # also a type error
 ```
 
-Calls to `RDL.instantiate!` may also come with a `check` flag. By default, `check` is set to false. When `check` is set to true, we ensure that the receiving object's contents are consistent with the given type *at the time of the call to `RDL.instantiate!``*. Currently this is enforced using the second parameter to `type_params`, which must name a method that behaves like `Array#all?`, i.e., it iterates through the contents, checking that a block argument is satisfied. As seen above, for `Array` we call `type_params(:t, :all?)`. Then at the call `x.instantiate('Integer', check: true)`, RDL will call `Array#all?` to iterate through the contents of `x` to check they have type `Integer`. A simple call to `RDL.instantiate!(x, 'Integer')`, on the other hand, will not check the types of the elements of `x`. The `check` flag thus leaves to the programmer this choice between dynamic type safety and performance.
+Calls to `RDL.instantiate!` may also come with a `check` flag. By default, `check` is set to false. When `check` is set to true, we ensure that the receiving object's contents are consistent with the given type *at the time of the call to* `RDL.instantiate!`. Currently this is enforced using the second parameter to `type_params`, which must name a method that behaves like `Array#all?`, i.e., it iterates through the contents, checking that a block argument is satisfied. As seen above, for `Array` we call `type_params(:t, :all?)`. Then at the call `x.instantiate('Integer', check: true)`, RDL will call `Array#all?` to iterate through the contents of `x` to check they have type `Integer`. A simple call to `RDL.instantiate!(x, 'Integer')`, on the other hand, will not check the types of the elements of `x`. The `check` flag thus leaves to the programmer this choice between dynamic type safety and performance.
 
 RDL also includes a `RDL.deinstantiate!` method to remove the type instantiation from an object:
 ```ruby
@@ -589,6 +584,14 @@ Types can be prefixed with `!` to indicate the associated value is not `nil`. Fo
 `type :x=, '(!Integer) -> !Integer'  # x's argument must not be nil`
 
 **Warning:** This is simply *documentation* of non-nullness, and **is not checked** by the static type checker. The contract checker might or might not enforce non-nullness. (For those who are curious: RDL has this annotation because it seems useful for descriptive purposes. However, it's quite challenging to build a practical analysis that enforces non-nilness without reporting too many false positives.)
+
+## Constructor Type
+
+Type signatures can be added to constructors by giving a type signature for `initialize` (not for `new` or `self.new`). The return type for `initialize` must always be `self` or a [generic type](#generic-class-types) where the base is `self`:
+
+```ruby
+type :initialize, '(String, Fixnum) -> self'
+```
 
 # Static Type Checking
 
