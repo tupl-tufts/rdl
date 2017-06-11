@@ -1157,12 +1157,12 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_instantiate
-    assert (
+    assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "(Integer, Integer) -> Array<Integer>", typecheck: :now
         def def_inst_fail(x, y) a = Array.new(x,y); a; end
       }
-    )
+    }
     assert (
       self.class.class_eval {
         type "(Integer, Integer) -> Array<Integer>", typecheck: :now

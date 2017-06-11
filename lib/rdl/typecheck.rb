@@ -1297,15 +1297,18 @@ RUBY
           if tmeth_inst
             tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
             if trecv.is_a?(RDL::Type::SingletonType) && meth == :new
+              init_typ = RDL::Type::NominalType.new(trecv.val)
               if (tmeth.ret.instance_of?(RDL::Type::GenericType))
-                error :bad_initialize_type, [], e unless (tmeth.ret.base == RDL::Type::NominalType.new(trecv.val))
+                error :bad_initialize_type, [], e unless (tmeth.ret.base == init_typ)
               elsif (tmeth.ret.instance_of?(RDL::Type::AnnotatedArgType) || tmeth.ret.instance_of?(RDL::Type::DependentArgType))
-                error :bad_initialize_type, [], e unless (tmeth.ret.type == RDL::Type::NominalType.new(trecv.val))
+                error :bad_initialize_type, [], e unless (tmeth.ret.type == init_typ)
               else
-                error :bad_initialize_type, [], e unless (tmeth.ret == RDL::Type::NominalType.new(trecv.val))
+                error :bad_initialize_type, [], e unless (tmeth.ret == init_typ)
               end
+              trets_tmp << init_typ
+            else
+              trets_tmp << tmeth.ret.instantiate(tmeth_inst) # found a match for this subunion; add its return type to trets_tmp
             end
-            trets_tmp << tmeth.ret.instantiate(tmeth_inst) # found a match for this subunion; add its return type to trets_tmp
           end
         end
       }
