@@ -1,7 +1,7 @@
 # :integer, :bigint, :float, :decimal, :numeric, :datetime, :time, :date, :binary, :boolean.
 # null allowed
 
-type_alias '%symstr', 'Symbol or String'
+RDL.type_alias '%symstr', 'Symbol or String'
 
 module RDL
   class Rails

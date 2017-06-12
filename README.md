@@ -40,7 +40,7 @@
   * [Tuples, Finite Hashes, and Subtyping](#tuples-finite-hashes-and-subtyping)
   * [Other Features and Limitations](#other-features-and-limitations)
   * [Assumptions](#assumptions)
-* [Other RDL Methods](#other-rdl-methods)
+* [RDL Method Reference](#rdl-method-reference)
 * [Performance](#performance)
 * [Queries](#queries)
 * [Configuration](#configuration)
@@ -746,19 +746,48 @@ RDL's static type checker makes some assumptions that should hold unless your Ru
 
 (More assumptions will be added here as they are added to RDL...)
 
-# Other RDL Methods
+# RDL Method Reference
 
-RDL also includes a few other useful methods:
+The following methods are available in `RDL::Annotate`.
 
-* `RDL.rdl_alias [klass], new_name, old_name` (part of `RDL::Annotate`) tells RDL that method `new_name` of `klass` is an alias for method `old_name` (of the same class), and therefore they should have the same contracts and types. This method is only needed when adding contracts and types to method that have already been aliased; it's not needed if the method is aliased after the contract or type has been added. If the `klass` argument is omitted it's assumed to be `self`.
+* `pre [klass], [meth], &blk, wrap: true, version: nil` - add `blk` as a precondition contract on `klass#meth`. If `klass` is omitted, applies to `self`. If `meth` is also omitted, applies to next defined method. If `wrap` is true, wrap the method to actually check the precondition. If it's false, don't wrap the method (this is probably useless). If a `version` string or array of strings is specified (in rubygems format), only apply when the current Ruby version matches.
+
+* `post [klass], [meth], &blk, wrap: true, version: nil` - same as `pre`, but add a postcondition.
+
+* `type [klass], [meth], typ, wrap: true, typecheck: nil, version: nil` - same as `pre`, but add a type specification. If `typecheck` is `nil`, does no static type checking. If it's `:call`, will type check the method each time it's called. If it's `:now`, will type check the method after it's defined. If it's some other `symbol`, will type check the method when `RDL.do_typecheck symbol` is called.
+
+* `var_type [klass], var, typ` - indicate the `typ` is the type for `var`, which may be a `:@field` or `:local_variable`.
+
+* `attr_accessor_type :name1, typ1, ...` calls `attr_accessor :name1, ...` and creates type annotations for the given field and its getters and setters.
+
+* `attr_reader_type`, `attr_type`, and `attr_writer_type` - analogous to `attr_accessor_type`
+
+* `rdl_alias [klass], new_name, old_name` tells RDL that method `new_name` of `klass` is an alias for method `old_name` (of the same class), and therefore they should have the same contracts and types. This method is only needed when adding contracts and types to method that have already been aliased; it's not needed if the method is aliased after the contract or type has been added. If the `klass` argument is omitted it's assumed to be `self`.
+
+* `type_params [klass] [:param1, ...], :all, variance: nil, [&blk]` - indicates that `klass` should be treated as a generic type with parameters `:param1...`. The `:all` argument names a method of `klass` that iterates through a `klass` instance's contents. Alternatively, if a block is passed as an argument, that block is used as the iterator. The `variance` argument gives an array of variances of the parameters, `:+` for covariant, `:-` for contravaraiant, and `:~` for invariant. If `variance` is omitted, the parameters are assumed to be invariant.
+
+The methods above can also be accessed as `RDL.method`. When doing so, however, the `klass` and `meth` arguments are not optional and must be specified. The `RDL` module also includes several other useful methods:
+
+* `RDL.type_alias '%name', typ` - indicates that if `%name` appears in a type annotations, it should be expanded to `typ`.
 
 * `RDL.nowrap [klass]`, if called at the top-level of a class, causes RDL to behave as if `wrap: false` were passed to all `type`, `pre`, and `post` calls in `klass`. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead. If `klass` is omitted it's assumed to be `self`.
 
+* `RDL.do_typecheck(sym)` statically type checks all methods whose type annotations include argument `typecheck: sym`.
+
+* `RDL.at(sym, &blk)` invokes `blk.call(sym)` when `RDL.do_typecheck(sym)` is called. Useful when type annotations need to be generated at some later time, e.g., because not all classes are loaded.
+
+* `RDL.note_type e` - evaluates `e` and returns it at run time. During static type checking, prints out the type of `e`.
+
 * `RDL.remove_type klass, meth` removes the type annotation for meth in klass. Fails if meth does not have a type annotation.
+
+* `RDL.insantiate!(var, typ1, ...)` - `var` must have a generic type. Instantiates the type of `x` with type parameters `typ1`, ...
+
+* `RDL.deinsantiate!(var)` - remove `var`'s instantiation.
+
+* `RDL.type_cast(e, typ, force: false)` - evaluate `e` and return it at run time. During dynamic contract checking, the returned object will have `typ` associated with it. If `force` is `false`, will also check that `e`'s run-time type is compatible with `typ`. If `force` is true then `typ` will be applied regardless of `e`'s type. During static type checking, the type checker will treat the object returned by `type_cast` has having type `typ`.
 
 * `RDL.query` prints information about types; see below for details.
 
-* `RDL.do_at(sym, &blk)` invokes `blk.call(sym)` when `RDL.do_typecheck(sym)` is called. Useful when type annotations need to be generated at some later time, e.g., because not all classes are loaded.
 
 # Performance
 
