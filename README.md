@@ -919,7 +919,7 @@ In Object-Oriented Program Languages and Systems (OOPS) Track at ACM Symposium o
 
 # Copyright
 
-Copyright (c) 2014-2016, University of Maryland, College Park. All rights reserved.
+Copyright (c) 2014-2017, University of Maryland, College Park. All rights reserved.
 
 # Authors
 
