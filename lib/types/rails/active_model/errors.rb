@@ -1,14 +1,14 @@
-rdl_nowrap :'ActiveModel::Errors'
-type :'ActiveModel::Errors', :clear, '() -> %any'
-type :'ActiveModel::Errors', :delete, '(%symstr) -> %any'
-type :'ActiveModel::Errors', :[], '(%symstr) -> Array<String>'
-type :'ActiveModel::Errors', :each, '() { (%symstr, String) -> %any } -> %any'
-type :'ActiveModel::Errors', :size, '() -> Integer'
-rdl_alias :'ActiveModel::Errors', :count, :size
-type :'ActiveModel::Errors', :values, '() -> Array<String>'
-type :'ActiveModel::Errors', :keys, '() -> Array<Symbol>'
-type :'ActiveModel::Errors', :empty?, '() -> %bool'
-rdl_alias :'ActiveModel::Errors', :blank?, :empty?
-type :'ActiveModel::Errors', :hash, '(?%bool full_messages) -> Hash<Symbol, String>'
-type :'ActiveModel::Errors', :add, '(%symstr, %symstr, Hash<Symbol, %any>) -> %any'
-type :'ActiveModel::Errors', :add, '(%symstr, { () -> String }, Hash<Symbol, %any>) -> %any' # TODO: combine with prev with union once supported
+RDL.nowrap :'ActiveModel::Errors'
+RDL.type :'ActiveModel::Errors', :clear, '() -> %any'
+RDL.type :'ActiveModel::Errors', :delete, '(%symstr) -> %any'
+RDL.type :'ActiveModel::Errors', :[], '(%symstr) -> Array<String>'
+RDL.type :'ActiveModel::Errors', :each, '() { (%symstr, String) -> %any } -> %any'
+RDL.type :'ActiveModel::Errors', :size, '() -> Integer'
+RDL.rdl_alias :'ActiveModel::Errors', :count, :size
+RDL.type :'ActiveModel::Errors', :values, '() -> Array<String>'
+RDL.type :'ActiveModel::Errors', :keys, '() -> Array<Symbol>'
+RDL.type :'ActiveModel::Errors', :empty?, '() -> %bool'
+RDL.rdl_alias :'ActiveModel::Errors', :blank?, :empty?
+RDL.type :'ActiveModel::Errors', :hash, '(?%bool full_messages) -> Hash<Symbol, String>'
+RDL.type :'ActiveModel::Errors', :add, '(%symstr, %symstr, Hash<Symbol, %any>) -> %any'
+RDL.type :'ActiveModel::Errors', :add, '(%symstr, { () -> String }, Hash<Symbol, %any>) -> %any' # TODO: combine with prev with union once supported

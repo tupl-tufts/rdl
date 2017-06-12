@@ -1,6 +1,7 @@
 module ActiveRecord
   module ModelSchema
     module ClassMethods
+      extend RDL::Annotate # probably not a good idea...
       post(:load_schema!) { |ret| # load_schema! doesn't return anything interesting
         columns_hash.each { |name, col|
           t = RDL::Rails.column_to_rdl(col.type)

@@ -1,2 +1,2 @@
-type :Integer, :*, '(ActiveSupport::Duration) -> ActiveSupport::Duration'
-type :Integer, :day, '() -> ActiveSupport::Duration'
+RDL.type :Integer, :*, '(ActiveSupport::Duration) -> ActiveSupport::Duration'
+RDL.type :Integer, :day, '() -> ActiveSupport::Duration'

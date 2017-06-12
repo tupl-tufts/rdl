@@ -1,2 +1,2 @@
-rdl_nowrap :'ActiveSupport::TaggedLogging'
-type :'ActiveSupport::TaggedLogging', :info, '(String) -> %bool'
+RDL.nowrap :'ActiveSupport::TaggedLogging'
+RDL.type :'ActiveSupport::TaggedLogging', :info, '(String) -> %bool'

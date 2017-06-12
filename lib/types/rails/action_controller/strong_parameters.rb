@@ -15,8 +15,4 @@ class ActionController::Base
   end
 end
 
-module ActionController
-  module StrongParameters
-    type :params, '() -> ActionController::Parameters'
-  end
-end
+RDL.type :'ActionController::StrongParameters', :params, '() -> ActionController::Parameters'

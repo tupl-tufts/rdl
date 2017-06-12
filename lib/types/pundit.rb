@@ -1,2 +1,2 @@
-rdl_nowrap :Pundit
-type :Pundit, :authorize, '(%any, ?%any) -> %any'
+RDL.nowrap :Pundit
+RDL.type :Pundit, :authorize, '(%any, ?%any) -> %any'

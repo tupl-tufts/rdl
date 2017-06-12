@@ -1,3 +1,3 @@
-type :String, :truncate, '(Fixnum) -> String'
-type :String, :strftime, '(String) -> String'
-type :String, :sanitize, '() -> String'
+RDL.type :String, :truncate, '(Fixnum) -> String'
+RDL.type :String, :strftime, '(String) -> String'
+RDL.type :String, :sanitize, '() -> String'
