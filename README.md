@@ -34,7 +34,7 @@
   * [Type Casts](#type-casts)
   * [Bottom Type (%bot)](#bottom-type-bot)
   * [Non-null Type](#non-null-type)
-  * [Constructor Type] (#constructor-type)
+  * [Constructor Type](#constructor-type)
 * [Static Type Checking](#static-type-checking)
   * [Types for Variables](#types-for-variables)
   * [Tuples, Finite Hashes, and Subtyping](#tuples-finite-hashes-and-subtyping)
