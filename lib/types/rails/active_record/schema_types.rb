@@ -1,4 +1,6 @@
 class ActiveRecord::Base
+  extend RDL::Annotate # probably not a good idea...
+
   def self.add_schema_types
   end
 
@@ -32,19 +34,18 @@ class ActiveRecord::Base
     type 'self.find', "(String) -> #{self}"
     type 'self.find', '({' + attribute_types + "}) -> #{self}"
 
-=begin    
+=begin
     type 'self.find_by', '(' + attribute_types + ") -> #{self} or nil"
     type 'self.find_by!', '(' + attribute_types + ") -> #{self}"
     type 'update', '(' + attribute_types + ') -> %bool'
     type 'update_columns', '(' + attribute_types + ') -> %bool'
     type 'attributes=', '(' + attribute_types + ') -> %bool'
-    
+
     # If called with String arguments, can't check types as precisely
     type 'write_attribute', '(String, %any) -> %bool'
     type 'update_attribute', '(String, %any) -> %bool'
     type 'update_column', '(String, %any) -> %bool'
-=end    
+=end
     true
   }
 end
-

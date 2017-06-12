@@ -1,3 +1,3 @@
-rdl_nowrap :'ActionController::Base'
-type :'ActionController::Base', 'self.helpers', '() -> ActionView::Base'
-type :'ActionController::Base', :logger, '() -> ActiveSupport::TaggedLogging'
+RDL.nowrap :'ActionController::Base'
+RDL.type :'ActionController::Base', 'self.helpers', '() -> ActionView::Base'
+RDL.type :'ActionController::Base', :logger, '() -> ActiveSupport::TaggedLogging'
