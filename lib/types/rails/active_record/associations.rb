@@ -80,13 +80,13 @@ module ActiveRecord::Associations::ClassMethods
      optional: nil, required: nil, anonymous_class: nil|
 
     if polymorphic
-      assoc_RDL.type = '%any' # RDL.type is data-driven, can't determine statically
+      assoc_type = '%any' # type is data-driven, can't determine statically
     elsif class_name
-      assoc_RDL.type = class_name.to_s.classify
+      assoc_type = class_name.to_s.classify
     elsif anonymous_class
-      assoc_RDL.type = anonymous_class.to_s
+      assoc_type = anonymous_class.to_s
     else
-      assoc_RDL.type = name.to_s.classify # camelize?
+      assoc_type = name.to_s.classify # camelize?
     end
     rdl_type name, "(?%bool force_reload) -> #{assoc_type}"
     rdl_type "#{name}=", "(#{assoc_type}) -> #{assoc_type}"
@@ -115,13 +115,13 @@ module ActiveRecord::Associations::ClassMethods
      required: nil|
 
     if as
-     assoc_RDL.type = '%any' # RDL.type is data-driven, can't determine statically
+     assoc_type = '%any' # type is data-driven, can't determine statically
     elsif class_name
-     assoc_RDL.type = class_name.to_s.classify
+     assoc_type = class_name.to_s.classify
     elsif anonymous_class # not sure this has anonymou_class
-     assoc_RDL.type = anonymous_class.to_s.classify
+     assoc_type = anonymous_class.to_s.classify
     else
-     assoc_RDL.type = name.to_s.classify # camelize?
+     assoc_type = name.to_s.classify # camelize?
     end
     rdl_type name, "(?%bool force_reload) -> #{assoc_type}"
     rdl_type "#{name}=", "(#{assoc_type}) -> #{assoc_type}"
@@ -149,13 +149,13 @@ module ActiveRecord::Associations::ClassMethods
      validate: nil, inverse_of: nil, extend: nil|
 
     if class_name
-      collect_RDL.type = class_name.to_s.classify
+      collect_type = class_name.to_s.classify
     else
-      collect_RDL.type = name.to_s.singularize.classify
+      collect_type = name.to_s.singularize.classify
     end
     rdl_type name, "() -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>"
     rdl_type "#{name}=", "(Array<t>) -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>" # TODO not sure of type
-    id_RDL.type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash['id'].type) # TODO assumes id field is "id"
+    id_type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash['id'].type) # TODO assumes id field is "id"
     rdl_type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
     rdl_type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
 
@@ -173,13 +173,13 @@ module ActiveRecord::Associations::ClassMethods
      validate: nil, autosave: nil|
 
     if class_name
-      collect_RDL.type = class_name.to_s.classify
+      collect_type = class_name.to_s.classify
     else
-      collect_RDL.type = name.to_s.singularize.classify
+      collect_type = name.to_s.singularize.classify
     end
     rdl_type name, "() -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>"
     rdl_type "#{name}=", "(Array<t>) -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>" # TODO not sure of type
-    id_RDL.type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash['id'].type) # TODO assumes id field is "id"
+    id_type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash['id'].type) # TODO assumes id field is "id"
     rdl_type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
     rdl_type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
 
