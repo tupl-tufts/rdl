@@ -766,7 +766,7 @@ The following methods are available in `RDL::Annotate`.
 
 * `type_params [klass] [:param1, ...], :all, variance: nil, [&blk]` - indicates that `klass` should be treated as a generic type with parameters `:param1...`. The `:all` argument names a method of `klass` that iterates through a `klass` instance's contents. Alternatively, if a block is passed as an argument, that block is used as the iterator. The `variance` argument gives an array of variances of the parameters, `:+` for covariant, `:-` for contravaraiant, and `:~` for invariant. If `variance` is omitted, the parameters are assumed to be invariant.
 
-The methods above can also be accessed as `RDL.method`. When doing so, however, the `klass` and `meth` arguments are not optional and must be specified. The `RDL` module also includes several other useful methods:
+The methods above can also be accessed as `rdl_method` after `extend RDL::RDLAnnotate`. They can also be accessed as `RDL.method`, but when doing so, however, the `klass` and `meth` arguments are not optional and must be specified. The `RDL` module also includes several other useful methods:
 
 * `RDL.type_alias '%name', typ` - indicates that if `%name` appears in a type annotations, it should be expanded to `typ`.
 

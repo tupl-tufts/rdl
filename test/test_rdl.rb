@@ -388,4 +388,25 @@ RUBY
     assert !(RDL::Globals.info.has? "TestRDL::TestVersion", "m4", :post)
   end
 
+  class TestRDLAnnotate
+    extend RDL::RDLAnnotate
+
+    rdl_pre { |x| x > 0 }
+    def m1(x) return x; end
+
+    rdl_post { |x| x < 0 }
+    def m2(x) return 3; end
+
+    rdl_type '(Integer) -> Integer'
+    def m3(x) return x; end
+
+  end
+
+  def test_pre_rdl_annotate_contract
+    assert_equal 3, TestRDLAnnotate.new.m1(3)
+    assert_raises(RDL::Contract::ContractError) { TestRDLAnnotate.new.m1(-1) }
+    assert_raises(RDL::Contract::ContractError) { TestRDLAnnotate.new.m2(42) }
+    assert_raises(RDL::Type::TypeError) { TestRDLAnnotate.new.m3('one') }
+  end
+
 end
