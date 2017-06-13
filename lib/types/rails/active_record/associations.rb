@@ -60,139 +60,144 @@ RDL.type :'ActiveRecord::Associations::CollectionProxy', :second_to_last, '(Inte
 RDL.type :'ActiveRecord::Associations::CollectionProxy', :last, '() -> t or nil'
 RDL.type :'ActiveRecord::Associations::CollectionProxy', :last, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
 
-# TODO: Check presence of methods required by, e.g., foreign_key, primary_key, etc.
-# TODO: Check counter_cache, add to model attr_readonly_type
+module ActiveRecord::Associations::ClassMethods
 
-RDL.type :'ActiveRecord::Associations::ClassMethods', :belongs_to,
-  '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?%symstr, foreign_key: ?%symstr,' +
-  'primary_key: ?%symstr, dependent: ?(:delete or :destroy), counter_cache: ?(%bool or %symstr),' +
-  'polymorphic: ?%bool, validate: ?%bool, autosave: ?%bool, touch: ?(%bool or %symstr),' +
-  'inverse_of: ?%symstr, optional: ?%bool, required: ?%bool, anonymous_class: ?Class) -> %any'
+  # TODO: Check presence of methods required by, e.g., foreign_key, primary_key, etc.
+  # TODO: Check counter_cache, add to model attr_readonly_type
 
-RDL.pre :'ActiveRecord::Associations::ClassMethods', :belongs_to do
-  |name, scope=nil, class_name: nil, foreign_key: nil, primary_key: nil,
-   dependent: nil, counter_cache: nil, polymorphic: nil,
-   validate: nil, autosave: nil, touch: nil, inverse_of: nil,
-   optional: nil, required: nil, anonymous_class: nil|
+  extend RDL::RDLAnnotate
 
-  if polymorphic
-    assoc_RDL.type = '%any' # RDL.type is data-driven, can't determine statically
-  elsif class_name
-    assoc_RDL.type = class_name.to_s.classify
-  elsif anonymous_class
-    assoc_RDL.type = anonymous_class.to_s
-  else
-    assoc_RDL.type = name.to_s.classify # camelize?
+  rdl_type :'ActiveRecord::Associations::ClassMethods', :belongs_to,
+    '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?%symstr, foreign_key: ?%symstr,' +
+    'primary_key: ?%symstr, dependent: ?(:delete or :destroy), counter_cache: ?(%bool or %symstr),' +
+    'polymorphic: ?%bool, validate: ?%bool, autosave: ?%bool, touch: ?(%bool or %symstr),' +
+    'inverse_of: ?%symstr, optional: ?%bool, required: ?%bool, anonymous_class: ?Class) -> %any'
+
+  rdl_pre :'ActiveRecord::Associations::ClassMethods', :belongs_to do
+    |name, scope=nil, class_name: nil, foreign_key: nil, primary_key: nil,
+     dependent: nil, counter_cache: nil, polymorphic: nil,
+     validate: nil, autosave: nil, touch: nil, inverse_of: nil,
+     optional: nil, required: nil, anonymous_class: nil|
+
+    if polymorphic
+      assoc_RDL.type = '%any' # RDL.type is data-driven, can't determine statically
+    elsif class_name
+      assoc_RDL.type = class_name.to_s.classify
+    elsif anonymous_class
+      assoc_RDL.type = anonymous_class.to_s
+    else
+      assoc_RDL.type = name.to_s.classify # camelize?
+    end
+    rdl_type name, "(?%bool force_reload) -> #{assoc_type}"
+    rdl_type "#{name}=", "(#{assoc_type}) -> #{assoc_type}"
+    unless polymorphic
+      RDL.at(:model) { |sym|
+        assoc_attribute_types = RDL::Rails.attribute_types(assoc_type.constantize)
+        rdl_type "build_#{name}", "(#{assoc_attribute_types}) -> #{assoc_type}"
+        rdl_type "create_#{name}", "(#{assoc_attribute_types}) -> #{assoc_type}"
+        rdl_type "create_#{name}!", "(#{assoc_attribute_types}) -> #{assoc_type}"
+      }
+    end
+    true
   end
-  RDL.type name, "(?%bool force_reload) -> #{assoc_type}"
-  RDL.type "#{name}=", "(#{assoc_type}) -> #{assoc_type}"
-  unless polymorphic
-    rdl_at(:model) { |sym|
-      assoc_attribute_types = RDL::Rails.attribute_types(assoc_type.constantize)
-      RDL.type "build_#{name}", "(#{assoc_attribute_types}) -> #{assoc_type}"
-      RDL.type "create_#{name}", "(#{assoc_attribute_types}) -> #{assoc_type}"
-      RDL.type "create_#{name}!", "(#{assoc_attribute_types}) -> #{assoc_type}"
-    }
+
+  rdl_type :'ActiveRecord::Associations::ClassMethods', :has_one,
+    '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?%symstr,'+
+    'dependent: ?(:destroy or :delete or :nullify or :restrict_with_exception or :restrict_with_error),' +
+    'foreign_key: ?%symstr, foreign_type: ?%symstr, primary_key: ?%symstr, as: ?%symstr,' +
+    'through: ?%symstr, source: ?%symstr, source_type: ?%symstr, validate: ?%bool, autosave: ?%bool,' +
+    'inverse_of: ?%symstr, required: ?%bool, anonymous_class: ?Class) -> %any'
+
+  rdl_pre :'ActiveRecord::Associations::ClassMethods', :has_one do
+    |name, scope=nil, class_name: nil, dependent: nil, foreign_key: nil,
+     foreign_type: nil, primary_key: nil, as: nil, through: nil, source: nil,
+     source_type: nil, vadliate: nil, autosave: nil, inverse_of: nil,
+     required: nil|
+
+    if as
+     assoc_RDL.type = '%any' # RDL.type is data-driven, can't determine statically
+    elsif class_name
+     assoc_RDL.type = class_name.to_s.classify
+    elsif anonymous_class # not sure this has anonymou_class
+     assoc_RDL.type = anonymous_class.to_s.classify
+    else
+     assoc_RDL.type = name.to_s.classify # camelize?
+    end
+    rdl_type name, "(?%bool force_reload) -> #{assoc_type}"
+    rdl_type "#{name}=", "(#{assoc_type}) -> #{assoc_type}"
+    unless as
+      RDL.at(:model) { |sym|
+       assoc_attribute_types = RDL::Rails.attribute_types(assoc_type.constantize)
+       rdl_type "build_#{name}", "(#{assoc_attribute_types}) -> #{assoc_type}"
+       rdl_type "create_#{name}", "(#{assoc_attribute_types}) -> #{assoc_type}"
+       rdl_type "create_#{name}!", "(#{assoc_attribute_types}) -> #{assoc_type}"
+     }
+    end
   end
-  true
-end
 
-RDL.type :'ActiveRecord::Associations::ClassMethods', :has_one,
-  '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?%symstr,'+
-  'dependent: ?(:destroy or :delete or :nullify or :restrict_with_exception or :restrict_with_error),' +
-  'foreign_key: ?%symstr, foreign_type: ?%symstr, primary_key: ?%symstr, as: ?%symstr,' +
-  'through: ?%symstr, source: ?%symstr, source_type: ?%symstr, validate: ?%bool, autosave: ?%bool,' +
-  'inverse_of: ?%symstr, required: ?%bool, anonymous_class: ?Class) -> %any'
+  rdl_type :'ActiveRecord::Associations::ClassMethods', :has_many,
+    '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?%symstr,' +
+    'foreign_key: ?%symstr, foreign_type: ?%symstr, primary_key: ?%symstr,' +
+    'dependent: ?(:destroy or :delete_all or :nullify or :restrict_with_exception or :restrict_with_error),' +
+    'counter_cache: ?(%bool or %symstr), as: ?%symstr, through: ?%symstr, source: ?%symstr,' +
+    'source_type: ?%symstr, validate: ?%bool, inverse_of: ?%symstr, extend: ?(Module or Array<Module>))' +
+    '?{ () -> %any } -> %any'
 
-RDL.pre :'ActiveRecord::Associations::ClassMethods', :has_one do
-  |name, scope=nil, class_name: nil, dependent: nil, foreign_key: nil,
-   foreign_type: nil, primary_key: nil, as: nil, through: nil, source: nil,
-   source_type: nil, vadliate: nil, autosave: nil, inverse_of: nil,
-   required: nil|
+  rdl_pre :'ActiveRecord::Associations::ClassMethods', :has_many do
+    |name, scope=nil, class_name: nil, foreign_key: nil, foreign_type: nil, primary_key: nil,
+     dependent: nil, counter_cache: nil, as: nil, through: nil, source: nil, source_type: nil,
+     validate: nil, inverse_of: nil, extend: nil|
 
-  if as
-   assoc_RDL.type = '%any' # RDL.type is data-driven, can't determine statically
-  elsif class_name
-   assoc_RDL.type = class_name.to_s.classify
-  elsif anonymous_class # not sure this has anonymou_class
-   assoc_RDL.type = anonymous_class.to_s.classify
-  else
-   assoc_RDL.type = name.to_s.classify # camelize?
+    if class_name
+      collect_RDL.type = class_name.to_s.classify
+    else
+      collect_RDL.type = name.to_s.singularize.classify
+    end
+    rdl_type name, "() -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>"
+    rdl_type "#{name}=", "(Array<t>) -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>" # TODO not sure of type
+    id_RDL.type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash['id'].type) # TODO assumes id field is "id"
+    rdl_type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
+    rdl_type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
+
+    true
   end
-  RDL.type name, "(?%bool force_reload) -> #{assoc_type}"
-  RDL.type "#{name}=", "(#{assoc_type}) -> #{assoc_type}"
-  unless as
-   rdl_at(:model) { |sym|
-     assoc_attribute_types = RDL::Rails.attribute_types(assoc_type.constantize)
-     RDL.type "build_#{name}", "(#{assoc_attribute_types}) -> #{assoc_type}"
-     RDL.type "create_#{name}", "(#{assoc_attribute_types}) -> #{assoc_type}"
-     RDL.type "create_#{name}!", "(#{assoc_attribute_types}) -> #{assoc_type}"
-   }
+
+  rdl_type :'ActiveRecord::Associations::ClassMethods', :has_and_belongs_to_many,
+    '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?%symstr,' +
+    'join_table: ?%symstr, foreign_key: ?%symstr, association_foreign_key: ?%symstr,' +
+    'validate: ?%bool, autosave: ?%bool) ?{ () -> %any } -> %any'
+
+  rdl_pre :'ActiveRecord::Associations::ClassMethods', :has_and_belongs_to_many do
+    |name, scope=nil, class_name: nil, join_table: nil,
+     foreign_key: nil, association_foreign_key: nil,
+     validate: nil, autosave: nil|
+
+    if class_name
+      collect_RDL.type = class_name.to_s.classify
+    else
+      collect_RDL.type = name.to_s.singularize.classify
+    end
+    rdl_type name, "() -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>"
+    rdl_type "#{name}=", "(Array<t>) -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>" # TODO not sure of type
+    id_RDL.type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash['id'].type) # TODO assumes id field is "id"
+    rdl_type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
+    rdl_type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
+
+    # Remaining methods are from CollectionProxy
+    # TODO give these precise types for this particular model
+    # collection<<(object, ...)
+    # collection.delete(object, ...)
+    # collection.destroy(object, ...)
+    # collection.clear
+    # collection.empty?
+    # collection.size
+    # collection.find(...)
+    # collection.where(...)
+    # collection.exists?(...)
+    # collection.build(attributes = {})
+    # collection.create(attributes = {})
+    # collection.create!(attributes = {})
+    true
   end
-end
 
-RDL.type :'ActiveRecord::Associations::ClassMethods', :has_many,
-  '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?%symstr,' +
-  'foreign_key: ?%symstr, foreign_type: ?%symstr, primary_key: ?%symstr,' +
-  'dependent: ?(:destroy or :delete_all or :nullify or :restrict_with_exception or :restrict_with_error),' +
-  'counter_cache: ?(%bool or %symstr), as: ?%symstr, through: ?%symstr, source: ?%symstr,' +
-  'source_type: ?%symstr, validate: ?%bool, inverse_of: ?%symstr, extend: ?(Module or Array<Module>))' +
-  '?{ () -> %any } -> %any'
-
-RDL.pre :'ActiveRecord::Associations::ClassMethods', :has_many do
-  |name, scope=nil, class_name: nil, foreign_key: nil, foreign_type: nil, primary_key: nil,
-   dependent: nil, counter_cache: nil, as: nil, through: nil, source: nil, source_type: nil,
-   validate: nil, inverse_of: nil, extend: nil|
-
-  if class_name
-    collect_RDL.type = class_name.to_s.classify
-  else
-    collect_RDL.type = name.to_s.singularize.classify
-  end
-  RDL.type name, "() -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>"
-  RDL.type "#{name}=", "(Array<t>) -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>" # TODO not sure of type
-  id_RDL.type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash['id'].type) # TODO assumes id field is "id"
-  RDL.type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
-  RDL.type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
-  puts "end has_many"
-
-  true
-end
-
-RDL.type :'ActiveRecord::Associations::ClassMethods', :has_and_belongs_to_many,
-  '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?%symstr,' +
-  'join_table: ?%symstr, foreign_key: ?%symstr, association_foreign_key: ?%symstr,' +
-  'validate: ?%bool, autosave: ?%bool) ?{ () -> %any } -> %any'
-
-RDL.pre :'ActiveRecord::Associations::ClassMethods', :has_and_belongs_to_many do
-  |name, scope=nil, class_name: nil, join_table: nil,
-   foreign_key: nil, association_foreign_key: nil,
-   validate: nil, autosave: nil|
-
-  if class_name
-    collect_RDL.type = class_name.to_s.classify
-  else
-    collect_RDL.type = name.to_s.singularize.classify
-  end
-  RDL.type name, "() -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>"
-  RDL.type "#{name}=", "(Array<t>) -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>" # TODO not sure of type
-  id_RDL.type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash['id'].type) # TODO assumes id field is "id"
-  RDL.type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
-  RDL.type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
-
-  # Remaining methods are from CollectionProxy
-  # TODO give these precise types for this particular model
-  # collection<<(object, ...)
-  # collection.delete(object, ...)
-  # collection.destroy(object, ...)
-  # collection.clear
-  # collection.empty?
-  # collection.size
-  # collection.find(...)
-  # collection.where(...)
-  # collection.exists?(...)
-  # collection.build(attributes = {})
-  # collection.create(attributes = {})
-  # collection.create!(attributes = {})
-  true
 end

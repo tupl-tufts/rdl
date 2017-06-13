@@ -1,40 +1,37 @@
-module ActiveRecord
-  module ModelSchema
-    module ClassMethods
-      extend RDL::Annotate # probably not a good idea...
-      post(:load_schema!) { |ret| # load_schema! doesn't return anything interesting
-        columns_hash.each { |name, col|
-          t = RDL::Rails.column_to_rdl(col.type)
-          if col.null
-            # may be null; show nullability in return type
-            type name,       "() -> #{t} or nil"     # getter
-            type "#{name}=", "(#{t}) -> #{t} or nil" # setter
-            type "write_attribute", "(:#{name}, #{t}) -> %bool"
-            type "update_attribute", "(:#{name}, #{t}) -> %bool"
-            type "update_column", "(:#{name}, #{t}) -> %bool"
-          else
-            # not null; can't truly check in type system but hint via the name
-            type name,       "() -> !#{t}"                 # getter
-            type "#{name}=", "(!#{t}) -> !#{t}" # setter
-            type "write_attribute", "(:#{name}, !#{t}) -> %bool"
-            type "update_attribute", "(:#{name}, #{t}) -> %bool"
-            type "update_column", "(:#{name}, #{t}) -> %bool"
-          end
-        }
+module ActiveRecord::ModelSchema::ClassMethods
+  extend RDL::RDLAnnotate
 
-        attribute_types = RDL::Rails.attribute_types(self)
-        type 'self.find_by', '(' + attribute_types + ") -> #{self} or nil"
-        type 'self.find_by!', '(' + attribute_types + ") -> #{self}"
-        type 'update', '(' + attribute_types + ') -> %bool'
-        type 'update_columns', '(' + attribute_types + ') -> %bool'
-        type 'attributes=', '(' + attribute_types + ') -> %bool'
+  rdl_post(:load_schema!) { |ret| # load_schema! doesn't return anything interesting
+    columns_hash.each { |name, col|
+      t = RDL::Rails.column_to_rdl(col.type)
+      if col.null
+        # may be null; show nullability in return type
+        rdl_type name,       "() -> #{t} or nil"     # getter
+        rdl_type "#{name}=", "(#{t}) -> #{t} or nil" # setter
+        rdl_type "write_attribute", "(:#{name}, #{t}) -> %bool"
+        rdl_type "update_attribute", "(:#{name}, #{t}) -> %bool"
+        rdl_type "update_column", "(:#{name}, #{t}) -> %bool"
+      else
+        # not null; can't truly check in type system but hint via the name
+        rdl_type name,       "() -> !#{t}"                 # getter
+        rdl_type "#{name}=", "(!#{t}) -> !#{t}" # setter
+        rdl_type "write_attribute", "(:#{name}, !#{t}) -> %bool"
+        rdl_type "update_attribute", "(:#{name}, #{t}) -> %bool"
+        rdl_type "update_column", "(:#{name}, #{t}) -> %bool"
+      end
+    }
 
-        # If called with String arguments, can't check types as precisely
-        type 'write_attribute', '(String, %any) -> %bool'
-        type 'update_attribute', '(String, %any) -> %bool'
-        type 'update_column', '(String, %any) -> %bool'
-        true
-      }
-    end
-  end
+    attribute_types = RDL::Rails.attribute_types(self)
+    rdl_type 'self.find_by', '(' + attribute_types + ") -> #{self} or nil"
+    rdl_type 'self.find_by!', '(' + attribute_types + ") -> #{self}"
+    rdl_type 'update', '(' + attribute_types + ') -> %bool'
+    rdl_type 'update_columns', '(' + attribute_types + ') -> %bool'
+    rdl_type 'attributes=', '(' + attribute_types + ') -> %bool'
+
+    # If called with String arguments, can't check types as precisely
+    rdl_type 'write_attribute', '(String, %any) -> %bool'
+    rdl_type 'update_attribute', '(String, %any) -> %bool'
+    rdl_type 'update_column', '(String, %any) -> %bool'
+    true
+  }
 end

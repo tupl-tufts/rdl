@@ -1,38 +1,38 @@
 class ActiveRecord::Base
-  extend RDL::Annotate # probably not a good idea...
+  extend RDL::RDLAnnotate
 
   def self.add_schema_types
   end
 
-  post('self.add_schema_types') { |ret| # load_schema! doesn't return anything interesting
+  rdl_post('self.add_schema_types') { |ret| # load_schema! doesn't return anything interesting
     type 'self.where', "(*%any) -> ActiveRecord::Relation<#{self}>"
 
     columns_hash.each { |name, col|
       t = RDL::Rails.column_to_rdl(col.type)
       if col.null
         # may be null; show nullability in return type
-        type name,       "() -> #{t} or nil"     # getter
-        type "#{name}_id",       "() -> #{t} or nil"     # getter
-        type "#{name}=", "(#{t}) -> #{t} or nil" # setter
-        type "write_attribute", "(:#{name}, #{t}) -> %bool"
-        type "update_attribute", "(:#{name}, #{t}) -> %bool"
-        type "update_column", "(:#{name}, #{t}) -> %bool"
+        rdl_type name,       "() -> #{t} or nil"     # getter
+        rdl_type "#{name}_id",       "() -> #{t} or nil"     # getter
+        rdl_type "#{name}=", "(#{t}) -> #{t} or nil" # setter
+        rdl_type "write_attribute", "(:#{name}, #{t}) -> %bool"
+        rdl_type "update_attribute", "(:#{name}, #{t}) -> %bool"
+        rdl_type "update_column", "(:#{name}, #{t}) -> %bool"
       else
         # not null; can't truly check in type system but hint via the name
-        type name,       "() -> !#{t}"                 # getter
-        type "#{name}_id",       "() -> !#{t}"                 # getter
-        type "#{name}=", "(!#{t}) -> !#{t}" # setter
-        type "write_attribute", "(:#{name}, !#{t}) -> %bool"
-        type "update_attribute", "(:#{name}, #{t}) -> %bool"
-        type "update_column", "(:#{name}, #{t}) -> %bool"
+        rdl_type name,       "() -> !#{t}"                 # getter
+        rdl_type "#{name}_id",       "() -> !#{t}"                 # getter
+        rdl_type "#{name}=", "(!#{t}) -> !#{t}" # setter
+        rdl_type "write_attribute", "(:#{name}, !#{t}) -> %bool"
+        rdl_type "update_attribute", "(:#{name}, #{t}) -> %bool"
+        rdl_type "update_column", "(:#{name}, #{t}) -> %bool"
       end
     }
 
     attribute_types = RDL::Rails.attribute_types(self)
 
-    type 'self.find', "(Fixnum) -> #{self}"
-    type 'self.find', "(String) -> #{self}"
-    type 'self.find', '({' + attribute_types + "}) -> #{self}"
+    rdl_type 'self.find', "(Fixnum) -> #{self}"
+    rdl_type 'self.find', "(String) -> #{self}"
+    rdl_type 'self.find', '({' + attribute_types + "}) -> #{self}"
 
 =begin
     type 'self.find_by', '(' + attribute_types + ") -> #{self} or nil"
