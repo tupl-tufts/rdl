@@ -27,20 +27,20 @@ module RDL::Annotate
 
   def rdl_alias(*args); end
   def type_params(*args); end
-  def type_alias(*args); end
-
 end
 
 module RDL
   extend RDL::Annotate
+  def self.type_alias(*args); end
   def self.nowrap(*args); end
-  def self.at(*args); end
   def self.do_typecheck(*args); end
+  def self.at(*args); end
   def self.note_type(*args); end
   def self.remove_type(*args); end
   def self.instantaite!(*args); self; end
   def self.deinstantaite!(*args); self; end
   def self.type_cast(*args); self; end
+  def self.query(*args); end
 end
 
 def RDL.config(*args); end

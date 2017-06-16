@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [2.1.0] - 2017-06-14
+
 ### Fixed
 - Type checking bug in const expressions when env[:self] is SingletonType
 - Type for unary minus in numeric type files (changed :- to :-@)

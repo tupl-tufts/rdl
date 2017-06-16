@@ -472,24 +472,6 @@ module RDL::Annotate
     nil
   end
 
-  # Add a new type alias.
-  # [+name+] must be a string beginning with %.
-  # [+typ+] can be either a string, in which case it will be parsed
-  # into a type, or a Type.
-  def type_alias(name, typ)
-    raise RuntimeError, "Attempt to redefine type #{name}" if RDL::Globals.special_types[name]
-    case typ
-    when String
-      t = RDL::Globals.parser.scan_str "#T #{typ}"
-      RDL::Globals.special_types[name] = t
-    when RDL::Type::Type
-      RDL::Globals.special_types[name] = typ
-    else
-      raise RuntimeError, "Unexpected typ argument #{typ.inspect}"
-    end
-    nil
-  end
-
   # The following code attempts to warn about annotation methods already being defined on the class/module.
   # But it doesn't work because `extended` gets called *after* the module's methods are already added...
   # def self.extended(other)
@@ -502,15 +484,46 @@ module RDL::Annotate
   #    :attr_type,
   #    :attr_writer_type,
   #    :rdl_alias,
-  #    :type_params,
-  #    :type_alias].each { |a|
+  #    :type_params].each { |a|
   #      warn "RDL WARNING: #{other.to_s} extended RDL::Annotate but already has #{a} defined" if other.respond_to? a
   #    }
   # end
 end
 
+# all methods in RDL::Annotate but with an `rdl_` prefix
+module RDL::RDLAnnotate
+  define_method :rdl_pre, RDL::Annotate.instance_method(:pre)
+  define_method :rdl_post, RDL::Annotate.instance_method(:post)
+  define_method :rdl_type, RDL::Annotate.instance_method(:type)
+  define_method :rdl_var_type, RDL::Annotate.instance_method(:var_type)
+  define_method :rdl_attr_accessor_type, RDL::Annotate.instance_method(:attr_accessor_type)
+  define_method :rdl_attr_reader_type, RDL::Annotate.instance_method(:attr_reader_type)
+  define_method :rdl_attr_type, RDL::Annotate.instance_method(:attr_type)
+  define_method :rdl_attr_writer_type, RDL::Annotate.instance_method(:attr_writer_type)
+  define_method :rdl_alias, RDL::Annotate.instance_method(:rdl_alias)
+  define_method :rdl_type_params, RDL::Annotate.instance_method(:type_params)
+end
+
 module RDL
   extend RDL::Annotate
+
+  # Add a new type alias.
+  # [+name+] must be a string beginning with %.
+  # [+typ+] can be either a string, in which case it will be parsed
+  # into a type, or a Type.
+  def self.type_alias(name, typ)
+    raise RuntimeError, "Attempt to redefine type #{name}" if RDL::Globals.special_types[name]
+    case typ
+    when String
+      t = RDL::Globals.parser.scan_str "#T #{typ}"
+      RDL::Globals.special_types[name] = t
+    when RDL::Type::Type
+      RDL::Globals.special_types[name] = typ
+    else
+      raise RuntimeError, "Unexpected typ argument #{typ.inspect}"
+    end
+    nil
+  end
 
   def self.nowrap(klass=self)
     RDL.config { |config| config.add_nowrap(klass) }
