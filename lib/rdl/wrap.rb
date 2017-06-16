@@ -68,7 +68,13 @@ class RDL::Wrap
             posts = RDL::Globals.info.get(klass, meth, :post)
             RDL::Contract::AndContract.check_array(posts, self, ret, *args, &blk) if posts
             if matches
-              ret = RDL::Type::MethodType.check_ret_types(self, "#{full_method_name}", types, inst, matches, ret, bind, *args, &blk)
+              if meth.to_sym == :initialize
+                types.each { |t|
+                  raise ArgumentError, "Initialize method must be annotated with return type `self` or a generic type where base is `self`. #{full_method_name} has incorrect type." unless ((t.ret.is_a?(RDL::Type::VarType) && t.ret.name == :self) || (t.ret.is_a?(RDL::Type::GenericType) && t.ret.base.is_a?(RDL::Type::VarType) && t.ret.base.name == :self)) 
+                }
+              else
+                ret = RDL::Type::MethodType.check_ret_types(self, "#{full_method_name}", types, inst, matches, ret, bind, *args, &blk) unless (meth.to_sym == :initialize)
+              end
             end
             if RDL::Config.instance.guess_types.include?("#{klass_str_without_singleton}".to_sym)
               RDL::Globals.info.add(klass, meth, :otype, { args: (args.map { |arg| arg.class }), ret: ret.class, block: block_given? })
@@ -330,7 +336,7 @@ module RDL::Annotate
                           bt.shift # remove type call itself
                           err.set_backtrace bt
                           raise err
-                        end
+                        end    
     if meth
 # It turns out Ruby core/stdlib don't always follow this convention...
 #        if (meth.to_s[-1] == "?") && (type.ret != RDL::Globals.types[:bool])

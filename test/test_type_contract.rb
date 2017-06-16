@@ -11,6 +11,22 @@ class TestTypeContract < Minitest::Test
     @p = Parser.new
   end
 
+  class TestTypeContract_A
+    extend RDL::Annotate
+    type "(Fixnum) -> self"
+    def initialize(x)
+      x
+    end
+  end
+
+  class TestTypeContract_B
+    extend RDL::Annotate
+    type "(Fixnum) -> Fixnum"
+    def initialize(x)
+      x
+    end
+  end
+
   def test_flat
     cnil = RDL::Globals.types[:nil].to_contract
     assert (cnil.check self, nil)
@@ -186,7 +202,7 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p18.call(41, 1) }
     assert_raises(TypeError) { p18.call(41, Proc.new {|x| x+1.5}) }
     p18b = t18.to_higher_contract(self) { |x,p=nil| if p then p.call(x+0.5) else x end }
-    assert_raises(TypeError) { p18b.call(41, Proc.new {|x| x+1}) }
+    assert_raises(TypeError) { p18b.call(41, Proc.new {|x| x+1}) }    
 
 
   end
@@ -312,6 +328,11 @@ class TestTypeContract < Minitest::Test
   type '() { () -> nil } -> nil'
   def _test_with_without_block
     nil
+  end
+
+  def test_initialize
+    assert TestTypeContract_A.new(1)
+    assert_raises(ArgumentError) { TestTypeContract_B.new(1) }
   end
 
   def test_block
