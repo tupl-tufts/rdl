@@ -23,7 +23,6 @@ class TestTypeContract < Minitest::Test
     end
   end
 
-
   def setup
     @p = Parser.new
   end
