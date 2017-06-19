@@ -34,9 +34,9 @@ module ActiveRecord::ModelSchema::ClassMethods
     rdl_type :update_column, '(String, %any) -> %bool'
 
     rdl_type :'self.joins', "(Symbol or String) -> ActiveRecord::Associations::CollectionProxy<#{self.to_s}>"
-    rdl_type :'self.none', "(
-
-    ) -> ActiveRecord::Associations::CollectionProxy<#{self.to_s}>"
+    rdl_type :'self.none', "() -> ActiveRecord::Associations::CollectionProxy<#{self.to_s}>"
+    rdl_type :'self.where', '(String, *%any) -> ActiveRecord::Associations::CollectionProxy<t>'
+    rdl_type :'self.where', '(**%any) -> ActiveRecord::Associations::CollectionProxy<t>'
     true
   }
 end
