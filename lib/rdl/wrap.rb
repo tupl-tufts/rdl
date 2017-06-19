@@ -70,7 +70,7 @@ class RDL::Wrap
             if matches
               if meth.to_sym == :initialize
                 types.each { |t|
-                  raise ArgumentError, "Initialize method must be annotated with return type `self` or a generic type where base is `self`. #{full_method_name} has incorrect type." unless ((t.ret.is_a?(RDL::Type::VarType) && t.ret.name == :self) || (t.ret.is_a?(RDL::Type::GenericType) && t.ret.base.is_a?(RDL::Type::VarType) && t.ret.base.name == :self)) 
+                  raise ArgumentError, "Initialize method must be annotated with return type `self` or a generic type where base is `self`. #{full_method_name} has incorrect type." unless ((t.ret.is_a?(RDL::Type::VarType) && t.ret.name == :self) || (t.ret.is_a?(RDL::Type::GenericType) && t.ret.base.is_a?(RDL::Type::VarType) && t.ret.base.name == :self))
                 }
               else
                 ret = RDL::Type::MethodType.check_ret_types(self, "#{full_method_name}", types, inst, matches, ret, bind, *args, &blk) unless (meth.to_sym == :initialize)
@@ -588,7 +588,7 @@ module RDL
     formals, _, all = RDL::Globals.type_params[klass]
     raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
     raise RuntimeError, "Expecting #{formals.size} type parameters, got #{typs.size}" unless formals.size == typs.size
-    raise RuntimeError, "Instance already has type instantiation" if obj.instance_variable_get(:@__rdl_type)
+    raise RuntimeError, "Instance already has type instantiation" if obj.instance_variable_defined?(:@__rdl_type) && obj.instance_variable_get(:@__rdl_type)
     new_typs = typs.map { |t| if t.is_a? RDL::Type::Type then t else RDL::Globals.parser.scan_str "#T #{t}" end }
     t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *new_typs)
     if check
