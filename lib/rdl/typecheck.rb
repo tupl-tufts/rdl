@@ -636,7 +636,7 @@ module RDL::Typecheck
         t = RDL::Type::SingletonType.new(const_get(e.children[1]))
         [env, t]
       else
-        [env, RDL::Type::NominalType.new(const_get(e.children[1]).class)]
+        [env, RDL::Type::NominalType.new(c.class)]
       end
     when :defined?
       # do not type check subexpression, since it may not be type correct, e.g., undefined variable

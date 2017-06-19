@@ -400,6 +400,20 @@ class TestTypecheck < Minitest::Test
     assert_equal t, do_tc("TestTypecheckOuter::A", env: @env)
     t = RDL::Type::SingletonType.new(TestTypecheckOuter::A::B::C)
     assert_equal t, do_tc("TestTypecheckOuter::A::B::C", env: @env)
+
+    self.class.class_eval {
+      const_set(:CONST_STRING, 'string')
+
+      type '() -> String', typecheck: :now
+      def const1() CONST_STRING; end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '() -> Integer', typecheck: :now
+        def const2() CONST_STRING; end
+      }
+    }
   end
 
   def test_defined

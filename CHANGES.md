@@ -4,6 +4,7 @@
 
 ### Fixed
 - Dynamic type checking of initialize method.
+- Bug with handling constants of certain types.
 
 ## [2.1.0] - 2017-06-14
 
