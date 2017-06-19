@@ -155,12 +155,14 @@ module ActiveRecord::Associations::ClassMethods
     end
     rdl_type name, "() -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>"
     rdl_type "#{name}=", "(Array<t>) -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>" # TODO not sure of type
-    RDL.at(:model) {
-      # primary_key is not available when has_many is first called!
-      id_type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash[primary_key].type)
-      rdl_type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
-      rdl_type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
-    }
+    if primary_key # not every model has a primary key
+      RDL.at(:model) {
+        # primary_key is not available when has_many is first called!
+        id_type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash[primary_key].type)
+        rdl_type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
+        rdl_type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
+      }
+    end
     true
   end
 
@@ -181,12 +183,14 @@ module ActiveRecord::Associations::ClassMethods
     end
     rdl_type name, "() -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>"
     rdl_type "#{name}=", "(Array<t>) -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>" # TODO not sure of type
-    RDL.at(:model) {
-      # primary_key is not available when has_and_belongs_to_many is first called!
-      id_type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash[primary_key].type)
-      rdl_type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
-      rdl_type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
-    }
+    if primary_key # not every model has a primary key
+      RDL.at(:model) {
+        # primary_key is not available when has_and_belongs_to_many is first called!
+        id_type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash[primary_key].type)
+        rdl_type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
+        rdl_type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
+      }
+    end
 
     # Remaining methods are from CollectionProxy
     # TODO give these precise types for this particular model
