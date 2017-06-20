@@ -157,13 +157,13 @@ RUBY
     "__rdl_#{meth.to_s}_old_#{klass_str}".to_sym
   end
 
-  def self.unwrapped_name(s)
-    if not s.start_with?('__rdl_') and s.include?('_old_')
-      raise Exception, "cannot get unwrapped name for #{s}"
+  def self.unwrapped_name(klass, meth_str)
+    if not meth_str.start_with?('__rdl_') and meth_str.include?('_old_')
+      raise Exception, "cannot get unwrapped name for #{meth_str}"
     end
     klass_str = RDL::Util.to_class_str(klass).hash.to_s
-    s = klass_str.split("_#{klass_str}")
-    s[6..-5]
+    meth_str = meth_str.split("_#{klass_str}")[0]
+    meth_str[6..-5]
   end
 
   def self.class_to_string(klass)
