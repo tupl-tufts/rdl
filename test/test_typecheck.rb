@@ -114,6 +114,40 @@ class Y
   extend RDL::Annotate
 end
 
+class MetaA
+  extend RDL::Annotate
+  type "self.pass_method", "(Fixnum) -> Fixnum", typecheck: :call
+  type "self.fail_method", "(Fixnum) -> Fixnum", typecheck: :call
+  def self.run
+    class_eval do
+      define_singleton_method(:pass_method) do |x|
+        1
+      end
+
+      define_singleton_method(:fail_method) do |x|
+        "1"
+      end
+    end
+  end 
+end
+
+
+class MetaB
+  extend RDL::Annotate
+  type "pass_method", "(Fixnum) -> Fixnum", typecheck: :call
+  type "fail_method", "(Fixnum) -> Fixnum", typecheck: :call
+  def self.run
+    class_eval do
+      define_method(:pass_method) do |x|
+        1
+      end
+      define_method(:fail_method) do |x|
+        "1"
+      end
+    end
+  end
+end
+
 class MethodMissing1
   extend RDL::Annotate
   type '() -> String', typecheck: :later_mm1
@@ -1654,5 +1688,14 @@ class TestTypecheck < Minitest::Test
     end
 
     assert_nil TestTypecheck::A5.new.foo(:a)
+  end
+
+  def test_meta_methods
+    MetaA.run
+    assert MetaA.pass_method(1)
+    assert_raises(RDL::Typecheck::StaticTypeError) { MetaA.fail_method("1") }
+    MetaB.run
+    assert MetaB.new.pass_method(1)
+    assert_raises(RDL::Typecheck::StaticTypeError) { MetaB.new.fail_method(1) }
   end
 end

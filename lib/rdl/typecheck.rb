@@ -40,6 +40,15 @@ module RDL::Typecheck
       node.updated(nil, nil)
     end
 
+    def on_block(node)
+      meth_call, _, block_body = *node
+      if @line_defs[node.loc.line]
+        raise RuntimeError, "Multiple defs or block calls per line (#{meth_call} and #{@line_defs[node.loc.line].children[1]} in #{@file}) currently not allowed"
+      end
+      @line_defs[node.loc.line] = node
+      process block_body
+    end
+
   end
 
   # Local variable environment
@@ -218,8 +227,16 @@ module RDL::Typecheck
       name, args, body = *ast
     elsif ast.type == :defs
       _, name, args, body = *ast
+    elsif ast.type == :block
+      meth_call, args, body = *ast
+      _, def_name, sym_meth_name = *meth_call
+      if (def_name == :define_method) || (def_name == :define_singleton_method)
+        name = sym_meth_name.children[0]
+      else
+        raise RuntimeError, "Unexpected ast type #{ast.type} for ast #{ast}"
+      end
     else
-      raise RuntimeError, "Unexpected ast type #{ast.type}"
+      raise RuntimeError, "Unexpected ast type #{ast.type} for ast #{ast}"
     end
     raise RuntimeError, "Method #{name} defined where method #{meth} expected" if name.to_sym != meth
     context_types = RDL::Globals.info.get(klass, meth, :context_types)

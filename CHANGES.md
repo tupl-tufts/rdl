@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- Static type checking of dynamically defined methods.
+
 ### Fixed
 - Dynamic type checking of initialize method.
 
