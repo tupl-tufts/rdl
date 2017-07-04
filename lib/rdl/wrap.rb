@@ -391,6 +391,7 @@ module RDL::Annotate
   # [+ args +] is a sequence of symbol, typ. attr_reader is called for each symbol,
   # and var_type is called to assign the immediately following type to the
   # attribute named after that symbol.
+  # Note these three methods are duplicated in RDLAnnotate
   def attr_accessor_type(*args)
     args.each_slice(2) { |name, typ|
       attr_accessor name
@@ -502,12 +503,40 @@ module RDL::RDLAnnotate
   define_method :rdl_post, RDL::Annotate.instance_method(:post)
   define_method :rdl_type, RDL::Annotate.instance_method(:type)
   define_method :rdl_var_type, RDL::Annotate.instance_method(:var_type)
-  define_method :rdl_attr_accessor_type, RDL::Annotate.instance_method(:attr_accessor_type)
-  define_method :rdl_attr_reader_type, RDL::Annotate.instance_method(:attr_reader_type)
-  define_method :rdl_attr_type, RDL::Annotate.instance_method(:attr_type)
-  define_method :rdl_attr_writer_type, RDL::Annotate.instance_method(:attr_writer_type)
   define_method :rdl_alias, RDL::Annotate.instance_method(:rdl_alias)
   define_method :rdl_type_params, RDL::Annotate.instance_method(:type_params)
+
+  # Need to duplicate these methods because they need to call rdl_var_type and rdl_type
+  # and couldn't figure out how to do instance_method with a partial argument binding
+  def rdl_attr_accessor_type(*args)
+    args.each_slice(2) { |name, typ|
+      attr_accessor name
+      rdl_var_type ("@" + name.to_s), typ
+      rdl_type name, "() -> #{typ}"
+      rdl_type name.to_s + "=", "(#{typ}) -> #{typ}"
+    }
+    nil
+  end
+
+  def rdl_attr_reader_type(*args)
+    args.each_slice(2) { |name, typ|
+      attr_reader name
+      rdl_var_type ("@" + name.to_s), typ
+      rdl_type name, "() -> #{typ}"
+    }
+    nil
+  end
+
+  alias_method :rdl_attr_type, :rdl_attr_reader_type
+
+  def rdl_attr_writer_type(*args)
+    args.each_slice(2) { |name, typ|
+      attr_writer name
+      rdl_var_type ("@" + name.to_s), typ
+      rdl_type name.to_s + "=", "(#{typ}) -> #{typ}"
+    }
+    nil
+  end
 end
 
 module RDL
