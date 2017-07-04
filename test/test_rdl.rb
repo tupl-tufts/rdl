@@ -412,12 +412,12 @@ RUBY
   class TC0
     extend RDL::Annotate
 
-    type :foo, '() -> Fixnum', {typecheck: :call}
+    type :foo, '() -> Integer', {typecheck: :call}
     def foo
       's'
     end
 
-    type :bar, '() -> Fixnum', {typecheck: :call}
+    type :bar, '() -> Integer', {typecheck: :call}
     def bar
       0
     end
