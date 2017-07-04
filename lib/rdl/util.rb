@@ -60,7 +60,6 @@ class RDL::Util
     begin
       sk = self.to_class klass
       msym = method.to_sym
-      mstr = method.to_s
     rescue NameError
       return false
     end
