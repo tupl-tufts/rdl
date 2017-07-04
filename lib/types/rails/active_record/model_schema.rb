@@ -1,3 +1,7 @@
+class ActiveRecord::Base
+  extend RDL::RDLAnnotate
+end
+
 module ActiveRecord::ModelSchema::ClassMethods
   extend RDL::RDLAnnotate
 
