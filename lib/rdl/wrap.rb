@@ -68,7 +68,13 @@ class RDL::Wrap
             posts = RDL::Globals.info.get(klass, meth, :post)
             RDL::Contract::AndContract.check_array(posts, self, ret, *args, &blk) if posts
             if matches
-              ret = RDL::Type::MethodType.check_ret_types(self, "#{full_method_name}", types, inst, matches, ret, bind, *args, &blk)
+              if meth.to_sym == :initialize
+                types.each { |t|
+                  raise ArgumentError, "Initialize method must be annotated with return type `self` or a generic type where base is `self`. #{full_method_name} has incorrect type." unless ((t.ret.is_a?(RDL::Type::VarType) && t.ret.name == :self) || (t.ret.is_a?(RDL::Type::GenericType) && t.ret.base.is_a?(RDL::Type::VarType) && t.ret.base.name == :self))
+                }
+              else
+                ret = RDL::Type::MethodType.check_ret_types(self, "#{full_method_name}", types, inst, matches, ret, bind, *args, &blk) unless (meth.to_sym == :initialize)
+              end
             end
             if RDL::Config.instance.guess_types.include?("#{klass_str_without_singleton}".to_sym)
               RDL::Globals.info.add(klass, meth, :otype, { args: (args.map { |arg| arg.class }), ret: ret.class, block: block_given? })
@@ -151,13 +157,13 @@ RUBY
     "__rdl_#{meth.to_s}_old_#{klass_str}".to_sym
   end
 
-  def self.unwrapped_name(s)
-    if not s.start_with?('__rdl_') and s.include?('_old_')
-      raise Exception, "cannot get unwrapped name for #{s}"
+  def self.unwrapped_name(klass, meth_str)
+    if not meth_str.start_with?('__rdl_') and meth_str.include?('_old_')
+      raise Exception, "cannot get unwrapped name for #{meth_str}"
     end
     klass_str = RDL::Util.to_class_str(klass).hash.to_s
-    s = klass_str.split("_#{klass_str}")
-    s[6..-5]
+    meth_str = meth_str.split("_#{klass_str}")[0]
+    meth_str[6..-5]
   end
 
   def self.class_to_string(klass)
@@ -385,6 +391,7 @@ module RDL::Annotate
   # [+ args +] is a sequence of symbol, typ. attr_reader is called for each symbol,
   # and var_type is called to assign the immediately following type to the
   # attribute named after that symbol.
+  # Note these three methods are duplicated in RDLAnnotate
   def attr_accessor_type(*args)
     args.each_slice(2) { |name, typ|
       attr_accessor name
@@ -496,12 +503,40 @@ module RDL::RDLAnnotate
   define_method :rdl_post, RDL::Annotate.instance_method(:post)
   define_method :rdl_type, RDL::Annotate.instance_method(:type)
   define_method :rdl_var_type, RDL::Annotate.instance_method(:var_type)
-  define_method :rdl_attr_accessor_type, RDL::Annotate.instance_method(:attr_accessor_type)
-  define_method :rdl_attr_reader_type, RDL::Annotate.instance_method(:attr_reader_type)
-  define_method :rdl_attr_type, RDL::Annotate.instance_method(:attr_type)
-  define_method :rdl_attr_writer_type, RDL::Annotate.instance_method(:attr_writer_type)
   define_method :rdl_alias, RDL::Annotate.instance_method(:rdl_alias)
   define_method :rdl_type_params, RDL::Annotate.instance_method(:type_params)
+
+  # Need to duplicate these methods because they need to call rdl_var_type and rdl_type
+  # and couldn't figure out how to do instance_method with a partial argument binding
+  def rdl_attr_accessor_type(*args)
+    args.each_slice(2) { |name, typ|
+      attr_accessor name
+      rdl_var_type ("@" + name.to_s), typ
+      rdl_type name, "() -> #{typ}"
+      rdl_type name.to_s + "=", "(#{typ}) -> #{typ}"
+    }
+    nil
+  end
+
+  def rdl_attr_reader_type(*args)
+    args.each_slice(2) { |name, typ|
+      attr_reader name
+      rdl_var_type ("@" + name.to_s), typ
+      rdl_type name, "() -> #{typ}"
+    }
+    nil
+  end
+
+  alias_method :rdl_attr_type, :rdl_attr_reader_type
+
+  def rdl_attr_writer_type(*args)
+    args.each_slice(2) { |name, typ|
+      attr_writer name
+      rdl_var_type ("@" + name.to_s), typ
+      rdl_type name.to_s + "=", "(#{typ}) -> #{typ}"
+    }
+    nil
+  end
 end
 
 module RDL
@@ -582,7 +617,7 @@ module RDL
     formals, _, all = RDL::Globals.type_params[klass]
     raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
     raise RuntimeError, "Expecting #{formals.size} type parameters, got #{typs.size}" unless formals.size == typs.size
-    raise RuntimeError, "Instance already has type instantiation" if obj.instance_variable_get(:@__rdl_type)
+    raise RuntimeError, "Instance already has type instantiation" if obj.instance_variable_defined?(:@__rdl_type) && obj.instance_variable_get(:@__rdl_type)
     new_typs = typs.map { |t| if t.is_a? RDL::Type::Type then t else RDL::Globals.parser.scan_str "#T #{t}" end }
     t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *new_typs)
     if check
