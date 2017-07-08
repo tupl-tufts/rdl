@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+- Static type checking of dynamically defined methods.
+
+### Fixed
+- Dynamic type checking of initialize method
+- Bug with handling constants of certain types
+- Broken rdl_attr_* methods
+
 ## [2.1.0] - 2017-06-14
 
 ### Fixed

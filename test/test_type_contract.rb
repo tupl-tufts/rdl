@@ -7,6 +7,22 @@ class TestTypeContract < Minitest::Test
   include RDL::Contract
   extend RDL::Annotate
 
+  class TestTypeContract_A
+    extend RDL::Annotate
+    type "(Integer) -> self"
+    def initialize(x)
+      x
+    end
+  end
+
+  class TestTypeContract_B
+    extend RDL::Annotate
+    type "(Integer) -> Integer"
+    def initialize(x)
+      x
+    end
+  end
+
   def setup
     @p = Parser.new
   end
@@ -314,6 +330,11 @@ class TestTypeContract < Minitest::Test
     nil
   end
 
+  def test_initialize
+    assert TestTypeContract_A.new(1)
+    assert_raises(ArgumentError) { TestTypeContract_B.new(1) }
+  end
+  
   def test_block
     assert_nil(_test_with_block { nil })
     assert_raises(TypeError) { _test_with_block }

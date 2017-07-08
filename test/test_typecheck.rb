@@ -114,6 +114,40 @@ class Y
   extend RDL::Annotate
 end
 
+class MetaA
+  extend RDL::Annotate
+  type "self.pass_method", "(Fixnum) -> Fixnum", typecheck: :call
+  type "self.fail_method", "(Fixnum) -> Fixnum", typecheck: :call
+  def self.run
+    class_eval do
+      define_singleton_method(:pass_method) do |x|
+        1
+      end
+
+      define_singleton_method(:fail_method) do |x|
+        "1"
+      end
+    end
+  end 
+end
+
+
+class MetaB
+  extend RDL::Annotate
+  type "pass_method", "(Fixnum) -> Fixnum", typecheck: :call
+  type "fail_method", "(Fixnum) -> Fixnum", typecheck: :call
+  def self.run
+    class_eval do
+      define_method(:pass_method) do |x|
+        1
+      end
+      define_method(:fail_method) do |x|
+        "1"
+      end
+    end
+  end
+end
+
 class MethodMissing1
   extend RDL::Annotate
   type '() -> String', typecheck: :later_mm1
@@ -400,6 +434,20 @@ class TestTypecheck < Minitest::Test
     assert_equal t, do_tc("TestTypecheckOuter::A", env: @env)
     t = RDL::Type::SingletonType.new(TestTypecheckOuter::A::B::C)
     assert_equal t, do_tc("TestTypecheckOuter::A::B::C", env: @env)
+
+    self.class.class_eval {
+      const_set(:CONST_STRING, 'string')
+
+      type '() -> String', typecheck: :now
+      def const1() CONST_STRING; end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '() -> Integer', typecheck: :now
+        def const2() CONST_STRING; end
+      }
+    }
   end
 
   def test_defined
@@ -1616,8 +1664,8 @@ class TestTypecheck < Minitest::Test
       def bar(x); 1 + x; end
       def baz(x); 1 + x; end
       type 'self.foo', '() -> :a0'
-      type 'bar', '(Fixnum) -> Fixnum'
-      type 'baz', '(Fixnum) -> Fixnum'
+      type 'bar', '(Integer) -> Integer'
+      type 'baz', '(Integer) -> Integer'
     end
     TestTypecheck::SA1.class_eval do
       extend RDL::Annotate
@@ -1625,8 +1673,8 @@ class TestTypecheck < Minitest::Test
       def bar(x); super(x); end
       def baz(x); super; end
       type 'self.foo', '() -> :a0', typecheck: :call
-      type :bar, '(Fixnum) -> Fixnum', typecheck: :call
-      type :baz, '(Fixnum) -> Fixnum', typecheck: :call
+      type :bar, '(Integer) -> Integer', typecheck: :call
+      type :baz, '(Integer) -> Integer', typecheck: :call
     end
 
     r = TestTypecheck::SA1.foo
@@ -1654,5 +1702,14 @@ class TestTypecheck < Minitest::Test
     end
 
     assert_nil TestTypecheck::A5.new.foo(:a)
+  end
+
+  def test_meta_methods
+    MetaA.run
+    assert MetaA.pass_method(1)
+    assert_raises(RDL::Typecheck::StaticTypeError) { MetaA.fail_method("1") }
+    MetaB.run
+    assert MetaB.new.pass_method(1)
+    assert_raises(RDL::Typecheck::StaticTypeError) { MetaB.new.fail_method(1) }
   end
 end

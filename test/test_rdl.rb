@@ -409,4 +409,37 @@ RUBY
     assert_raises(RDL::Type::TypeError) { TestRDLAnnotate.new.m3('one') }
   end
 
+  class TC0
+    extend RDL::Annotate
+
+    type :foo, '() -> Integer', {typecheck: :call}
+    def foo
+      's'
+    end
+
+    type :bar, '() -> Integer', {typecheck: :call}
+    def bar
+      0
+    end
+  end
+  class TC1 < TC0
+    extend RDL::Annotate
+    type :foo, '() -> String', {typecheck: :call}
+    def foo
+      's'
+    end
+
+    type :bar, '() -> String', {typecheck: :call}
+    def bar
+      0
+    end
+  end
+
+  def test_wrap_inheritance
+    assert_raises(RDL::Typecheck::StaticTypeError) { TC0.new.foo }
+    assert_equal 0, TC0.new.bar
+    assert_equal 's', TC1.new.foo
+    assert_raises(RDL::Typecheck::StaticTypeError) { TC1.new.bar }
+  end
+
 end
