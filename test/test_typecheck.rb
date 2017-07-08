@@ -434,6 +434,20 @@ class TestTypecheck < Minitest::Test
     assert_equal t, do_tc("TestTypecheckOuter::A", env: @env)
     t = RDL::Type::SingletonType.new(TestTypecheckOuter::A::B::C)
     assert_equal t, do_tc("TestTypecheckOuter::A::B::C", env: @env)
+
+    self.class.class_eval {
+      const_set(:CONST_STRING, 'string')
+
+      type '() -> String', typecheck: :now
+      def const1() CONST_STRING; end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '() -> Integer', typecheck: :now
+        def const2() CONST_STRING; end
+      }
+    }
   end
 
   def test_defined
@@ -1650,8 +1664,8 @@ class TestTypecheck < Minitest::Test
       def bar(x); 1 + x; end
       def baz(x); 1 + x; end
       type 'self.foo', '() -> :a0'
-      type 'bar', '(Fixnum) -> Fixnum'
-      type 'baz', '(Fixnum) -> Fixnum'
+      type 'bar', '(Integer) -> Integer'
+      type 'baz', '(Integer) -> Integer'
     end
     TestTypecheck::SA1.class_eval do
       extend RDL::Annotate
@@ -1659,8 +1673,8 @@ class TestTypecheck < Minitest::Test
       def bar(x); super(x); end
       def baz(x); super; end
       type 'self.foo', '() -> :a0', typecheck: :call
-      type :bar, '(Fixnum) -> Fixnum', typecheck: :call
-      type :baz, '(Fixnum) -> Fixnum', typecheck: :call
+      type :bar, '(Integer) -> Integer', typecheck: :call
+      type :baz, '(Integer) -> Integer', typecheck: :call
     end
 
     r = TestTypecheck::SA1.foo

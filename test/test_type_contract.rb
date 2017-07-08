@@ -9,7 +9,7 @@ class TestTypeContract < Minitest::Test
 
   class TestTypeContract_A
     extend RDL::Annotate
-    type "(Fixnum) -> self"
+    type "(Integer) -> self"
     def initialize(x)
       x
     end
@@ -17,7 +17,7 @@ class TestTypeContract < Minitest::Test
 
   class TestTypeContract_B
     extend RDL::Annotate
-    type "(Fixnum) -> Fixnum"
+    type "(Integer) -> Integer"
     def initialize(x)
       x
     end
