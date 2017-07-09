@@ -68,7 +68,7 @@ module ActiveRecord::Associations::ClassMethods
   extend RDL::RDLAnnotate
 
   rdl_type :'ActiveRecord::Associations::ClassMethods', :belongs_to,
-    '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?%symstr, foreign_key: ?%symstr,' +
+    '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?(%symstr or Class), foreign_key: ?%symstr,' +
     'primary_key: ?%symstr, dependent: ?(:delete or :destroy), counter_cache: ?(%bool or %symstr),' +
     'polymorphic: ?%bool, validate: ?%bool, autosave: ?%bool, touch: ?(%bool or %symstr),' +
     'inverse_of: ?%symstr, optional: ?%bool, required: ?%bool, anonymous_class: ?Class) -> %any'
@@ -102,7 +102,7 @@ module ActiveRecord::Associations::ClassMethods
   end
 
   rdl_type :'ActiveRecord::Associations::ClassMethods', :has_one,
-    '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?%symstr,'+
+    '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?(%symstr or Class),'+
     'dependent: ?(:destroy or :delete or :nullify or :restrict_with_exception or :restrict_with_error),' +
     'foreign_key: ?%symstr, foreign_type: ?%symstr, primary_key: ?%symstr, as: ?%symstr,' +
     'through: ?%symstr, source: ?%symstr, source_type: ?%symstr, validate: ?%bool, autosave: ?%bool,' +
@@ -112,7 +112,7 @@ module ActiveRecord::Associations::ClassMethods
     |name, scope=nil, class_name: nil, dependent: nil, foreign_key: nil,
      foreign_type: nil, primary_key: nil, as: nil, through: nil, source: nil,
      source_type: nil, vadliate: nil, autosave: nil, inverse_of: nil,
-     required: nil|
+     required: nil, anonymous_class: nil|
 
     if as
      assoc_type = '%any' # type is data-driven, can't determine statically
@@ -136,7 +136,7 @@ module ActiveRecord::Associations::ClassMethods
   end
 
   rdl_type :'ActiveRecord::Associations::ClassMethods', :has_many,
-    '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?%symstr,' +
+    '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?(%symstr or Class),' +
     'foreign_key: ?%symstr, foreign_type: ?%symstr, primary_key: ?%symstr,' +
     'dependent: ?(:destroy or :delete_all or :nullify or :restrict_with_exception or :restrict_with_error),' +
     'counter_cache: ?(%bool or %symstr), as: ?%symstr, through: ?%symstr, source: ?%symstr,' +
@@ -165,7 +165,7 @@ module ActiveRecord::Associations::ClassMethods
   end
 
   rdl_type :'ActiveRecord::Associations::ClassMethods', :has_and_belongs_to_many,
-    '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?%symstr,' +
+    '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?(%symstr or Class),' +
     'join_table: ?%symstr, foreign_key: ?%symstr, association_foreign_key: ?%symstr,' +
     'validate: ?%bool, autosave: ?%bool) ?{ () -> %any } -> %any'
 
