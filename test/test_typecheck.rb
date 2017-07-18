@@ -1417,6 +1417,22 @@ class TestTypecheck < Minitest::Test
       end
     }
 
+    self.class.class_eval {
+      type '(?Integer x) -> Integer', typecheck: :now
+      def _optional_varargs_mapping9(x=42)
+        x
+      end
+    }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type '(?Integer x) -> Integer', typecheck: :now
+        def _optional_varargs_mapping10(x='hi')
+          x
+        end
+      }
+    }
+
   end
 
   def test_kw_mapping
