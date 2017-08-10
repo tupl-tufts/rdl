@@ -651,6 +651,10 @@ module RDL
   end
 end
 
+class Object
+  define_method :singleton_method_added, Module.instance_method(:singleton_method_added)
+end
+
 class Module
   def method_added(meth)
     klass = self.to_s
@@ -667,3 +671,4 @@ class Module
     nil
   end
 end
+
