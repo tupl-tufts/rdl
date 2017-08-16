@@ -238,7 +238,7 @@ module RDL::Typecheck
       type = type.instantiate inst
       _, targs = args_hash({}, Env.new, type, args, ast, 'method')
       targs[:self] = self_type
-      scope = { tret: type.ret, tblock: type.block, captured: Hash.new, context_types: context_types }
+      scope = { tret: type.ret, tblock: type.block, captured: Hash.new, context_types: context_types, usings: RDL::RefinementSet.usings_modules(klass) }
       begin
         old_captured = scope[:captured].dup
         if body.nil?
@@ -1455,6 +1455,13 @@ RUBY
     end
   end
 
+  def self.lookup_refinement(scope, klass, name)
+    using_modules = scope[:usings]
+    return unless using_modules
+    t = using_modules.lazy.map{ |ref| RDL::RefinementSet.get(ref, klass, name) }.find { |t| t }
+    t
+  end
+
   # [+ klass +] is a string containing the class name
   # [+ name +] is a symbol naming the thing to look up (either a method or field)
   # returns klass#name's type, walking up the inheritance hierarchy if appropriate
@@ -1477,7 +1484,10 @@ RUBY
         return t if k == klass && m = name
       }
     end
-    t = RDL::Globals.info.get_with_aliases(klass, name, :type)
+
+    t = self.lookup_refinement(scope, klass, name)
+
+    t ||= RDL::Globals.info.get_with_aliases(klass, name, :type)
     return t if t # simplest case, no need to walk inheritance hierarchy
     the_klass = RDL::Util.to_class(klass)
     is_singleton = RDL::Util.has_singleton_marker(the_klass.to_s)

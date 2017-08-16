@@ -11,6 +11,7 @@ def RDL.config
   yield(RDL::Config.instance)
 end
 require 'rdl/info.rb'
+require 'rdl/refinement_set.rb'
 
 module RDL::Globals
   # Method/variable info table with kinds:
