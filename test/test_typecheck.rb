@@ -1685,4 +1685,16 @@ class TestTypecheck < Minitest::Test
 
     assert_nil TestTypecheck::A5.new.foo(:a)
   end
+
+  def test_bottom_receiver
+    self.class.class_eval "class BottomReceiver; end"
+    BottomReceiver.class_eval do
+      extend RDL::Annotate
+      type '() -> %bot', :typecheck => :call
+      def self.foo
+      end
+    end
+
+    do_tc("BottomReceiver.foo[0]", env: @env) <= RDL::Globals.types[:nil]
+  end
 end

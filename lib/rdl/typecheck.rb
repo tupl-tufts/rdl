@@ -1281,6 +1281,8 @@ RUBY
         # treat as Proc
         tc_send_one_recv(scope, env, RDL::Globals.types[:proc], meth, tactuals, block, e)
       end
+    when RDL::Type::BotType
+      return [trecv]
     else
       raise RuntimeError, "receiver type #{trecv} not supported yet, meth=#{meth}"
     end
