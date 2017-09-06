@@ -634,7 +634,7 @@ module RDL::Typecheck
       when TrueClass, FalseClass, Complex, Rational, Integer, Float, Symbol, Class
         [env, RDL::Type::SingletonType.new(c)]
       when Module
-        t = RDL::Type::SingletonType.new(const_get(e.children[1]))
+        t = RDL::Type::SingletonType.new(const_get(e.loc.expression.source))
         [env, t]
       else
         [env, RDL::Type::NominalType.new(c.class)]
