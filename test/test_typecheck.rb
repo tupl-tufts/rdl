@@ -1685,4 +1685,19 @@ class TestTypecheck < Minitest::Test
 
     assert_nil TestTypecheck::A5.new.foo(:a)
   end
+
+  def test_untyped_vararg
+    self.class.class_eval "module UntypedVararg; end"
+    UntypedVararg.class_eval do
+      extend RDL::Annotate
+      type '(Integer) -> String', :typecheck => :call
+      def self.foo(x)
+        sprintf("%d", bar)
+      end
+      # untyped, so it returns the bottom type
+      def self.bar; 1; end
+    end
+
+    assert_equal "1", UntypedVararg.foo(1)
+  end
 end
