@@ -525,22 +525,6 @@ class TestTypecheck < Minitest::Test
   class B < A
   end
 
-  class A1
-    extend RDL::Annotate
-    type "() -> nil"
-    def _send_inherit2; end
-  end
-  class A2 < A1
-    def _send_inherit2; end
-  end
-  class A3 < A2
-  end
-
-  def test_send_inherit
-    assert do_tc("B.new._send_inherit1", env: @env) <= RDL::Globals.types[:integer]
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("A3.new._send_inherit2", env: @env) }
-  end
-
   def test_send_inter
     self.class.class_eval {
       type :_send_inter1, "(Integer) -> Integer"
@@ -1684,5 +1668,26 @@ class TestTypecheck < Minitest::Test
     end
 
     assert_nil TestTypecheck::A5.new.foo(:a)
+  end
+
+  def test_grandparent_with_type
+    self.class.class_eval "class GrandParentWithType; end"
+    self.class.class_eval "class ParentWithoutType < GrandParentWithType; end"
+    self.class.class_eval "class ChildWithoutType < ParentWithoutType; end"
+    GrandParentWithType.class_eval do
+      extend RDL::Annotate
+      type '(Integer) -> nil', typecheck: :call
+      def foo(x); end
+    end
+
+    ParentWithoutType.class_eval do
+      def foo(x); end
+    end
+
+    ChildWithoutType.class_eval do
+      def foo(x); end
+    end
+
+    assert_nil ChildWithoutType.new.foo(1)
   end
 end
