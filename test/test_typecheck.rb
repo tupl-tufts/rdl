@@ -1685,4 +1685,48 @@ class TestTypecheck < Minitest::Test
 
     assert_nil TestTypecheck::A5.new.foo(:a)
   end
+
+  module ModuleNesting
+    module Foo
+      extend RDL::Annotate
+      MYFOO = 'foo'
+      type '() -> String', :typecheck => :call
+      def self.foo
+        MYFOO
+      end
+    end
+    module Bar
+      extend RDL::Annotate
+      type '() -> NilClass', :typecheck => :call
+      def self.bar
+        TestTypecheck::ModuleNesting::Foo.foo
+        Foo.foo
+        Foo::MYFOO
+        nil
+      end
+    end
+    class Baz
+      extend RDL::Annotate
+      type '() -> NilClass', :typecheck => :call
+      def self.baz
+        TestTypecheck::ModuleNesting::Foo.foo
+        Foo.foo
+        Foo::MYFOO
+        nil
+      end
+      type '() -> NilClass', :typecheck => :call
+      def baz
+        TestTypecheck::ModuleNesting::Foo.foo
+        Foo.foo
+        Foo::MYFOO
+        nil
+      end
+    end
+  end
+
+  def test_module_nesting
+    assert_nil ModuleNesting::Bar.bar
+    assert_nil ModuleNesting::Baz.baz
+    assert_nil ModuleNesting::Baz.new.baz
+  end
 end
