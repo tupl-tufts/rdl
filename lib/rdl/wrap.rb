@@ -582,7 +582,7 @@ module RDL
     formals, _, all = RDL::Globals.type_params[klass]
     raise RuntimeError, "Receiver is of class #{klass}, which is not parameterized" unless formals
     raise RuntimeError, "Expecting #{formals.size} type parameters, got #{typs.size}" unless formals.size == typs.size
-    raise RuntimeError, "Instance already has type instantiation" if obj.instance_variable_get(:@__rdl_type)
+    raise RuntimeError, "Instance already has type instantiation" if obj.instance_variable_defined?(:@__rdl_type) && obj.instance_variable_get(:@__rdl_type)
     new_typs = typs.map { |t| if t.is_a? RDL::Type::Type then t else RDL::Globals.parser.scan_str "#T #{t}" end }
     t = RDL::Type::GenericType.new(RDL::Type::NominalType.new(klass), *new_typs)
     if check
