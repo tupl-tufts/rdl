@@ -1510,7 +1510,8 @@ RUBY
     # arity right.
     method = begin
       the_klass.instance_method(name)
-    rescue NameError
+    rescue NameError => e
+      puts "Unknown method: #{the_klass}.#{name}"
       nil
     end
 
@@ -1526,7 +1527,7 @@ RUBY
         args << RDL::Type::VarargType.new(RDL::Globals.types[:top])
       end
     else
-      args = []
+      args = [RDL::Type::VarargType.new(RDL::Globals.types[:top])]
     end
 
     ret = RDL::Globals.types[:bot]

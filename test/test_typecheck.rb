@@ -1700,4 +1700,21 @@ class TestTypecheck < Minitest::Test
 
     assert_equal "1", UntypedVararg.foo(1)
   end
+
+  def test_unknown_method
+    self.class.class_eval "module UnknownMethod; end"
+    UnknownMethod.class_eval do
+      extend RDL::Annotate
+      type '() -> nil', :typecheck => :call
+      def self.foo
+        begin
+          whatever(5, 4)
+        rescue
+          nil
+        end
+      end
+    end
+
+    assert_nil UnknownMethod.foo
+  end
 end
