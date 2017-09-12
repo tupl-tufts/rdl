@@ -66,7 +66,7 @@ class RDL::Util
       return false
     end
     klass_str = RDL::Util.to_class_str(klass).hash
-    if mstr.start_with?('__rdl') and mstr.end_with?('_old_#{klass_str}')
+    if mstr.start_with?('__rdl') and mstr.end_with?("_old_#{klass_str}")
       mstr0 = RDL::Wrap.unwrapped_name(klass, mstr)
       owner0 = sk.instance_method(mstr0).owner
       owner = sk.instance_method(mstr).owner
