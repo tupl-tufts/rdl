@@ -1685,4 +1685,17 @@ class TestTypecheck < Minitest::Test
 
     assert_nil TestTypecheck::A5.new.foo(:a)
   end
+
+  def test_object_sing_method
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      Object.class_eval do
+        extend RDL::Annotate
+        type '(Integer) -> String', typecheck: :now
+        def self.add_one(x)
+          x+1
+        end
+      end
+    }
+  end
+    
 end
