@@ -523,6 +523,16 @@ module RDL::Typecheck
           end
         }
         [envi, tright]
+      elsif (tright === RDL::Globals.types[:dynamic])
+        tasgn = tright
+        lhs.each { |asgn|
+          if asgn.type == :splat
+            envi, _ = tc_vasgn(scope, envi, asgn.children[0].type, asgn.children[0].children[0], tright, asgn)
+          else
+            envi, _ = tc_vasgn(scope, envi, asgn.type, asgn.children[0], tasgn, asgn)
+          end
+        }
+        [envi, tright]
       else
         error :masgn_bad_rhs, [tright], e.children[1]
       end
@@ -1041,13 +1051,12 @@ RUBY
       end
     when :ivar, :cvar, :gvar
       klass = (if kind == :gvar then RDL::Util::GLOBAL_NAME else env[:self] end)
-      unless RDL::Globals.info.has?(klass, name, :type)
-        kind_text = (if kind == :ivar then "instance"
-                     elsif kind == :cvar then "class"
-                     else "global" end)
-        error :untyped_var, [kind_text, name, klass], e
+      if RDL::Globals.info.has?(klass, name, :type)
+        type =  RDL::Globals.info.get(klass, name, :type)
+      else
+        type = RDL::Globals.types[:dynamic]
       end
-      [env, RDL::Globals.info.get(klass, name, :type).canonical]
+      [env, type.canonical]
     else
       raise RuntimeError, "unknown kind #{kind}"
     end
@@ -1070,13 +1079,11 @@ RUBY
       end
     when :ivasgn, :cvasgn, :gvasgn
       klass = (if kind == :gvasgn then RDL::Util::GLOBAL_NAME else env[:self] end)
-      unless RDL::Globals.info.has?(klass, name, :type)
-        kind_text = (if kind == :ivasgn then "instance"
-                    elsif kind == :cvasgn then "class"
-                    else "global" end)
-        error :untyped_var, [kind_text, name, klass], e
+      if RDL::Globals.info.has?(klass, name, :type)
+        tleft = RDL::Globals.info.get(klass, name, :type)
+      else
+        tleft = RDL::Globals.types[:dynamic]
       end
-      tleft = RDL::Globals.info.get(klass, name, :type)
       error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless tright <= tleft
       [env, tright.canonical]
     when :send
@@ -1281,6 +1288,8 @@ RUBY
         # treat as Proc
         tc_send_one_recv(scope, env, RDL::Globals.types[:proc], meth, tactuals, block, e)
       end
+    when RDL::Type::DynamicType
+      return [trecv]
     else
       raise RuntimeError, "receiver type #{trecv} not supported yet, meth=#{meth}"
     end
@@ -1505,7 +1514,37 @@ RUBY
         error :missing_ancestor_type, [ancestor, klass, name], e
       end
     }
-    return nil
+
+    # No types writen out, without full fledged inference, lets simply get the
+    # arity right.
+    method = begin
+      the_klass.instance_method(name)
+    rescue NameError => e
+      puts "Unknown method: #{the_klass}.#{name}"
+      nil
+    end
+
+    if method
+      arity = method.arity
+      has_varargs = false
+      if arity < 0
+        has_varargs = true
+        arity = -arity - 1
+      end
+      args = arity.times.map {RDL::Globals.types[:top]}
+      if has_varargs
+        args << RDL::Type::VarargType.new(RDL::Globals.types[:top])
+      end
+    else
+      args = [RDL::Type::VarargType.new(RDL::Globals.types[:top])]
+    end
+
+    ret = RDL::Globals.types[:dynamic]
+    if name == :initialize
+      ret = RDL::Type::NominalType.new(the_klass)
+    end
+
+    return [RDL::Type::MethodType.new(args, nil, ret)]
   end
 end
 

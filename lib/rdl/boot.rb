@@ -84,6 +84,7 @@ require 'rdl/types/annotated_arg.rb'
 require 'rdl/types/bot.rb'
 require 'rdl/types/dependent_arg.rb'
 require 'rdl/types/dots_query.rb'
+require 'rdl/types/dynamic.rb'
 require 'rdl/types/finite_hash.rb'
 require 'rdl/types/generic.rb'
 require 'rdl/types/intersection.rb'
@@ -149,6 +150,7 @@ module RDL::Globals
   @types[:regexp] = RDL::Type::NominalType.new Regexp
   @types[:standard_error] = RDL::Type::NominalType.new StandardError
   @types[:proc] = RDL::Type::NominalType.new Proc
+  @types[:dynamic] = RDL::Type::DynamicType.new
 
   # Hash from special type names to their values
   @special_types = {'%any' => @types[:top],

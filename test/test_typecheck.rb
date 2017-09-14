@@ -1685,4 +1685,38 @@ class TestTypecheck < Minitest::Test
 
     assert_nil TestTypecheck::A5.new.foo(:a)
   end
+
+  def test_dynamic
+    dynamic = do_tc('unknown', env: @env)
+    assert dynamic <= tt('Integer')
+    assert tt('Integer') <= dynamic
+    assert dynamic <= tt('Array<Integer>')
+    assert tt('Array<Integer>') <= dynamic
+
+    tuple_of_dynamic = do_tc('[unknown]', env: @env)
+    refute tuple_of_dynamic <= tt('Integer')
+    assert tuple_of_dynamic <= tt('[Integer]')
+    refute tt('Integer') <= tuple_of_dynamic
+    assert tt('[Integer]') <= tuple_of_dynamic
+
+    assert_equal(dynamic, do_tc('unknown.unknown', env: @env))
+    assert_equal(dynamic, do_tc('a,b = unknown', env: @env))
+    assert_equal(dynamic, do_tc('(a,b = unknown).unknown', env: @env))
+    assert_equal(dynamic, do_tc('unknown[1]', env: @env))
+
+    self.class.class_eval {
+      type "() -> String", typecheck: :now
+      def dynamic_1()
+        unknown
+      end
+      type "() -> Array<Integer>", typecheck: :now
+      def dynamic_2()
+        unknown(unknown)
+      end
+      type "() -> %bot", typecheck: :now
+      def dynamic_2()
+        unknown(3)
+      end
+    }
+  end
 end
