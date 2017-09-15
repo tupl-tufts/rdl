@@ -1685,4 +1685,22 @@ class TestTypecheck < Minitest::Test
 
     assert_nil TestTypecheck::A5.new.foo(:a)
   end
+
+  def test_to_proc
+    self.class.class_eval "class ToProc; end"
+    ToProc.class_eval do
+      extend RDL::Annotate
+      type '() -> Array<Integer>', :typecheck => :call
+      def self.foo
+        a = [self.new].map{|x| x.bar}
+        b = [self.new].map(&:bar)
+      end
+      type '() -> Integer', :typecheck => :call
+      def bar
+        5
+      end
+    end
+
+    assert_equal [5], ToProc.foo
+  end
 end
