@@ -1505,7 +1505,37 @@ RUBY
         error :missing_ancestor_type, [ancestor, klass, name], e
       end
     }
-    return nil
+
+    # No types writen out, without full fledged inference, lets simply get the
+    # arity right.
+    method = begin
+      the_klass.instance_method(name)
+    rescue NameError => e
+      puts "Unknown method: #{the_klass}.#{name}"
+      nil
+    end
+
+    if method
+      arity = method.arity
+      has_varargs = false
+      if arity < 0
+        has_varargs = true
+        arity = -arity - 1
+      end
+      args = arity.times.map {RDL::Globals.types[:top]}
+      if has_varargs
+        args << RDL::Type::VarargType.new(RDL::Globals.types[:top])
+      end
+    else
+      args = [RDL::Type::VarargType.new(RDL::Globals.types[:top])]
+    end
+
+    ret = RDL::Globals.types[:bot]
+    if name == :initialize
+      ret = RDL::Type::NominalType.new(the_klass)
+    end
+
+    return [RDL::Type::MethodType.new(args, nil, ret)]
   end
 end
 
