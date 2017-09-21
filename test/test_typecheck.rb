@@ -1722,11 +1722,37 @@ class TestTypecheck < Minitest::Test
         nil
       end
     end
+
+    class Parent
+      MY_CONST = 'foo'
+    end
+    module Mixin
+      MY_MIXIN_CONST = 'bar'
+    end
+    class Child < Parent
+      include Mixin
+      extend RDL::Annotate
+      type '() -> String', :typecheck => :call
+      def self.no_context
+        MY_CONST
+      end
+      type '() -> String', :typecheck => :call
+      def self.parent_context
+        Parent::MY_CONST
+      end
+      type '() -> String', :typecheck => :call
+      def self.mixin
+        MY_MIXIN_CONST
+      end
+    end
   end
 
   def test_module_nesting
     assert_nil ModuleNesting::Bar.bar
     assert_nil ModuleNesting::Baz.baz
     assert_nil ModuleNesting::Baz.new.baz
+    assert_equal 'foo', ModuleNesting::Child.no_context
+    assert_equal 'foo', ModuleNesting::Child.parent_context
+    assert_equal 'bar', ModuleNesting::Child.mixin
   end
 end

@@ -1493,25 +1493,13 @@ RUBY
     if e.children[0].nil?
       case env[:self]
       when RDL::Type::SingletonType
-        sclass = env[:self].val
+        ic = env[:self].val
       when RDL::Type::NominalType
-        sclass = env[:self].klass
+        ic = env[:self].klass
       else
         raise Exception, "unsupported env[self]=#{env[:self]}"
       end
-      c1_str = RDL::Util.to_class_str(e.children[1])
-      self_klass_str = RDL::Util.to_class_str(sclass)
-      if self_klass_str.end_with?('::' + c1_str)
-        i = self_klass_str.rindex('::' + c1_str)
-        pc = RDL::Util.to_class self_klass_str[0..i-1]
-        c = pc.const_get(e.children[1])
-      else
-        if self_klass_str['::']
-          i = self_klass_str.rindex('::')
-          sclass = RDL::Util.to_class self_klass_str[0..i-1]
-        end
-        c = sclass.const_get(e.children[1])
-      end
+      c = get_leaves(e).inject(ic) {|m, c2| m.const_get(c2)}
     elsif e.children[0].type == :cbase
       raise "const cbase not implemented yet" # TODO!
     elsif e.children[0].type == :lvar
