@@ -581,11 +581,16 @@ module RDL
     end
     RDL::Globals.to_do_at[sym] = Array.new
     return unless RDL::Globals.to_typecheck[sym]
-    RDL::Globals.to_typecheck[sym].each { |klass, meth|
-      RDL::Typecheck.typecheck(klass, meth)
-    }
-    RDL::Globals.to_typecheck[sym] = Set.new
-    nil
+
+    loop do
+      work = RDL::Globals.to_typecheck[sym]
+      return unless !work.empty?
+      RDL::Globals.to_typecheck[sym] = Set.new
+
+      work.each { |klass, meth|
+        RDL::Typecheck.typecheck(klass, meth)
+      }
+    end
   end
 
   # Does nothing at run time
