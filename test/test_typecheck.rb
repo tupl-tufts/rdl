@@ -1685,4 +1685,22 @@ class TestTypecheck < Minitest::Test
 
     assert_nil TestTypecheck::A5.new.foo(:a)
   end
+
+  def test_tuple_promote
+    self.class.class_eval "module TuplePromote; end"
+    TuplePromote.class_eval do
+      extend RDL::Annotate
+
+      type '() ->  nil', :typecheck => :call
+      def self.foo
+        a = []
+        a.each do |v|
+          v.to_s
+        end
+        nil
+      end
+    end
+
+    assert_nil TuplePromote.foo
+  end
 end
