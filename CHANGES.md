@@ -8,6 +8,7 @@
 - Broken rdl_attr_* methods
 - Bug handling optional annotated/dependent types
 - Add RDLAnnotate to rdl_disable
+- PR #52 Kernel.raise annotation
 
 ## [2.1.0] - 2017-06-14
 
