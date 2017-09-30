@@ -1698,4 +1698,34 @@ class TestTypecheck < Minitest::Test
     }
   end
     
+  def test_raise_typechecks
+    self.class.class_eval "module RaiseTypechecks; end"
+    RaiseTypechecks.class_eval do
+      extend RDL::Annotate
+      type '() -> nil', :typecheck => :call
+      def self.foo
+        raise "strings are good"
+      end
+
+      type '() -> nil', :typecheck => :call
+      def self.bar
+        raise RuntimeError.new, "so are two-args"
+      end
+
+      type '() -> nil', :typecheck => :call
+      def self.baz
+        raise RuntimeError, "and just class is ok"
+      end
+    end
+
+    assert_raises(RuntimeError) do
+      RaiseTypechecks.foo
+    end
+    assert_raises(RuntimeError) do
+      RaiseTypechecks.bar
+    end
+    assert_raises(RuntimeError) do
+      RaiseTypechecks.baz
+    end
+  end
 end
