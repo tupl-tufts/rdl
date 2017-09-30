@@ -1689,5 +1689,47 @@ class TestTypecheck < Minitest::Test
     end
 
     assert_nil ChildWithoutType.new.foo(1)
+
+  def test_object_sing_method
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      Object.class_eval do
+        extend RDL::Annotate
+        type '(Integer) -> String', typecheck: :now
+        def self.add_one(x)
+          x+1
+        end
+      end
+    }
+  end
+    
+  def test_raise_typechecks
+    self.class.class_eval "module RaiseTypechecks; end"
+    RaiseTypechecks.class_eval do
+      extend RDL::Annotate
+      type '() -> nil', :typecheck => :call
+      def self.foo
+        raise "strings are good"
+      end
+
+      type '() -> nil', :typecheck => :call
+      def self.bar
+        raise RuntimeError.new, "so are two-args"
+      end
+
+      type '() -> nil', :typecheck => :call
+      def self.baz
+        raise RuntimeError, "and just class is ok"
+      end
+    end
+
+    assert_raises(RuntimeError) do
+      RaiseTypechecks.foo
+    end
+    assert_raises(RuntimeError) do
+      RaiseTypechecks.bar
+    end
+    assert_raises(RuntimeError) do
+      RaiseTypechecks.baz
+    end
   end
 end

@@ -651,19 +651,24 @@ module RDL
   end
 end
 
-class Module
-  def method_added(meth)
-    klass = self.to_s
-    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-    RDL::Wrap.do_method_added(self, false, klass, meth)
-    nil
-  end
-
+class Object
   def singleton_method_added(meth)
     klass = self.to_s
     klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
     sklass = RDL::Util.add_singleton_marker(klass)
     RDL::Wrap.do_method_added(self, true, sklass, meth)
     nil
+  end  
+end
+
+class Module
+  define_method :singleton_method_added, Object.instance_method(:singleton_method_added)
+  
+  def method_added(meth)
+    klass = self.to_s
+    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
+    RDL::Wrap.do_method_added(self, false, klass, meth)
+    nil
   end
 end
+
