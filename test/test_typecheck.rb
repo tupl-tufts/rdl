@@ -1670,6 +1670,22 @@ class TestTypecheck < Minitest::Test
     assert_nil TestTypecheck::A5.new.foo(:a)
   end
 
+  def test_module_fully_qualfieds_calls
+    self.class.class_eval "module FullyQualfied; end"
+    FullyQualfied.class_eval do
+      extend RDL::Annotate
+      type '() -> nil', :typecheck => :call
+      def self.foo
+        TestTypecheck::FullyQualfied.bar
+      end
+      type '() -> nil', :typecheck => :call
+      def self.bar
+      end
+    end
+
+    assert_nil FullyQualfied.foo
+  end
+
   def test_grandparent_with_type
     self.class.class_eval "class GrandParentWithType; end"
     self.class.class_eval "class ParentWithoutType < GrandParentWithType; end"
