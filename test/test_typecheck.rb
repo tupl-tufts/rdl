@@ -1689,7 +1689,8 @@ class TestTypecheck < Minitest::Test
     end
 
     assert_nil ChildWithoutType.new.foo(1)
-
+  end
+    
   def test_object_sing_method
     assert_raises(RDL::Typecheck::StaticTypeError) {
       Object.class_eval do
