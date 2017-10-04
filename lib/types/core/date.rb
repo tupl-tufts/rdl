@@ -1,3 +1,5 @@
+require 'date'
+
 RDL.nowrap :Date
 
 RDL.type :Date, 'self.now', '() -> DateTime'
