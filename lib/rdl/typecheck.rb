@@ -1459,7 +1459,6 @@ RUBY
         end
 
         return nil if the_klass.to_s.start_with?('#<Class:') and name ==:new
-        error :missing_ancestor_type, [ancestor, klass, name], e
       end
     }
     return nil
@@ -1554,7 +1553,6 @@ class Diagnostic < Parser::Diagnostic
     no_block: "attempt to call yield in method not declared to take a block argument",
     block_block: "can't call yield on a block expecting another block argument",
     block_type_error: "argument type error for block\n%s",
-    missing_ancestor_type: "ancestor `%s' of `%s' has method `%s' but no type for it",
     type_cast_format: "type_cast must be called as `type_cast obj, type-string' or `type_cast obj, type-string, force: expr'",
     instantiate_format: "instantiate! must be called as `instantiate! type*' or `instantiate! type*, check: bool' where type is a string, symbol, or class for static type checking.",
     var_type_format: "var_type must be called as `var_type :var-name, type-string'",

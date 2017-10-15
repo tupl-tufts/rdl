@@ -525,22 +525,6 @@ class TestTypecheck < Minitest::Test
   class B < A
   end
 
-  class A1
-    extend RDL::Annotate
-    type "() -> nil"
-    def _send_inherit2; end
-  end
-  class A2 < A1
-    def _send_inherit2; end
-  end
-  class A3 < A2
-  end
-
-  def test_send_inherit
-    assert do_tc("B.new._send_inherit1", env: @env) <= RDL::Globals.types[:integer]
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("A3.new._send_inherit2", env: @env) }
-  end
-
   def test_send_inter
     self.class.class_eval {
       type :_send_inter1, "(Integer) -> Integer"
@@ -1754,5 +1738,85 @@ class TestTypecheck < Minitest::Test
     assert_equal 'foo', ModuleNesting::Child.no_context
     assert_equal 'foo', ModuleNesting::Child.parent_context
     assert_equal 'bar', ModuleNesting::Child.mixin
+  end
+    
+  def test_module_fully_qualfieds_calls
+    self.class.class_eval "module FullyQualfied; end"
+    FullyQualfied.class_eval do
+      extend RDL::Annotate
+      type '() -> nil', :typecheck => :call
+      def self.foo
+        TestTypecheck::FullyQualfied.bar
+      end
+      type '() -> nil', :typecheck => :call
+      def self.bar
+      end
+    end
+
+    assert_nil FullyQualfied.foo
+  end
+
+  def test_grandparent_with_type
+    self.class.class_eval "class GrandParentWithType; end"
+    self.class.class_eval "class ParentWithoutType < GrandParentWithType; end"
+    self.class.class_eval "class ChildWithoutType < ParentWithoutType; end"
+    GrandParentWithType.class_eval do
+      extend RDL::Annotate
+      type '(Integer) -> nil', typecheck: :call
+      def foo(x); end
+    end
+
+    ParentWithoutType.class_eval do
+      def foo(x); end
+    end
+
+    ChildWithoutType.class_eval do
+      def foo(x); end
+    end
+
+    assert_nil ChildWithoutType.new.foo(1)
+  end
+    
+  def test_object_sing_method
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      Object.class_eval do
+        extend RDL::Annotate
+        type '(Integer) -> String', typecheck: :now
+        def self.add_one(x)
+          x+1
+        end
+      end
+    }
+  end
+    
+  def test_raise_typechecks
+    self.class.class_eval "module RaiseTypechecks; end"
+    RaiseTypechecks.class_eval do
+      extend RDL::Annotate
+      type '() -> nil', :typecheck => :call
+      def self.foo
+        raise "strings are good"
+      end
+
+      type '() -> nil', :typecheck => :call
+      def self.bar
+        raise RuntimeError.new, "so are two-args"
+      end
+
+      type '() -> nil', :typecheck => :call
+      def self.baz
+        raise RuntimeError, "and just class is ok"
+      end
+    end
+
+    assert_raises(RuntimeError) do
+      RaiseTypechecks.foo
+    end
+    assert_raises(RuntimeError) do
+      RaiseTypechecks.bar
+    end
+    assert_raises(RuntimeError) do
+      RaiseTypechecks.baz
+    end
   end
 end
