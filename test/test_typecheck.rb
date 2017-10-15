@@ -1670,6 +1670,76 @@ class TestTypecheck < Minitest::Test
     assert_nil TestTypecheck::A5.new.foo(:a)
   end
 
+  module ModuleNesting
+    module Foo
+      extend RDL::Annotate
+      MYFOO = 'foo'
+      type '() -> String', :typecheck => :call
+      def self.foo
+        MYFOO
+      end
+    end
+    module Bar
+      extend RDL::Annotate
+      type '() -> NilClass', :typecheck => :call
+      def self.bar
+        TestTypecheck::ModuleNesting::Foo.foo
+        Foo.foo
+        Foo::MYFOO
+        nil
+      end
+    end
+    class Baz
+      extend RDL::Annotate
+      type '() -> NilClass', :typecheck => :call
+      def self.baz
+        TestTypecheck::ModuleNesting::Foo.foo
+        Foo.foo
+        Foo::MYFOO
+        nil
+      end
+      type '() -> NilClass', :typecheck => :call
+      def baz
+        TestTypecheck::ModuleNesting::Foo.foo
+        Foo.foo
+        Foo::MYFOO
+        nil
+      end
+    end
+
+    class Parent
+      MY_CONST = 'foo'
+    end
+    module Mixin
+      MY_MIXIN_CONST = 'bar'
+    end
+    class Child < Parent
+      include Mixin
+      extend RDL::Annotate
+      type '() -> String', :typecheck => :call
+      def self.no_context
+        MY_CONST
+      end
+      type '() -> String', :typecheck => :call
+      def self.parent_context
+        Parent::MY_CONST
+      end
+      type '() -> String', :typecheck => :call
+      def self.mixin
+        MY_MIXIN_CONST
+      end
+    end
+  end
+
+  def test_module_nesting
+    assert_nil ModuleNesting::Bar.bar
+    assert_nil ModuleNesting::Baz.baz
+    assert_nil ModuleNesting::Baz.new.baz
+    assert_equal 'foo', ModuleNesting::Child.no_context
+    assert_equal 'foo', ModuleNesting::Child.parent_context
+    assert_equal 'bar', ModuleNesting::Child.mixin
+  end
+    
   def test_module_fully_qualfieds_calls
     self.class.class_eval "module FullyQualfied; end"
     FullyQualfied.class_eval do
