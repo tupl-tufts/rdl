@@ -14,6 +14,7 @@
 - #43 allow fully qualified calls
 - #45 handle local constants
 - #62 allow more method names in structural types
+- #34 clean up discussion of how type checking works in README
 
 ## [2.1.0] - 2017-06-14
 

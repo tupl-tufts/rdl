@@ -70,10 +70,12 @@ file.rb:
   require 'rdl'
   extend RDL::Annotate
 
-  type '(Integer) -> Integer', typecheck: :now
+  type '(Integer) -> Integer', typecheck: :label
   def id(x)
     "forty-two"
   end
+
+  RDL.do_typecheck :label
 ```
 
 ```
@@ -84,13 +86,15 @@ $ ruby file.rb
 .../file.rb:6:   ^~~~~~~~~~~
 ```
 
-Passing `typecheck: :now` to `type` checks the method body immediately or as soon as it is defined. Passing `typecheck: :call` to `type` statically type checks the method body whenever it is called. Passing `typecheck: sym` for some other symbol statically type checks the method body when `RDL.do_typecheck sym` is called.
+Passing `typecheck: sym` for some other symbol statically type checks the method body when `RDL.do_typecheck sym` is called. Passing `typecheck: :call` to `type` statically type checks the method body whenever it is called.
+
+Note that RDL only type checks the bodies of methods with type signatures. Methods without type signatues, or code that is not in method bodies, is not checked.
 
 The `type` method can also be called with the class and method to be annotated, and it can also be invoked as `RDL.type` in case `extend RDL::Annotate` would cause namespace issues:
 
 ```
-  type :A, :id, '(Integer) -> Integer', typecheck: :now # Add a type annotation for A#id.
-  RDL.type :A, :id, '(Integer) -> Integer', typecheck: :now # Note class and method name required when calling like this
+  type :A, :id, '(Integer) -> Integer', typecheck: :label # Add a type annotation for A#id.
+  RDL.type :A, :id, '(Integer) -> Integer', typecheck: :label # Note class and method name required when calling like this
 ```
 
 RDL tries to follow the philosophy that you get what you pay for. Methods with type annotations can be checked dynamically or statically; methods without type annotations are unaffected by RDL. See the [performance](#performance) discussion for more detail.
@@ -595,11 +599,9 @@ type :initialize, '(String, Fixnum) -> self'
 
 # Static Type Checking
 
-As mentioned in the introduction, calling `type` with `typecheck: :now` statically type checks the body of the annotated method body against the given signature. If the method has already been defined, RDL will try to check the method immediately. Otherwise, RDL will statically type check the method as soon as it is loaded.
+As mentioned in the introduction, calling `type` with `typecheck: sym` statically type checks the body of the annotated method body against the given signature when `RDL.do_typecheck sym` is called. Note that at this call, all methods whose `type` call is labeled with `sym` will be statically checked.
 
-Often method bodies cannot be type checked as soon as they are loaded because they refer to classes, methods, and variables that have not been created yet. To support these cases, some other symbol can be supplied as `typecheck: sym`. Then when `RDL.do_typecheck sym` is called, all methods typechecked at `sym` will be statically checked.
-
-Additionally, `type` can be called with `typecheck: :call`, which will delay checking the method's type until the method is called. Currently these checks are not cached, so expect a big performance hit for using this feature.
+Additionally, `type` can be called with `typecheck: :call`, which will delay checking the method's type until the method is called. Currently these checks are not cached, so expect a big performance hit for using this feature. Finally, `type` can be called with `typecheck: :now` to check the method immediately after it is defined. This is probably only useful for demos.
 
 To perform type checking, RDL needs source code, which it gets by parsing the file containing the to-be-typechecked method. Hence, static type checking does not work in `irb` since RDL has no way of getting the source. Typechecking does work in `pry` (this feature has only limited testing) as long as typechecking is delayed until after the method is defined:
 
