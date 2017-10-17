@@ -2,7 +2,7 @@ module RDL::Type
 class Parser
 
 macro
-  ID (\w|\:\:)+
+  ID ((\w|\:\:)+(!|\?|=)?)|~|\+|-|\/|&|\||\^
   SYMBOL :\w+
   SPECIAL_ID %\w+
   FIXNUM -?(\d)+
@@ -23,9 +23,11 @@ rule
   \]            { [:RBRACKET, text] }
   <             { [:LESS, text] }
   >             { [:GREATER, text] }
+  =             { [:EQUAL, text] }
   ,             { [:COMMA, text] }
   \?            { [:QUERY, text] }
   \!            { [:BANG, text] }
+  ~             { [:TILDE, text] }
   \*\*          { [:STARSTAR, text] }
   \*            { [:STAR, text] }
   \#T           { [:HASH_TYPE, text] }

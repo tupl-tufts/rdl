@@ -170,6 +170,10 @@ class TestParser < Minitest::Test
     tm1 = MethodType.new [], nil, RDL::Globals.types[:string]
     ts1 = StructuralType.new(to_str: tm1)
     assert_equal ts1, t1
+    t2 = tt "[[]: (String) -> %any]"
+    tm2 = MethodType.new [RDL::Globals.types[:string]], nil, RDL::Globals.special_types['%any']
+    ts2 = StructuralType.new(:[] => tm2)
+    assert_equal ts2, t2
   end
 
   def test_finite_hash

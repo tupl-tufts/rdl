@@ -13,6 +13,7 @@
 - #42 use grandparent type information for methods
 - #43 allow fully qualified calls
 - #45 handle local constants
+- #62 allow more method names in structural types
 
 ## [2.1.0] - 2017-06-14
 
