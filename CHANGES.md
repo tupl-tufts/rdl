@@ -9,7 +9,10 @@
 - Bug handling optional annotated/dependent types
 - Add RDLAnnotate to rdl_disable
 - Type checking of Object class singleton methods
-- PR #52 Kernel.raise annotation
+- #52 Kernel.raise annotation
+- #42 use grandparent type information for methods
+- #43 allow fully qualified calls
+- #45 handle local constants
 
 ## [2.1.0] - 2017-06-14
 

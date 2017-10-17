@@ -140,7 +140,7 @@ Given this program, RDL intercepts the call to `sqrt` and passes its argument to
 
 ## Supported versions of Ruby
 
-RDL currently supports Ruby 2.x except 2.1.4 may not be supported. RDL may or may not work with other versions.
+RDL currently supports Ruby 2.x except 2.1.1-2.1.6. RDL may or may not work with other versions.
 
 ## Installing RDL
 
@@ -920,6 +920,12 @@ In Object-Oriented Program Languages and Systems (OOPS) Track at ACM Symposium o
 # Copyright
 
 Copyright (c) 2014-2017, University of Maryland, College Park. All rights reserved.
+
+# Contributing
+
+Contributions are welcome! If you submit any pull requests, please
+submit them against the `dev` branch. We keep the `master` branch so
+it matches the latest gem version.
 
 # Authors
 
