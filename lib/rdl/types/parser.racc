@@ -9,7 +9,7 @@ class Parser
 
 token HASH_TYPE HASH_QUERY CONST_BEGIN RASSOC
 token OR FIXNUM FLOAT COLON RARROW DOT DOTS ID SYMBOL SPECIAL_ID STRING PREDICATE
-token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
+token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET COMP
 token COMMA QUERY BANG STARSTAR STAR LESS GREATER
 token EOF
 
@@ -36,6 +36,9 @@ rule
    | LPAREN arg_list RPAREN block RARROW type_expr ID PREDICATE {
         result = RDL::Type::MethodType.new val[1], val[3], RDL::Type::DependentArgType.new(val[6], val[5], val[7])
       }
+   | LPAREN arg_list RPAREN block RARROW COMP {
+     	result = RDL::Type::MethodType.new(val[1], val[3], RDL::Type::ComputedType.new(val[5]))
+      }
 
   method_sig_list:
      ID COLON method_type { result = [val[0].to_sym, val[2]] }
@@ -57,6 +60,7 @@ rule
       base_arg { result = val[0] }
     | base_arg ID PREDICATE { result = RDL::Type::DependentArgType.new(val[1], val[0], val[2]) }
     | base_arg ID { result = RDL::Type::AnnotatedArgType.new(val[1], val[0]) }
+    | COMP { result = RDL::Type::ComputedType.new(val[0]) }
     | DOTS { result = RDL::Type::DotsQuery.new }
   named_arg_list:
       named_arg { result = [val[0], nil] }
