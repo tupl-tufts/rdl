@@ -1315,6 +1315,7 @@ RUBY
   # [+ tactuals +] is a list Array<Type> of types of the input to a method call
   # Returns a new MethodType where all ComputedTypes in tmeth have been evaluated
   def self.compute_types(tmeth, self_klass, trecv, tactuals)
+    bind = nil
     self_klass.class_eval { bind = binding() }
     bind.local_variable_set(:trec, trecv)
     bind.local_variable_set(:targs, tactuals)
