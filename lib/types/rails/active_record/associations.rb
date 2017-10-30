@@ -60,6 +60,28 @@ RDL.type :'ActiveRecord::Associations::CollectionProxy', :second_to_last, '(Inte
 RDL.type :'ActiveRecord::Associations::CollectionProxy', :last, '() -> t or nil'
 RDL.type :'ActiveRecord::Associations::CollectionProxy', :last, '(Integer) -> ActiveRecord::Associations::CollectionProxy<t>'
 
+RDL.type :'ActiveRecord::Associations::CollectionProxy', :where, '(String, *%any) -> ActiveRecord::Associations::CollectionProxy<t>'
+RDL.type :'ActiveRecord::Associations::CollectionProxy', :where, '(**%any) -> ActiveRecord::Associations::CollectionProxy<t>'
+RDL.type :'ActiveRecord::Associations::CollectionProxy', :group, '(Symbol) -> ActiveRecord::Associations::CollectionProxy<t>'
+RDL.type :'ActiveRecord::Associations::CollectionProxy', :order, '(Symbol) -> ActiveRecord::Associations::CollectionProxy<t>'
+
+
+# Remaining methods are from CollectionProxy
+# TODO give these precise types for this particular model
+# collection<<(object, ...)
+# collection.delete(object, ...)
+# collection.destroy(object, ...)
+# collection.clear
+# collection.empty?
+# collection.size
+# collection.find(...)
+# collection.where(...)
+# collection.exists?(...)
+# collection.build(attributes = {})
+# collection.create(attributes = {})
+# collection.create!(attributes = {})
+
+
 module ActiveRecord::Associations::ClassMethods
 
   # TODO: Check presence of methods required by, e.g., foreign_key, primary_key, etc.
@@ -155,12 +177,14 @@ module ActiveRecord::Associations::ClassMethods
     end
     rdl_type name, "() -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>"
     rdl_type "#{name}=", "(Array<t>) -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>" # TODO not sure of type
-    RDL.at(:model) {
-      # primary_key is not available when has_many is first called!
-      id_type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash[primary_key].type)
-      rdl_type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
-      rdl_type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
-    }
+    if primary_key # not every model has a primary key
+      RDL.at(:model) {
+        # primary_key is not available when has_many is first called!
+        id_type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash[primary_key].type)
+        rdl_type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
+        rdl_type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
+      }
+    end
     true
   end
 
@@ -181,27 +205,15 @@ module ActiveRecord::Associations::ClassMethods
     end
     rdl_type name, "() -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>"
     rdl_type "#{name}=", "(Array<t>) -> ActiveRecord::Associations::CollectionProxy<#{collect_type}>" # TODO not sure of type
-    RDL.at(:model) {
-      # primary_key is not available when has_and_belongs_to_many is first called!
-      id_type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash[primary_key].type)
-      rdl_type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
-      rdl_type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
-    }
+    if primary_key # not every model has a primary key
+      RDL.at(:model) {
+        # primary_key is not available when has_and_belongs_to_many is first called!
+        id_type = RDL::Rails.column_to_rdl(collect_type.constantize.columns_hash[primary_key].type)
+        rdl_type "#{name.to_s.singularize}_ids", "() -> Array<#{id_type}>"
+        rdl_type "#{name.to_s.singularize}_ids=", "() -> Array<#{id_type}>"
+      }
+    end
 
-    # Remaining methods are from CollectionProxy
-    # TODO give these precise types for this particular model
-    # collection<<(object, ...)
-    # collection.delete(object, ...)
-    # collection.destroy(object, ...)
-    # collection.clear
-    # collection.empty?
-    # collection.size
-    # collection.find(...)
-    # collection.where(...)
-    # collection.exists?(...)
-    # collection.build(attributes = {})
-    # collection.create(attributes = {})
-    # collection.create!(attributes = {})
     true
   end
 

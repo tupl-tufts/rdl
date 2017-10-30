@@ -60,20 +60,15 @@ class RDL::Util
     begin
       sk = self.to_class klass
       msym = method.to_sym
-      mstr = method.to_s
-      sk.instance_method msym
     rescue NameError
       return false
     end
-    klass_str = RDL::Util.to_class_str(klass).hash
-    if mstr.start_with?('__rdl') and mstr.end_with?('_old_#{klass_str}')
-      mstr0 = RDL::Wrap.unwrapped_name(klass, mstr)
-      owner0 = sk.instance_method(mstr0).owner
-      owner = sk.instance_method(mstr).owner
-      return false if owner0 != owner
-    end
 
-    true
+    return sk.methods.include?(:new) if method == :new
+
+    sk.public_instance_methods(false).include?(msym) or
+      sk.protected_instance_methods(false).include?(msym) or
+      sk.private_instance_methods(false).include?(msym)
   end
 
   # Returns the @__rdl_type field of [+obj+]

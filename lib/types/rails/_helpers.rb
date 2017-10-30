@@ -12,7 +12,7 @@ class RDL::Rails
     when :string, :text, :binary
       return 'String'
     when :integer
-      return 'Fixnum'
+      return 'Integer'
     when :float
       return 'Float'
     when :decimal

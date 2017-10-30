@@ -267,6 +267,7 @@ module RDL::Typecheck
     args.children.each { |arg|
       error :type_args_fewer, [kind, kind], arg if tpos >= type.args.length && arg.type != :blockarg  # blocks could be called with yield
       targ = type.args[tpos]
+      (if (targ.is_a?(RDL::Type::AnnotatedArgType) || targ.is_a?(RDL::Type::DependentArgType)) then targ = targ.type end)
       if arg.type == :arg
         error :type_arg_kind_mismatch, [kind, 'optional', 'required'], arg if targ.optional?
         error :type_arg_kind_mismatch, [kind, 'vararg', 'required'], arg if targ.vararg?
@@ -588,55 +589,12 @@ module RDL::Typecheck
     when :nth_ref, :back_ref
       [env, RDL::Globals.types[:string]]
     when :const
-      c = nil
-      if e.children[0].nil?
-        case env[:self]
-        when RDL::Type::SingletonType
-          sclass = env[:self].val
-        when RDL::Type::NominalType
-          sclass = env[:self].klass
-        else
-          raise Exception, "unsupported env[self]=#{env[:self]}"
-        end
-        c1_str = RDL::Util.to_class_str(e.children[1])
-        self_klass_str = RDL::Util.to_class_str(sclass)
-        if self_klass_str.end_with?('::' + c1_str)
-          i = self_klass_str.rindex('::' + c1_str)
-          pc = RDL::Util.to_class self_klass_str[0..i-1]
-          c = pc.const_get(e.children[1])
-        else
-          if self_klass_str['::']
-            i = self_klass_str.rindex('::')
-            sclass = RDL::Util.to_class self_klass_str[0..i-1]
-          end
-          c = sclass.const_get(e.children[1])
-        end
-      elsif e.children[0].type == :cbase
-        raise "const cbase not implemented yet" # TODO!
-      elsif e.children[0].type == :lvar
-        raise "const lvar not implemented yet" # TODO!
-      elsif e.children[0].type == :const
-        if env[:self]
-          if env[:self].is_a?(RDL::Type::SingletonType)
-            ic = env[:self].val
-          else
-            ic = env[:self].class
-          end
-        else
-          ic = Object
-        end
-        c = get_leaves(e).inject(ic) {|m, c2| m.const_get(c2)}
-      else
-        raise "const other not implemented yet"
-      end
+      c = find_constant(env, e)
       case c
-      when TrueClass, FalseClass, Complex, Rational, Integer, Float, Symbol, Class
+      when TrueClass, FalseClass, Complex, Rational, Integer, Float, Symbol, Class, Module
         [env, RDL::Type::SingletonType.new(c)]
-      when Module
-        t = RDL::Type::SingletonType.new(const_get(e.children[1]))
-        [env, t]
       else
-        [env, RDL::Type::NominalType.new(const_get(e.children[1]).class)]
+        [env, RDL::Type::NominalType.new(c.class)]
       end
     when :defined?
       # do not type check subexpression, since it may not be type correct, e.g., undefined variable
@@ -1501,10 +1459,64 @@ RUBY
         end
 
         return nil if the_klass.to_s.start_with?('#<Class:') and name ==:new
-        error :missing_ancestor_type, [ancestor, klass, name], e
       end
     }
     return nil
+  end
+
+  def self.find_constant(env, e)
+    # https://cirw.in/blog/constant-lookup.html
+    # First look in Module.nesting for a lexically scoped variable
+    if @cur_meth
+      if (RDL::Util.has_singleton_marker(@cur_meth[0]))
+        klass = RDL::Util.to_class(RDL::Util.remove_singleton_marker(@cur_meth[0]))
+      else
+        klass = RDL::Util.to_class(@cur_meth[0]).allocate
+      end
+      if RDL::Wrap.wrapped?(@cur_meth[0], @cur_meth[1])
+        meth_name = RDL::Wrap.wrapped_name(@cur_meth[0], @cur_meth[1])
+      else
+        meth_name = @cur_meth[1]
+      end
+      method = klass.method(meth_name)
+      nesting = method.to_proc.binding.eval('Module.nesting')
+
+      nesting.each do |ic|
+        c = get_leaves(e).inject(ic) {|m, c2| m && m.const_defined?(c2, false) && m.const_get(c2, false)}
+        # My first time using ruby's stupid return-from-block correctly
+        return c if c
+      end
+    end
+
+    # Check the ancestors
+    if e.children[0].nil?
+      case env[:self]
+      when RDL::Type::SingletonType
+        ic = env[:self].val
+      when RDL::Type::NominalType
+        ic = env[:self].klass
+      else
+        raise Exception, "unsupported env[self]=#{env[:self]}"
+      end
+      c = get_leaves(e).inject(ic) {|m, c2| m.const_get(c2)}
+    elsif e.children[0].type == :cbase
+      raise "const cbase not implemented yet" # TODO!
+    elsif e.children[0].type == :lvar
+      raise "const lvar not implemented yet" # TODO!
+    elsif e.children[0].type == :const
+      if env[:self]
+        if env[:self].is_a?(RDL::Type::SingletonType)
+          ic = env[:self].val
+        else
+          ic = env[:self].klass
+        end
+      else
+        ic = Object
+      end
+      c = get_leaves(e).inject(ic) {|m, c2| m.const_get(c2)}
+    else
+      raise "const other not implemented yet"
+    end
   end
 end
 
@@ -1541,7 +1553,6 @@ class Diagnostic < Parser::Diagnostic
     no_block: "attempt to call yield in method not declared to take a block argument",
     block_block: "can't call yield on a block expecting another block argument",
     block_type_error: "argument type error for block\n%s",
-    missing_ancestor_type: "ancestor `%s' of `%s' has method `%s' but no type for it",
     type_cast_format: "type_cast must be called as `type_cast obj, type-string' or `type_cast obj, type-string, force: expr'",
     instantiate_format: "instantiate! must be called as `instantiate! type*' or `instantiate! type*, check: bool' where type is a string, symbol, or class for static type checking.",
     var_type_format: "var_type must be called as `var_type :var-name, type-string'",
