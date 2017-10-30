@@ -6,15 +6,23 @@ module RDL::Type
 
     def initialize(code)
       @code = code
+      super()
+    end
+
+    def compute(bind)
+      res = bind.eval(@code)
+      raise RuntimeError, "Expected ComputedType to evaluate to type, instead got #{res}." unless res.is_a?(RDL::Type)
     end
 
 
-
-
     ### TODO:: Figure out how to fill in the below methods.
-    ### I believe a ComputedType will always be resolved to
+    ### I believe a ComputedType will always be evaluated to
     ### another RDL type before any of these methods would be called.
     ### Need to think about this though.
+
+    def instantiate(inst)
+      @inst = inst
+    end
     
     def <=(other)
       ## TODO
@@ -25,10 +33,7 @@ module RDL::Type
     end
 
     alias eql? ==
-    
-    def instantiate(inst)
-      ## TODO
-    end
+
 
   end
 end

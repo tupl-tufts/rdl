@@ -1196,6 +1196,7 @@ RUBY
         ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] if (meth == :new) && (ts.nil?) # there's always a nullary new if initialize is undefined
         error :no_singleton_method_type, [trecv.val, meth], e unless ts
         inst = {self: self_inst}
+        self_klass = trecv.val
         tmeth_inter = ts.map { |t| t.instantiate(inst) }
       elsif trecv.val.is_a?(Symbol) && meth == :to_proc
         # Symbol#to_proc on a singleton symbol type produces a Proc for the method of the same name
@@ -1212,12 +1213,14 @@ RUBY
         ts = lookup(scope, klass, meth, e)
         error :no_instance_method_type, [klass, meth], e unless ts
         inst = {self: trecv}
+        self_klass = trecv.val.class
         tmeth_inter = ts.map { |t| t.instantiate(inst) }
       end
     when RDL::Type::NominalType
       ts = lookup(scope, trecv.name, meth, e)
       error :no_instance_method_type, [trecv.name, meth], e unless ts
       inst = {self: trecv}
+      self_klass = RDL::Util.to_class(trecv.name)
       tmeth_inter = ts.map { |t| t.instantiate(inst) }
     when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
       unless trecv.is_a? RDL::Type::GenericType
@@ -1227,6 +1230,7 @@ RUBY
       ts = lookup(scope, trecv.base.name, meth, e)
       error :no_instance_method_type, [trecv.base.name, meth], e unless ts
       inst = trecv.to_inst.merge(self: trecv)
+      self_klass = RDL::Util.to_class(trecv.base.name)
       tmeth_inter = ts.map { |t| t.instantiate(inst) }
     when RDL::Type::VarType
       error :recv_var_type, [trecv], e
@@ -1251,7 +1255,8 @@ RUBY
       trets_tmp = []
       tmeth_inter.each { |tmeth| # MethodType
         if ((tmeth.block && block) || (tmeth.block.nil? && block.nil?))
-          tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)
+          tmeth = compute_types(tmeth, self_klass, trecv, tactuals_expanded)
+          tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)          
           if tmeth_inst
             tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
             if trecv.is_a?(RDL::Type::SingletonType) && meth == :new
@@ -1301,6 +1306,34 @@ RUBY
     end
     # TODO: issue warning if trets.size > 1 ?
     return trets
+  end
+
+  # Evaluates any ComputedTypes in a method type
+  # [+ tmeth +] is a MethodType for which we want to evaluate ComputedType args or return
+  # [+ self_klass +] is the class of the receiver to the method call
+  # [+ trecv +] is the type of the receiver to the method call
+  # [+ tactuals +] is a list Array<Type> of types of the input to a method call
+  # Returns a new MethodType where all ComputedTypes in tmeth have been evaluated
+  def self.compute_types(tmeth, self_klass, trecv, tactuals)
+    self_klass.class_eval { bind = binding() }
+    bind.local_variable_set(:trec, trecv)
+    bind.local_variable_set(:targs, tactuals)
+    new_args = []
+    tmeth.args.each { |targ|
+      case targ
+      when RDL::Type::ComputedType
+        new_args << targ.compute(bind)
+      else
+        new_args << targ
+      end
+    }
+    case tmeth.ret
+    when RDL::Type::ComputedType
+      new_ret = tmeth.ret.compute(bind)
+    else
+      new_ret = tmeth.ret
+    end
+    RDL::Type::MethodType.new(new_args, tmeth.block, new_ret)
   end
 
   def self.tc_send_class(trecv, e)
