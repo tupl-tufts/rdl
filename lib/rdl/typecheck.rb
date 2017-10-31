@@ -234,6 +234,7 @@ module RDL::Typecheck
         # initialize method must always return "self" or GenericType where base is "self"
         error :bad_initialize_type, [], ast unless ((type.ret.is_a?(RDL::Type::VarType) && type.ret.name == :self) || (type.ret.is_a?(RDL::Type::GenericType) && type.ret.base.is_a?(RDL::Type::VarType) && type.ret.base.name == :self))
       end
+      raise RuntimeError, "Type checking of methods with computed types is not currently supported." unless (type.args + [type.ret]).all? { |t| !t.instance_of?(RDL::Type::ComputedType) }
       inst = {self: self_type}
       type = type.instantiate inst
       _, targs = args_hash({}, Env.new, type, args, ast, 'method')
