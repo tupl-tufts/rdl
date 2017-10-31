@@ -1255,7 +1255,7 @@ RUBY
       trets_tmp = []
       tmeth_inter.each { |tmeth| # MethodType
         if ((tmeth.block && block) || (tmeth.block.nil? && block.nil?))
-          tmeth = compute_types(tmeth, self_klass, trecv, tactuals_expanded)
+          tmeth = compute_types(tmeth, self_klass, trecv, tactuals_expanded) unless (tmeth.args+[tmeth.ret]).all? { |t| !t.instance_of?(RDL::Type::ComputedType) }
           tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)          
           if tmeth_inst
             tc_block(scope, env, tmeth.block, block, tmeth_inst) if block

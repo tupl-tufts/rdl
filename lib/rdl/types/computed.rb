@@ -15,6 +15,9 @@ module RDL::Type
       res
     end
 
+    def to_s
+      "``#{@code}``"
+    end
 
     ### TODO:: Figure out how to fill in the below methods.
     ### I believe a ComputedType will always be evaluated to

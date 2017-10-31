@@ -1819,4 +1819,78 @@ class TestTypecheck < Minitest::Test
       RaiseTypechecks.baz
     end
   end
+
+  def test_comp_types
+    self.class.class_eval "class CompTypes; end"
+    CompTypes.class_eval do
+      ### Tests where return type is computed
+      extend RDL::Annotate
+      type :bar, '(Integer or String) -> ``gen_return_type(targs)``'
+      def self.gen_return_type(targs)
+        raise RDL::Typecheck::StaticTypeError, "Unexpected number of arguments to bar." unless targs.size == 1
+        if targs[0] == RDL::Globals.types[:integer]
+          return RDL::Globals.types[:string]
+        elsif targs[0] == RDL::Globals.types[:string]
+          return RDL::Globals.types[:integer]
+        else
+          raise RDL::Typecheck::StaticTypeError, "Unexpected input type."
+        end
+      end
+
+      type '(Integer) -> String', typecheck: :now
+      def uses_bar1(x)
+        bar(x)
+      end
+
+      type '(String) -> Integer', typecheck: :now
+      def uses_bar2(x)
+        bar(x)
+      end
+    end
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      CompTypes.class_eval do
+          type '(String) -> String', typecheck: :now
+          def uses_bar3(x)
+            bar(x)
+          end
+      end
+    }
+
+    CompTypes.class_eval do
+      ### Tests where input type is computed
+      type :baz, '(Integer or String, ``gen_input_type(targs)``) -> Integer'
+
+      def self.gen_input_type(targs)
+        raise RDL::Typecheck::StaticTypeError, "Unexpected number of arguments to bar." unless targs.size == 2
+        if targs[0] == RDL::Globals.types[:integer]
+          return RDL::Globals.types[:string]
+        elsif targs[0] == RDL::Globals.types[:string]
+          return RDL::Globals.types[:integer]
+        else
+          raise RDL::Typecheck::StaticTypeError, "Unexpected input type."
+        end    
+      end
+
+      type '(Integer, String) -> Integer', typecheck: :now
+      def uses_baz1(x, y)
+        baz(x, y)
+      end
+
+      type '(String, Integer) -> Integer', typecheck: :now
+      def uses_baz2(x, y)
+        baz(x, y)
+      end
+    end
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      CompTypes.class_eval do
+        type '(Integer, Integer) -> Integer', typecheck: :now
+        def uses_baz3(x, y)
+          baz(x, y)
+        end
+      end
+    }
+
+  end
 end
