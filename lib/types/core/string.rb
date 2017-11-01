@@ -1,6 +1,6 @@
 RDL.nowrap :String
 RDL.type :String, :initialize, '(?String str) -> self new_str'
-RDL.type :String, :try_convert, '(Object obj) -> String or nil new_string'
+RDL.type :String, :'self.try_convert', '(Object obj) -> String or nil new_string'
 RDL.type :String, :%, '(Object) -> String'
 RDL.type :String, :*, '(Integer) -> String'
 RDL.type :String, :+, '(String) -> String'
