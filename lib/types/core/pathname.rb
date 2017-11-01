@@ -52,7 +52,7 @@ RDL.type :Pathname, :lchmod, '(Integer mode) -> Integer'
 RDL.type :Pathname, :lchown, '(Integer owner, Integer group) -> Integer'
 RDL.type :Pathname, :lstat, '() -> File::Stat'
 RDL.type :Pathname, :make_link, '(String old) -> 0'
-RDL.type :Pathname, :symlink, '(String old) -> 0'
+RDL.type :Pathname, :symlink?, '(String old) -> 0'
 RDL.type :Pathname, :mkdir, '(String p1) -> 0'
 RDL.type :Pathname, :mkpath, '() -> %any' # TODO return?
 RDL.type :Pathname, :mountpoint?, '() -> %bool'
