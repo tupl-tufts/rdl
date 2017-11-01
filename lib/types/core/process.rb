@@ -90,7 +90,6 @@ RDL.rdl_alias :'Process::Status', :to_int, :to_i
 RDL.type :'Process::Status', :to_s, '() -> String'
 
 RDL.nowrap :'Process::Sys'
-RDL.type :'Process::Sys', 'self.geteid', '() -> Integer'
 RDL.type :'Process::Sys', 'self.geteuid', '() -> Integer'
 RDL.type :'Process::Sys', 'self.getgid', '() -> Integer'
 RDL.type :'Process::Sys', 'self.getuid', '() -> Integer'
