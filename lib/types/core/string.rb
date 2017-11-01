@@ -98,7 +98,7 @@ RDL.type :String, :scrub, '(?String) -> String'
 RDL.type :String, :scrub, '(?String) {(%any) -> %any} -> String'
 RDL.type :String, :scrub!, '(?String) -> String'
 RDL.type :String, :scrub!, '(?String) {(%any) -> %any} -> String'
-RDL.type :String, :set_byte, '(Integer, Integer) -> Integer'
+RDL.type :String, :setbyte, '(Integer, Integer) -> Integer'
 RDL.type :String, :size, '() -> Integer'
 RDL.rdl_alias :String, :slice, :[]
 RDL.type :String, :slice!, '(Integer, ?Integer) -> String or nil'
