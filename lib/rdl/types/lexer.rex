@@ -8,7 +8,7 @@ macro
   FIXNUM -?(\d)+
   FLOAT -?\d\.\d+
   PREDICATE \{\{(?:(?!}}).)+\}\}
-  COMP ``.+``
+  COMP  ``(?:(?!``).)+``
 
 
 rule

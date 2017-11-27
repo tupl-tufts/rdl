@@ -130,7 +130,7 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/\./))
          action { [:DOT, text] }
 
-      when (text = @ss.scan(/``.+``/))
+      when (text = @ss.scan(/``(?:(?!``).)+``/))
          action { [:COMP, text[2..-3]] }
 
       when (text = @ss.scan(/-?\d\.\d+/))
