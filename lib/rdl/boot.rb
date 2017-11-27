@@ -2,6 +2,7 @@ require 'delegate'
 require 'digest'
 require 'set'
 require 'parser/current'
+require 'bigdecimal'
 
 module RDL
 end

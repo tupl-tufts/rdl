@@ -1437,15 +1437,20 @@ RUBY
     t = RDL::Globals.info.get_with_aliases(klass, name, :type)
     return t if t # simplest case, no need to walk inheritance hierarchy
     the_klass = RDL::Util.to_class(klass)
-    is_singleton = RDL::Util.has_singleton_marker(the_klass.to_s)
+    is_singleton = RDL::Util.has_singleton_marker(klass)
     included = the_klass.included_modules
     the_klass.ancestors[1..-1].each { |ancestor|
       # assumes ancestors is proper order to walk hierarchy
       # included modules' instance methods get added as instance methods, so can't be in singleton class
-      next if (ancestor.instance_of? Module) && (included.member? ancestor) && is_singleton
+      next if (ancestor.instance_of? Module) && (included.member? ancestor) && is_singleton && !(ancestor == Kernel)
       # extended (i.e., not included) modules' instance methods get added as singleton methods, so can't be in class
       next if (ancestor.instance_of? Module) && (not (included.member? ancestor)) && (not is_singleton)
-      tancestor = RDL::Globals.info.get_with_aliases(ancestor.to_s, name, :type)
+      if is_singleton
+        anc_lookup = get_singleton_name(ancestor.to_s)
+      else
+        anc_lookup = ancestor.to_s
+      end
+      tancestor = RDL::Globals.info.get_with_aliases(anc_lookup, name, :type)
       return tancestor if tancestor
       # special caes: Kernel's singleton methods are *also* added when included?!
       if ancestor == Kernel
@@ -1462,6 +1467,13 @@ RUBY
       end
     }
     return nil
+  end
+
+  def self.get_singleton_name(name)
+    /#<Class:(.+)>/ =~ name
+    return name unless $1 ### possible to get no match for extended modules, or class Class, Module, ..., BasicObject
+    new_name = RDL::Util.add_singleton_marker($1)
+    new_name
   end
 
   def self.find_constant(env, e)

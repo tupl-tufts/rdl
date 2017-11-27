@@ -140,6 +140,12 @@ class MethodMissing2
   end
 end
 
+class SingletonInheritA
+  extend RDL::Annotate
+  type 'self.foo', '(Integer) -> Integer'
+end
+
+class SingletonInheritB < SingletonInheritA; end
 
 class TestTypecheck < Minitest::Test
   extend RDL::Annotate
@@ -1819,4 +1825,15 @@ class TestTypecheck < Minitest::Test
       RaiseTypechecks.baz
     end
   end
+
+  def test_sing_method_inheritence
+    self.class.class_eval do
+      type '(Integer) -> Integer', typecheck: :now
+      def calls_inherited_sing_meth(x)
+        SingletonInheritB.foo(x)
+      end
+    end
+  end
+
+
 end
