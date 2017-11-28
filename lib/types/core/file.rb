@@ -23,7 +23,7 @@ RDL.type :File, 'self.expand_path', '(%path file, ?%path dir) -> String abs_file
 RDL.type :File, 'self.extname', '(String path) -> String'
 RDL.type :File, 'self.file?', '(String or IO file) -> %bool'
 RDL.type :File, 'self.fnmatch', '(String pattern, String path, ?Integer flags) -> %bool'
-RDL.rdl_alias :File, :fnmatch?, :fnmatch
+RDL.rdl_alias :File, :'self.fnmatch?', :'self.fnmatch'
 RDL.type :File, 'self.ftype', '(String file) -> String' # TODO: return in set of strings
 RDL.type :File, 'self.grpowned?', '(String or IO file) -> %bool'
 RDL.type :File, 'self.identical?', '(String or IO file_1, String or IO file_2) -> %bool'
@@ -56,7 +56,7 @@ RDL.type :File, 'self.symlink', '(String old, String new) -> 0'
 RDL.type :File, 'self.symlink?', '(String file) -> %bool'
 RDL.type :File, 'self.truncate', '(String file, Integer) -> 0'
 RDL.type :File, 'self.umask', '(?Integer) -> Integer'
-RDL.rdl_alias :File, :unlink, :delete
+RDL.rdl_alias :File, :'self.unlink', :'self.delete'
 RDL.type :File, 'self.utime', '(Time atime, Time mtime, *String files) -> Integer'
 RDL.type :File, 'self.world_readable?', '(String or IO file) -> Integer or nil'
 RDL.type :File, 'self.world_writable?', '(String or IO file) -> Integer or nil'
