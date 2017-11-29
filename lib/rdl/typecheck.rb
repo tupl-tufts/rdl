@@ -1438,7 +1438,7 @@ RUBY
     return t if t # simplest case, no need to walk inheritance hierarchy
     the_klass = RDL::Util.to_class(klass)
     is_singleton = RDL::Util.has_singleton_marker(klass)
-    included = the_klass.included_modules
+    included = RDL::Util.to_class(klass.gsub("[s]", "")).included_modules
     the_klass.ancestors[1..-1].each { |ancestor|
       # assumes ancestors is proper order to walk hierarchy
       # included modules' instance methods get added as instance methods, so can't be in singleton class
