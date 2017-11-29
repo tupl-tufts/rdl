@@ -1085,9 +1085,9 @@ RUBY
       pair = fh.children[0]
       error :type_cast_format, [], fh unless pair.type == :pair && pair.children[0].type == :sym && pair.children[0].children[0] == :force
       force_arg = pair.children[1]
-      env1, _ = tc(scope, env, force_arg)
+      env, _ = tc(scope, env, force_arg)
     end
-    [env1, typ]
+    [env, typ]
   end
 
   def self.tc_note_type(scope, env, e)
