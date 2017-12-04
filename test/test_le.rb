@@ -1,7 +1,6 @@
 require 'minitest/autorun'
 $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
-require 'types/core'
 
 class TestLe < Minitest::Test
   include RDL::Type
@@ -21,6 +20,7 @@ class TestLe < Minitest::Test
   end
 
   def setup
+    RDL.reset
     @tbasicobject = NominalType.new "BasicObject"
     @tsymfoo = SingletonType.new :foo
     @ta = NominalType.new A
@@ -90,6 +90,8 @@ class TestLe < Minitest::Test
   end
 
   def test_tuple
+    RDL.type_params :Array, [:t], :all?
+
     t1 = TupleType.new(RDL::Globals.types[:symbol], RDL::Globals.types[:string])
     t2 = TupleType.new(RDL::Globals.types[:object], RDL::Globals.types[:object])
     tarray = NominalType.new("Array")
@@ -131,6 +133,8 @@ class TestLe < Minitest::Test
   end
 
   def test_finite_hash
+    RDL.type_params :Hash, [:k, :v], :all?
+
     t12 = tt "{a: 1, b: 2}"
     tfs = tt "{a: Integer, b: Integer}"
     too = tt "{a: Object, b: Object}"
@@ -248,18 +252,18 @@ class TestLe < Minitest::Test
   end
 
   class NomT
-    extend RDL::Annotate
-    type "() -> nil"
     def m1()
       nil
     end
-    type "() -> nil"
     def m2()
       nil
     end
   end
 
   def test_nominal_structural
+    RDL.type TestLe::NomT, :m1, "() -> nil", wrap: false
+    RDL.type TestLe::NomT, :m2, "() -> nil", wrap: false
+
     tnom = NominalType.new(Nom)
     tnomt = NominalType.new(NomT)
     tma = MethodType.new([], nil, RDL::Globals.types[:nil])
@@ -279,6 +283,9 @@ class TestLe < Minitest::Test
   end
 
   def test_leq_inst
+    RDL.type_params :Array, [:t], :all?
+    RDL.type_params :Hash, [:k, :v], :all?
+
     # when return of do_leq is false, ignore resulting inst, since that's very implementation dependent
     assert_equal [true, {t: @ta}], do_leq(tt("t"), @ta, true)
     assert_equal false, do_leq(tt("t"), @ta, false)[0]

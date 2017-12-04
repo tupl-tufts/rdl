@@ -9,6 +9,10 @@ class TestTypes < Minitest::Test
   class B; end
   class C; end
 
+  def setup
+    RDL.reset
+  end
+
   def test_nil_top
     tnil = NominalType.new :NilClass
     assert_equal RDL::Globals.types[:nil], tnil

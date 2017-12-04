@@ -10,6 +10,7 @@ class TestParser < Minitest::Test
   class C; end
 
   def setup
+    RDL.reset
     @tintegeropt = OptionalType.new RDL::Globals.types[:integer]
     @tintegervararg = VarargType.new RDL::Globals.types[:integer]
     @tstringopt = OptionalType.new RDL::Globals.types[:string]

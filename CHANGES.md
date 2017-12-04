@@ -15,6 +15,11 @@
 - #45 handle local constants
 - #62 allow more method names in structural types
 - #34 clean up discussion of how type checking works in README
+- Reordered list of RDL.* methods in README
+- Remove (most) ordering dependencies among test cases
+
+### Added
+- `RDL.reset` method
 
 ## [2.1.0] - 2017-06-14
 

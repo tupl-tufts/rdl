@@ -67,10 +67,6 @@ end
 
 class TestTypecheckC
   extend RDL::Annotate
-  type 'self.bar', '() -> Integer or String ret'
-  type 'self.foo', '() -> :A'
-  type 'foo', '() -> Integer'
-  type '(Integer) -> self'
   def initialize(x); end
 end
 
@@ -79,7 +75,6 @@ end
 
 class TestTypecheckE
   extend RDL::Annotate
-  type '(Integer) -> self', typecheck: :einit
   def initialize(x)
     x
   end
@@ -87,7 +82,6 @@ end
 
 class TestTypecheckF
   extend RDL::Annotate
-  type '(Integer) -> F', typecheck: :finit
   def initialize(x)
     x
   end
@@ -95,7 +89,6 @@ end
 
 module TestTypecheckM
   extend RDL::Annotate
-  type 'self.foo', '() -> :B'
 end
 
 class TestTypecheckOuter
@@ -143,9 +136,56 @@ end
 
 class TestTypecheck < Minitest::Test
   extend RDL::Annotate
-  type :_any_object, "() -> Object" # a method that could return true or false
 
   def setup
+    RDL.reset
+    RDL.type TestTypecheck, :_any_object, '() -> Object', wrap: false # a method that could return true or false
+    RDL.type_params :Array, [:t], :all?
+    RDL.type :Array, :[]=, '(Integer, t) -> t', wrap: false
+    RDL.type :Array, :[]=, '(Integer, Integer, t) -> t', wrap: false
+    RDL.type :Array, :[]=, '(Range<Integer>, t) -> t', wrap: false
+    RDL.type :Array, :each, '() -> Enumerator<t>', wrap: false
+    RDL.type :Array, :each, '() { (t) -> %any } -> Array<t>', wrap: false
+    RDL.type :Array, :length, '() -> Integer', wrap: false
+    RDL.type :Array, :index, '(u) -> Integer', wrap: false
+    RDL.type :Array, :index, '() { (t) -> %bool } -> Integer', wrap: false
+    RDL.type :Array, :index, '() -> Enumerator<t>', wrap: false
+    RDL.type :Array, :map, '() {(t) -> u} -> Array<u>', wrap: false
+    RDL.type :Array, :map, '() -> Enumerator<t>', wrap: false
+    RDL.type_params :Hash, [:k, :v], :all?
+    RDL.type :Hash, :length, '() -> Integer', wrap: false
+    RDL.rdl_alias :Array, :size, :length
+    RDL.type :Hash, :[], '(k) -> v', wrap: false
+    RDL.type :Hash, :[]=, '(k, v) -> v', wrap: false
+    RDL.type_params(:Range, [:t], nil, variance: [:+]) { |t| t.member?(self.begin) && t.member?(self.end) }
+    RDL.type :Range, :each, '() { (t) -> %any } -> self'
+    RDL.type :Range, :each, '() -> Enumerator<t>'
+    RDL.type :Integer, :<, '(Integer) -> %bool', wrap: false
+    RDL.type :Integer, :>, '(Integer) -> %bool', wrap: false
+    RDL.type :Integer, :>=, '(Integer) -> %bool', wrap: false
+    RDL.type :Integer, :+, '(Integer) -> Integer', wrap: false
+    RDL.type :Integer, :&, '(Integer) -> Integer', wrap: false
+    RDL.type :Integer, :*, '(Integer) -> Integer', wrap: false
+    RDL.type :Integer, :to_s, '() -> String', wrap: false
+    RDL.type :Fixnum, :<, '(Integer) -> %bool', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
+    RDL.type :Fixnum, :>, '(Integer) -> %bool', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
+    RDL.type :Fixnum, :>=, '(Integer) -> %bool', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
+    RDL.type :Fixnum, :+, '(Integer) -> Integer', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
+    RDL.type :Fixnum, :&, '(Integer) -> Integer', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
+    RDL.type :Fixnum, :*, '(Integer) -> Integer', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
+    RDL.type :Fixnum, :to_s, '() -> String', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
+    RDL.type :Kernel, 'self.puts', '(*[to_s : () -> String]) -> nil', wrap: false
+    RDL.type :Kernel, :raise, '() -> %bot', wrap: false
+    RDL.type :Kernel, :raise, '(String) -> %bot', wrap: false
+    RDL.type :Kernel, :raise, '(Class, ?String, ?Array<String>) -> %bot', wrap: false
+    RDL.type :Kernel, :raise, '(Exception, ?String, ?Array<String>) -> %bot', wrap: false
+    RDL.type :Object, :===, '(%any other) -> %bool', wrap: false
+    RDL.type :Object, :clone, '() -> self', wrap: false
+    RDL.type :String, :*, '(Integer) -> String', wrap: false
+    RDL.type :String, :+, '(String) -> String', wrap: false
+    RDL.type :String, :===, '(%any) -> %bool', wrap: false
+    RDL.type :String, :length, '() -> Integer', wrap: false
+    RDL.type :NilClass, :&, '(%any obj) -> false', wrap: false
     @t3 = RDL::Type::SingletonType.new 3
     @t4 = RDL::Type::SingletonType.new 4
     @t5 = RDL::Type::SingletonType.new 5
@@ -519,17 +559,14 @@ class TestTypecheck < Minitest::Test
   end
 
   class A
-    extend RDL::Annotate
-    type :_send_inherit1, "() -> Integer"
   end
   class B < A
   end
 
   def test_send_inter
-    self.class.class_eval {
-      type :_send_inter1, "(Integer) -> Integer"
-      type :_send_inter1, "(String) -> String"
-    }
+    RDL.type A, :_send_inherit1, "() -> Integer", wrap: false
+    RDL.type TestTypecheck, :_send_inter1, "(Integer) -> Integer", wrap: false
+    RDL.type TestTypecheck, :_send_inter1, "(String) -> String", wrap: false
     assert do_tc("_send_inter1(42)", env: @env) <= RDL::Globals.types[:integer]
     assert do_tc("_send_inter1('42')", env: @env) <= RDL::Globals.types[:string]
 
@@ -538,15 +575,13 @@ class TestTypecheck < Minitest::Test
 
   def test_send_opt_varargs
     # from test_type_contract.rb
-    self.class.class_eval {
-      type :_send_opt_varargs1, "(Integer, ?Integer) -> Integer"
-      type :_send_opt_varargs2, "(Integer, *Integer) -> Integer"
-      type :_send_opt_varargs3, "(Integer, ?Integer, ?Integer, *Integer) -> Integer"
-      type :_send_opt_varargs4, "(?Integer) -> Integer"
-      type :_send_opt_varargs5, "(*Integer) -> Integer"
-      type :_send_opt_varargs6, "(?Integer, String) -> Integer"
-      type :_send_opt_varargs7, "(Integer, *String, Integer) -> Integer"
-    }
+    RDL.type TestTypecheck, :_send_opt_varargs1, "(Integer, ?Integer) -> Integer", wrap: false
+    RDL.type TestTypecheck, :_send_opt_varargs2, "(Integer, *Integer) -> Integer", wrap: false
+    RDL.type TestTypecheck, :_send_opt_varargs3, "(Integer, ?Integer, ?Integer, *Integer) -> Integer", wrap: false
+    RDL.type TestTypecheck, :_send_opt_varargs4, "(?Integer) -> Integer", wrap: false
+    RDL.type TestTypecheck, :_send_opt_varargs5, "(*Integer) -> Integer", wrap: false
+    RDL.type TestTypecheck, :_send_opt_varargs6, "(?Integer, String) -> Integer", wrap: false
+    RDL.type TestTypecheck, :_send_opt_varargs7, "(Integer, *String, Integer) -> Integer", wrap: false
     assert do_tc("_send_opt_varargs1(42)", env: @env) <= RDL::Globals.types[:integer]
     assert do_tc("_send_opt_varargs1(42, 43)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { assert do_tc("_send_opt_varargs1()", env: @env) }
@@ -677,7 +712,7 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_send_singleton
-    RDL.type Integer, :_send_singleton, "() -> String"
+    RDL.type Integer, :_send_singleton, "() -> String", wrap: false
     assert do_tc("3._send_singleton", env: @env) <= RDL::Globals.types[:string]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("3._send_singleton_nexists", env: @env) }
   end
@@ -694,10 +729,8 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_send_block
-    self.class.class_eval {
-      type :_send_block1, "(Integer) { (Integer) -> Integer } -> Integer"
-      type :_send_block2, "(Integer) -> Integer"
-    }
+    RDL.type TestTypecheck, :_send_block1, "(Integer) { (Integer) -> Integer } -> Integer"
+    RDL.type TestTypecheck, :_send_block2, "(Integer) -> Integer"
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block2(42) { |x| x + 1 }", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42) { |x, y| x + y }", env: @env) }
@@ -959,16 +992,14 @@ class TestTypecheck < Minitest::Test
   end
 
   class C
-    extend RDL::Annotate
-    type :===, "(Object) -> %bool"
   end
 
   class D
-    extend RDL::Annotate
-    type :===, "(String) -> %bool"
   end
 
   def test_when
+    RDL.type C, :===, "(Object) -> %bool"
+    RDL.type D, :===, "(String) -> %bool"
     assert do_tc("case when C.new then 3 end", env: @env) <= @t3
     assert do_tc("x = 4; case when _any_object then x = 3 end; x", env: @env) <= @t34
     assert do_tc("case when _any_object then 3 else 'foo' end", env: @env) <= @ts3
@@ -1058,12 +1089,11 @@ class TestTypecheck < Minitest::Test
   end
 
   class E
-    extend RDL::Annotate
-    type :f, '() -> Integer'
-    type :f=, '(Integer) -> nil'
   end
 
   def test_op_asgn
+    RDL.type E, :f, '() -> Integer', wrap: false
+    RDL.type E, :f=, '(Integer) -> nil', wrap: false
     assert RDL::Globals.types[:integer], do_tc("x = 0; x += 1")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x += 1") }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = Object.new; x += 1", env: @env) }
@@ -1073,9 +1103,12 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_and_or_asgn
+    RDL.type E, :f, '() -> Integer', wrap: false
+    RDL.type E, :f=, '(Integer) -> nil', wrap: false
     self.class.class_eval {
       var_type :@f_and_or_asgn, "Integer"
     }
+    RDL.type TestTypecheckE, :initialize, '(Integer) -> self', wrap: false, typecheck: :einit
     assert do_tc("x ||= 3") <= @t3 # weird
     assert do_tc("x &&= 3") <= RDL::Globals.types[:nil] # weirder
     assert do_tc("@f_and_or_asgn &&= 4", env: @env) <= RDL::Globals.types[:integer]
@@ -1086,6 +1119,8 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_masgn
+    RDL.type E, :f, '() -> Integer', wrap: false
+    RDL.type E, :f=, '(Integer) -> nil', wrap: false
     self.class.class_eval {
       var_type :@f_masgn, "Array<Integer>"
     }
@@ -1155,6 +1190,9 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_instantiate
+    RDL.type :Array, :initialize, '() -> self', wrap: false
+    RDL.type :Array, :initialize, '(Integer) -> self', wrap: false
+    RDL.type :Array, :initialize, '(Integer, t) -> self<t>', wrap: false
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "(Integer, Integer) -> Array<Integer>", typecheck: :now
@@ -1223,11 +1261,9 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_array_splat
-    self.class.class_eval {
-      type :_splataf, "() -> Array<Integer>"
-      type :_splatas, "() -> Array<String>"
-      type :_splathsf, "() -> Hash<Symbol, Integer>"
-    }
+    RDL.type TestTypecheck, :_splataf, "() -> Array<Integer>", wrap: false
+    RDL.type TestTypecheck, :_splatas, "() -> Array<String>", wrap: false
+    RDL.type TestTypecheck, :_splathsf, "() -> Hash<Symbol, Integer>", wrap: false
     assert do_tc("x = *1") <= tt("[1]")
     assert do_tc("x = [1, *2, 3]") <= tt("[1, 2, 3]")
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("x = [1, *Object.new, 3]", env: @env) } # the Object might or might not be an array...
@@ -1522,6 +1558,7 @@ class TestTypecheck < Minitest::Test
 
   def test_class_call
     TestTypecheckE.class_eval {
+      type :initialize, '(Integer) -> self', wrap: false
       type '(Integer) -> Class', typecheck: :now
       def call_class1(x)
         x.class
@@ -1540,18 +1577,31 @@ class TestTypecheck < Minitest::Test
   end
 
   def test_singleton
+    TestTypecheckC.class_eval {
+      type :'self.foo', '() -> :A'
+    }
+    TestTypecheckM.class_eval {
+      type :'self.foo', '() -> :B'
+    }
     assert_equal ':A', do_tc("TestTypecheckC.foo", env: @env).to_s
     assert_equal ':B', do_tc("TestTypecheckM.foo", env: @env).to_s
   end
 
   def test_annotated_ret
+    TestTypecheckC.class_eval {
+      type 'self.bar', '() -> Integer or String ret'
+    }
     assert do_tc("TestTypecheckC.bar", env: @env) <= tt('Integer or String')
   end
 
   def test_constructor
+    RDL.type TestTypecheckC, :'self.bar', '() -> Integer or String ret'
+    RDL.type TestTypecheckC, :'self.foo', '() -> :A'
+    RDL.type TestTypecheckC, :foo, '() -> Integer'
+    RDL.type TestTypecheckC, :initialize, '(Integer) -> self'
+    RDL.type TestTypecheckF, :initialize, '(Integer) -> F', typecheck: :finit
     t = do_tc("TestTypecheckC.new(1)", env: @env)
     assert_equal 'TestTypecheckC', t.to_s
-
 
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
@@ -1739,7 +1789,7 @@ class TestTypecheck < Minitest::Test
     assert_equal 'foo', ModuleNesting::Child.parent_context
     assert_equal 'bar', ModuleNesting::Child.mixin
   end
-    
+
   def test_module_fully_qualfieds_calls
     self.class.class_eval "module FullyQualfied; end"
     FullyQualfied.class_eval do
@@ -1776,7 +1826,7 @@ class TestTypecheck < Minitest::Test
 
     assert_nil ChildWithoutType.new.foo(1)
   end
-    
+
   def test_object_sing_method
     assert_raises(RDL::Typecheck::StaticTypeError) {
       Object.class_eval do
@@ -1788,7 +1838,7 @@ class TestTypecheck < Minitest::Test
       end
     }
   end
-    
+
   def test_raise_typechecks
     self.class.class_eval "module RaiseTypechecks; end"
     RaiseTypechecks.class_eval do

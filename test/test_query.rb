@@ -6,6 +6,7 @@ class TestQuery < Minitest::Test
   include RDL::Type
 
   def setup
+    RDL.reset
     @p = Parser.new
     @tinteger = NominalType.new Integer
     @tarray = NominalType.new Array

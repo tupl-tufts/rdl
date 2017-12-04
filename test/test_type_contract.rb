@@ -7,23 +7,8 @@ class TestTypeContract < Minitest::Test
   include RDL::Contract
   extend RDL::Annotate
 
-  class TestTypeContract_A
-    extend RDL::Annotate
-    type "(Integer) -> self"
-    def initialize(x)
-      x
-    end
-  end
-
-  class TestTypeContract_B
-    extend RDL::Annotate
-    type "(Integer) -> Integer"
-    def initialize(x)
-      x
-    end
-  end
-
   def setup
+    RDL.reset
     @p = Parser.new
   end
 
@@ -39,6 +24,28 @@ class TestTypeContract < Minitest::Test
   end
 
   def test_proc
+    self.class.class_eval <<-RUBY, __FILE__, __LINE__
+      type '(Integer) { (Integer) -> Integer } -> Integer'
+      def block_contract_test1(x)
+        x+yield(5)
+      end
+
+      type '(Integer) { (Integer) -> Integer } -> Float'
+      def block_contract_test2(x)
+        x+yield(4.5)
+      end
+
+      type '(Integer) -> Integer'
+      def block_contract_test3(x)
+        42
+      end
+
+      type '(Integer) ?{(Integer) -> Integer} -> Integer'
+      def block_contract_test4(x,&blk)
+        return yield(x) if blk
+        return x
+      end
+RUBY
     t1 = @p.scan_str "(nil) -> nil"
     p1 = t1.to_contract.wrap(self) { |x| nil }
     assert_nil p1.call(nil)
@@ -203,29 +210,6 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p18.call(41, Proc.new {|x| x+1.5}) }
     p18b = t18.to_higher_contract(self) { |x,p=nil| if p then p.call(x+0.5) else x end }
     assert_raises(TypeError) { p18b.call(41, Proc.new {|x| x+1}) }
-
-
-  end
-
-  type '(Integer) { (Integer) -> Integer } -> Integer'
-  def block_contract_test1(x)
-    x+yield(5)
-  end
-
-  type '(Integer) { (Integer) -> Integer } -> Float'
-  def block_contract_test2(x)
-    x+yield(4.5)
-  end
-
-  type '(Integer) -> Integer'
-  def block_contract_test3(x)
-    42
-  end
-
-  type '(Integer) ?{(Integer) -> Integer} -> Integer'
-  def block_contract_test4(x,&blk)
-    return yield(x) if blk
-    return x
   end
 
   def test_proc_names
@@ -314,28 +298,45 @@ class TestTypeContract < Minitest::Test
     assert_raises(TypeError) { p9.call(43, x: "foo", y: 44, pi: 3.14, e: 3) }
   end
 
-  type '() { () -> nil } -> nil'
-  def _test_with_block
-    nil
-  end
-
-  type '() -> nil'
-  def _test_without_block
-    nil
-  end
-
-  type '() -> nil'
-  type '() { () -> nil } -> nil'
-  def _test_with_without_block
-    nil
-  end
-
   def test_initialize
+    self.class.class_eval <<-RUBY, __FILE__, __LINE__
+      class TestTypeContract_A
+        extend RDL::Annotate
+        type "(Integer) -> self"
+        def initialize(x)
+          x
+        end
+      end
+      class TestTypeContract_B
+        extend RDL::Annotate
+        type "(Integer) -> Integer"
+        def initialize(x)
+          x
+        end
+      end
+RUBY
     assert TestTypeContract_A.new(1)
     assert_raises(ArgumentError) { TestTypeContract_B.new(1) }
   end
-  
+
   def test_block
+    self.class.class_eval <<-RUBY, __FILE__, __LINE__
+      type '() { () -> nil } -> nil'
+      def _test_with_block
+        nil
+      end
+
+      type '() -> nil'
+      def _test_without_block
+        nil
+      end
+
+      type '() -> nil'
+      type '() { () -> nil } -> nil'
+      def _test_with_without_block
+        nil
+      end
+RUBY
     assert_nil(_test_with_block { nil })
     assert_raises(TypeError) { _test_with_block }
 
