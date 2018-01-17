@@ -565,6 +565,12 @@ type MyClass, :foo, '(a: Integer, b: String) { () -> %any } -> %any'
 ```
 Here `foo`, takes a hash where key `:a` is mapped to an `Integer` and key `:b` is mapped to a `String`. Similarly, `{'a'=>Integer, 2=>String}` types a hash where keys `'a'` and `2` are mapped to `Integer` and `String`, respectively. Both syntaxes can be used to define hash types.
 
+Value types can also be declared as optional, indicating that the key/value pair is an optional part of the hash:
+```ruby
+type MyClass, :foo, '(a: Integer, b: ?String) { () -> %any } -> %any'
+```
+With this type, `foo` takes a hash where key `:a` is mapped to an `Integer`, and furthermore the hash may or may not include a key `:b` that is mapped to a `String`. 
+
 RDL also allows a "rest" type in finite hashes (of course, they're not so finite if they use it!):
 ```ruby
 type MyClass, :foo, '(a: Integer, b: String, **Float) -> %any'
