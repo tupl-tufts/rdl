@@ -5,6 +5,10 @@ require 'rdl'
 class TestRDL < Minitest::Test
   extend RDL::Annotate
 
+  def setup
+    RDL.reset
+  end
+
   # Test wrapping with no types or contracts
   def test_wrap
     def m1(x) return x; end
@@ -388,21 +392,21 @@ RUBY
     assert !(RDL::Globals.info.has? "TestRDL::TestVersion", "m4", :post)
   end
 
-  class TestRDLAnnotate
-    extend RDL::RDLAnnotate
-
-    rdl_pre { |x| x > 0 }
-    def m1(x) return x; end
-
-    rdl_post { |x| x < 0 }
-    def m2(x) return 3; end
-
-    rdl_type '(Integer) -> Integer'
-    def m3(x) return x; end
-
-  end
-
   def test_pre_rdl_annotate_contract
+    self.class.class_eval <<-RUBY, __FILE__, __LINE__
+      class TestRDLAnnotate
+        extend RDL::RDLAnnotate
+
+        rdl_pre { |x| x > 0 }
+        def m1(x) return x; end
+
+        rdl_post { |x| x < 0 }
+        def m2(x) return 3; end
+
+        rdl_type '(Integer) -> Integer'
+        def m3(x) return x; end
+    end
+RUBY
     assert_equal 3, TestRDLAnnotate.new.m1(3)
     assert_raises(RDL::Contract::ContractError) { TestRDLAnnotate.new.m1(-1) }
     assert_raises(RDL::Contract::ContractError) { TestRDLAnnotate.new.m2(42) }
@@ -410,32 +414,30 @@ RUBY
   end
 
   class TC0
-    extend RDL::Annotate
-
-    type :foo, '() -> Integer', {typecheck: :call}
     def foo
       's'
     end
 
-    type :bar, '() -> Integer', {typecheck: :call}
     def bar
       0
     end
   end
+
   class TC1 < TC0
-    extend RDL::Annotate
-    type :foo, '() -> String', {typecheck: :call}
     def foo
       's'
     end
 
-    type :bar, '() -> String', {typecheck: :call}
     def bar
       0
     end
   end
 
   def test_wrap_inheritance
+    RDL.type TC0, :foo, '() -> Integer', typecheck: :call
+    RDL.type TC0, :bar, '() -> Integer', typecheck: :call
+    RDL.type TC1, :foo, '() -> String', typecheck: :call
+    RDL.type TC1, :bar, '() -> String', typecheck: :call
     assert_raises(RDL::Typecheck::StaticTypeError) { TC0.new.foo }
     assert_equal 0, TC0.new.bar
     assert_equal 's', TC1.new.foo

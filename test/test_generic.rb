@@ -1,6 +1,7 @@
 require 'minitest/autorun'
 $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
+RDL.reset
 
 class TestGeneric < Minitest::Test
   extend RDL::Annotate
@@ -8,8 +9,6 @@ class TestGeneric < Minitest::Test
   # Make two classes that wrap Array and Hash, so we don't mess with their
   # implementations in test case evaluation.
   class A
-    extend RDL::Annotate
-    type_params [:t], :all?
     def initialize(a); @a = a end
     def all?(&blk)
       @a.all?(&blk)
@@ -17,8 +16,6 @@ class TestGeneric < Minitest::Test
   end
 
   class H
-    extend RDL::Annotate
-    type_params [:k, :v], :all?
     def initialize(h); @h = h end
     def all?(&blk)
       @h.all? { |x, y| blk.call(x, y) } # have to do extra wrap to avoid splat issues
@@ -28,9 +25,7 @@ class TestGeneric < Minitest::Test
   class B
     extend RDL::Annotate
     # class for checking other variance annotations
-    type_params [:a, :b], nil, variance: [:+, :-] { |a, b| true }
-    type "(a) -> nil"
-    def m1(x)
+    def m1(x) # type annotation
       nil
     end
     def m2(x) # no type annotation
@@ -38,7 +33,26 @@ class TestGeneric < Minitest::Test
     end
   end
 
+  class C
+    def m1() return self; end
+    def m2() return C.new; end
+    def m3() return Object.new; end
+  end
+
+  class D < C
+  end
+
+
+
   def setup
+    RDL.reset
+    RDL.type_params A, [:t], :all?
+    RDL.type_params H, [:k, :v], :all?
+    RDL.type_params B, [:a, :b], nil, variance: [:+, :-] { |a, b| true }
+    RDL.type B, :m1, "(a) -> nil"
+    RDL.type C, :m1, "() -> self"
+    RDL.type C, :m2, "() -> self"
+    RDL.type C, :m3, "() -> self"
     @ta = RDL::Type::NominalType.new "TestGeneric::A"
     @th = RDL::Type::NominalType.new "TestGeneric::H"
     @tas = RDL::Type::GenericType.new(@ta, RDL::Globals.types[:string])
@@ -109,19 +123,6 @@ class TestGeneric < Minitest::Test
     assert (not (tbss <= ts4))
     ts5 = RDL::Type::StructuralType.new(m1: tmb, m2: tmc)
     assert (tbss <= ts5)
-  end
-
-  class C
-    extend RDL::Annotate
-    type "() -> self"
-    def m1() return self; end
-    type "() -> self"
-    def m2() return C.new; end
-    type "() -> self"
-    def m3() return Object.new; end
-  end
-
-  class D < C
   end
 
   def test_self_type
