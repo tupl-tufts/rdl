@@ -1,4 +1,5 @@
 RDL.nowrap :'ActiveRecord::Associations::CollectionProxy'
+RDL.nowrap :'ActiveRecord::Associations::ClassMethods'
 
 RDL.type_params :'ActiveRecord::Associations::CollectionProxy', [:t], :all?
 
