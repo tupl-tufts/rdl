@@ -1100,7 +1100,6 @@ RUBY
 
   def self.tc_instantiate!(scope, env, e)
     error :instantiate_format, [], e if e.children.length < 4
-    puts "RIGHT NOW WE HAVE #{e.children[2]} AND ALSO #{env[e.children[2].children[0]]}"
     env, obj_typ = tc(scope, env, e.children[2])
     case obj_typ
     when RDL::Type::GenericType
@@ -1114,7 +1113,6 @@ RUBY
     when RDL::Type::SingletonType
       klass = if obj_typ.val.is_a?(Class) then obj_typ.val.to_s else obj_typ.val.class.to_s end
     else
-      puts "GOT HERE WITH #{obj_typ.class}"
       error :bad_inst_type, [obj_typ], e
     end
 
