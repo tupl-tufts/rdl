@@ -25,6 +25,8 @@ class RDL::Rails
       return 'Time'
     when :datetime
       return 'DateTime'
+    when :json
+      return 'Json'
     else
       raise RuntimeError, "Unrecoganized column type #{rails_type}"
     end
