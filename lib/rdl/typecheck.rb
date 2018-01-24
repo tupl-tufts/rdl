@@ -1100,6 +1100,7 @@ RUBY
 
   def self.tc_instantiate!(scope, env, e)
     error :instantiate_format, [], e if e.children.length < 4
+    puts "RIGHT NOW WE HAVE #{e.children[2]} AND ALSO #{env[e.children[2].children[0]]}"
     env, obj_typ = tc(scope, env, e.children[2])
     case obj_typ
     when RDL::Type::GenericType
@@ -1113,6 +1114,7 @@ RUBY
     when RDL::Type::SingletonType
       klass = if obj_typ.val.is_a?(Class) then obj_typ.val.to_s else obj_typ.val.class.to_s end
     else
+      puts "GOT HERE WITH #{obj_typ.class}"
       error :bad_inst_type, [obj_typ], e
     end
 
@@ -1473,14 +1475,14 @@ RUBY
     return t if t # simplest case, no need to walk inheritance hierarchy
     the_klass = RDL::Util.to_class(klass)
     is_singleton = RDL::Util.has_singleton_marker(klass)
-    included = the_klass.included_modules
+    included = RDL::Util.to_class(klass.gsub("[s]", "")).included_modules
     the_klass.ancestors[1..-1].each { |ancestor|
       # assumes ancestors is proper order to walk hierarchy
       # included modules' instance methods get added as instance methods, so can't be in singleton class
       next if (ancestor.instance_of? Module) && (included.member? ancestor) && is_singleton && !(ancestor == Kernel)
       # extended (i.e., not included) modules' instance methods get added as singleton methods, so can't be in class
       next if (ancestor.instance_of? Module) && (not (included.member? ancestor)) && (not is_singleton)
-      if is_singleton
+      if is_singleton #&& !ancestor.instance_of?(Module)
         anc_lookup = get_singleton_name(ancestor.to_s)
       else
         anc_lookup = ancestor.to_s

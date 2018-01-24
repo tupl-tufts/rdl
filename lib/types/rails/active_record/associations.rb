@@ -134,7 +134,7 @@ module ActiveRecord::Associations::ClassMethods
     |name, scope=nil, class_name: nil, dependent: nil, foreign_key: nil,
      foreign_type: nil, primary_key: nil, as: nil, through: nil, source: nil,
      source_type: nil, vadliate: nil, autosave: nil, inverse_of: nil,
-     required: nil|
+     required: nil, anonymous_class: nil|
 
     if as
      assoc_type = '%any' # type is data-driven, can't determine statically
