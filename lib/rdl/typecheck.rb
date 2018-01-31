@@ -620,7 +620,7 @@ module RDL::Typecheck
           if env[:self].is_a?(RDL::Type::SingletonType)
             ic = env[:self].val
           else
-            ic = env[:self].class
+            ic = env[:self].klass
           end
         else
           ic = Object
