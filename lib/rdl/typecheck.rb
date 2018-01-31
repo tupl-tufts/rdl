@@ -900,10 +900,13 @@ RUBY
       [env, RDL::Globals.types[:bot]]
     when :return
       # TODO return in lambda returns from lambda and not outer scope
-      if e.children[0]
-         env1, t1 = tc(scope, env, e.children[0])
+      case e.children.size
+      when 0
+        env1, t1 = [env, RDL::Globals.types[:nil]]
+      when 1
+        env1, t1 = tc(scope, env, e.children[0])
       else
-         env1, t1 = [env, RDL::Globals.types[:nil]]
+        env1, t1 = tc(scope, env, AST::Node.new(:array, e.children))
       end
       error :bad_return_type, [t1.to_s, scope[:tret]], e unless t1 <= scope[:tret]
       [env1, RDL::Globals.types[:bot]] # return is a void value expression
