@@ -6,6 +6,7 @@ module ActiveRecord::ModelSchema::ClassMethods
   extend RDL::RDLAnnotate
 
   rdl_post(:load_schema!) { |ret| # load_schema! doesn't return anything interesting
+=begin
     columns_hash.each { |name, col|
       t = RDL::Rails.column_to_rdl(col.type)
       if col.null
@@ -41,6 +42,8 @@ module ActiveRecord::ModelSchema::ClassMethods
     rdl_type :'self.none', "() -> ActiveRecord::Associations::CollectionProxy<#{self.to_s}>"
     rdl_type :'self.where', '(String, *%any) -> ActiveRecord::Associations::CollectionProxy<t>'
     rdl_type :'self.where', '(**%any) -> ActiveRecord::Associations::CollectionProxy<t>'
+=end
     true
   }
+
 end
