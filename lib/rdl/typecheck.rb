@@ -1180,7 +1180,7 @@ RUBY
   # Returns array of possible return types, or throws exception if there are none
   def self.tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e)
     return tc_send_class(trecv, e) if (meth == :class) && (tactuals.empty?)
-    tmeth_inter = [] # Array<MethodType>, i.e., an intersection types
+    ts = [] # Array<MethodType>, i.e., an intersection types
     case trecv
     when RDL::Type::SingletonType
       if trecv.val.is_a? Class or trecv.val.is_a? Module
@@ -1198,7 +1198,6 @@ RUBY
         error :no_singleton_method_type, [trecv.val, meth], e unless ts
         inst = {self: self_inst}
         self_klass = trecv.val
-        tmeth_inter = ts.map { |t| t.instantiate(inst) }
       elsif trecv.val.is_a?(Symbol) && meth == :to_proc
         # Symbol#to_proc on a singleton symbol type produces a Proc for the method of the same name
         if env[:self].is_a?(RDL::Type::NominalType)
@@ -1215,30 +1214,41 @@ RUBY
         error :no_instance_method_type, [klass, meth], e unless ts
         inst = {self: trecv}
         self_klass = trecv.val.class
-        tmeth_inter = ts.map { |t| t.instantiate(inst) }
       end
     when RDL::Type::NominalType
       ts = lookup(scope, trecv.name, meth, e)
       error :no_instance_method_type, [trecv.name, meth], e unless ts
       inst = {self: trecv}
       self_klass = RDL::Util.to_class(trecv.name)
-      tmeth_inter = ts.map { |t| t.instantiate(inst) }
-    when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
+    when RDL::Type::GenericType#, RDL::Type::TupleType, RDL::Type::FiniteHashType
+=begin
       unless trecv.is_a? RDL::Type::GenericType
         error :tuple_finite_hash_promote, (if trecv.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e unless trecv.promote!
         trecv = trecv.canonical
       end
+=end
       ts = lookup(scope, trecv.base.name, meth, e)
       error :no_instance_method_type, [trecv.base.name, meth], e unless ts
       inst = trecv.to_inst.merge(self: trecv)
       self_klass = RDL::Util.to_class(trecv.base.name)
-      tmeth_inter = ts.map { |t| t.instantiate(inst) }
+    when RDL::Type::TupleType
+      ts = lookup(scope, "Array", meth, e)
+      error :no_instance_method_type, [trecv.base.name, meth], e unless ts
+      #inst = trecv.to_inst.merge(self: trecv)
+      inst = { self: trecv }
+      self_klass = Array
+    when RDL::Type::FiniteHashType
+      ts = lookup(scope, "Hash", meth, e)
+      error :no_instance_method_type, [trecv.base.name, meth], e unless ts
+      #inst = trecv.to_inst.merge(self: trecv)
+      inst = { self: trecv }
+      self_klass = Hash
     when RDL::Type::VarType
       error :recv_var_type, [trecv], e
     when RDL::Type::MethodType
       if meth == :call
         # Special case - invokes the Proc
-        tmeth_inter = [trecv]
+        ts = [trecv]
       else
         # treat as Proc
         tc_send_one_recv(scope, env, RDL::Globals.types[:proc], meth, tactuals, block, e)
@@ -1249,14 +1259,23 @@ RUBY
 
     trets = [] # all possible return types
     # there might be more than one return type because multiple cases of an intersection type might match
-
+    tmeth_names = [] ## necessary for more precise error messages with ComputedTypes
     # for ALL of the expanded lists of actuals...
     RDL::Type.expand_product(tactuals).each { |tactuals_expanded|
       # AT LEAST ONE of the possible intesection arms must match
       trets_tmp = []
-      tmeth_inter.each { |tmeth| # MethodType
+      ts.each { |tmeth| # MethodType
         if ((tmeth.block && block) || (tmeth.block.nil? && block.nil?))
           tmeth = compute_types(tmeth, self_klass, trecv, tactuals_expanded) unless (tmeth.args+[tmeth.ret]).all? { |t| !t.instance_of?(RDL::Type::ComputedType) }
+
+          ### TODO: change below once figuring out a way of promote!-ing without side-effect.
+          if trecv.is_a?(RDL::Type::FiniteHashType) && trecv.the_hash
+            trecv = trecv.canonical
+            inst = trecv.to_inst.merge(self: trecv)
+          end
+          
+          tmeth = tmeth.instantiate(inst) if inst
+          tmeth_names << tmeth
           tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)          
           if tmeth_inst
             tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
@@ -1271,7 +1290,7 @@ RUBY
               end
               trets_tmp << init_typ
             else
-              trets_tmp << tmeth.ret.instantiate(tmeth_inst) # found a match for this subunion; add its return type to trets_tmp
+              trets_tmp << (x = tmeth.ret.instantiate(tmeth_inst)) # found a match for this subunion; add its return type to trets_tmp
             end
           end
         end
@@ -1287,7 +1306,7 @@ RUBY
     if trets.empty? # no possible matching call
       msg = <<RUBY
 Method type:
-#{ tmeth_inter.map { |ti| "        " + ti.to_s }.join("\n") }
+#{ tmeth_names.map { |ti| "        " + ti.to_s }.join("\n") }
 Actual arg type#{tactuals.size > 1 ? "s" : ""}:
       (#{tactuals.map { |ti| ti.to_s }.join(', ')}) #{if block then '{ block }' end}
 RUBY
@@ -1296,7 +1315,7 @@ RUBY
         :initialize
       elsif trecv.is_a? RDL::Type::SingletonType
         trecv.val.class.to_s
-      elsif trecv.is_a?(RDL::Type::NominalType) || trecv.is_a?(RDL::Type::GenericType)
+      elsif trecv.is_a?(RDL::Type::NominalType) || trecv.is_a?(RDL::Type::GenericType) || trecv.is_a?(RDL::Type::FiniteHashType) || trecv.is_a?(RDL::Type::TupleType)
         trecv.to_s
       elsif trecv.is_a?(RDL::Type::MethodType)
         'Proc'

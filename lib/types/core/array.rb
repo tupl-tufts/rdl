@@ -4,13 +4,78 @@ RDL.type_params :Array, [:t], :all?
 
 RDL.type :Array, :<<, '(t) -> Array<t>'
 RDL.type :Array, :[], '(Range<Integer>) -> Array<t>'
-RDL.type :Array, :[], '(Integer or Float) -> t'
+#RDL.type :Array, :[], '(Integer or Float) -> t'
+RDL.type :Array, :[], '(Integer or Float) -> ``access_output(trec, targs)``'
+
+def Array.access_output(trec, targs)
+  case trec
+  when RDL::Type::TupleType
+    case targs[0]
+    when RDL::Type::SingletonType
+      return trec.params[targs[0].val]
+    else
+      return trec.promote.params[0]
+    end
+  else
+    vartype_name = RDL::Globals.type_params["Array"][0][0]
+    RDL::Type::VarType.new(vartype_name)
+  end
+end
+
 RDL.type :Array, :[], '(Integer, Integer) -> Array<t>'
 RDL.type :Array, :&, '(Array<u>) -> Array<t>'
 RDL.type :Array, :*, '(Integer) -> Array<t>'
 RDL.type :Array, :*, '(String) -> String'
 RDL.type :Array, :+, '(Enumerable<u>) -> Array<u or t>'
-RDL.type :Array, :+, '(Array<u>) -> Array<u or t>'
+#RDL.type :Array, :+, '(Array<u>) -> Array<u or t>'
+RDL.type :Array, :+, '(``plus_input(targs)``) -> ``plus_output(trec, targs)``'
+def Array.plus_input(targs)
+  case targs[0]
+  when RDL::Type::TupleType
+    return targs[0]
+  when RDL::Type::GenericType
+    return RDL::Globals.parser.scan_str "#T Array<u>"
+  else
+    RDL::Globals.types[:array]
+  end
+end
+
+def Array.plus_output(trec, targs)
+  case trec
+  when RDL::Type::NominalType
+    return RDL::Globals.types[:array]
+  when RDL::Type::GenericType
+    case targs[0]
+    when RDL::Type::TupleType
+      promoted = targs[0].promote
+      param_union = RDL::Type::UnionType.new(promoted.params[0], trec.params[0])
+      return RDL::Type::GenericType.new(trec.base, param_union)
+    when RDL::Type::GenericType
+      return RDL::Globals.parser.scan_str "#T Array<u or t>"
+    else
+      ## targs[0] should just be array here
+      return RDL::Globals.types[:array]
+    end
+  when RDL::Type::TupleType
+    case targs[0]
+    when RDL::Type::TupleType
+      return RDL::Type::TupleType.new(*(trec.params + targs[0].params))
+    when RDL::Type::GenericType
+      promoted = trec.promote
+      param_union = RDL::Type::UnionType.new(promoted.params[0], targs[0].params[0])
+      return RDL::Type::GenericType.new(targs[0].base, param_union)
+    else
+      ## targs[0] should just be Array here
+      return RDL::Globals.types[:array]
+    end
+  end
+end
+
+
+
+
+
+
 RDL.type :Array, :-, '(Array<u>) -> Array<u or t>'
 RDL.type :Array, :slice, '(Range<Integer>) -> Array<t>'
 RDL.type :Array, :slice, '(Integer) -> t'
@@ -68,7 +133,33 @@ RDL.type :Array, :index, '() { (t) -> %bool } -> Integer'
 RDL.type :Array, :index, '() -> Enumerator<t>'
 RDL.type :Array, :first, '() -> t'
 RDL.type :Array, :first, '(Integer) -> Array<t>'
-RDL.type :Array, :include?, '(u) -> %bool'
+
+#RDL.type :Array, :include?, '(u) -> %bool'
+RDL.type :Array, :include?, '(%any) -> ``include_output(trec, targs)``'
+
+def Array.include_output(trec, targs)
+  case trec
+  when RDL::Type::TupleType
+    case targs[0]
+    when RDL::Type::SingletonType
+      if trec.params.include?(targs[0])
+        RDL::Globals.types[:true]
+      else
+        ## in this case, still can't say false because arg may be in tuple, but without singleton type.
+        RDL::Globals.types[:bool]
+      end
+    else
+      RDL::Globals.types[:bool]
+    end
+  else
+    RDL::Globals.types[:bool]
+  end
+end
+
+
+
+
+
 RDL.type :Array, :initialize, '() -> self'
 RDL.type :Array, :initialize, '(Integer) -> self'
 RDL.type :Array, :initialize, '(Integer, t) -> self<t>'

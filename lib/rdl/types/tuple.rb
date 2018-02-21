@@ -44,6 +44,12 @@ module RDL::Type
       return (other.instance_of? TupleType) && (@params.length == other.params.length) && (@params.zip(other.params).all? { |t,o| t.match(o) })
     end
 
+    def promote
+      return false if @cant_promote
+      GenericType.new(RDL::Globals.types[:array], UnionType.new(*@params))
+    end
+
+    ### TODO: similar question as in tuple types. Should [1,2,3] be promoted to Array<1 or 2 or 3> or Array<Integer>
     def promote!
       return false if @cant_promote
       @array = GenericType.new(RDL::Globals.types[:array], UnionType.new(*@params))

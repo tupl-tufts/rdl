@@ -58,6 +58,22 @@ module RDL::Type
               @elts.all? { |k, v| (other.elts.has_key? k) && (v.match(other.elts[k]))})
     end
 
+    def promote
+      return false if @cant_promote
+      # TODO look at key types
+      domain_type = UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }))
+      range_type = UnionType.new(*@elts.values)
+      if @rest
+        domain_type = UnionType.new(domain_type, RDL::Globals.types[:symbol])
+        range_type = UnionType.new(range_type, @rest)
+      end
+      return GenericType.new(RDL::Globals.types[:hash], domain_type, range_type)
+      ## TODO: ask what the last line of `promote!` is for
+      ## TODO: Ask about promoting values of hashes, i.e., singleton type keys end up being promoted
+      ## and it seems like the same should be true of singleton type values.
+      ## e.g., { foo: 1 } will be promoted to Hash<Symbol, 1>, seems it should be Hash<Symbol, Integer>.
+    end
+
     def promote!
       return false if @cant_promote
       # TODO look at key types
