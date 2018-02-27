@@ -224,4 +224,9 @@ class TestTypes < Minitest::Test
     assert_equal tmethbssfn, tmethbaabn.instantiate(inst)
     assert_equal tstructinst, tstructorig.instantiate(inst)
   end
+
+  def test_canonical
+    t = RDL::Globals.parser.scan_str '#T Array<Fixnum or Fixnum>'
+    assert_equal 'Array<Fixnum>', t.canonical.to_s
+  end
 end
