@@ -59,5 +59,14 @@ module RDL::Type
     def to_inst
       return RDL::Globals.type_params[base.name][0].zip(@params).to_h
     end
+
+    def canonical
+      canonicalize!
+      return self
+    end
+
+    def canonicalize!
+      @params.map! {|p| p.canonical}
+    end
   end
 end

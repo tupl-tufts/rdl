@@ -5,6 +5,10 @@ require 'rdl'
 class TestRDLType < Minitest::Test
   extend RDL::Annotate
 
+  def setup
+    RDL.reset
+  end
+
   def test_single_type_contract
     def m1(x) return x; end
     RDL.type TestRDLType, :m1, "(Integer) -> Integer"

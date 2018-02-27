@@ -13,6 +13,8 @@ end
 require 'rdl/info.rb'
 
 module RDL::Globals
+  FIXBIG_VERSIONS = ['>= 2.0.0', '< 2.4.0']
+
   # Method/variable info table with kinds:
   # For methods
   #   :pre to array of precondition contracts
@@ -115,50 +117,63 @@ require 'rdl/query.rb'
 require 'rdl/typecheck.rb'
 #require_relative 'rdl/stats.rb'
 
-module RDL::Globals
-  FIXBIG_VERSIONS = ['>= 2.0.0', '< 2.4.0']
-  # INTEGER_VERSIONS = '>= 2.4.0'
-
-  @parser = RDL::Type::Parser.new
-
-  # Map from file names to [digest, cache] where 2nd elt maps
-  #  :ast to the AST
-  #  :line_defs maps linenumber to AST for def at that line
-  @parser_cache = Hash.new
-
-  # Some generally useful types; not really a big deal to do this since
-  # NominalTypes are cached, but these names are shorter to type
-  @types = Hash.new
-  @types[:nil] = RDL::Type::NominalType.new NilClass # actually creates singleton type
-  @types[:top] = RDL::Type::TopType.new
-  @types[:bot] = RDL::Type::BotType.new
-  @types[:object] = RDL::Type::NominalType.new Object
-  @types[:true] = RDL::Type::NominalType.new TrueClass # actually creates singleton type
-  @types[:false] = RDL::Type::NominalType.new FalseClass # also singleton type
-  @types[:bool] = RDL::Type::UnionType.new(@types[:true], @types[:false])
-  @types[:float] = RDL::Type::NominalType.new Float
-  @types[:complex] = RDL::Type::NominalType.new Complex
-  @types[:rational] = RDL::Type::NominalType.new Rational
-  @types[:integer] = RDL::Type::NominalType.new Integer
-  @types[:numeric] = RDL::Type::NominalType.new Numeric
-  @types[:string] = RDL::Type::NominalType.new String
-  @types[:array] = RDL::Type::NominalType.new Array
-  @types[:hash] = RDL::Type::NominalType.new Hash
-  @types[:symbol] = RDL::Type::NominalType.new Symbol
-  @types[:range] = RDL::Type::NominalType.new Range
-  @types[:regexp] = RDL::Type::NominalType.new Regexp
-  @types[:standard_error] = RDL::Type::NominalType.new StandardError
-  @types[:proc] = RDL::Type::NominalType.new Proc
-
-  # Hash from special type names to their values
-  @special_types = {'%any' => @types[:top],
-                    '%bot' => @types[:bot],
-                    '%bool' => @types[:bool]}
-end
-
 class << RDL::Globals
   attr_reader :parser
   attr_accessor :parser_cache
   attr_reader :types
   attr_reader :special_types
 end
+
+module RDL
+  def self.reset
+    RDL::Globals.module_eval {
+      @info = RDL::Info.new
+      @wrapped_calls = Hash.new 0
+      @type_params = Hash.new
+      @aliases = Hash.new
+      @to_wrap = Set.new
+      @to_typecheck = Hash.new
+      @to_typecheck[:now] = Set.new
+      @to_do_at = Hash.new
+      @deferred = []
+
+      @parser = RDL::Type::Parser.new
+
+      # Map from file names to [digest, cache] where 2nd elt maps
+      #  :ast to the AST
+      #  :line_defs maps linenumber to AST for def at that line
+      @parser_cache = Hash.new
+
+      # Some generally useful types; not really a big deal to do this since
+      # NominalTypes are cached, but these names are shorter to type
+      @types = Hash.new
+      @types[:nil] = RDL::Type::NominalType.new NilClass # actually creates singleton type
+      @types[:top] = RDL::Type::TopType.new
+      @types[:bot] = RDL::Type::BotType.new
+      @types[:object] = RDL::Type::NominalType.new Object
+      @types[:true] = RDL::Type::NominalType.new TrueClass # actually creates singleton type
+      @types[:false] = RDL::Type::NominalType.new FalseClass # also singleton type
+      @types[:bool] = RDL::Type::UnionType.new(@types[:true], @types[:false])
+      @types[:float] = RDL::Type::NominalType.new Float
+      @types[:complex] = RDL::Type::NominalType.new Complex
+      @types[:rational] = RDL::Type::NominalType.new Rational
+      @types[:integer] = RDL::Type::NominalType.new Integer
+      @types[:numeric] = RDL::Type::NominalType.new Numeric
+      @types[:string] = RDL::Type::NominalType.new String
+      @types[:array] = RDL::Type::NominalType.new Array
+      @types[:hash] = RDL::Type::NominalType.new Hash
+      @types[:symbol] = RDL::Type::NominalType.new Symbol
+      @types[:range] = RDL::Type::NominalType.new Range
+      @types[:regexp] = RDL::Type::NominalType.new Regexp
+      @types[:standard_error] = RDL::Type::NominalType.new StandardError
+      @types[:proc] = RDL::Type::NominalType.new Proc
+
+      # Hash from special type names to their values
+      @special_types = {'%any' => @types[:top],
+                        '%bot' => @types[:bot],
+                        '%bool' => @types[:bool]}
+    }
+  end
+end
+
+RDL.reset

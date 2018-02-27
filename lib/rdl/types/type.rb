@@ -98,7 +98,7 @@ module RDL::Type
         # do check here to avoid hiding errors if generic type written
         # with wrong number of parameters but never checked against
         # instantiated instances
-        raise TypeError, "No type parameters defined for #{base.name}" unless formals
+        raise TypeError, "No type parameters defined for #{left.base.name}" unless formals
         return false unless left.base == right.base
         return variance.zip(left.params, right.params).all? { |v, tl, tr|
           case v
@@ -116,7 +116,7 @@ module RDL::Type
       if left.is_a?(GenericType) && right.is_a?(StructuralType)
         # similar to logic above for leq(NominalType, StructuralType, ...)
         formals, variance, _ = RDL::Globals.type_params[left.base.name]
-        raise TypeError, "No type parameters defined for #{base.name}" unless formals
+        raise TypeError, "No type parameters defined for #{left.base.name}" unless formals
         base_inst = Hash[*formals.zip(left.params).flatten] # instantiation for methods in base's class
         klass = left.base.klass
         right.methods.each_pair { |meth, t|

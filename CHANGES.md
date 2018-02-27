@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+### Fixed
+- Dynamic type checking of initialize method
+- Bug with handling constants of certain types
+- Broken rdl_attr_* methods
+- Bug handling optional annotated/dependent types
+- Add RDLAnnotate to rdl_disable
+- Type checking of Object class singleton methods
+- #52 Kernel.raise annotation
+- #42 use grandparent type information for methods
+- #43 allow fully qualified calls
+- #45 handle local constants
+- #62 allow more method names in structural types
+- #34 clean up discussion of how type checking works in README
+- Reordered list of RDL.* methods in README
+- Remove (most) ordering dependencies among test cases
+- Undefined identified issue for Rails assocation types
+
+### Added
+- `RDL.reset` method
+
 ## [2.1.0] - 2017-06-14
 
 ### Fixed

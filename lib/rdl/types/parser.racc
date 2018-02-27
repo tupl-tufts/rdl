@@ -10,7 +10,7 @@ class Parser
 token HASH_TYPE HASH_QUERY CONST_BEGIN RASSOC
 token OR FIXNUM FLOAT COLON RARROW DOT DOTS ID SYMBOL SPECIAL_ID STRING PREDICATE
 token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
-token COMMA QUERY BANG STARSTAR STAR LESS GREATER
+token COMMA QUERY BANG STARSTAR STAR LESS GREATER EQUAL TILDE
 token EOF
 
 rule
@@ -38,8 +38,28 @@ rule
       }
 
   method_sig_list:
-     ID COLON method_type { result = [val[0].to_sym, val[2]] }
-   | ID COLON method_type COMMA method_sig_list { result = [val[0].to_sym, val[2]] + val[4] }
+     method_name COLON method_type { result = [val[0], val[2]] }
+   | method_name COLON method_type COMMA method_sig_list { result = [val[0], val[2]] + val[4] }
+
+  method_name:
+     ID { result = val[0].to_sym }
+   | BANG { result = :! }
+   | STAR { result = :* }
+   | STARSTAR { result = :** }
+   | LESS { result = :< }
+   | LESS EQUAL { result = :<= }
+   | GREATER { result = :> }
+   | GREATER EQUAL { result = :>= }
+   | EQUAL EQUAL  { result = :== }
+   | BANG EQUAL { result = :!= }
+   | EQUAL EQUAL EQUAL { result = :=== }
+   | LESS EQUAL GREATER { result = :<=> }
+   | LESS LESS { result = :<< }
+   | GREATER GREATER { result = :>> }
+   | LBRACKET RBRACKET { result = :[] }
+   | LBRACKET RBRACKET EQUAL { result = :[]= }
+   | EQUAL TILDE { result = :=~ }
+   | BANG TILDE { result = :!~ }
 
   arg_list:
       { result = [] }

@@ -5,6 +5,10 @@ require 'rdl'
 class TestAlias < Minitest::Test
   extend RDL::Annotate
 
+  def setup
+    RDL.reset
+  end
+
   def test_alias_lookup
     self.class.class_eval {
       rdl_alias :foobar1, :foobar

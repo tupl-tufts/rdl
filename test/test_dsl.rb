@@ -4,6 +4,11 @@ require 'rdl'
 
 class TestDsl < Minitest::Test
 
+  def setup
+    RDL.reset
+  end
+
+
   class Pair
 
     # dsl {

@@ -94,6 +94,9 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/>/))
          action { [:GREATER, text] }
 
+      when (text = @ss.scan(/=/))
+         action { [:EQUAL, text] }
+
       when (text = @ss.scan(/,/))
          action { [:COMMA, text] }
 
@@ -102,6 +105,9 @@ class Parser < Racc::Parser
 
       when (text = @ss.scan(/\!/))
          action { [:BANG, text] }
+
+      when (text = @ss.scan(/~/))
+         action { [:TILDE, text] }
 
       when (text = @ss.scan(/\*\*/))
          action { [:STARSTAR, text] }
@@ -130,7 +136,7 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/-?(\d)+/))
          action { [:FIXNUM, text] }
 
-      when (text = @ss.scan(/(\w|\:\:)+/))
+      when (text = @ss.scan(/((\w|\:\:)+(!|\?|=)?)|~|\+|-|\/|&|\||\^/))
          action { if text == "or" then [:OR, text] else [:ID, text] end }
 
       when (text = @ss.scan(/:\w+/))

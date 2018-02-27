@@ -29,6 +29,20 @@ module RDL::Annotate
   def type_params(*args); end
 end
 
+module RDL::RDLAnnotate
+  define_method :rdl_pre, RDL::Annotate.instance_method(:pre)
+  define_method :rdl_post, RDL::Annotate.instance_method(:post)
+  define_method :rdl_type, RDL::Annotate.instance_method(:type)
+  define_method :rdl_var_type, RDL::Annotate.instance_method(:var_type)
+  define_method :rdl_alias, RDL::Annotate.instance_method(:rdl_alias)
+  define_method :rdl_type_params, RDL::Annotate.instance_method(:type_params)
+  define_method :rdl_attr_accessor_type, RDL::Annotate.instance_method(:attr_accessor_type) # note in disable these don't call var_type
+  define_method :rdl_attr_reader_type, RDL::Annotate.instance_method(:attr_reader_type)
+  define_method :rdl_attr_type, RDL::Annotate.instance_method(:attr_type)
+  define_method :rdl_attr_writer_type, RDL::Annotate.instance_method(:attr_writer_type)
+end
+
+
 module RDL
   extend RDL::Annotate
   def self.type_alias(*args); end

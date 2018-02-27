@@ -4,6 +4,11 @@ require 'rdl'
 
 class TestWrap < Minitest::Test
   extend RDL::Annotate
+
+  def setup
+    RDL.reset
+  end
+
   class C
     def foo_public(x)
       foo(x)

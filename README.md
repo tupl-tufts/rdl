@@ -70,10 +70,12 @@ file.rb:
   require 'rdl'
   extend RDL::Annotate
 
-  type '(Integer) -> Integer', typecheck: :now
+  type '(Integer) -> Integer', typecheck: :label
   def id(x)
     "forty-two"
   end
+
+  RDL.do_typecheck :label
 ```
 
 ```
@@ -84,13 +86,15 @@ $ ruby file.rb
 .../file.rb:6:   ^~~~~~~~~~~
 ```
 
-Passing `typecheck: :now` to `type` checks the method body immediately or as soon as it is defined. Passing `typecheck: :call` to `type` statically type checks the method body whenever it is called. Passing `typecheck: sym` for some other symbol statically type checks the method body when `RDL.do_typecheck sym` is called.
+Passing `typecheck: sym` for some other symbol statically type checks the method body when `RDL.do_typecheck sym` is called. Passing `typecheck: :call` to `type` statically type checks the method body whenever it is called.
+
+Note that RDL only type checks the bodies of methods with type signatures. Methods without type signatues, or code that is not in method bodies, is not checked.
 
 The `type` method can also be called with the class and method to be annotated, and it can also be invoked as `RDL.type` in case `extend RDL::Annotate` would cause namespace issues:
 
 ```
-  type :A, :id, '(Integer) -> Integer', typecheck: :now # Add a type annotation for A#id.
-  RDL.type :A, :id, '(Integer) -> Integer', typecheck: :now # Note class and method name required when calling like this
+  type :A, :id, '(Integer) -> Integer', typecheck: :label # Add a type annotation for A#id.
+  RDL.type :A, :id, '(Integer) -> Integer', typecheck: :label # Note class and method name required when calling like this
 ```
 
 RDL tries to follow the philosophy that you get what you pay for. Methods with type annotations can be checked dynamically or statically; methods without type annotations are unaffected by RDL. See the [performance](#performance) discussion for more detail.
@@ -140,7 +144,7 @@ Given this program, RDL intercepts the call to `sqrt` and passes its argument to
 
 ## Supported versions of Ruby
 
-RDL currently supports Ruby 2.x. It may or may not work with other versions.
+RDL currently supports Ruby 2.x except 2.1.1-2.1.6. RDL may or may not work with other versions.
 
 ## Installing RDL
 
@@ -561,6 +565,12 @@ type MyClass, :foo, '(a: Integer, b: String) { () -> %any } -> %any'
 ```
 Here `foo`, takes a hash where key `:a` is mapped to an `Integer` and key `:b` is mapped to a `String`. Similarly, `{'a'=>Integer, 2=>String}` types a hash where keys `'a'` and `2` are mapped to `Integer` and `String`, respectively. Both syntaxes can be used to define hash types.
 
+Value types can also be declared as optional, indicating that the key/value pair is an optional part of the hash:
+```ruby
+type MyClass, :foo, '(a: Integer, b: ?String) { () -> %any } -> %any'
+```
+With this type, `foo` takes a hash where key `:a` is mapped to an `Integer`, and furthermore the hash may or may not include a key `:b` that is mapped to a `String`. 
+
 RDL also allows a "rest" type in finite hashes (of course, they're not so finite if they use it!):
 ```ruby
 type MyClass, :foo, '(a: Integer, b: String, **Float) -> %any'
@@ -595,11 +605,9 @@ type :initialize, '(String, Fixnum) -> self'
 
 # Static Type Checking
 
-As mentioned in the introduction, calling `type` with `typecheck: :now` statically type checks the body of the annotated method body against the given signature. If the method has already been defined, RDL will try to check the method immediately. Otherwise, RDL will statically type check the method as soon as it is loaded.
+As mentioned in the introduction, calling `type` with `typecheck: sym` statically type checks the body of the annotated method body against the given signature when `RDL.do_typecheck sym` is called. Note that at this call, all methods whose `type` call is labeled with `sym` will be statically checked.
 
-Often method bodies cannot be type checked as soon as they are loaded because they refer to classes, methods, and variables that have not been created yet. To support these cases, some other symbol can be supplied as `typecheck: sym`. Then when `RDL.do_typecheck sym` is called, all methods typechecked at `sym` will be statically checked.
-
-Additionally, `type` can be called with `typecheck: :call`, which will delay checking the method's type until the method is called. Currently these checks are not cached, so expect a big performance hit for using this feature.
+Additionally, `type` can be called with `typecheck: :call`, which will delay checking the method's type until the method is called. Currently these checks are not cached, so expect a big performance hit for using this feature. Finally, `type` can be called with `typecheck: :now` to check the method immediately after it is defined. This is probably only useful for demos.
 
 To perform type checking, RDL needs source code, which it gets by parsing the file containing the to-be-typechecked method. Hence, static type checking does not work in `irb` since RDL has no way of getting the source. Typechecking does work in `pry` (this feature has only limited testing) as long as typechecking is delayed until after the method is defined:
 
@@ -768,25 +776,28 @@ The following methods are available in `RDL::Annotate`.
 
 The methods above can also be accessed as `rdl_method` after `extend RDL::RDLAnnotate`. They can also be accessed as `RDL.method`, but when doing so, however, the `klass` and `meth` arguments are not optional and must be specified. The `RDL` module also includes several other useful methods:
 
-* `RDL.type_alias '%name', typ` - indicates that if `%name` appears in a type annotations, it should be expanded to `typ`.
-
-* `RDL.nowrap [klass]`, if called at the top-level of a class, causes RDL to behave as if `wrap: false` were passed to all `type`, `pre`, and `post` calls in `klass`. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead. If `klass` is omitted it's assumed to be `self`.
-
-* `RDL.do_typecheck(sym)` statically type checks all methods whose type annotations include argument `typecheck: sym`.
-
 * `RDL.at(sym, &blk)` invokes `blk.call(sym)` when `RDL.do_typecheck(sym)` is called. Useful when type annotations need to be generated at some later time, e.g., because not all classes are loaded.
-
-* `RDL.note_type e` - evaluates `e` and returns it at run time. During static type checking, prints out the type of `e`.
-
-* `RDL.remove_type klass, meth` removes the type annotation for meth in klass. Fails if meth does not have a type annotation.
-
-* `RDL.insantiate!(var, typ1, ...)` - `var` must have a generic type. Instantiates the type of `x` with type parameters `typ1`, ...
 
 * `RDL.deinsantiate!(var)` - remove `var`'s instantiation.
 
-* `RDL.type_cast(e, typ, force: false)` - evaluate `e` and return it at run time. During dynamic contract checking, the returned object will have `typ` associated with it. If `force` is `false`, will also check that `e`'s run-time type is compatible with `typ`. If `force` is true then `typ` will be applied regardless of `e`'s type. During static type checking, the type checker will treat the object returned by `type_cast` has having type `typ`.
+* `RDL.do_typecheck(sym)` statically type checks all methods whose type annotations include argument `typecheck: sym`.
+
+* `RDL.insantiate!(var, typ1, ...)` - `var` must have a generic type. Instantiates the type of `x` with type parameters `typ1`, ...
+
+* `RDL.note_type e` - evaluates `e` and returns it at run time. During static type checking, prints out the type of `e`.
+
+* `RDL.nowrap [klass]`, if called at the top-level of a class, causes RDL to behave as if `wrap: false` were passed to all `type`, `pre`, and `post` calls in `klass`. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead. If `klass` is omitted it's assumed to be `self`.
 
 * `RDL.query` prints information about types; see below for details.
+
+* `RDL.remove_type klass, meth` removes the type annotation for meth in klass. Fails if meth does not have a type annotation.
+
+* `RDL.reset` resets all global state stored internally inside RDL back to their original settings. Note: this is really only for internal RDL testing, as it doesn't completely undo RDL's effect (e.g., wrapped methods will be broken by a reset).
+
+* `RDL.type_alias '%name', typ` - indicates that if `%name` appears in a type annotations, it should be expanded to `typ`.
+
+* `RDL.type_cast(e, typ, force: false)` - evaluate `e` and return it at run time. During dynamic contract checking, the returned object will have `typ` associated with it. If `force` is `false`, will also check that `e`'s run-time type is compatible with `typ`. If `force` is true then `typ` will be applied regardless of `e`'s type. During static type checking, the type checker will treat the object returned by `type_cast` has having type `typ`.
+
 
 
 # Performance
@@ -921,6 +932,12 @@ In Object-Oriented Program Languages and Systems (OOPS) Track at ACM Symposium o
 
 Copyright (c) 2014-2017, University of Maryland, College Park. All rights reserved.
 
+# Contributing
+
+Contributions are welcome! If you submit any pull requests, please
+submit them against the `dev` branch. We keep the `master` branch so
+it matches the latest gem version.
+
 # Authors
 
 * [Jeffrey S. Foster](http://www.cs.umd.edu/~jfoster/)
@@ -932,6 +949,7 @@ Copyright (c) 2014-2017, University of Maryland, College Park. All rights reserv
 # Contributors
 
 * [Joel Holdbrooks](https://github.com/noprompt)
+* [Paul Tarjan](https://github.com/ptarjan)
 
 # Discussion group
 
