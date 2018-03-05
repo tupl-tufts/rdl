@@ -32,10 +32,11 @@ module RDL::Type
     # [+ other +] is a Type
     # [+ inst +] is a Hash<Symbol, Type> representing an instantiation
     # [+ ileft +] is a %bool
+    # [+ no_constraint +] is a %bool indicating whether or not we should add to tuple/FHT constraints
     # if inst is nil, returns self <= other
     # if inst is non-nil and ileft, returns inst(self) <= other, possibly mutating inst to make this true
     # if inst is non-nil and !ileft, returns self <= inst(other), again possibly mutating inst
-    def self.leq(left, right, inst=nil, ileft=true)
+    def self.leq(left, right, inst=nil, ileft=true, no_constraint: false)
       left = inst[left.name] if inst && ileft && left.is_a?(VarType) && inst[left.name]
       right = inst[right.name] if inst && !ileft && right.is_a?(VarType) && inst[right.name]
       left = left.type if left.is_a? DependentArgType
@@ -162,8 +163,8 @@ module RDL::Type
         return false unless left.params.length == right.params.length
         return false unless left.params.zip(right.params).all? { |lt, rt| leq(lt, rt, inst, ileft) }
         # subyping check passed
-        left.ubounds << right
-        right.lbounds << left
+        left.ubounds << right unless no_constraint
+        right.lbounds << left unless no_constraint
         return true
       end
       if left.is_a?(TupleType) && right.is_a?(GenericType) && right.base == RDL::Globals.types[:array]
@@ -196,8 +197,8 @@ module RDL::Type
           # If left has optional stuff, right needs to accept it
           return false unless !(right.rest.nil?) && leq(left.rest, right.rest, inst, ileft)
         end
-        left.ubounds << right
-        right.lbounds << left
+        left.ubounds << right unless no_constraint
+        right.lbounds << left unless no_constraint
         return true
       end
       if left.is_a?(FiniteHashType) && right.is_a?(GenericType) && right.base == RDL::Globals.types[:hash]

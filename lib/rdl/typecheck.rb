@@ -1266,7 +1266,8 @@ RUBY
       trets_tmp = []
       ts.each { |tmeth| # MethodType
         if ((tmeth.block && block) || (tmeth.block.nil? && block.nil?))
-          tmeth = compute_types(tmeth, self_klass, trecv, tactuals_expanded) unless (tmeth.args+[tmeth.ret]).all? { |t| !t.instance_of?(RDL::Type::ComputedType) }
+          block_types = (if tmeth.block then tmeth.block.args + [tmeth.block.ret] else [] end)
+          tmeth = compute_types(tmeth, self_klass, trecv, tactuals_expanded) unless (tmeth.args+[tmeth.ret]+block_types).all? { |t| !t.instance_of?(RDL::Type::ComputedType) }
 
           ### TODO: change below once figuring out a way of promote!-ing without side-effect.
           if trecv.is_a?(RDL::Type::FiniteHashType) && trecv.the_hash
@@ -1334,7 +1335,7 @@ RUBY
   # [+ trecv +] is the type of the receiver to the method call
   # [+ tactuals +] is a list Array<Type> of types of the input to a method call
   # Returns a new MethodType where all ComputedTypes in tmeth have been evaluated
-  def self.compute_types(tmeth, self_klass, trecv, tactuals)
+  def self.compute_types(tmeth, self_klass, trecv, tactuals) 
     bind = nil
     self_klass.class_eval { bind = binding() }
     bind.local_variable_set(:trec, trecv)
@@ -1354,7 +1355,8 @@ RUBY
     else
       new_ret = tmeth.ret
     end
-    RDL::Type::MethodType.new(new_args, tmeth.block, new_ret)
+    new_block = compute_types(tmeth.block, self_klass, trecv, tactuals) if tmeth.block
+    RDL::Type::MethodType.new(new_args, new_block, new_ret)
   end
 
   def self.tc_send_class(trecv, e)

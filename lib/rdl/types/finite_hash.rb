@@ -58,11 +58,19 @@ module RDL::Type
               @elts.all? { |k, v| (other.elts.has_key? k) && (v.match(other.elts[k]))})
     end
 
-    def promote
+    def promote(key=nil, value=nil)
       return false if @cant_promote
       # TODO look at key types
-      domain_type = UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }))
-      range_type = UnionType.new(*@elts.values)
+      if key
+        domain_type = UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }), key)
+      else
+        domain_type = UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }))
+      end
+      if value
+        range_type = UnionType.new(*@elts.values, value)
+      else
+        range_type = UnionType.new(*@elts.values)
+      end
       if @rest
         domain_type = UnionType.new(domain_type, RDL::Globals.types[:symbol])
         range_type = UnionType.new(range_type, @rest)
@@ -74,18 +82,14 @@ module RDL::Type
       ## e.g., { foo: 1 } will be promoted to Hash<Symbol, 1>, seems it should be Hash<Symbol, Integer>.
     end
 
-    def promote!
-      return false if @cant_promote
-      # TODO look at key types
-      domain_type = UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }))
-      range_type = UnionType.new(*@elts.values)
-      if @rest
-        domain_type = UnionType.new(domain_type, RDL::Globals.types[:symbol])
-        range_type = UnionType.new(range_type, @rest)
-      end
-      @the_hash = GenericType.new(RDL::Globals.types[:hash], domain_type, range_type)
+    ### [+ key +] is type to add to promoted key types
+    ### [+ value +] is type to add to promoted value types
+    def promote!(key=nil, value=nil)
+      hash = promote(key, value)
+      return hash if !hash
+      @the_hash = hash
       # same logic as Tuple
-      return (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
+      return check_bounds
     end
 
     def cant_promote!
@@ -93,8 +97,12 @@ module RDL::Type
       @cant_promote = true
     end
 
-    def <=(other)
-      return Type.leq(self, other)
+    def check_bounds(no_promote=false)
+      return (@lbounds.all? { |lbound| lbound.<=(self, no_promote) }) && (@ubounds.all? { |ubound| self.<=(ubound, no_promote) })
+    end
+
+    def <=(other, no_constraint=false)
+      return Type.leq(self, other, no_constraint: no_constraint)
     end
 
     def member?(obj, *args)
