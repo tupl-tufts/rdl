@@ -1032,7 +1032,7 @@ class TestTypecheck < Minitest::Test
 
   def test_for
     assert do_tc("for i in 1..5 do end; i") <= RDL::Globals.types[:integer]
-    #assert do_tc("for i in [1,2,3,4,5] do end; i") <= tt("1 or 2 or 3 or 4 or 5")
+    assert do_tc("for i in [1,2,3,4,5] do end; i") <= tt("1 or 2 or 3 or 4 or 5")
     ## TODO: figure out why above fails to terminate
     assert do_tc("for i in 1..5 do break end", env: @env) <= tt("Range<Integer>")
     assert do_tc("for i in 1..5 do next end", env: @env) <= tt("Range<Integer>")

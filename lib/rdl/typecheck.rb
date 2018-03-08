@@ -805,14 +805,24 @@ RUBY
       tcollect = tcollect.canonical
       case tcollect
       when RDL::Type::NominalType
+        self_klass = tcollect.klass
         teaches = lookup(scope, tcollect.name, :each, e.children[1])
       when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
         unless tcollect.is_a? RDL::Type::GenericType
           error :tuple_finite_hash_promote, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e.children[1] unless tcollect.promote!
           tcollect = tcollect.canonical
         end
+        self_klass = tcollect.base.klass
         teaches = lookup(scope, tcollect.base.name, :each, e.children[1])
         inst = tcollect.to_inst.merge(self: tcollect)
+        teaches = teaches.map { |typ|
+          block_types = (if typ.block then typ.block.args + [typ.block.ret] else [] end)
+          if (typ.args+[typ.ret]+block_types).all? { |t| !t.instance_of?(RDL::Type::ComputedType) }
+            typ
+          else
+            compute_types(typ, self_klass, tcollect, [])
+          end
+        }
         teaches = teaches.map { |typ| typ.instantiate(inst) }
       else
         error :for_collection, [tcollect], e.children[1]

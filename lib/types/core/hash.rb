@@ -96,7 +96,7 @@ def Hash.assign_output(trec, targs)
       raise RDL::Typecheck::StaticTypeError, "Failed to mutate hash: new hash does not match prior type constraints." unless trec.check_bounds(true)
       return targs[1]
     else
-x      raise "Unable to promote tuple #{trec} to Hash." unless trec.promote!(targs[0], targs[1])
+      raise "Unable to promote tuple #{trec} to Hash." unless trec.promote!(targs[0], targs[1])
       return targs[1]
     end
   else
