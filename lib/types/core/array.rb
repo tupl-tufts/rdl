@@ -163,6 +163,7 @@ def Array.assign_output(trec, targs)
     when RDL::Type::SingletonType
       if v = trec.params[targs[0].val]
         trec.params[targs[0].val] = RDL::Type::UnionType.new(v, targs[1])
+        trec.params[targs[0].val] = Hash.weak_promote(trec.params[targs[0].val]) if RDL::Config.instance.weak_update_promote
         raise RDL::Typecheck::StaticTypeError, "Failed to mutate tuple: new tuple does not match previous constraints." unless trec.check_bounds(true)
         targs[1]
       else
@@ -249,7 +250,10 @@ RDL.type :Array, :fill, '(``any_or_t(trec)``) -> ``fill_output(trec, targs)``'
 def Array.fill_output(trec, targs)
   case trec
   when RDL::Type::TupleType
-    trec.params.each_with_index { |e, i| trec.params[i] = RDL::Type::UnionType.new(e, targs[0]).canonical }
+    trec.params.each_with_index { |e, i|
+      trec.params[i] = RDL::Type::UnionType.new(e, targs[0]).canonical
+      trec.params[i] = weak_promote(trec.params[i]) if RDL::Config.instance.weak_update_promote
+    }
     trec.check_bounds(true)
     trec
   else
@@ -325,6 +329,7 @@ def Array.reverse_output(trec)
     rev = trec.params.reverse
     trec.params.each_with_index { |e, i|
       trec.params[i] = RDL::Type::UnionType.new(e, rev[i]).canonical
+      trec.params[i] = weak_promote(trec.params[i]) if RDL::Config.instance.weak_update_promote
     }
     trec.check_bounds(true)
     trec

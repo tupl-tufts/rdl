@@ -72,6 +72,25 @@ def Hash.promoted_or_v(trec)
   end
 end
 
+def Hash.weak_promote(val)
+  case val
+  when RDL::Type::UnionType
+    if val.types.all? { |t| t.is_a?(RDL::Type::SingletonType) }
+      klass = val.types[0].nominal.klass
+      if val.types.all? { |t| t.nominal.klass == klass }
+        return RDL::Type::NominalType.new(klass)
+      else
+        return val
+      end
+    else
+      return val
+    end
+  else
+    val
+  end
+end
+
+
 RDL.type :Hash, 'self.[]', '(*%any) -> ``hash_create_output(targs)``'
 
 def Hash.hash_create_output(targs)
@@ -93,6 +112,7 @@ def Hash.assign_output(trec, targs)
     case targs[0]
     when RDL::Type::SingletonType ### TODO: adjust for strings
       trec.elts[targs[0].val] = RDL::Type::UnionType.new(trec.elts[targs[0].val], targs[1]).canonical
+      trec.elts[targs[0].val] = weak_promote(trec.elts[targs[0].val]) if RDL::Config.instance.weak_update_promote
       raise RDL::Typecheck::StaticTypeError, "Failed to mutate hash: new hash does not match prior type constraints." unless trec.check_bounds(true)
       return targs[1]
     else
