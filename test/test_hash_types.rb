@@ -16,7 +16,7 @@ class TestHashTypes < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) { RDL.do_typecheck :create_fail1 }
   end
 
-  
+
   type '({bar: Integer, baz: String}) -> String', typecheck: :now
   def access_test1(x)
     x[:baz]
@@ -72,7 +72,7 @@ class TestHashTypes < Minitest::Test
   def key_test3(x)
     x.key(1)
   end
-  
+
   type '({ bar: Integer, baz: String }) -> { bar: Integer, baz: String, foo: Integer }', typecheck: :now
   def merge_test1(x)
     x.merge({ foo: 1 })
@@ -311,5 +311,5 @@ class TestHashTypes < Minitest::Test
   def values_at_test3(x)
     x.values_at(:foo, :blah)
   end
-  
+
 end

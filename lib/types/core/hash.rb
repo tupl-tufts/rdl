@@ -200,19 +200,24 @@ RDL.type :Hash, :keys, '() -> ``output_type(trec, targs, :keys, "Array<k>")``'
 RDL.type :Hash, :length, '() -> ``output_type(trec, targs, :length, "Integer")``'
 RDL.type :Hash, :size, '() -> ``output_type(trec, targs, :size, "Integer")``'
 RDL.type :Hash, :merge, '(``merge_input(targs)``) -> ``merge_output(trec, targs)``'
+RDL.type :Hash, :merge!, '(``merge_input(targs, true)``) -> ``merge_output(trec, targs, true)``'
 
-def Hash.merge_input(targs)
+def Hash.merge_input(targs, mutate=false)
   case targs[0]
   when RDL::Type::FiniteHashType
     return targs[0]
   when RDL::Type::GenericType
-    return RDL::Globals.parser.scan_str "#T Hash<a, b>"
+    if mutate
+      return RDL::Globals.parser.scan_str "#T Hash<k, v>"
+    else
+      return RDL::Globals.parser.scan_str "#T Hash<a, b>"
+    end
   else
     RDL::Globals.types[:hash]
   end
 end
 
-def Hash.merge_output(trec, targs)
+def Hash.merge_output(trec, targs, mutate=false)
   case trec
   when RDL::Type::NominalType
     return RDL::Globals.types[:hash]
@@ -222,9 +227,15 @@ def Hash.merge_output(trec, targs)
       promoted = targs[0].promote
       key_union = RDL::Type::UnionType.new(promoted.params[0], trec.params[0]).canonical
       value_union = RDL::Type::UnionType.new(promoted.params[1], trec.params[1]).canonical
-      return RDL::Type::GenericType.new(trec.base, key_union, value_union)
+      if mutate
+        raise "Call to `merge!` would change type of Hash." unless (key_union == trec.params[0]) && (value_union == trec.params[1])
+        return trec
+      else
+        return RDL::Type::GenericType.new(trec.base, key_union, value_union)
+      end
     when RDL::Type::GenericType
-      return RDL::Globals.parser.scan_str "#T Hash<a or k, b or v>"
+      ret = (if mutate then "Hash<k, v>" else "Hash<a or k, b or v>" end)
+      return RDL::Globals.parser.scan_str "#T #{ret}"
     else
       ## targs[0] should just be hash here
       return RDL::Globals.types[:hash]
@@ -232,12 +243,34 @@ def Hash.merge_output(trec, targs)
   when RDL::Type::FiniteHashType
     case targs[0]
     when RDL::Type::FiniteHashType
-      return RDL::Type::FiniteHashType.new(trec.elts.merge(targs[0].elts), nil)
+      if mutate
+        targs[0].each { |k, v|
+          case k
+          when RDL::Type::SingletonType
+            trec.elts[k.val] = RDL::Type::UnionType.new(trec.elts[k.val], v).canonical
+            trec.elts[k.val] = weak_promote(trec.elts[k.val]) if RDL::Config.instance.weak_update_promote
+          else
+            arg_key = targs[0].promote.params[0]
+            arg_val = targs[0].promote.params[1]
+            raise "Unable to promote tuple #{trec} to Hash." unless trec.promote!(arg_key, arg_val)
+            return trec
+          end
+        }
+        raise RDL::Typecheck::StaticTypeError, "Failed to mutate hash: new hash does not match prior type constraints." unless trec.check_bounds(true)
+        return trec
+      else
+        return RDL::Type::FiniteHashType.new(trec.elts.merge(targs[0].elts), nil)
+      end
     when RDL::Type::GenericType
       promoted = trec.promote
       key_union = RDL::Type::UnionType.new(promoted.params[0], targs[0].params[0]).canonical
       value_union = RDL::Type::UnionType.new(promoted.params[1], targs[0].params[1]).canonical
-      return RDL::Type::GenericType.new(targs[0].base, key_union, value_union)
+      if mutate
+        raise "Unable to promote tuple #{trec} to Hash." unless trec.promote!(targs[0].params[0], targs[0].params[1])
+        return trec        
+      else
+        return RDL::Type::GenericType.new(targs[0].base, key_union, value_union)
+      end
     else
       ## targs[0] should just be Hash here
       return RDL::Globals.types[:hash]

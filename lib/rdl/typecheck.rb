@@ -1243,13 +1243,13 @@ RUBY
       self_klass = RDL::Util.to_class(trecv.base.name)
     when RDL::Type::TupleType
       ts = lookup(scope, "Array", meth, e)
-      error :no_instance_method_type, [trecv.base.name, meth], e unless ts
+      error :no_instance_method_type, ["Array", meth], e unless ts
       #inst = trecv.to_inst.merge(self: trecv)
       inst = { self: trecv }
       self_klass = Array
     when RDL::Type::FiniteHashType
       ts = lookup(scope, "Hash", meth, e)
-      error :no_instance_method_type, [trecv.base.name, meth], e unless ts
+      error :no_instance_method_type, ["Hash", meth], e unless ts
       #inst = trecv.to_inst.merge(self: trecv)
       inst = { self: trecv }
       self_klass = Hash
