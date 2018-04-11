@@ -206,6 +206,9 @@ module RDL::Type
         return false unless left.promote!
         return leq(left, right, inst, ileft) # recheck for promoted type
       end
+      if left.is_a?(FiniteHashType) && (right == RDL::Globals.types[:hash])
+        return true
+      end
 
       return false
     end

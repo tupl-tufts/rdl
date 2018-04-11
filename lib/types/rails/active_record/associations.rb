@@ -1,7 +1,8 @@
 RDL.nowrap :'ActiveRecord::Associations::CollectionProxy'
+RDL.nowrap :'ActiveRecord::Associations::ClassMethods'
 
 RDL.type_params :'ActiveRecord::Associations::CollectionProxy', [:t], :all?
-
+=begin
 RDL.type :'ActiveRecord::Associations::CollectionProxy', :<<, '(*(t or Array<t>)) -> self'
 RDL.type :'ActiveRecord::Associations::CollectionProxy', :==, '(%any) -> %bool'
 RDL.type :'ActiveRecord::Associations::CollectionProxy', :any?, '() ?{ (t) -> %bool } -> %bool'
@@ -64,7 +65,7 @@ RDL.type :'ActiveRecord::Associations::CollectionProxy', :where, '(String, *%any
 RDL.type :'ActiveRecord::Associations::CollectionProxy', :where, '(**%any) -> ActiveRecord::Associations::CollectionProxy<t>'
 RDL.type :'ActiveRecord::Associations::CollectionProxy', :group, '(Symbol) -> ActiveRecord::Associations::CollectionProxy<t>'
 RDL.type :'ActiveRecord::Associations::CollectionProxy', :order, '(Symbol) -> ActiveRecord::Associations::CollectionProxy<t>'
-
+=end
 
 # Remaining methods are from CollectionProxy
 # TODO give these precise types for this particular model

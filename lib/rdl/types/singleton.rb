@@ -1,6 +1,6 @@
 module RDL::Type
   class SingletonType < Type
-    attr_reader :val
+    attr_accessor :val
     attr_reader :nominal
 
     @@cache = {}
