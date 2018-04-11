@@ -1225,6 +1225,16 @@ RUBY
         inst = {self: trecv}
         self_klass = trecv.val.class
       end
+    when RDL::Type::AstNode
+      meth_lookup = meth
+      trecv_lookup = RDL::Util.add_singleton_marker(trecv.val.to_s)
+      self_inst = trecv
+      ts = lookup(scope, trecv_lookup, meth_lookup, e)
+      ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] if (meth == :new) && (ts.nil?) # there's always a nullary new if initialize is undefined
+      error :no_singleton_method_type, [trecv.val, meth], e unless ts
+      inst = {self: self_inst}
+      self_klass = trecv.val
+      tmeth_inter = ts.map { |t| t.instantiate(inst) }
     when RDL::Type::NominalType
       ts = lookup(scope, trecv.name, meth, e)
       error :no_instance_method_type, [trecv.name, meth], e unless ts
@@ -1284,10 +1294,10 @@ RUBY
             trecv = trecv.canonical
             inst = trecv.to_inst.merge(self: trecv)
           end
-          
+
           tmeth = tmeth.instantiate(inst) if inst
           tmeth_names << tmeth
-          tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)          
+          tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)
           if tmeth_inst
             tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
             if trecv.is_a?(RDL::Type::SingletonType) && meth == :new
@@ -1326,7 +1336,7 @@ RUBY
         :initialize
       elsif trecv.is_a? RDL::Type::SingletonType
         trecv.val.class.to_s
-      elsif trecv.is_a?(RDL::Type::NominalType) || trecv.is_a?(RDL::Type::GenericType) || trecv.is_a?(RDL::Type::FiniteHashType) || trecv.is_a?(RDL::Type::TupleType)
+      elsif [RDL::Type::NominalType, RDL::Type::GenericType, RDL::Type::FiniteHashType, RDL::Type::TupleType, RDL::Type::AstNode].any? { |t| trecv.is_a? t }
         trecv.to_s
       elsif trecv.is_a?(RDL::Type::MethodType)
         'Proc'
@@ -1345,7 +1355,7 @@ RUBY
   # [+ trecv +] is the type of the receiver to the method call
   # [+ tactuals +] is a list Array<Type> of types of the input to a method call
   # Returns a new MethodType where all ComputedTypes in tmeth have been evaluated
-  def self.compute_types(tmeth, self_klass, trecv, tactuals) 
+  def self.compute_types(tmeth, self_klass, trecv, tactuals)
     bind = nil
     self_klass.class_eval { bind = binding() }
     bind.local_variable_set(:trec, trecv)
