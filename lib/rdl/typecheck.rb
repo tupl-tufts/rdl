@@ -1294,10 +1294,10 @@ RUBY
             trecv = trecv.canonical
             inst = trecv.to_inst.merge(self: trecv)
           end
-          
+
           tmeth = tmeth.instantiate(inst) if inst
           tmeth_names << tmeth
-          tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)          
+          tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)
           if tmeth_inst
             tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
             if trecv.is_a?(RDL::Type::SingletonType) && meth == :new
@@ -1355,7 +1355,7 @@ RUBY
   # [+ trecv +] is the type of the receiver to the method call
   # [+ tactuals +] is a list Array<Type> of types of the input to a method call
   # Returns a new MethodType where all ComputedTypes in tmeth have been evaluated
-  def self.compute_types(tmeth, self_klass, trecv, tactuals) 
+  def self.compute_types(tmeth, self_klass, trecv, tactuals)
     bind = nil
     self_klass.class_eval { bind = binding() }
     bind.local_variable_set(:trec, trecv)
