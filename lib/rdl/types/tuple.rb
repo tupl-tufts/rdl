@@ -58,7 +58,7 @@ module RDL::Type
     end
 
     def check_bounds(no_promote=false)
-      return (@lbounds.all? { |lbound| lbound.<=(self, no_promote )}) && (@ubounds.all? { |ubound| self.<=(ubound, no_promote) })
+      return (@lbounds.all? { |lbound|  lbound.<=(self, no_promote )}) && (@ubounds.all? { |ubound| self.<=(ubound, no_promote) })
     end
 
     def cant_promote!
@@ -79,7 +79,6 @@ module RDL::Type
     end
 
     def instantiate(inst)
-      #puts "WE HERE WITH #{self} AND #{inst}"
       return @array.instantiate(inst) if @array
       return TupleType.new(*@params.map { |t| t.instantiate(inst) })
     end

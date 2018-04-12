@@ -563,7 +563,14 @@ module RDL::Typecheck
       if e.children[0].type == :send
         meth = e.children[0].children[1]
         envleft, trecv = tc(scope, env, e.children[0].children[0]) # recv
-        tleft = tc_send(scope, envleft, trecv, meth, [], nil, e.children[0]) # call recv.meth()
+        elargs = e.children[0].children[2]
+        if elargs
+          envleft, elargs = tc(scope, envleft, elargs)
+          largs = [elargs]
+        else
+          largs = []
+        end
+        tleft = tc_send(scope, envleft, trecv, meth, largs, nil, e.children[0]) # call recv.meth()
         envright, tright = tc(scope, envleft, e.children[1]) # operand
       else
         x = e.children[0].children[0] # Note don't need to check outer_env here because will be checked by tc_var below
@@ -582,7 +589,8 @@ module RDL::Typecheck
                     end)
       if e.children[0].type == :send
         mutation_meth = (meth.to_s + '=').to_sym
-        tres = tc_send(scope, envi, trecv, mutation_meth, [trhs], nil, e)
+        rhs_array = [*largs, trhs]
+        tres = tc_send(scope, envi, trecv, mutation_meth, rhs_array, nil, e)
         [envi, tres]
       else
         tc_vasgn(scope, envi, e.children[0].type, x, trhs, e)
@@ -1284,10 +1292,9 @@ RUBY
             trecv = trecv.canonical
             inst = trecv.to_inst.merge(self: trecv)
           end
-          
           tmeth = tmeth.instantiate(inst) if inst
           tmeth_names << tmeth
-          tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)          
+          tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)
           if tmeth_inst
             tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
             if trecv.is_a?(RDL::Type::SingletonType) && meth == :new

@@ -244,11 +244,11 @@ def Hash.merge_output(trec, targs, mutate=false)
     case targs[0]
     when RDL::Type::FiniteHashType
       if mutate
-        targs[0].each { |k, v|
+        targs[0].elts.each { |k, v|
           case k
-          when RDL::Type::SingletonType
-            trec.elts[k.val] = RDL::Type::UnionType.new(trec.elts[k.val], v).canonical
-            trec.elts[k.val] = weak_promote(trec.elts[k.val]) if RDL::Config.instance.weak_update_promote
+          when Symbol
+            trec.elts[k] = RDL::Type::UnionType.new(trec.elts[k], v).canonical
+            trec.elts[k] = weak_promote(trec.elts[k]) if RDL::Config.instance.weak_update_promote
           else
             arg_key = targs[0].promote.params[0]
             arg_val = targs[0].promote.params[1]
