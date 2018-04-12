@@ -27,6 +27,10 @@ class RDL::Rails
       return 'DateTime'
     when :json
       return 'Json'
+    when :inet
+      return 'Inet'
+    when :tsvector
+      return 'tsvector'
     else
       raise RuntimeError, "Unrecoganized column type #{rails_type}"
     end
