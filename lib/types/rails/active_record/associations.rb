@@ -118,7 +118,7 @@ module ActiveRecord::Associations::ClassMethods
      assoc_type = '%any' # type is data-driven, can't determine statically
     elsif class_name
      assoc_type = class_name.to_s.classify
-    elsif anonymous_class # not sure this has anonymou_class
+    elsif defined? anonymous_class # not sure this has anonymous_class
      assoc_type = anonymous_class.to_s.classify
     else
      assoc_type = name.to_s.classify # camelize?
