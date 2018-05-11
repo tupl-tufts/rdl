@@ -9,7 +9,7 @@ class RDL::Rails
   # returns a String containing an RDL type
   def self.column_to_rdl(rails_type)
     case rails_type
-    when :string, :text, :binary, :uuid
+    when :string, :text, :binary, :uuid, :jsonb
       return 'String'
     when :integer
       return 'Fixnum'
