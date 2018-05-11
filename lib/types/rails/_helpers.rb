@@ -2,6 +2,7 @@
 # null allowed
 
 RDL.type_alias '%symstr', 'Symbol or String'
+RDL.type_alias '%jsonb', 'String or Float or Integer or Hash or Array or %bool' 
 
 class RDL::Rails
 
@@ -11,6 +12,8 @@ class RDL::Rails
     case rails_type
     when :string, :text, :binary, :uuid, :jsonb
       return 'String'
+    when :jsonb
+      return '%jsonb'
     when :integer
       return 'Fixnum'
     when :float
