@@ -380,3 +380,4 @@ RDL.type :Array, :values_at, '(*Integer) -> ``output_type(trec, targs, :values_a
 RDL.type :Array, :values_at, '(Range<Integer>) -> ``promote_tuple(trec)``'
 RDL.type :Array, :zip, '(*Array<u>) -> ``RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::UnionType.new(promoted_or_t(trec), RDL::Globals.parser.scan_str("#T u"))))``'
 RDL.type :Array, :|, '(*Array<u>) -> ``RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::UnionType.new(promoted_or_t(trec), RDL::Globals.parser.scan_str "#T u"))``'
+

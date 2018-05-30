@@ -53,6 +53,14 @@ module RDL::Type
       return VarargType.new(@type.instantiate(inst))
     end
 
+    def widen
+      return VarargType.new(@type.widen)
+    end
+
+    def copy
+      return VarargType.new(@type.copy)
+    end
+
     def hash # :nodoc:
       return 59 + @type.hash
     end

@@ -337,6 +337,8 @@ module RDL::Annotate
                           err.set_backtrace bt
                           raise err
                         end
+    typs = type.args + [type.ret, type.block]
+    RDL::Globals.dep_types << [klass, meth, type] if typs.any? { |t| t.is_a?(RDL::Type::ComputedType) }
     if meth
 # It turns out Ruby core/stdlib don't always follow this convention...
 #        if (meth.to_s[-1] == "?") && (type.ret != RDL::Globals.types[:bool])
@@ -587,6 +589,45 @@ module RDL
     }
     RDL::Globals.to_typecheck[sym] = Set.new
     nil
+  end
+
+  def self.check_type_code
+    count = 1
+    code_type = RDL::Globals.parser.scan_str "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
+    RDL::Globals.dep_types.each { |klass, meth, typ|
+      comp_types = []
+      (typ.args+[typ.ret]+[typ.block]).each { |t|
+        if t.is_a?(RDL::Type::ComputedType)
+          meth = cleanse_meth_name(meth)
+          tmp_meth = "def #{klass}.tc_#{meth}#{count}(trec, targs) #{t.code}; end"
+          ast = Parser::CurrentRuby.parse tmp_meth
+          #RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type])
+          count += 1
+        end
+      }
+    }
+    true
+  end
+
+  def self.cleanse_meth_name(meth)
+    meth = meth.to_s
+    meth.gsub!("%", "percent")
+    meth.gsub!("&", "ampersand")
+    meth.gsub!("*", "asterisk")
+    meth.gsub!("+", "plus")
+    meth.gsub!("-", "dash")
+    meth.gsub!("@", "at")
+    meth.gsub!("/", "slash")
+    meth.gsub!("<", "lt")
+    meth.gsub!(">", "gt")
+    meth.gsub!("=", "eq")
+    meth.gsub!("[", "lbracket")
+    meth.gsub!("]", "rbracket")
+    meth.gsub!("^", "carrot")
+    meth.gsub!("|", "line")
+    meth.gsub!("~", "line")
+    meth.gsub!("?", "qmark")
+    meth
   end
 
   # Does nothing at run time

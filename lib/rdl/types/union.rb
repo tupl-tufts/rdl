@@ -114,6 +114,45 @@ module RDL::Type
       return UnionType.new(*(@types.map { |t| t.instantiate(inst) }))
     end
 
+    def widen
+      return @canonical.widen if @canonical
+      sing_types = []
+      non_sing_types = []
+      @types.each { |t|
+        case t
+        when SingletonType
+          sing_types << t.nominal
+        when TupleType
+          sing_types << t.promote
+        when FiniteHashType
+          sing_types << t.promote
+        else
+          non_sing_types << t
+        end
+      }
+      UnionType.new(*sing_types, *non_sing_types).canonical
+    end
+
+    def copy
+      UnionType.new(*@types.map { |t| t.copy })
+    end
+=begin
+    def self.widened_type(u)
+      return u unless u.instance_of?(UnionType)
+      nominal_class = nil
+      @types.each { |t|
+        return u if !t.instance_of?(SingletonType)
+        if nominal_class.nil?
+          nominal_class = t.nominal ## first type
+        elsif nominal_class <= t.nominal
+          nominal_class = t.nominal ## update to more general class (or just stay the same)
+        else
+          return u ## found a case with differing singleton classes, can't widen
+        end
+      }
+      nominal_class
+    end
+=end
     def hash  # :nodoc:
       return @hash
     end

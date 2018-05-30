@@ -65,5 +65,17 @@ module RDL::Type
     def instantiate(inst)
       return self
     end
+
+    def widen
+      return self
+    end
+
+    def copy
+      return self
+    end
+
+    def satisfies?
+      yield(val)
+    end
   end
 end

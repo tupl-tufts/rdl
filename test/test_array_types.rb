@@ -82,7 +82,7 @@ class TestArrayTypes < Minitest::Test
   def count_test2(a)
     a.count
   end
-  
+
   type '([1,2,3]) -> [1,2,3,4]', typecheck: :now
   def append_test1(a)
     a << 4

@@ -42,6 +42,14 @@ module RDL::Type
       return OptionalType.new(@type.instantiate(inst))
     end
 
+    def widen
+      return OptionalType.new(@type.widen)
+    end
+
+    def copy
+      return OptionalType.new(@type.copy)
+    end
+
     def hash # :nodoc:
       return 57 + @type.hash
     end

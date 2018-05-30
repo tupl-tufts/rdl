@@ -6,7 +6,7 @@ class RDL::Config
   attr_accessor :nowrap
   attr_accessor :gather_stats
   attr_reader :report # writer is custom defined
-  attr_accessor :weak_update_promote
+  attr_accessor :weak_update_promote, :widen_bound, :promote_widen
   attr_accessor :type_defaults, :pre_defaults, :post_defaults
 
   def initialize
@@ -16,9 +16,11 @@ class RDL::Config
     @guess_types = [] # same as above
     @at_exit_installed = false
     @weak_update_promote = false
+    @promote_widen = false
     @type_defaults = { wrap: true, typecheck: false }
     @pre_defaults = { wrap: true }
     @post_defaults = { wrap: true }
+    @widen_bound = 5
   end
 
   def report=(val)

@@ -99,7 +99,7 @@ module RDL::Type
         # do check here to avoid hiding errors if generic type written
         # with wrong number of parameters but never checked against
         # instantiated instances
-        raise TypeError, "No type parameters defined for #{base.name}" unless formals
+        raise TypeError, "No type parameters defined for #{left.base.name}" unless formals
         return false unless left.base == right.base
         return variance.zip(left.params, right.params).all? { |v, tl, tr|
           case v

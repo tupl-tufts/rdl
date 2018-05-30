@@ -294,6 +294,18 @@ RUBY
                             @ret.instantiate(inst))
     end
 
+    def widen
+      return MethodType.new(@args.map { |arg| arg.widen },
+                            @block ? @block.widen : nil,
+                            @ret.widen)
+    end
+
+    def copy
+      return MethodType.new(@args.map { |arg| arg.copy },
+                            @block ? @block.copy : nil,
+                            @ret.copy)
+    end
+
     # Return +true+ if +other+ is the same type
     def ==(other)
       return (other.instance_of? MethodType) &&

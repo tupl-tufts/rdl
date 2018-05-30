@@ -52,6 +52,14 @@ module RDL::Type
       GenericType.new(base.instantiate(inst), *params.map { |t| t.instantiate(inst) })
     end
 
+    def widen
+      GenericType.new(base.widen, *params.map { |t| t.widen })
+    end
+
+    def copy
+      GenericType.new(base.copy, *params.map { |t| t.copy })
+    end
+
     def hash
       (61 + @base.hash) * @params.hash
     end

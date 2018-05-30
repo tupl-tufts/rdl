@@ -72,6 +72,14 @@ module RDL::Type
       return self
     end
 
+    def widen
+      return self
+    end
+
+    def copy
+      return self
+    end
+    
     @@cache.merge!({"NilClass" => SingletonType.new(nil),
                     "TrueClass" => SingletonType.new(true),
                     "FalseClass" => SingletonType.new(false),

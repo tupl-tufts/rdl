@@ -1,9 +1,12 @@
 RDL.nowrap :Integer
 
+RDL.type Numeric, 'self.sing_or_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, String) -> RDL::Type::Type", typecheck: :type_code
 def Numeric.sing_or_type(trec, targs, meth, type)
   if trec.is_a?(RDL::Type::SingletonType) && (targs.empty? || targs[0].is_a?(RDL::Type::SingletonType))
-    if targs[0]
-      v = trec.val.send(meth, targs[0].val)
+    trec = RDL.type_cast(trec, "RDL::Type::SingletonType", force: true)
+    arg = RDL.type_cast(targs[0], "RDL::Type::SingletonType", force: true)
+    if arg
+      v = trec.val.send(meth, arg.val)
     else
       v = trec.val.send(meth)
     end
@@ -194,7 +197,7 @@ RDL.type :Integer, :round, '(%numeric) -> ``sing_or_type(trec, targs, :round, "%
 RDL.pre(:Integer, :round) { |x| x!=0 && if x.is_a?(Complex) then x.imaginary==0 && (if x.real.is_a?(Float)||x.real.is_a?(BigDecimal) then !x.real.infinite? && !x.real.nan? else true end) elsif x.is_a?(Float) then x!=Float::INFINITY && !x.nan? elsif x.is_a?(BigDecimal) then x!=BigDecimal::INFINITY && !x.nan? else true end} #Also, x must be in range [-2**31, 2**31].
 RDL.type :Integer, :size, '() -> ``sing_or_type(trec, targs, :size, "Integer")``'
 RDL.type :Integer, :succ, '() -> ``sing_or_type(trec, targs, :succ, "Integer")``'
-RDL.type :Integer, :times, '() { (Integer) -> %any } -> Integer'
+RDL.type :Integer, :times, '() { (?Integer) -> %any } -> Integer'
 RDL.type :Integer, :times, '() -> Enumerator<Integer>'
 RDL.type :Integer, :to_c, '() -> Complex r {{ r.imaginary==0 }}'
 RDL.type :Integer, :to_f, '() -> ``sing_or_type(trec, targs, :to_f, "Float")``'

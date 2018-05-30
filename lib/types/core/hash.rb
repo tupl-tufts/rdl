@@ -303,7 +303,7 @@ end
 
 RDL.type :Hash, :to_a, '() -> ``output_type(trec, targs, :to_a, "Array<[k, v]>")``'
 RDL.type :Hash, :to_hash, '() -> self'
-RDL.type :Hash, :values, '() -> ``output_type(trec, targs, :keys, "Array<k>")``'
+RDL.type :Hash, :values, '() -> ``output_type(trec, targs, :values, "Array<v>")``'
 RDL.type :Hash, :values_at, '(``values_at_input(trec)``) -> ``values_at_output(trec, targs)``'
 
 def Hash.values_at_input(trec)
@@ -332,4 +332,5 @@ def Hash.values_at_output(trec, targs)
     RDL::Globals.parser.scan_str "#T Array<v>"
   end
 end
+
 

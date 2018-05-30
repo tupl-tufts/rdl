@@ -46,7 +46,9 @@ module RDL::Type
 
     def promote(t=nil)
       return false if @cant_promote
-      GenericType.new(RDL::Globals.types[:array], UnionType.new(*@params, t))
+      param = UnionType.new(*@params, t)
+      param = param.widen if RDL::Config.instance.promote_widen
+      GenericType.new(RDL::Globals.types[:array], param)
     end
 
     ### TODO: similar question as in tuple types. Should [1,2,3] be promoted to Array<1 or 2 or 3> or Array<Integer>
@@ -80,7 +82,20 @@ module RDL::Type
 
     def instantiate(inst)
       return @array.instantiate(inst) if @array
-      return TupleType.new(*@params.map { |t| t.instantiate(inst) })
+      #return TupleType.new(*@params.map { |t| t.instantiate(inst) })
+      @params.map! { |t| t.instantiate(inst) }
+      self
+    end
+
+    def widen
+      return @array.widen if @array
+      #return TupleType.new(*@params.map { |t| t.widen })
+      @params.map! { |t| t.widen }
+      self
+    end
+
+    def copy
+      return TupleType.new(*@params.map { |t| t.copy })      
     end
 
     def hash

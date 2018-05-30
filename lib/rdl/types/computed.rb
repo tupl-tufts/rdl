@@ -28,6 +28,10 @@ module RDL::Type
       @inst = inst
       self
     end
+
+    def widen
+      self
+    end
     
     def <=(other)
       ## TODO
