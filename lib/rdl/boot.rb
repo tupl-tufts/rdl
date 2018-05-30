@@ -119,7 +119,6 @@ require 'rdl/util.rb'
 require 'rdl/wrap.rb'
 require 'rdl/query.rb'
 require 'rdl/typecheck.rb'
-require 'rdl/types/rdl_types.rb'
 #require_relative 'rdl/stats.rb'
 
 module RDL::Globals
@@ -169,3 +168,5 @@ class << RDL::Globals
   attr_reader :types
   attr_reader :special_types
 end
+
+require 'rdl/types/rdl_types.rb'
