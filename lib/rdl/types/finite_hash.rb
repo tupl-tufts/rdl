@@ -84,10 +84,6 @@ module RDL::Type
         end
       end
       return GenericType.new(RDL::Globals.types[:hash], domain_type.canonical, range_type.canonical)
-      ## TODO: ask what the last line of `promote!` is for
-      ## TODO: Ask about promoting values of hashes, i.e., singleton type keys end up being promoted
-      ## and it seems like the same should be true of singleton type values.
-      ## e.g., { foo: 1 } will be promoted to Hash<Symbol, 1>, seems it should be Hash<Symbol, Integer>.
     end
 
     ### [+ key +] is type to add to promoted key types

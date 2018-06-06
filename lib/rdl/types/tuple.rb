@@ -26,7 +26,7 @@ module RDL::Type
       return @array.to_s if @array
       return "[#{@params.map { |t| t.to_s }.join(', ')}]"
     end
-
+p
     def ==(other) # :nodoc:
       return false if other.nil?
       return (@array == other) if @array

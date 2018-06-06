@@ -919,7 +919,7 @@ class TestTypecheck < Minitest::Test
   # end
 
   def test_new
-    assert do_tc("B.new", env: @env) <= RDL::Type::NominalType.new(B)
+    assert do_tc("B.new", env: @env) <= RDL::Type::NominalType.new(TestTypecheck::B)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("B.new(3)", env: @env) }
   end
 

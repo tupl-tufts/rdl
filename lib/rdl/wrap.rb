@@ -359,12 +359,10 @@ module RDL::Annotate
           end
           RDL::Wrap.wrap(klass, meth) if wrap
         else
-          if wrap
-            RDL::Globals.to_wrap << [klass, meth]
-            if (typecheck && typecheck != :call)
-              RDL::Globals.to_typecheck[typecheck] = Set.new unless RDL::Globals.to_typecheck[typecheck]
-              RDL::Globals.to_typecheck[typecheck].add([klass, meth])
-            end
+          RDL::Globals.to_wrap << [klass, meth] if wrap
+          if (typecheck && typecheck != :call)
+            RDL::Globals.to_typecheck[typecheck] = Set.new unless RDL::Globals.to_typecheck[typecheck]
+            RDL::Globals.to_typecheck[typecheck].add([klass, meth])
           end
         end
       end
@@ -592,20 +590,25 @@ module RDL
   end
 
   def self.check_type_code
+    RDL.config { |config| config.use_dep_types = false }
     count = 1
     code_type = RDL::Globals.parser.scan_str "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
     RDL::Globals.dep_types.each { |klass, meth, typ|
       comp_types = []
+      klass = RDL::Util.has_singleton_marker(klass) ? RDL::Util.remove_singleton_marker(klass) : klass
       (typ.args+[typ.ret]+[typ.block]).each { |t|
         if t.is_a?(RDL::Type::ComputedType)
           meth = cleanse_meth_name(meth)
           tmp_meth = "def #{klass}.tc_#{meth}#{count}(trec, targs) #{t.code}; end"
+          eval tmp_meth
           ast = Parser::CurrentRuby.parse tmp_meth
-          #RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type])
+          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type])
           count += 1
         end
       }
     }
+    RDL.do_typecheck :type_code
+    RDL.config { |config| config.use_dep_types = true }
     true
   end
 
@@ -627,6 +630,7 @@ module RDL
     meth.gsub!("|", "line")
     meth.gsub!("~", "line")
     meth.gsub!("?", "qmark")
+    meth.gsub!("!", "bang")
     meth
   end
 
@@ -712,5 +716,40 @@ class Module
     RDL::Wrap.do_method_added(self, false, klass, meth)
     nil
   end
+end
+
+class Class
+  def ===(x)
+    if x.method(:is_a?).owner == SimpleDelegator then super(x.__getobj__) else super(x) end
+  end
+end
+
+class SimpleDelegator
+  ## pass methods through to wrapped object
+  ## necessary when type casts are inside type-level code
+  def is_a?(c)
+    __getobj__.is_a?(c)
+  end
+
+  def instance_of?(c)
+    __getobj__.instance_of?(c)
+  end
+
+  def kind_of?(c)
+    __getobj__.kind_of?(c)
+  end
+
+  def ===(x)
+    __getobj__ === x
+  end
+
+  def ==(x)
+    __getobj__ == x
+  end
+
+  def class
+     __getobj__.class
+  end
+
 end
 
