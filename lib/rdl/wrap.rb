@@ -219,6 +219,7 @@ RUBY
           raise RuntimeError, "Deferred #{kind} contract from class #{prev_klass} being applied in class #{tmp_klass} to #{meth}"
         end
         RDL::Globals.info.add(klass, meth, kind, contract)
+        RDL::Globals.info.add(klass, meth, :effect, h[:effect]) if h.has_key?(:effect)
         RDL::Wrap.wrap(klass, meth) if h[:wrap]
         unless !h.has_key?(:typecheck) || RDL::Globals.info.set(klass, meth, :typecheck, h[:typecheck])
           raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
@@ -323,7 +324,7 @@ module RDL::Annotate
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
-  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil)
+  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil, effect: nil)
     return if version && !(Gem::Requirement.new(version).satisfied_by? Gem.ruby_version)
     klass, meth, type = begin
                           RDL::Wrap.process_type_args(self, *args)
@@ -345,6 +346,7 @@ module RDL::Annotate
 #          warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
 #        end
       RDL::Globals.info.add(klass, meth, :type, type)
+      RDL::Globals.info.add(klass, meth, :effect, effect)
       unless RDL::Globals.info.set(klass, meth, :typecheck, typecheck)
         raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
       end
@@ -368,7 +370,7 @@ module RDL::Annotate
       end
     else
       RDL::Globals.deferred << [klass, :type, type, {wrap: wrap,
-                                               typecheck: typecheck}]
+                                               typecheck: typecheck, effect: effect}]
     end
     nil
   end
@@ -602,7 +604,7 @@ module RDL
           tmp_meth = "def #{klass}.tc_#{meth}#{count}(trec, targs) #{t.code}; end"
           eval tmp_meth
           ast = Parser::CurrentRuby.parse tmp_meth
-          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type])
+          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type]) ## TODO: update with effects after implementing
           count += 1
         end
       }
