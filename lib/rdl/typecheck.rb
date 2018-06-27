@@ -213,11 +213,11 @@ module RDL::Typecheck
     return ast
   end
 
-  def self.typecheck(klass, meth, ast=nil, types = nil, effect = nil)
+  def self.typecheck(klass, meth, ast=nil, types = nil, effects = nil)
     @cur_meth = [klass, meth]
     ast = get_ast(klass, meth) unless ast
     types = RDL::Globals.info.get(klass, meth, :type) unless types
-    effects = RDL::Globals.info.get(klass, meth, :effect) unless effect
+    effects = RDL::Globals.info.get(klass, meth, :effect) unless effects
     if effects.empty? || effects[0] == nil
       effect = nil
     else
@@ -263,6 +263,7 @@ module RDL::Typecheck
         old_captured, scope[:captured] = widen_scopes(old_captured, scope[:captured])
       end until old_captured == scope[:captured]
       error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || meth == :initialize || body_type <= type.ret
+      puts "ABOUT TO CHECK #{body_effect} <= #{effect} FOR METH #{[klass, meth]}"
       error :bad_effect, [body_effect, effect], body unless body.nil? || effect.nil? || effect_leq(body_effect, effect)
     }
     RDL::Globals.info.set(klass, meth, :typechecked, true)
@@ -574,7 +575,7 @@ module RDL::Typecheck
       if e.type == :lvar then eff = [:+, :+] else eff = [:-, :+] end
       tc_var(scope, env, e.type, e.children[0], e) + [eff]
     when :lvasgn, :ivasgn, :cvasgn, :gvasgn
-      if e.type == :lvar then eff = [:+, :+] else eff = [:-, :+] end
+      if e.type == :lvasgn then eff = [:+, :+] else eff = [:-, :+] end
       x = e.children[0]
       # if local var, lhs is bound to nil before assignment is executed! only matters in type checking for locals
       env = env.bind(x, RDL::Globals.types[:nil]) if ((e.type == :lvasgn) && (not (env.has_key? x)))
@@ -1353,8 +1354,10 @@ RUBY
     eff = [:+, :+]
     trecvs.each { |trecv|
       ts, es = tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e)
-      if es.nil?
-        #puts "Going to assume method #{meth} for receiver #{trecv} has effect [:-, :-]."
+      if es.all? { |e| e.nil? } ## could be multiple, because every time e is called, nil is added to effects
+        ## should probably change default effect to be [:-, :-], but for now I want it like this,
+        ## so I can easily see when a method has been used and its effect set to the default.
+        puts "Going to assume method #{meth} for receiver #{trecv} has effect [:-, :-]."
         eff = [:-, :-]
       else
         es.each { |e| eff = effect_union(eff, e) unless e.nil? }

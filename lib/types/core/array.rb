@@ -46,7 +46,7 @@ def Array.output_type(trec, targs, meth_name, default1, default2=default1, use_s
     RDL::Globals.parser.scan_str "#T #{default2}"
   end
 end
-RDL.type Array, 'self.output_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, String or Symbol, ?(String or Symbol), { use_sing_val: ?%bool, nil_false_default: ?%bool }) -> RDL::Type::Type", wrap: false, typecheck: :type_code
+RDL.type Array, 'self.output_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, String or Symbol, ?(String or Symbol), { use_sing_val: ?%bool, nil_false_default: ?%bool }) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:~, :+]
 
 
 def Array.any_or_t(trec, vararg=false)
@@ -59,7 +59,7 @@ def Array.any_or_t(trec, vararg=false)
     if vararg then RDL::Type::VarargType.new(ret) else ret end
   end
 end
-RDL.type Array, 'self.any_or_t', "(RDL::Type::Type, ?%bool) -> RDL::Type::Type", wrap: false, typecheck: :type_code
+RDL.type Array, 'self.any_or_t', "(RDL::Type::Type, ?%bool) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
 
 
 def Array.promoted_or_t(trec, vararg=false)
@@ -72,7 +72,7 @@ def Array.promoted_or_t(trec, vararg=false)
     if vararg then RDL::Type::VarargType.new(ret) else ret end
   end
 end
-RDL.type Array, 'self.promoted_or_t', "(RDL::Type::Type, ?%bool) -> RDL::Type::Type", wrap: false, typecheck: :type_code
+RDL.type Array, 'self.promoted_or_t', "(RDL::Type::Type, ?%bool) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:~, :+]
 
 
 def Array.promote_tuple(trec)
@@ -110,7 +110,7 @@ def Array.append_push_output(trec, targs, meth)
     RDL::Globals.parser.scan_str "#T Array<t>"
   end
 end
-RDL.type Array, 'self.append_push_output', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol) -> RDL::Type::Type", typecheck: :type_code, wrap: false
+RDL.type Array, 'self.append_push_output', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
 
 RDL.type :Array, :[], '(Range<Integer>) -> ``output_type(trec, targs, :[], :promoted_array, "Array<t>")``'
 RDL.type :Array, :[], '(Integer or Float) -> ``output_type(trec, targs, :[], :promoted_param, "t")``'
@@ -131,7 +131,7 @@ def Array.plus_input(targs)
     RDL::Globals.types[:array]
   end
 end
-RDL.type Array, 'self.plus_input', "(Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
+RDL.type Array, 'self.plus_input', "(Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
 
 
 def Array.plus_output(trec, targs)
@@ -164,7 +164,7 @@ def Array.plus_output(trec, targs)
     end
   end
 end
-RDL.type Array, 'self.plus_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
+RDL.type Array, 'self.plus_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
 
 RDL.type :Array, :-, '(Array<u>) -> ``output_type(trec, targs, :-, :promoted_array, "Array<t>")``'
 RDL.type :Array, :slice, '(Range<Integer>) -> ``output_type(trec, targs, :slice, :promoted_array, "Array<t>")``'
@@ -197,7 +197,7 @@ def Array.assign_output(trec, targs)
     RDL::Globals.parser.scan_str "#T t"
   end
 end
-RDL.type Array, 'self.assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
+RDL.type Array, 'self.assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
 
 RDL.type :Array, :[]=, '(Integer, Integer, ``any_or_t(trec)``) -> t'
 
@@ -214,7 +214,7 @@ def Array.multi_assign_output(trec, targs)
     RDL::Globals.parser.scan_str "#T t"
   end
 end
-RDL.type Array, 'self.multi_assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
+RDL.type Array, 'self.multi_assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
 
 RDL.type :Array, :[]=, '(Range<Integer>, ``any_or_t(trec)``) -> ``multi_assign_output(trec, targs)``'
 RDL.type :Array, :assoc, '(t) -> Array<t>'
@@ -235,7 +235,7 @@ def Array.map_output(trec)
     RDL::Globals.parser.scan_str "#T Array<u>"
   end
 end
-RDL.type Array, 'self.map_output', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false
+RDL.type Array, 'self.map_output', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
   
 RDL.type :Array, :map!, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), promoted_or_t(trec))``'
 RDL.type :Array, :collect, '() {(``promoted_or_t(trec)``) -> u} -> Array<u>'

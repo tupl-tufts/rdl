@@ -604,7 +604,7 @@ module RDL
           tmp_meth = "def #{klass}.tc_#{meth}#{count}(trec, targs) #{t.code}; end"
           eval tmp_meth
           ast = Parser::CurrentRuby.parse tmp_meth
-          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type]) ## TODO: update with effects after implementing
+          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type], [[:~, :+]]) 
           count += 1
         end
       }
