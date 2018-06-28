@@ -6,7 +6,7 @@ module RDL::Type
   # Finite hashes can also have a "rest" type (okay, they're not exactly finite in this case...)
   # which is treated as a hash from Symbol to the type.
   class FiniteHashType < Type
-    attr_reader :elts
+    attr_accessor :elts
     attr_reader :rest
     attr_reader :the_hash # either nil or hash type if self has been promoted to hash
     attr_accessor :ubounds  # upper bounds this tuple has been compared with using <=

@@ -270,7 +270,7 @@ module RDL::Typecheck
   end
 
   def self.effect_leq(e1, e2)
-    raise "Unexpected effect #{e1} or #{e2}" unless (e1+e2).all? { |e| e.is_a?(Symbol) }
+    raise "Unexpected effect #{e1} or #{e2}" unless (e1+e2).all? { |e| [:+, :-, :~].include?(e) }
     p1, t1 = e1
     p2, t2 = e2
     pret = tret = nil
@@ -278,7 +278,7 @@ module RDL::Typecheck
     when :~
       return false if p2 == :+
     when :-
-      return false if p2 == :+ || p2 == :~
+      return false if p2 == :+# || p2 == :~ going to treat this as okay, like a type cast
     end
     case t1 #:+ always okay
     when :-
@@ -1354,7 +1354,7 @@ RUBY
     eff = [:+, :+]
     trecvs.each { |trecv|
       ts, es = tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e)
-      if es.all? { |e| e.nil? } ## could be multiple, because every time e is called, nil is added to effects
+      if es.nil? || (es.all? { |e| e.nil? }) ## could be multiple, because every time e is called, nil is added to effects
         ## should probably change default effect to be [:-, :-], but for now I want it like this,
         ## so I can easily see when a method has been used and its effect set to the default.
         puts "Going to assume method #{meth} for receiver #{trecv} has effect [:-, :-]."
@@ -1492,7 +1492,7 @@ RUBY
     RDL::Type.expand_product(tactuals).each { |tactuals_expanded|
       # AT LEAST ONE of the possible intesection arms must match
       trets_tmp = []
-      ts.each { |tmeth| # MethodType
+      ts.each_with_index { |tmeth, ind| # MethodType
         if ((tmeth.block && block) || (tmeth.block.nil? && block.nil?))
           if trecv.is_a?(RDL::Type::FiniteHashType) && trecv.the_hash
             trecv = trecv.canonical
@@ -1512,7 +1512,21 @@ RUBY
           tmeth_names << tmeth
           tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)
           if tmeth_inst
-            tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
+            effblock = tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
+            if es
+              es.each { |e| ## expecting just one effect per method right now. can clean this up later.
+                if !e.nil? && e[1] == :blockdep
+                  raise "Got block-dependent termination effect, but no block." unless block && effblock
+                  if effblock[0] == :+ or effblock[0] == :~
+                    e[1] = :+ 
+                  elsif effblock[0] == :-
+                    e[1] = :-
+                  else
+                    raise "unexpected effect #{effblock[0]}"
+                  end
+                end
+              }
+            end
             if trecv.is_a?(RDL::Type::SingletonType) && meth == :new
               init_typ = RDL::Type::NominalType.new(trecv.val)
               if (tmeth.ret.instance_of?(RDL::Type::GenericType))
@@ -1695,9 +1709,10 @@ RUBY
         # note: okay if outer_env shadows, since nested scope will include outer scope by next line
         targs_dup = Hash[targs.map { |k, t| [k, t.copy] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
         env = env.merge(Env.new(targs_dup))
-        _, body_type = if body.nil? then [nil, RDL::Globals.types[:nil]] else tc(bscope, env.merge(Env.new(targs)), body) end
+        _, body_type, eff = if body.nil? then [nil, RDL::Globals.types[:nil], [:+, :+]] else tc(bscope, env.merge(Env.new(targs)), body) end
         error :bad_return_type, [body_type, tblock.ret], body unless body.nil? || RDL::Type::Type.leq(body_type, tblock.ret, inst, false)
         #
+        eff
       }
     end
   end

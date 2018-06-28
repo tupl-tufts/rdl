@@ -601,8 +601,13 @@ module RDL
       (typ.args+[typ.ret]+[typ.block]).each { |t|
         if t.is_a?(RDL::Type::ComputedType)
           meth = cleanse_meth_name(meth)
-          tmp_meth = "def #{klass}.tc_#{meth}#{count}(trec, targs) #{t.code}; end"
-          eval tmp_meth
+          if klass.to_s.include?("::") ## hacky way around namespace issue
+            tmp_meth =  "def klass.tc_#{meth}#{count}(trec, targs) #{t.code}; end"
+            tmp_eval = "klass = #{klass} ; #{tmp_meth}"
+          else
+            tmp_meth = tmp_eval = "def #{klass}.tc_#{meth}#{count}(trec, targs) #{t.code}; end"
+          end
+          eval tmp_eval
           ast = Parser::CurrentRuby.parse tmp_meth
           RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type], [[:~, :+]]) 
           count += 1
