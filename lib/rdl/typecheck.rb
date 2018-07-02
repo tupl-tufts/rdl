@@ -263,7 +263,6 @@ module RDL::Typecheck
         old_captured, scope[:captured] = widen_scopes(old_captured, scope[:captured])
       end until old_captured == scope[:captured]
       error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || meth == :initialize || body_type <= type.ret
-      puts "ABOUT TO CHECK #{body_effect} <= #{effect} FOR METH #{[klass, meth]}"
       error :bad_effect, [body_effect, effect], body unless body.nil? || effect.nil? || effect_leq(body_effect, effect)
     }
     RDL::Globals.info.set(klass, meth, :typechecked, true)
@@ -1357,7 +1356,7 @@ RUBY
       if es.nil? || (es.all? { |e| e.nil? }) ## could be multiple, because every time e is called, nil is added to effects
         ## should probably change default effect to be [:-, :-], but for now I want it like this,
         ## so I can easily see when a method has been used and its effect set to the default.
-        puts "Going to assume method #{meth} for receiver #{trecv} has effect [:-, :-]."
+        #puts "Going to assume method #{meth} for receiver #{trecv} has effect [:-, :-]."
         eff = [:-, :-]
       else
         es.each { |e| eff = effect_union(eff, e) unless e.nil? }

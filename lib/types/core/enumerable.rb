@@ -26,7 +26,7 @@ RDL.type :Enumerable, :each_cons, '(Integer n) -> Enumerator<t>'
 RDL.rdl_alias :Enumerable, :each_slice, :each_cons
 RDL.type :Enumerable, :each_with_index, '() { (t, Integer) -> %any } -> Enumerable<t>', effect: [:~, :blockdep] # args! note may not return self
 RDL.type :Enumerable, :each_with_index, '() -> Enumerable<t>', effect: [:~, :blockdep] # args! note may not return self
-:# RDL.type :Enumerable, :each_with_object, '(XXXX : XXXX)' #TODO
+# RDL.type :Enumerable, :each_with_object, '(XXXX : XXXX)' #TODO
 RDL.type :Enumerable, :entries, '() -> Array<t>' # TODO args?
 RDL.rdl_alias :Enumerable, :find, :detect
 RDL.type :Enumerable, :find_all, '() { (t) -> %bool } -> Array<t>'
