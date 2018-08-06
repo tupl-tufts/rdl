@@ -1,22 +1,22 @@
 RDL.type_params 'RDL::Type::SingletonType', [:t], :satisfies?
 
-RDL.type 'RDL::Type::SingletonType', :initialize, "(x) -> self<x>", wrap: false, effect: [:~, :+]
+RDL.type 'RDL::Type::SingletonType', :initialize, "(x) -> self<x>", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Type::SingletonType', :val, "() -> t", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Type::SingletonType', :nominal, "() -> RDL::Type::NominalType", wrap: false, effect: [:+, :+]
 
-RDL.type 'RDL::Type::NominalType', :initialize, "(Class or String) -> self", wrap: false, effect: [:~, :+]
+RDL.type 'RDL::Type::NominalType', :initialize, "(Class or String) -> self", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Type::NominalType', :klass, "() -> Class", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Type::NominalType', :name, "() -> String", wrap: false, effect: [:+, :+]
 
-RDL.type 'RDL::Type::GenericType', :initialize, "(RDL::Type::Type, *RDL::Type::Type) -> self", wrap: false, effect: [:~, :+]
+RDL.type 'RDL::Type::GenericType', :initialize, "(RDL::Type::Type, *RDL::Type::Type) -> self", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Type::GenericType', :params, "() -> Array<RDL::Type::Type>", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Type::GenericType', :base, "() -> RDL::Type::NominalType", wrap: false, effect: [:+, :+]
 
-RDL.type 'RDL::Type::UnionType', :initialize, "(*RDL::Type::Type) -> self", wrap: false, effect: [:~, :+]
+RDL.type 'RDL::Type::UnionType', :initialize, "(*RDL::Type::Type) -> self", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Type::UnionType', :canonical, "() -> RDL::Type::Type", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Type::UnionType', :types, "() -> Array<RDL::Type::Type>", wrap: false, effect: [:+, :+]
 
-RDL.type 'RDL::Type::TupleType', :initialize, "(*RDL::Type::Type) -> self", wrap: false, effect: [:~, :+]
+RDL.type 'RDL::Type::TupleType', :initialize, "(*RDL::Type::Type) -> self", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Type::TupleType', :params, "() -> Array<RDL::Type::Type>", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Type::TupleType', :promote, "(?RDL::Type::Type) -> RDL::Type::GenericType", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Type::TupleType', :promote!, "(?RDL::Type::Type) -> %bool", wrap: false, effect: [:-, :+]
@@ -26,14 +26,14 @@ RDL.type 'RDL::Type::FiniteHashType', :elts, "() -> Hash<%any, RDL::Type::Type>"
 RDL.type 'RDL::Type::FiniteHashType', :elts=, "(Hash<%any, RDL::Type::Type>) -> Hash<%any, RDL::Type::Type>", wrap: false, effect: [:-, :+]
 RDL.type 'RDL::Type::FiniteHashType', :promote, "(?%any, ?RDL::Type::Type) -> RDL::Type::GenericType", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Type::FiniteHashType', :promote!, "(?%any, ?RDL::Type::Type) -> %bool", wrap: false, effect: [:-, :+]
-RDL.type 'RDL::Type::FiniteHashType', :initialize, "(Hash<%any, RDL::Type::Type> or {}, ?RDL::Type::Type) -> self", wrap: false, effect: [:~, :+]
+RDL.type 'RDL::Type::FiniteHashType', :initialize, "(Hash<%any, RDL::Type::Type> or {}, ?RDL::Type::Type) -> self", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Type::FiniteHashType', :check_bounds, "(?%bool) -> %bool", wrap: false, effect: [:+, :+]
 
-RDL.type 'RDL::Type::OptionalType', :initialize, "(RDL::Type::Type) -> self", wrap: false, effect: [:~, :+]
+RDL.type 'RDL::Type::OptionalType', :initialize, "(RDL::Type::Type) -> self", wrap: false, effect: [:+, :+]
 
-RDL.type 'RDL::Type::VarargType', :initialize, '(RDL::Type::Type) -> self', wrap: false, effect: [:~, :+]
+RDL.type 'RDL::Type::VarargType', :initialize, '(RDL::Type::Type) -> self', wrap: false, effect: [:+, :+]
 
-RDL.type 'RDL::Type::VarType', :initialize, "(String) -> self", wrap: false, effect: [:~, :+]
+RDL.type 'RDL::Type::VarType', :initialize, "(String) -> self", wrap: false, effect: [:+, :+]
 
 RDL.type "RDL::Type::Type", 'self.leq', "(RDL::Type::Type, RDL::Type::Type) -> %bool", wrap: false, effect: [:+, :+]
 

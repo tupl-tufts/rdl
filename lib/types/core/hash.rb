@@ -8,8 +8,8 @@ def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_de
   when RDL::Type::FiniteHashType    
     if targs.empty? || targs.all? { |t| t.is_a?(RDL::Type::SingletonType) }
       vals = RDL.type_cast((if use_sing_val then targs.map { |t| t.val } else targs end), "Array<%any>", force: true)
-      res = trec.elts.send(meth_name, *vals)
-      if nil_default && RDL.type_cast(res, "Object", force: true).nil?
+      res = RDL.type_cast(trec.elts.send(meth_name, *vals), "Object", force: true)
+      if nil_default && res.nil?
         if default1 == :promoted_val
           return trec.promote.params[1]
         elsif default1 == :promoted_key
@@ -32,7 +32,7 @@ def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_de
     RDL::Globals.parser.scan_str "#T #{default2}"
   end
 end
-RDL.type Hash, 'self.output_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, Symbol or String, ?(Symbol or String), { nil_default: ?%bool, use_sing_val: ?%bool } ) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.output_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, Symbol or String, ?(Symbol or String), { nil_default: ?%bool, use_sing_val: ?%bool } ) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 
 def Hash.to_type(t)
@@ -46,7 +46,7 @@ def Hash.to_type(t)
     RDL::Type::SingletonType.new(t)
   end
 end
-RDL.type Hash, 'self.to_type', "(%any) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.to_type', "(%any) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 def Hash.any_or_k(trec)
   case trec
@@ -56,7 +56,7 @@ def Hash.any_or_k(trec)
     RDL::Globals.parser.scan_str "#T k"
   end
 end
-RDL.type Hash, 'self.any_or_k', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.any_or_k', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 def Hash.any_or_v(trec)
   case trec
@@ -66,7 +66,7 @@ def Hash.any_or_v(trec)
     RDL::Globals.parser.scan_str "#T v"
   end
 end
-RDL.type Hash, 'self.any_or_v', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.any_or_v', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 def Hash.promoted_or_v(trec)
   case trec
@@ -76,7 +76,7 @@ def Hash.promoted_or_v(trec)
     RDL::Globals.parser.scan_str "#T v"
   end
 end
-RDL.type Hash, 'self.promoted_or_v', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.promoted_or_v', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 
 def Hash.weak_promote(val)
@@ -96,7 +96,7 @@ def Hash.weak_promote(val)
     val
   end
 end
-RDL.type Hash, 'self.weak_promote', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.weak_promote', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 RDL.type :Hash, 'self.[]', '(*%any) -> ``hash_create_output(targs)``'
 
@@ -113,7 +113,7 @@ def Hash.hash_create_output(targs)
 =end
   RDL::Type::FiniteHashType.new(RDL.type_cast(Hash[*args], "Hash<%any, RDL::Type::Type>", force: true), nil)
 end
-RDL.type Hash, 'self.hash_create_output', "(Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.hash_create_output', "(Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 RDL.type :Hash, :[], '(``any_or_k(trec)``) -> ``output_type(trec, targs, :[], :promoted_val, "v", nil_default: true)``', effect: [:+, :+]
 
@@ -175,7 +175,7 @@ def Hash.delete_output(trec, targs, block)
     RDL::Globals.parser.scan_str "#T #{t}"
   end
 end
-RDL.type Hash, 'self.delete_output', "(RDL::Type::Type, Array<RDL::Type::Type>, %bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.delete_output', "(RDL::Type::Type, Array<RDL::Type::Type>, %bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 RDL.type :Hash, :delete_if, '() { (``any_or_k(trec)``, ``any_or_v(trec)``) -> %any } -> self'
 RDL.type :Hash, :delete_if, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), RDL::Type::TupleType.new(any_or_k(trec), any_or_v(trec)))``' ## I had made a mistake here, type checker caught it.
@@ -211,7 +211,7 @@ def Hash.invert_output(trec)
     RDL::Globals.parser.scan_str "#T Hash<v, k>"
   end
 end
-RDL.type Hash, 'self.invert_output', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.invert_output', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 RDL.type :Hash, :keep_if, '() { (``any_or_k(trec)``,``any_or_v(trec)``) -> %bool } -> self'
 RDL.type :Hash, :keep_if, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), RDL::Type::TupleType.new(any_or_k(trec), any_or_v(trec)))``' ## I had made a mistake here, type checker caught it.
@@ -237,7 +237,7 @@ def Hash.merge_input(targs, mutate=false)
     RDL::Globals.types[:hash]
   end
 end
-RDL.type Hash, 'self.merge_input', "(Array<RDL::Type::Type>, ?%bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.merge_input', "(Array<RDL::Type::Type>, ?%bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 
 def Hash.merge_output(trec, targs, mutate=false)
@@ -335,7 +335,7 @@ def Hash.shift_output(trec)
     RDL::Globals.parser.scan_str "#T [k, v]"
   end
 end
-RDL.type Hash, 'self.shift_output', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.shift_output', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 RDL.type :Hash, :to_a, '() -> ``output_type(trec, targs, :to_a, "Array<[k, v]>")``'
 RDL.type :Hash, :to_hash, '() -> self'
@@ -379,15 +379,15 @@ RDL.type Hash, 'self.values_at_output', "(RDL::Type::Type, Array<RDL::Type::Type
 
 ######### Non-dependent types below #########
 
-RDL.type :Hash, 'self.[]', '(*u) -> Hash<u, u>', effect: [:~, :+]  # example: Hash[1,2,3,4]
-RDL.type :Hash, 'self.[]', '(Array<[a,b]>) -> Hash<a, b>', effect: [:~, :+]
-RDL.type :Hash, 'self.[]', '([to_hash: () -> Hash<a, b>]) -> Hash<a, b>', effect: [:~, :+]
+RDL.type :Hash, 'self.[]', '(*u) -> Hash<u, u>', effect: [:+, :+]  # example: Hash[1,2,3,4]
+RDL.type :Hash, 'self.[]', '(Array<[a,b]>) -> Hash<a, b>', effect: [:+, :+]
+RDL.type :Hash, 'self.[]', '([to_hash: () -> Hash<a, b>]) -> Hash<a, b>', effect: [:+, :+]
 
 RDL.type :Hash, :[], '(k) -> v'
 RDL.type :Hash, :[]=, '(k, v) -> v', effect: [:-, :+]
 RDL.type :Hash, :store, '(k,v) -> v'
 
-RDL.type :Hash, :any?, "() { (k, v) -> %any } -> %bool", effect: [:~, :blockdep]
+RDL.type :Hash, :any?, "() { (k, v) -> %any } -> %bool", effect: [:blockdep, :blockdep]
 # RDL.type :Hash, :assoc, '(k) -> [k, v]' # TODO
 RDL.type :Hash, :assoc, '(k) -> Array<k or v>'
 RDL.type :Hash, :clear, '() -> Hash<k,v>'
@@ -405,12 +405,12 @@ RDL.type :Hash, :delete, '(k) -> v'
 RDL.type :Hash, :delete, '(k) { (k) -> u } -> u or v'
 RDL.type :Hash, :delete_if, '() { (k,v) -> %bool } -> Hash<k,v>'
 RDL.type :Hash, :delete_if, '() -> Enumerator<[k, v]>'
-RDL.type :Hash, :each, '() { (k,v) -> %any } -> Hash<k,v>', effect: [:~, :blockdep]
-RDL.type :Hash, :each, '() -> Enumerator<[k, v]>', effect: [:~, :blockdep]
+RDL.type :Hash, :each, '() { (k,v) -> %any } -> Hash<k,v>', effect: [:blockdep, :blockdep]
+RDL.type :Hash, :each, '() -> Enumerator<[k, v]>', effect: [:blockdep, :blockdep]
 RDL.type :Hash, :each_pair, '() { (k,v) -> %any } -> Hash<k,v>'
 RDL.type :Hash, :each_pair, '() -> Enumerator<[k, v]>'
-RDL.type :Hash, :each_key, '() { (k) -> %any } -> Hash<k,v>', effect: [:~, :blockdep]
-RDL.type :Hash, :each_key, '() -> Enumerator<[k, v]>', effect: [:~, :blockdep]
+RDL.type :Hash, :each_key, '() { (k) -> %any } -> Hash<k,v>', effect: [:blockdep, :blockdep]
+RDL.type :Hash, :each_key, '() -> Enumerator<[k, v]>', effect: [:blockdep, :blockdep]
 RDL.type :Hash, :each_value, '() { (v) -> %any } -> Hash<k,v>'
 RDL.type :Hash, :each_value, '() -> Enumerator<[k, v]>'
 RDL.type :Hash, :empty?, '() -> %bool'
@@ -425,24 +425,24 @@ RDL.type :Hash, :key?, '(t) -> %bool'
 RDL.type :Hash, :has_value?, '(t) -> %bool'
 RDL.type :Hash, :value?, '(t) -> %bool'
 RDL.type :Hash, :to_s, '() -> String'
-RDL.type :Hash, :include?, '(%any) -> %bool', effect: [:~, :+]
+RDL.type :Hash, :include?, '(%any) -> %bool', effect: [:+, :+]
 RDL.type :Hash, :inspect, '() -> String'
-RDL.type :Hash, :invert, '() -> Hash<v,k>', effect: [:~, :+]
+RDL.type :Hash, :invert, '() -> Hash<v,k>', effect: [:+, :+]
 RDL.type :Hash, :keep_if, '() { (k,v) -> %bool } -> Hash<k,v>'
 RDL.type :Hash, :keep_if, '() -> Enumerator<[k, v]>'
 RDL.type :Hash, :key, '(t) -> k'
-RDL.type :Hash, :keys, '() -> Array<k>', effect: [:~, :+]
+RDL.type :Hash, :keys, '() -> Array<k>', effect: [:+, :+]
 RDL.type :Hash, :length, '() -> Integer'
 RDL.type :Hash, :size, '() -> Integer'
-RDL.type :Hash, :merge, '(Hash<a,b>) -> Hash<a or k, b or v>', effect: [:~, :+]
-RDL.type :Hash, :merge, '(Hash<a,b>) { (k,v,b) -> v or b } -> Hash<a or k, b or v>', effect: [:~, :+]
+RDL.type :Hash, :merge, '(Hash<a,b>) -> Hash<a or k, b or v>', effect: [:+, :+]
+RDL.type :Hash, :merge, '(Hash<a,b>) { (k,v,b) -> v or b } -> Hash<a or k, b or v>', effect: [:+, :+]
 # RDL.type :Hash, :rassoc, '(k) -> Tuple<k,v>'
 RDL.type :Hash, :rassoc, '(k) -> Array<k or v>'
 RDL.type :Hash, :rehash, '() -> Hash<k,v>'
 RDL.type :Hash, :reject, '() -> Enumerator<[k, v]>'
 RDL.type :Hash, :reject, '() {(k,v) -> %bool} -> Hash<k,v>'
 RDL.type :Hash, :reject!, '() {(k,v) -> %bool} -> Hash<k,v>'
-RDL.type :Hash, :select, '() {(k,v) -> %bool} -> Hash<k,v>', effect: [:~, :blockdep]
+RDL.type :Hash, :select, '() {(k,v) -> %bool} -> Hash<k,v>', effect: [:+, :blockdep]
 RDL.type :Hash, :select!, '() {(k,v) -> %bool} -> Hash<k,v>'
 # RDL.type :Hash, :shift, '() -> Tuple<k,v>'
 RDL.type :Hash, :shift, '() -> Array<k or v>'
@@ -450,4 +450,4 @@ RDL.type :Hash, :shift, '() -> Array<k or v>'
 RDL.type :Hash, :to_a, '() -> Array<Array<k or v>>'
 RDL.type :Hash, :to_hash, '() -> Hash<k,v>'
 RDL.type :Hash, :values, '() -> Array<v>'
-RDL.type :Hash, :values_at, '(*k) -> Array<v>', effect: [:~, :+]
+RDL.type :Hash, :values_at, '(*k) -> Array<v>', effect: [:+, :+]

@@ -58,8 +58,8 @@ RDL.type :Kernel, 'self.printf', '(?IO, ?String, *%any) -> nil'
 RDL.type :Kernel, :proc, '() {(*%any) -> %any} -> Proc' # TODO more precise
 RDL.type :Kernel, 'self.putc', '(Integer) -> Integer'
 RDL.type :Kernel, 'self.puts', '(*[to_s : () -> String]) -> nil'
-RDL.type :Kernel, 'self.raise', '() -> %bot', effect: [:~, :+]
-RDL.type :Kernel, 'raise', '() -> %bot', effect: [:~, :+]
+RDL.type :Kernel, 'self.raise', '() -> %bot', effect: [:+, :+]
+RDL.type :Kernel, 'raise', '() -> %bot', effect: [:+, :+]
 # RDL.type :Kernel, 'self.raise', '(String or [exception : () -> String], ?String, ?Array<String>) -> %any'
 # TODO: above same as fail?
 RDL.type :Kernel, 'self.rand', '(Integer or Range max) -> Numeric'

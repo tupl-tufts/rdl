@@ -574,7 +574,7 @@ module RDL::Typecheck
       if e.type == :lvar then eff = [:+, :+] else eff = [:-, :+] end
       tc_var(scope, env, e.type, e.children[0], e) + [eff]
     when :lvasgn, :ivasgn, :cvasgn, :gvasgn
-      if e.type == :lvasgn then eff = [:+, :+] else eff = [:-, :+] end
+      if e.type == :lvasgn || @cur_meth[1] == :initialize then eff = [:+, :+] else eff = [:-, :+] end
       x = e.children[0]
       # if local var, lhs is bound to nil before assignment is executed! only matters in type checking for locals
       env = env.bind(x, RDL::Globals.types[:nil]) if ((e.type == :lvasgn) && (not (env.has_key? x)))
@@ -584,7 +584,7 @@ module RDL::Typecheck
       # (masgn (mlhs (Xvasgn var-name) ... (Xvasgn var-name)) rhs)
       effi = [:+, :+]
       e.children[0].children.each { |asgn|
-        effi = effect_union(effi, [:-, :+]) if asgn.type != :lvasgn
+        effi = effect_union(effi, [:-, :+]) if asgn.type != :lvasgn && @cur_meth != :initialize
         next unless asgn.type == :lvasgn
         x = e.children[0]
         env = env.bind(x, RDL::Globals.types[:nil]) if (not (env.has_key? x)) # see lvasgn
@@ -1575,7 +1575,7 @@ RUBY
       error :arg_type_single_receiver_error, [name, meth, msg], e
     end
     # TODO: issue warning if trets.size > 1 ?
-    puts "GOT #{es} FOR METHOD #{meth}"
+    #puts "GOT #{es} FOR METHOD #{meth}"
     return [trets, es]
   end
 

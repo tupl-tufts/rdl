@@ -59,7 +59,7 @@ def Array.any_or_t(trec, vararg=false)
     if vararg then RDL::Type::VarargType.new(ret) else ret end
   end
 end
-RDL.type Array, 'self.any_or_t', "(RDL::Type::Type, ?%bool) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:~, :+]
+RDL.type Array, 'self.any_or_t', "(RDL::Type::Type, ?%bool) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
 
 
 def Array.promoted_or_t(trec, vararg=false)
@@ -72,7 +72,7 @@ def Array.promoted_or_t(trec, vararg=false)
     if vararg then RDL::Type::VarargType.new(ret) else ret end
   end
 end
-RDL.type Array, 'self.promoted_or_t', "(RDL::Type::Type, ?%bool) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:~, :+]
+RDL.type Array, 'self.promoted_or_t', "(RDL::Type::Type, ?%bool) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
 
 
 def Array.promote_tuple(trec)
@@ -164,7 +164,7 @@ def Array.plus_output(trec, targs)
     end
   end
 end
-RDL.type Array, 'self.plus_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Array, 'self.plus_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 RDL.type :Array, :-, '(Array<u>) -> ``output_type(trec, targs, :-, :promoted_array, "Array<t>")``'
 RDL.type :Array, :slice, '(Range<Integer>) -> ``output_type(trec, targs, :slice, :promoted_array, "Array<t>")``'
