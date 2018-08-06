@@ -585,7 +585,10 @@ module RDL
     RDL::Globals.to_do_at[sym] = Array.new
     return unless RDL::Globals.to_typecheck[sym]
     RDL::Globals.to_typecheck[sym].each { |klass, meth|
+      t1 = Time.now
       RDL::Typecheck.typecheck(klass, meth)
+      t2 = Time.now
+      puts "GOT #{t2 -t1} for #{[klass, meth]}"
     }
     RDL::Globals.to_typecheck[sym] = Set.new
     nil

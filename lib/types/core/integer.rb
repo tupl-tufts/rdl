@@ -235,11 +235,11 @@ RDL.post(:Integer, :**) { |r,x| r.real?}
 RDL.type :Integer, :**, '(Complex) -> Complex'
 RDL.pre(:Integer, :**) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end}
 
-RDL.type :Integer, :+, '(Integer) -> Integer'
-RDL.type :Integer, :+, '(Float) -> Float'
-RDL.type :Integer, :+, '(Rational) -> Rational'
-RDL.type :Integer, :+, '(BigDecimal) -> BigDecimal'
-RDL.type :Integer, :+, '(Complex) -> Complex'
+RDL.type :Integer, :+, '(Integer) -> Integer', effect: [:+, :+]
+RDL.type :Integer, :+, '(Float) -> Float', effect: [:+, :+]
+RDL.type :Integer, :+, '(Rational) -> Rational', effect: [:+, :+]
+RDL.type :Integer, :+, '(BigDecimal) -> BigDecimal', effect: [:+, :+]
+RDL.type :Integer, :+, '(Complex) -> Complex', effect: [:+, :+]
 
 RDL.type :Integer, :-, '(Integer) -> Integer'
 RDL.type :Integer, :-, '(Float) -> Float'

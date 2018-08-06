@@ -287,7 +287,7 @@ module RDL::Typecheck
   end
 
   def self.effect_union(e1, e2)
-    raise "Unexpected effect #{e1} or #{e2}" unless (e1+e2).all? { |e| e.is_a?(Symbol) }
+    raise "Unexpected effect #{e1} or #{e2}" unless (e1+e2).all? { |e| [:+, :-, :~].include?(e) }#{ |e| e.is_a?(Symbol) }
     p1, t1 = e1
     p2, t2 = e2
     pret = tret = nil
@@ -1513,13 +1513,16 @@ RUBY
           if tmeth_inst
             effblock = tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
             if es
+              es = es.map { |e| e.clone } 
               es.each { |e| ## expecting just one effect per method right now. can clean this up later.
-                if !e.nil? && e[1] == :blockdep
-                  raise "Got block-dependent termination effect, but no block." unless block && effblock
+                if !e.nil? && (e[1] == :blockdep || e[0] == :blockdep)
+                  raise "Got block-dependent effect, but no block." unless block && effblock
                   if effblock[0] == :+ or effblock[0] == :~
-                    e[1] = :+ 
+                    e[1] = :+
+                    e[0] = :+
                   elsif effblock[0] == :-
                     e[1] = :-
+                    e[0] = :-
                   else
                     raise "unexpected effect #{effblock[0]}"
                   end
@@ -1572,6 +1575,7 @@ RUBY
       error :arg_type_single_receiver_error, [name, meth, msg], e
     end
     # TODO: issue warning if trets.size > 1 ?
+    puts "GOT #{es} FOR METHOD #{meth}"
     return [trets, es]
   end
 

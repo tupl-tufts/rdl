@@ -6,14 +6,14 @@ RDL.type :String, :*, '(Integer) -> String'
 RDL.type :String, :+, '(String) -> String'
 RDL.type :String, :<<, '(Object) -> String'
 RDL.type :String, :<=>, '(String other) -> Integer or nil ret'
-RDL.type :String, :==, '(%any) -> %bool', effect: [:~, :+]
+RDL.type :String, :==, '(%any) -> %bool', effect: [:+, :+]
 RDL.type :String, :===, '(%any) -> %bool'
 RDL.type :String, :=~, '(Object) -> Integer or nil', wrap: false # Wrapping this messes up $1 etc
-RDL.type :String, :[], '(Integer, ?Integer) -> String or nil', effect: [:~, :+]
-RDL.type :String, :[], '(Range<Integer> or Regexp) -> String or nil', effect: [:~, :+]
-RDL.type :String, :[], '(Regexp, Integer) -> String or nil', effect: [:~, :+]
-RDL.type :String, :[], '(Regexp, String) -> String or nil', effect: [:~, :+]
-RDL.type :String, :[], '(String) -> String or nil', effect: [:~, :+]
+RDL.type :String, :[], '(Integer, ?Integer) -> String or nil', effect: [:+, :+]
+RDL.type :String, :[], '(Range<Integer> or Regexp) -> String or nil', effect: [:+, :+]
+RDL.type :String, :[], '(Regexp, Integer) -> String or nil', effect: [:+, :+]
+RDL.type :String, :[], '(Regexp, String) -> String or nil', effect: [:+, :+]
+RDL.type :String, :[], '(String) -> String or nil', effect: [:+, :+]
 RDL.type :String, :ascii_only?, '() -> %bool'
 RDL.type :String, :b, '() -> String'
 RDL.type :String, :bytes, '() -> Array' # TODO: bindings to parameterized (vars)
@@ -67,7 +67,7 @@ RDL.type :String, :gsub!, '(Regexp or String) {(String) -> %any } -> String or n
 RDL.type :String, :gsub!, '(Regexp or String) -> Enumerator', wrap: false
 RDL.type :String, :hash, '() -> Integer'
 RDL.type :String, :hex, '() -> Integer'
-RDL.type :String, :include?, '(String) -> %bool', effect: [:~, :+]
+RDL.type :String, :include?, '(String) -> %bool', effect: [:+, :+]
 RDL.type :String, :index, '(Regexp or String, ?Integer) -> Integer or nil'
 RDL.type :String, :replace, '(String) -> String'
 RDL.type :String, :insert, '(Integer, String) -> String'
@@ -106,11 +106,11 @@ RDL.type :String, :slice!, '(Range<Integer> or Regexp) -> String or nil'
 RDL.type :String, :slice!, '(Regexp, Integer) -> String or nil'
 RDL.type :String, :slice!, '(Regexp, String) -> String or nil'
 RDL.type :String, :slice!, '(String) -> String or nil'
-RDL.type :String, :split, '(?(Regexp or String), ?Integer) -> Array<String>', effect: [:~, :+]
-RDL.type :String, :split, '(?Integer) -> Array<String>', effect: [:~, :+]
+RDL.type :String, :split, '(?(Regexp or String), ?Integer) -> Array<String>', effect: [:+, :+]
+RDL.type :String, :split, '(?Integer) -> Array<String>', effect: [:+, :+]
 RDL.type :String, :squeeze, '(?String) -> String'
 RDL.type :String, :squeeze!, '(?String) -> String'
-RDL.type :String, :start_with?, '(* String) -> %bool', effect: [:~, :+]
+RDL.type :String, :start_with?, '(* String) -> %bool', effect: [:+, :+]
 RDL.type :String, :strip, '() -> String'
 RDL.type :String, :strip!, '() -> String'
 RDL.type :String, :sub, '(Regexp or String, String or Hash) -> String', wrap: false # Can't wrap these, since they mess with $1 etc
@@ -127,7 +127,7 @@ RDL.type :String, :to_i, '(?Integer) -> Integer'
 RDL.type :String, :to_r, '() -> Rational'
 RDL.type :String, :to_s, '() -> String', effect: [:+, :+]
 RDL.type :String, :to_str, '() -> String'
-RDL.type :String, :to_sym, '() -> Symbol', effect: [:~, :+]
+RDL.type :String, :to_sym, '() -> Symbol', effect: [:+, :+]
 RDL.type :String, :tr, '(String, String) -> String'
 RDL.type :String, :tr!, '(String, String) -> String or nil'
 RDL.type :String, :tr_s, '(String, String) -> String'
