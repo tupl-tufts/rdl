@@ -1356,7 +1356,7 @@ RUBY
       if es.nil? || (es.all? { |e| e.nil? }) ## could be multiple, because every time e is called, nil is added to effects
         ## should probably change default effect to be [:-, :-], but for now I want it like this,
         ## so I can easily see when a method has been used and its effect set to the default.
-        #puts "Going to assume method #{meth} for receiver #{trecv} has effect [:-, :-]."
+        puts "Going to assume method #{meth} for receiver #{trecv} has effect [:-, :-]."
         eff = [:-, :-]
       else
         es.each { |e| eff = effect_union(eff, e) unless e.nil? }

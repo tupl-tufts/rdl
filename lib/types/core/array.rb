@@ -442,8 +442,8 @@ RDL.type :Array, :[], '(Integer, Integer) -> Array<t>', effect: [:+, :+]
 RDL.type :Array, :&, '(Array<u>) -> Array<t>'
 RDL.type :Array, :*, '(Integer) -> Array<t>'
 RDL.type :Array, :*, '(String) -> String'
-RDL.type :Array, :+, '(Enumerable<u>) -> Array<u or t>'
-RDL.type :Array, :+, '(Array<u>) -> Array<u or t>'
+RDL.type :Array, :+, '(Enumerable<u>) -> Array<u or t>', effect: [:+, :+]
+RDL.type :Array, :+, '(Array<u>) -> Array<u or t>', effect: [:+, :+]
 RDL.type :Array, :-, '(Array<u>) -> Array<u or t>'
 RDL.type :Array, :slice, '(Range<Integer>) -> Array<t>'
 RDL.type :Array, :slice, '(Integer) -> t'

@@ -338,6 +338,7 @@ module RDL::Annotate
                           err.set_backtrace bt
                           raise err
                         end
+    effect[0] = :- if effect && effect[0] == :~ ## For now, treating pure-ish :~ as :-, since we realized it doesn't actually affect termination checking.
     typs = type.args + [type.ret, type.block]
     RDL::Globals.dep_types << [klass, meth, type] if typs.any? { |t| t.is_a?(RDL::Type::ComputedType) }
     if meth
@@ -612,7 +613,7 @@ module RDL
           end
           eval tmp_eval
           ast = Parser::CurrentRuby.parse tmp_meth
-          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type], [[:~, :+]]) 
+          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type], [[:-, :+]]) 
           count += 1
         end
       }

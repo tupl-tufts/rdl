@@ -192,7 +192,7 @@ RDL.type :Hash, :fetch, '(``any_or_k(trec)``) -> ``output_type(trec, targs, :fet
 RDL.type :Hash, :fetch, '(``any_or_k(trec)``, u) -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("u"), output_type(trec, targs, :fetch, :promoted_val, "v", nil_default: true))``'
 RDL.type :Hash, :fetch, '(``any_or_k(trec)``) { (``any_or_k(trec)``) -> u } -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("u"), output_type(trec, targs, :fetch, :promoted_val, "v", nil_default: true))``'
 RDL.type :Hash, :member?, '(%any) -> ``output_type(trec, targs, :member?, "%bool")``'
-RDL.type :Hash, :has_key?, '(%any) -> ``output_type(trec, targs, :has_key?, "%bool")``', effect: [:~, :+]
+RDL.type :Hash, :has_key?, '(%any) -> ``output_type(trec, targs, :has_key?, "%bool")``', effect: [:+, :+]
 RDL.type :Hash, :key?, '(%any) -> ``output_type(trec, targs, :key?, "%bool")``'
 RDL.type :Hash, :has_value?, '(%any) -> ``output_type(trec, targs, :has_value?, "%bool")``'
 RDL.type :Hash, :value?, '(%any) -> ``output_type(trec, targs, :value?, "%bool")``'
@@ -414,7 +414,7 @@ RDL.type :Hash, :each_key, '() -> Enumerator<[k, v]>', effect: [:blockdep, :bloc
 RDL.type :Hash, :each_value, '() { (v) -> %any } -> Hash<k,v>'
 RDL.type :Hash, :each_value, '() -> Enumerator<[k, v]>'
 RDL.type :Hash, :empty?, '() -> %bool'
-RDL.type :Hash, :except, '(%any) -> self', effect: [:-, :+]
+RDL.type :Hash, :except, '(%any) -> self', effect: [:+, :+]
 RDL.type :Hash, :fetch, '(k) -> v'
 RDL.type :Hash, :fetch, '(k,u) -> u or v'
 RDL.type :Hash, :fetch, '(k) { (k) -> u } -> u or v'
@@ -433,7 +433,7 @@ RDL.type :Hash, :keep_if, '() -> Enumerator<[k, v]>'
 RDL.type :Hash, :key, '(t) -> k'
 RDL.type :Hash, :keys, '() -> Array<k>', effect: [:+, :+]
 RDL.type :Hash, :length, '() -> Integer'
-RDL.type :Hash, :size, '() -> Integer'
+RDL.type :Hash, :size, '() -> Integer', effect: [:+, :+]
 RDL.type :Hash, :merge, '(Hash<a,b>) -> Hash<a or k, b or v>', effect: [:+, :+]
 RDL.type :Hash, :merge, '(Hash<a,b>) { (k,v,b) -> v or b } -> Hash<a or k, b or v>', effect: [:+, :+]
 # RDL.type :Hash, :rassoc, '(k) -> Tuple<k,v>'
