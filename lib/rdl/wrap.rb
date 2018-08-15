@@ -589,7 +589,7 @@ module RDL
       t1 = Time.now
       RDL::Typecheck.typecheck(klass, meth)
       t2 = Time.now
-      puts "GOT #{t2 -t1} for #{[klass, meth]}"
+      #puts "GOT #{t2 -t1} for #{[klass, meth]}"
     }
     RDL::Globals.to_typecheck[sym] = Set.new
     nil
