@@ -1087,7 +1087,9 @@ RUBY
       force_arg = pair.children[1]
       env, _ = tc(scope, env, force_arg)
     end
-    [env, typ]
+    sub_expr = e.children[2]
+    env2, _ = tc(scope, env, sub_expr)
+    [env2, typ]
   end
 
   def self.tc_note_type(scope, env, e)

@@ -1189,6 +1189,8 @@ class TestTypecheck < Minitest::Test
     assert do_tc("RDL.type_cast(1 + 2, 'Integer', force: :blah)", env: @env) <= RDL::Globals.types[:integer]
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("RDL.type_cast(1 + 2, 'Integer', forc: true)", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("RDL.type_cast(1 + 2, 'Fluffy Bunny')") }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("RDL.type_cast(:nonsense + 2, 'Integer')") }
+    assert do_tc("RDL.type_cast(RDL.type_cast(:nonsense, 'Integer') + 2, 'Integer')")
   end
 
   def test_instantiate

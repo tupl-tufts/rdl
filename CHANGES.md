@@ -18,6 +18,7 @@
 - Reordered list of RDL.* methods in README
 - Remove (most) ordering dependencies among test cases
 - Undefined identified issue for Rails assocation types
+- Type check expressions within casts
 
 ### Added
 - `RDL.reset` method
