@@ -249,7 +249,7 @@ module RDL::Typecheck
       raise RuntimeError, "Type checking of methods with computed types is not currently supported." unless (type.args + [type.ret]).all? { |t| !t.instance_of?(RDL::Type::ComputedType) }
       inst = {self: self_type}
       type = type.instantiate inst
-      _, targs = args_hash({}, Env.new, type, args, ast, 'method')
+      _, targs = args_hash({}, Env.new(:self => self_type), type, args, ast, 'method')
       targs[:self] = self_type
       scope = { tret: type.ret, tblock: type.block, captured: Hash.new, context_types: context_types, eff: effect }
       begin
@@ -1269,7 +1269,9 @@ RUBY
       force_arg = pair.children[1]
       env1, _ = tc(scope, env, force_arg)
     end
-    [env1, typ]
+    sub_expr = e.children[2]
+    env2, _ = tc(scope, env1, sub_expr)
+    [env2, typ]
   end
 
   def self.tc_note_type(scope, env, e)

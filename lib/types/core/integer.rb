@@ -394,7 +394,7 @@ RDL.type :Integer, :round, '(%numeric) -> %numeric'
 RDL.pre(:Integer, :round) { |x| x!=0 && if x.is_a?(Complex) then x.imaginary==0 && (if x.real.is_a?(Float)||x.real.is_a?(BigDecimal) then !x.real.infinite? && !x.real.nan? else true end) elsif x.is_a?(Float) then x!=Float::INFINITY && !x.nan? elsif x.is_a?(BigDecimal) then x!=BigDecimal::INFINITY && !x.nan? else true end} #Also, x must be in range [-2**31, 2**31].
 RDL.type :Integer, :size, '() -> Integer'
 RDL.type :Integer, :succ, '() -> Integer'
-RDL.type :Integer, :times, '() { (Integer) -> %any } -> Integer'
+RDL.type :Integer, :times, '() { (?Integer) -> %any } -> Integer'
 RDL.type :Integer, :times, '() -> Enumerator<Integer>'
 RDL.type :Integer, :to_c, '() -> Complex r {{ r.imaginary==0 }}'
 RDL.type :Integer, :to_f, '() -> Float'
