@@ -1267,10 +1267,10 @@ RUBY
       pair = fh.children[0]
       error :type_cast_format, [], fh unless pair.type == :pair && pair.children[0].type == :sym && pair.children[0].children[0] == :force
       force_arg = pair.children[1]
-      env1, _ = tc(scope, env, force_arg)
+      env, _ = tc(scope, env, force_arg)
     end
     sub_expr = e.children[2]
-    env2, _ = tc(scope, env1, sub_expr)
+    env2, _ = tc(scope, env, sub_expr)
     [env2, typ]
   end
 
