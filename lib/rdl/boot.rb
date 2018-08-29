@@ -109,6 +109,7 @@ require 'rdl/types/union.rb'
 require 'rdl/types/var.rb'
 require	'rdl/types/vararg.rb'
 require 'rdl/types/wild_query.rb'
+require	'rdl/types/string.rb'
 
 require 'rdl/contracts/contract.rb'
 require 'rdl/contracts/and.rb'

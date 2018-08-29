@@ -456,14 +456,27 @@ module RDL::Typecheck
       [env, RDL::Globals.types[:true], [:+, :+]]
     when :false
       [env, RDL::Globals.types[:false], [:+, :+]]
-    when :complex, :rational, :str, :string # constants
+    when :str, :string
+      [env, RDL::Type::PreciseStringType.new(e.children[0]), [:+, :+]]
+    when :complex, :rational # constants
       [env, RDL::Type::NominalType.new(e.children[0].class), [:+, :+]]
     when :int, :float, :sym # singletons
       [env, RDL::Type::SingletonType.new(e.children[0]), [:+, :+]]
     when :dstr, :xstr # string (or execute-string) with interpolation
-      envi = env
-      e.children.each { |ei| envi, _ = tc(scope, envi, ei) }
-      [envi, RDL::Globals.types[:string], [:+, :+]]
+      effi = [:+, :+]
+      prec_str = []
+      e.children.each { |ei|
+        envi, ti, eff_new = tc(scope, envi, ei)
+        effi = effect_union(effi, eff_new)
+        if ei.type == :str || ei.type == :string
+          ## for strings, just append the string itself
+          prec_str << ei.children[0]
+        else
+          ## for interpolated part, append the interpolated part
+          prec_str << (if ti.is_a?(RDL::Type::SingletonType) then ti.val.to_s else ti end)
+        end
+      }
+      [envi, RDL::Globals.types[:string], effi]
     when :dsym # symbol with interpolation
       envi = env
       e.children.each { |ei| envi, _ = tc(scope, envi, ei) }

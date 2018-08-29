@@ -174,7 +174,7 @@ rule
       result =  RDL::Type::SingletonType.new(Kernel.const_get(val[1]))
     }
 # The following can't be used in SingletonTypes because those compare using .equal?
-#    | STRING { result = RDL::Type::SingletonType.new(val[0]) }
+    | STRING { result = RDL::Type::PreciseStringType.new(val[0]) }
     | DOT { result = RDL::Type::WildQuery.new }
 
 ---- header ----
