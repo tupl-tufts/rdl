@@ -327,6 +327,12 @@ module RDL::Typecheck
           else
             newhash[k] = v
           end
+        when RDL::Type::PreciseStringType
+          if v.vals.size > 50 || (v.vals.size == 1 && v.vals[0].size > 50)
+            newhash[k] = RDL::Globals.types[:string]
+          else
+            newhash[k] = v
+          end
         when RDL::Type::UnionType
           if v.types.size > 50
             newhash[k] = v.widen
@@ -1306,6 +1312,8 @@ RUBY
       klass = "Array"
     when RDL::Type::FiniteHashType
       klass = "Hash"
+    when RDL::Type::PreciseStringType
+      klass = "String"
     when RDL::Type::SingletonType
       klass = if obj_typ.val.is_a?(Class) then obj_typ.val.to_s else obj_typ.val.class.to_s end
     else
@@ -1479,6 +1487,21 @@ RUBY
         inst = trecv.to_inst.merge(self: trecv)
         self_klass = RDL::Util.to_class(trecv.base.name)
       end
+    when RDL::Type::PreciseStringType
+      if RDL::Config.instance.use_dep_types
+        ts, es = lookup(scope, "String", meth, e)
+        error :no_instance_method_type, ["String", meth], e unless ts
+        inst = { self: trecv }
+        self_klass = String
+      else
+      ## need to promote in this case
+        error :tuple_finite_hash_promote, ['precise string type', 'String'], e unless trecv.promote!
+        trev = trecv.canonical
+        ts, es = lookup(scope, trecv.name, meth, e)
+        error :no_instance_method_type, [trecv.name, meth], e unless ts
+        inst = trecv.to_inst.merge(self: trecv)
+        self_klass = RDL::Util.to_class(trecv.name)
+      end
     when RDL::Type::VarType
       error :recv_var_type, [trecv], e
     when RDL::Type::MethodType
@@ -1580,7 +1603,7 @@ RUBY
         :initialize
       elsif trecv.is_a? RDL::Type::SingletonType
         trecv.val.class.to_s
-      elsif [RDL::Type::NominalType, RDL::Type::GenericType, RDL::Type::FiniteHashType, RDL::Type::TupleType, RDL::Type::AstNode].any? { |t| trecv.is_a? t }
+      elsif [RDL::Type::NominalType, RDL::Type::GenericType, RDL::Type::FiniteHashType, RDL::Type::TupleType, RDL::Type::AstNode, RDL::Type::PreciseStringType].any? { |t| trecv.is_a? t }
         trecv.to_s
       elsif trecv.is_a?(RDL::Type::MethodType)
         'Proc'
@@ -1642,6 +1665,8 @@ RUBY
       [RDL::Type::SingletonType.new(Array)]
     when RDL::Type::FiniteHashType
       [RDL::Type::SingletonType.new(Hash)]
+    when RDL::Type::PreciseStringType
+      [RDL::Type::SingletonType.new(String)]
     when RDL::Type::VarType
       error :recv_var_type, [trecv], e
     when RDL::Type::MethodType
