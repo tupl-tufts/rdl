@@ -2,7 +2,7 @@ RDL.nowrap :Integer
 
 def Numeric.sing_or_type(trec, targs, meth, type)
   if trec.is_a?(RDL::Type::SingletonType) && (targs.empty? || targs[0].is_a?(RDL::Type::SingletonType))
-    puts "We have reached the constant folding case for method #{meth}, receiver type #{trec}, and argument types #{targs}."
+    #puts "We have reached the constant folding case for method #{meth}, receiver type #{trec}, and argument types #{targs}."
     if targs[0]
       v = RDL.type_cast(trec.val.send(meth, targs[0].val), "Integer", force: true)
     else

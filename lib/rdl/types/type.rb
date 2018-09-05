@@ -73,12 +73,24 @@ module RDL::Type
 
       # nominal
       return left.klass.ancestors.member?(right.klass) if left.is_a?(NominalType) && right.is_a?(NominalType)
-      if left.is_a?(NominalType) && right.is_a?(StructuralType)
+      if (left.is_a?(NominalType) || left.is_a?(TupleType) || left.is_a?(FiniteHashType) || left.is_a?(PreciseStringType)) && right.is_a?(StructuralType)
+        case left
+        when TupleType
+          lklass = Array
+        when FiniteHashType
+          lklass = Hash
+        when PreciseStringType
+          lklass = String
+        else
+          lklass = left.klass
+        end
         right.methods.each_pair { |m, t|
-          return false unless left.klass.method_defined? m
-          types = RDL::Globals.info.get(left.klass, m, :type)
+          return false unless lklass.method_defined? m
+          types = RDL::Globals.info.get(lklass, m, :type)
           if types
-            return false unless types.all? { |tlm| leq(tlm, t, nil, ileft) }
+            non_dep_types = RDL::Typecheck.filter_comp_types(types, false)
+            raise "Need non-dependent types for method #{m} of class #{lklass} in order to use a structural type." if non_dep_types.empty?
+            return false unless non_dep_types.all? { |tlm| leq(tlm, t, nil, ileft) }
             # inst above is nil because the method types inside the class and
             # inside the structural type have an implicit quantifier on them. So
             # even if we're allowed to instantiate type variables we can't do that
@@ -205,6 +217,32 @@ module RDL::Type
         # TODO !ileft and right carries a free variable
         return false unless left.promote!
         return leq(left, right, inst, ileft) # recheck for promoted type
+      end
+
+      ## precise string
+      if left.is_a?(PreciseStringType)
+        if right.is_a?(PreciseStringType)
+          return false if left.vals.size != right.vals.size
+          left.vals.each_with_index { |v, i|
+            if v.is_a?(String) && right.vals[i].is_a?(String)
+              return false unless v == right.vals[i]
+            elsif v.is_a?(Type) && right.vals[i].is_a?(Type)
+              return false unless v <= right.vals[i]
+            else
+              return false
+            end
+          }
+          left.ubounds << right unless no_constraint
+          right.lbounds << left unless no_constraint
+          return true
+        elsif right == RDL::Globals.types[:string]
+          return false unless left.promote!
+          return true
+        elsif right.is_a?(NominalType) && String.ancestors.include?(RDL::Util.to_class(right.name))
+          ## necessary because of checking agains union types: we don't want to promote! unless it will work
+          left.promote!
+          return true
+        end
       end
 
       return false

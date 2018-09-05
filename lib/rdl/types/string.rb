@@ -1,11 +1,14 @@
 module RDL::Type
   # A specialized precise type for Strings
   class PreciseStringType < Type
-    attr_reader :vals
+    attr_accessor :vals
     attr_accessor :interp, :ubounds, :lbounds
 
-
+    ## @vals will be an array. For non-interpolated strings, it will only have one element, the string itself.
+    ## For interpolated strings, it will include strings and RDL types, in order, where the types represent
+    ## the types of the interpolated portions, and the strings represent the surrounding string parts.
     def initialize(*vals)
+      @interp = false
       vals.each { |v|
         case v
         when String
@@ -14,10 +17,9 @@ module RDL::Type
           ## interpolated string
           @interp = true
         else
-          raise RuntimeError, "Attempt to create precise string type with non-string or non-type value" unless vals.all? { |v| v.is_a?(Type) || v.is_a?(String) }
+          raise RuntimeError, "Attempt to create precise string type with non-string or non-type value #{v}" unless vals.all? { |v| v.is_a?(Type) || v.is_a?(String) }
         end
       }
-      @interp = false unless @interp
       vals = [vals.join] if !@interp && vals.size > 1 ## if all elements of `vals` are strings, join them into one
       
       @vals = vals
@@ -38,12 +40,12 @@ module RDL::Type
       printed_vals = @vals.map { |v|
         case v
         when String
-          v
+          '"'+v+'"'
         when Type
           '#{' + v.to_s + '}'
         end
       }
-      return "PreciseStringType<#{printed_vals.join}>"
+      return printed_vals.join
     end
 
     def ==(other)

@@ -471,6 +471,7 @@ module RDL::Typecheck
     when :dstr, :xstr # string (or execute-string) with interpolation
       effi = [:+, :+]
       prec_str = []
+      envi = env
       e.children.each { |ei|
         envi, ti, eff_new = tc(scope, envi, ei)
         effi = effect_union(effi, eff_new)
@@ -482,7 +483,7 @@ module RDL::Typecheck
           prec_str << (if ti.is_a?(RDL::Type::SingletonType) then ti.val.to_s else ti end)
         end
       }
-      [envi, RDL::Globals.types[:string], effi]
+      [envi, RDL::Type::PreciseStringType.new(*prec_str), effi]
     when :dsym # symbol with interpolation
       envi = env
       e.children.each { |ei| envi, _ = tc(scope, envi, ei) }
@@ -977,9 +978,9 @@ RUBY
         self_klass = tcollect.klass
         teaches, eeaches = lookup(scope, tcollect.name, :each, e.children[1])
         teaches = filter_comp_types(teaches, RDL::Config.instance.use_dep_types)
-      when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType
+      when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType, RDL::Type::PreciseStringType
         unless tcollect.is_a? RDL::Type::GenericType
-          error :tuple_finite_hash_promote, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e.children[1] unless tcollect.promote!
+          error :tuple_finite_hash_promote, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] elsif tcollect.is_a? RDL::Type::PreciseStringType then ['precise string', 'String'] else ['finite hash', 'Hash'] end), e.children[1] unless tcollect.promote!
           tcollect = tcollect.canonical
         end
         self_klass = tcollect.base.klass
