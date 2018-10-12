@@ -2,7 +2,6 @@ RDL.nowrap :Hash
 
 RDL.type_params :Hash, [:k, :v], :all?
 
-
 def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_default: false, use_sing_val: true)
   case trec
   when RDL::Type::FiniteHashType    
@@ -21,9 +20,10 @@ def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_de
       to_type(res)
     else
       if default1 == :promoted_val
-        trec.promote.params[1]
+        x = trec.promote.params[1]
+        return x
       elsif default1 == :promoted_key
-        trec.promote.params[0]
+        return trec.promote.params[0]
       else
         RDL::Globals.parser.scan_str "#T #{default1}"
       end

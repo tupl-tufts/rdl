@@ -600,7 +600,6 @@ module RDL
     count = 1
     code_type = RDL::Globals.parser.scan_str "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
     RDL::Globals.dep_types.each { |klass, meth, typ|
-      comp_types = []
       klass = RDL::Util.has_singleton_marker(klass) ? RDL::Util.remove_singleton_marker(klass) : klass
       (typ.args+[typ.ret]+[typ.block]).each { |t|
         if t.is_a?(RDL::Type::ComputedType)
@@ -760,6 +759,10 @@ class SimpleDelegator
 
   def class
      __getobj__.class
+  end
+
+  def nil?
+     __getobj__.nil?
   end
 
 end

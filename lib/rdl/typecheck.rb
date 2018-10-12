@@ -215,6 +215,7 @@ module RDL::Typecheck
 
   def self.typecheck(klass, meth, ast=nil, types = nil, effects = nil)
     @cur_meth = [klass, meth]
+    @comp_type_map = {}
     ast = get_ast(klass, meth) unless ast
     types = RDL::Globals.info.get(klass, meth, :type) unless types
     effects = RDL::Globals.info.get(klass, meth, :effect) unless effects
@@ -265,6 +266,10 @@ module RDL::Typecheck
       error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || meth == :initialize || body_type <= type.ret
       error :bad_effect, [body_effect, effect], body unless body.nil? || effect.nil? || effect_leq(body_effect, effect)
     }
+    if RDL::Config.instance.check_comp_types && !@comp_type_map.empty?
+      new_meth = WrapCall.rewrite(@comp_type_map, ast) # rewrite ast to insert dynamic checks
+      RDL::Util.to_class(klass).class_eval(new_meth) # redefine method in the same class
+    end
     RDL::Globals.info.set(klass, meth, :typechecked, true)
   end
 
@@ -272,7 +277,6 @@ module RDL::Typecheck
     raise "Unexpected effect #{e1} or #{e2}" unless (e1+e2).all? { |e| [:+, :-, :~].include?(e) }
     p1, t1 = e1
     p2, t2 = e2
-    pret = tret = nil
     case p1 #:+ always okay
     when :~
       return false if p2 == :+
@@ -1531,14 +1535,17 @@ RUBY
       # AT LEAST ONE of the possible intesection arms must match
       trets_tmp = []
       ts.each_with_index { |tmeth, ind| # MethodType
+        comp_type = false
         if ((tmeth.block && block) || (tmeth.block.nil? && block.nil?))
           if trecv.is_a?(RDL::Type::FiniteHashType) && trecv.the_hash
             trecv = trecv.canonical
             inst = trecv.to_inst.merge(self: trecv)
           end
           block_types = (if tmeth.block then tmeth.block.args + [tmeth.block.ret] else [] end)
-          tmeth = compute_types(tmeth, self_klass, trecv, tactuals_expanded) unless (tmeth.args+[tmeth.ret]+block_types).all? { |t| !t.instance_of?(RDL::Type::ComputedType) }
-
+          unless (tmeth.args+[tmeth.ret]+block_types).all? { |t| !t.instance_of?(RDL::Type::ComputedType) }
+            tmeth = compute_types(tmeth, self_klass, trecv, tactuals_expanded) 
+            comp_type = true
+          end
           ### TODO: change below once figuring out a way of promote!-ing without side-effect.
 =begin
           if trecv.is_a?(RDL::Type::FiniteHashType) && trecv.the_hash
@@ -1579,7 +1586,8 @@ RUBY
               end
               trets_tmp << init_typ
             else
-              trets_tmp << (x = tmeth.ret.instantiate(tmeth_inst)) # found a match for this subunion; add its return type to trets_tmp
+              trets_tmp << (tmeth.ret.instantiate(tmeth_inst)) # found a match for this subunion; add its return type to trets_tmp
+              @comp_type_map[e.object_id] = tmeth if comp_type && RDL::Config.instance.check_comp_types
             end
           end
         end
@@ -1614,7 +1622,6 @@ RUBY
       error :arg_type_single_receiver_error, [name, meth, msg], e
     end
     # TODO: issue warning if trets.size > 1 ?
-    #puts "GOT #{es} FOR METHOD #{meth}"
     return [trets, es]
   end
 
@@ -1983,4 +1990,98 @@ class Diagnostic < Parser::Diagnostic
     no_non_dep_types: "no non-dependent types for receiver %s in call to method %s",
     empty_env: "for some reason, environment is nil when type checking assignment to variable %s.",
   }
+end
+
+class Object
+
+  ## Method to replace dependently typed methods, and insert dynamic checks of types.
+  ## This method will check that given args satisfy given type, run the original method,
+  ## then check that the returned value satisfies the returned type, and finally return that value.
+  ## [+ __rdl_meth +] is a symbol naming the method being replaced.
+  ## [+ __rdl_type +] is a String representing a method type, which includes *only non-dependent types* to be type checked.
+  ## [+ *args +], [+ &block +] are the original arguments and blocked passed in a method call.
+  ## returns whatever is returned by calling the given method with the given args and block.
+  def __rdl_dyn_type_check(__rdl_meth, __rdl_type, *args, &block)
+    meth_type = RDL::Globals.parser.scan_str(__rdl_type)
+    bind = binding
+    inst = nil
+    inst = @__rdl_type.to_inst if ((defined? @__rdl_type) && @__rdl_type.is_a?(RDL::Type::GenericType))
+    klass = self.class.to_s
+    inst = Hash[RDL::Globals.type_params[klass][0].zip []] if (not(inst) && RDL::Globals.type_params[klass])
+    inst = {} if not inst
+
+    matches, args, blk, bind = RDL::Type::MethodType.check_arg_types("#{__rdl_meth}", self, bind, [meth_type], inst, *args, &blk)
+
+    ret = self.send(__rdl_meth, *args, &block)
+
+    if matches
+      ret = RDL::Type::MethodType.check_ret_types(self, "#{__rdl_meth}", [meth_type], inst, matches, ret, bind, *args, &blk) unless __rdl_meth == :initialize
+    end
+
+    return ret
+  end
+
+end
+
+module Parser
+  module Source
+    class TreeRewriter
+      ## Had to add some methods to the parser. Specifically, wanted to use `replace` for not just method being
+      ## called, but allso for its receiver and args. Doing so requires aligning the `range` being replaced
+      ## with the `buffer` containing the string that is being rewritten, in a way that the Parser did not support.
+      def align_replace(range, offset, content)
+        align_combine(range, offset, replacement: content)
+      end
+
+      def align_combine(range, offset, attributes)
+        if range.length > @source_buffer.source.size ## these are expected to be equal since buffer should be created from range source.
+          raise IndexError, "The range #{range} is outside the bounds of the source of size #{@source_buffer.source.size}"
+        end
+        dummy_range = Parser::Source::Range.new(@source_buffer, range.begin_pos - offset, range.end_pos - offset)
+        action = TreeRewriter::Action.new(dummy_range, @enforcer, attributes)
+        @action_root = @action_root.combine(action)
+        self
+      end
+
+    end
+  end
+end
+
+module Parser
+  class TreeRewriter < Parser::AST::Processor
+
+    def align_replace(range, offset, content)
+      @source_rewriter.align_replace(range, offset, content)
+    end
+  end
+end
+
+
+
+class WrapCall < Parser::TreeRewriter
+
+  def on_send(node)
+    rec_ast = node.children[0]
+    rec_code = WrapCall.rewrite(@type_map, rec_ast)+"." if rec_ast.is_a?(AST::Node) ## receiver is nil, or it gets rewritten
+    args_code = node.children[2..-1].map { |n| WrapCall.rewrite(@type_map, n) if n.is_a?(AST::Node) }
+    args_code = args_code.empty? ? nil : ","+args_code.join(",") ## no args, or args get rewritten
+    unless node.children[1] == :__rdl_dyn_type_check ## I don't believe this check is necessary, but at one point I had this issue so I'm leaving it in
+      meth_type = @type_map[node.object_id]
+      if meth_type ## Only do this if a call is associated with a type in the map. Otherwise, it may be a call to a non-dependently typed method.
+        align_replace(node.location.expression, @offset, "#{rec_code}__rdl_dyn_type_check(:#{node.children[1]}, '#{meth_type}'#{args_code})")
+      end
+    end
+  end
+  
+  def initialize(type_map, offset)
+    @type_map = type_map
+    @offset = offset
+  end
+
+  def self.rewrite(type_map, ast)
+    rewriter = WrapCall.new(type_map, ast.location.expression.begin_pos)
+    buffer = Parser::Source::Buffer.new("(ast)")
+    buffer.source = ast.location.expression.source
+    rewriter.rewrite(buffer, ast)
+  end
 end

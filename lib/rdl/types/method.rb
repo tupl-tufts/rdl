@@ -83,6 +83,8 @@ module RDL::Type
 	        t = t.type
         end
         case t
+        when ComputedType
+          raise "We do not currently support dynamic checks of unevaulated ComputedTypes."
         when OptionalType
           t = t.type.instantiate(inst)
           if actual == args.size
