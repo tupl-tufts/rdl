@@ -7,7 +7,7 @@ def Array.to_type(t)
   when RDL::Type::Type
     t
   when Array
-    RDL.type_cast(RDL::Type::TupleType.new(*(t.map { |i| to_type(i) })), "RDL::Type::TupleType", force: true)
+    RDL.type_cast(RDL::Type::TupleType.new(*(t.map { |i| to_type(RDL.type_cast(i, "Object")) })), "RDL::Type::TupleType", force: true)
   else
     t = "nil" if t.nil?
     RDL::Globals.parser.scan_str "#T #{t}"
@@ -20,7 +20,7 @@ def Array.output_type(trec, targs, meth_name, default1, default2=default1, use_s
   case trec
   when RDL::Type::TupleType
     if targs.empty? || targs.all? { |t| t.is_a?(RDL::Type::SingletonType) }
-      vals = RDL.type_cast((if use_sing_val then targs.map { |t| t.val } else targs end), "Array<%any>", force: true)
+      vals = RDL.type_cast((if use_sing_val then targs.map { |t| RDL.type_cast(t, "RDL::Type::SingletonType").val } else targs end), "Array<%any>", force: true)
       res = RDL.type_cast(trec.params.send(meth_name, *vals), "Object", force: true)
       if !res && nil_false_default
         if default1 == :promoted_param
@@ -103,7 +103,7 @@ RDL.type :Array, :<<, '(``any_or_t(trec)``) -> ``append_push_output(trec, targs,
 def Array.append_push_output(trec, targs, meth)
   case trec
   when RDL::Type::TupleType
-    RDL.type_cast(trec.params.send(meth, *targs), "%any", force: true)
+    RDL.type_cast(trec.params.send(meth, *RDL.type_cast(targs, "Array<%any>")), "%any", force: true)
     raise RDL::Typecheck::StaticTypeError, "Failed to mutate tuple: new tuple does not match prior type constraints." unless trec.check_bounds(true)
     trec
   else

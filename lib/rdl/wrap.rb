@@ -658,7 +658,7 @@ module RDL
   # Returns a new object that wraps self in a type cast. If force is true this cast is *unchecked*, so use with caution
   def self.type_cast(obj, typ, force: false)
     new_typ = if typ.is_a? RDL::Type::Type then typ else RDL::Globals.parser.scan_str "#T #{typ}" end
-    raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || typ.member?(obj)
+    raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || new_typ.member?(obj)
     new_obj = SimpleDelegator.new(obj)
     new_obj.instance_variable_set('@__rdl_type', new_typ)
     new_obj

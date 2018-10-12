@@ -4,9 +4,9 @@ def Numeric.sing_or_type(trec, targs, meth, type)
   if trec.is_a?(RDL::Type::SingletonType) && (targs.empty? || targs[0].is_a?(RDL::Type::SingletonType))
     #puts "We have reached the constant folding case for method #{meth}, receiver type #{trec}, and argument types #{targs}."
     if targs[0]
-      v = RDL.type_cast(trec.val.send(meth, targs[0].val), "Integer", force: true)
+      v = RDL.type_cast(RDL.type_cast(trec, "RDL::Type::SingletonType<Integer>").val.send(meth, RDL.type_cast(targs[0], "RDL::Type::SingletonType").val), "Integer", force: true)
     else
-      v = RDL.type_cast(trec.val.send(meth), "Integer", force: true)
+      v = RDL.type_cast(RDL.type_cast(trec, "RDL::Type::SingletonType<Integer>").val.send(meth), "Integer", force: true)
     end
     RDL::Type::SingletonType.new(v)
   else

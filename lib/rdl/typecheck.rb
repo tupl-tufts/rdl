@@ -268,6 +268,7 @@ module RDL::Typecheck
     }
     if RDL::Config.instance.check_comp_types && !@comp_type_map.empty?
       new_meth = WrapCall.rewrite(@comp_type_map, ast) # rewrite ast to insert dynamic checks
+      puts "About to redefine class #{klass} method #{meth} as #{new_meth}" 
       RDL::Util.to_class(klass).class_eval(new_meth) # redefine method in the same class
     end
     RDL::Globals.info.set(klass, meth, :typechecked, true)

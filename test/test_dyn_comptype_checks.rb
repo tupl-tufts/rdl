@@ -108,5 +108,13 @@ class TestDynChecks < Minitest::Test
     self.class.class_eval "def called_thrice(x) if (x==2) then x+2 else x+1 end; end" ## silly
     assert_raises(RDL::Type::TypeError) { multi_caller(0) }
   end
+
+
+  # Now to test op_asgn.
+
+  type "(Integer) -> Integer", typecheck: :now, wrap: false
+  def op_asgn_test(x)
+    x += 1
+  end
   
 end

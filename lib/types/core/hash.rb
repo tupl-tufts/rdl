@@ -6,7 +6,7 @@ def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_de
   case trec
   when RDL::Type::FiniteHashType    
     if targs.empty? || targs.all? { |t| t.is_a?(RDL::Type::SingletonType) }
-      vals = RDL.type_cast((if use_sing_val then targs.map { |t| t.val } else targs end), "Array<%any>", force: true)
+      vals = RDL.type_cast((if use_sing_val then targs.map { |t| RDL.type_cast(t, "RDL::Type::SingletonType").val } else targs end), "Array<%any>", force: true)
       res = RDL.type_cast(trec.elts.send(meth_name, *vals), "Object", force: true)
       if nil_default && res.nil?
         if default1 == :promoted_val
