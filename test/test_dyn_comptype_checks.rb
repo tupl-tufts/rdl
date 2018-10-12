@@ -73,10 +73,40 @@ class TestDynChecks < Minitest::Test
     assert_raises(RDL::Type::TypeError) { People.new.calls_where }
   end
     
-    def test_where_pass
-      People.class_eval("def person_to_look_up() {name: 'alice', age: 30}; end")
-      assert People.new.calls_where
-    end
+  def test_where_pass
+    People.class_eval("def person_to_look_up() {name: 'alice', age: 30}; end")
+    assert People.new.calls_where
+  end
 
+
+  # A test where the same method returns different types in different calls:
+
+  def self.called_thrice_output(trec, targs)
+    if targs[0].is_a?(RDL::Type::NominalType)
+      RDL::Globals.types[:integer]
+    elsif targs[0].is_a?(RDL::Type::SingletonType)
+      RDL::Type::SingletonType.new(targs[0].val + 1)
+    end
+  end
+  
+  type :called_thrice, "(Integer) -> ``called_thrice_output(trec, targs)``", wrap: false
+
+
+  type "(Integer) -> Integer", wrap: false, typecheck: :now
+  def multi_caller(x)
+    first = called_thrice(x) ## should have type Integer
+    second = called_thrice(1) ## Should have type 2
+    third = called_thrice(2) ## Should have type 3
+  end
+
+  def test_multi_pass
+    self.class.class_eval "def called_thrice(x) x+1; end" ## this will satisfy all call return types
+    assert self.class.new(nil).multi_caller(0)
+  end
+
+  def test_multi_fail
+    self.class.class_eval "def called_thrice(x) if (x==2) then x+2 else x+1 end; end" ## silly
+    assert_raises(RDL::Type::TypeError) { multi_caller(0) }
+  end
   
 end
