@@ -196,10 +196,14 @@ RUBY
     end
   end
 
+  def self.type_for_refinement(meth, mark, ref, klass, type, option)
+    myself, type, processed_type = RDL::Wrap.process_type_args(self, klass.to_sym, meth, type)
+    RDL::RefinementSet.add(ref, klass, meth, processed_type)
+  end
+
   # called by Object#method_added (sing=false) and Object#singleton_method_added (sing=true)
   def self.do_method_added(the_self, sing, klass, meth)
     # Apply any deferred contracts and reset list
-
     if RDL::Globals.deferred.size > 0
       if sing
         loc = the_self.singleton_method(meth).source_location
@@ -209,7 +213,11 @@ RUBY
       RDL::Globals.info.set(klass, meth, :source_location, loc)
       a = RDL::Globals.deferred
       RDL::Globals.deferred = [] # Reset before doing more work to avoid infinite recursion
-      a.each { |prev_klass, kind, contract, h|
+      a.each { |infos|
+        # for refine_type
+        next self.type_for_refinement(meth, *infos) if infos.first == :refinement
+
+        prev_klass, kind, contract, h = infos
         if RDL::Util.has_singleton_marker(klass)
           tmp_klass = RDL::Util.remove_singleton_marker(klass)
         else
@@ -420,6 +428,41 @@ module RDL::Annotate
       type name.to_s + "=", "(#{typ}) -> #{typ}"
     }
     nil
+  end
+
+  # Add type definithin in refine decration.
+  # It is declare like below code.
+  # module ArrayExtention
+  #  refine do
+  #    extend RDL::Annotate
+  #    refine_type '()->String'
+  #    def foo
+  #      [].to_s
+  #    end
+  #  end
+  # end
+  # using_type ArrayExtention
+  def refine_type(*args)
+    option = args.last.is_a?(Hash) ? args.pop : nil
+    if args.size == 4 # myself, klass, method, type
+      ref, klass, meth, type = args
+      klass, meth, processed_type = RDL::Wrap.process_type_args(self, *[klass.to_s.to_sym, meth, type])
+      RDL::RefinementSet.add(ref, klass, meth, processed_type)
+    elsif args.size == 1 # type
+      ori, klass, myself_name = self.to_s.match(%r{<refinement:(.*)@(.*)>}).to_a
+      ref, type = const_get(myself_name), args.first
+      RDL::Globals.deferred<< [:refinement, ref, klass, type, option]
+    end
+  end
+
+  # Connect using decration to refinemnt type decration
+  # [+ klass +] is the class whose type parameters to set; self if omitted
+  # [+ refinement_module +] module name used by using method
+  # It decrare like below codes.
+  # using_type self, ArrayExtention
+  # using_type StringExtention
+  def using_type(klass=self, refinement_module)
+    RDL::RefinementSet.using(klass, refinement_module)
   end
 
   # Aliases contracts for meth_old and meth_new. Currently, this must

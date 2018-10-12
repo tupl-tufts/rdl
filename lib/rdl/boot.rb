@@ -11,6 +11,7 @@ def RDL.config
   yield(RDL::Config.instance)
 end
 require 'rdl/info.rb'
+require 'rdl/refinement_set.rb'
 
 module RDL::Globals
   FIXBIG_VERSIONS = ['>= 2.0.0', '< 2.4.0']
