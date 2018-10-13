@@ -1,5 +1,5 @@
 RDL.nowrap :String
-=begin
+
 def String.output_type(trec, targs, meth, type)
   case trec
   when RDL::Type::PreciseStringType
@@ -343,7 +343,7 @@ RDL.type :String, :upto, '(String, ?bool) {(String) -> %any } -> String'
 RDL.type :String, :valid_encoding?, '() -> ``output_type(trec, targs, :valid_encoding?, "%bool")``'
 
 
-=end
+
 
 
 

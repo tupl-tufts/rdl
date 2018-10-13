@@ -268,7 +268,6 @@ module RDL::Typecheck
     }
     if RDL::Config.instance.check_comp_types && !@comp_type_map.empty?
       new_meth = WrapCall.rewrite(@comp_type_map, ast) # rewrite ast to insert dynamic checks
-      puts "About to redefine class #{klass} method #{meth} as #{new_meth}" 
       RDL::Util.to_class(klass).class_eval(new_meth) # redefine method in the same class
     end
     RDL::Globals.info.set(klass, meth, :typechecked, true)
@@ -682,7 +681,7 @@ module RDL::Typecheck
         effi = effect_union(effi, effright)
         tright = largs.push(tright) if largs
         mutation_meth = (meth.to_s + '=').to_sym
-        tres, effres = tc_send(scope, envoperand, trecv, mutation_meth, tright, nil, e) # call recv.meth=(recvt.meth().op(operand))
+        tres, effres = tc_send(scope, envoperand, trecv, mutation_meth, tright, nil, e, true) # call recv.meth=(recvt.meth().op(operand))
         effi = effect_union(effi, effres)
         [envoperand, tres, effi]
       else
@@ -1371,7 +1370,8 @@ RUBY
   # [+ tactuals +] are the actual arguments
   # [+ block +] is a pair of expressions [block-args, block-body], from the block AST node OR [block-type, block-arg-AST-node]
   # [+ e +] is the expression at which location to report an error
-  def self.tc_send(scope, env, trecvs, meth, tactuals, block, e)
+  # [+ op_asgn +] is a bool telling us that we are type checking the mutation method for an op_asgn node. used for ast rewriting.
+  def self.tc_send(scope, env, trecvs, meth, tactuals, block, e, op_asgn=false)
     scope[:exn] = Env.join(e, scope[:exn], env) if scope.has_key? :exn # assume this call might raise an exception
 
     # convert trecvs to array containing all receiver types
@@ -1381,7 +1381,7 @@ RUBY
     trets = []
     eff = [:+, :+]
     trecvs.each { |trecv|
-      ts, es = tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e)
+      ts, es = tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn)
       if es.nil? || (es.all? { |e| e.nil? }) ## could be multiple, because every time e is called, nil is added to effects
         ## should probably change default effect to be [:-, :-], but for now I want it like this,
         ## so I can easily see when a method has been used and its effect set to the default.
@@ -1398,7 +1398,7 @@ RUBY
 
   # Like tc_send but trecv should never be a union type
   # Returns array of possible return types, or throws exception if there are none
-  def self.tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e)
+  def self.tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn)
     return [tc_send_class(trecv, e), [[:+, :+]]] if (meth == :class) && (tactuals.empty?)
     ts = [] # Array<MethodType>, i.e., an intersection types
     case trecv
@@ -1516,7 +1516,7 @@ RUBY
         ts = [trecv]
       else
         # treat as Proc
-        tc_send_one_recv(scope, env, RDL::Globals.types[:proc], meth, tactuals, block, e)
+        tc_send_one_recv(scope, env, RDL::Globals.types[:proc], meth, tactuals, block, e, op_asgn)
       end
     else
       raise RuntimeError, "receiver type #{trecv} not supported yet, meth=#{meth}"
@@ -1588,7 +1588,15 @@ RUBY
               trets_tmp << init_typ
             else
               trets_tmp << (tmeth.ret.instantiate(tmeth_inst)) # found a match for this subunion; add its return type to trets_tmp
-              @comp_type_map[e.object_id] = tmeth if comp_type && RDL::Config.instance.check_comp_types
+              if comp_type && RDL::Config.instance.check_comp_types
+                if (e.type == :op_asgn) && op_asgn
+                  ## Hacky trick here. Because the ast `e` is used twice when type checking an op_asgn,
+                  ## in one of the cases we will use the object_id of its object_id to get two different mappings.
+                  @comp_type_map[e.object_id.object_id] = tmeth
+                else
+                  @comp_type_map[e.object_id] = tmeth
+                end
+              end
             end
           end
         end
@@ -2073,6 +2081,104 @@ class WrapCall < Parser::TreeRewriter
       end
     end
   end
+
+  def on_op_asgn(node)
+    if node.children[0].type == :send
+      rec_ast = node.children[0].children[0]
+      rec_code = WrapCall.rewrite(@type_map, rec_ast) + "." if rec_ast.is_a?(AST::Node)
+
+      rec_meth_ast = node.children[0]
+      rec_meth_code = WrapCall.rewrite(@type_map, rec_meth_ast)
+
+      elargs_ast = node.children[0].children[2]
+      elargs_code = WrapCall.rewrite(@type_map, elargs_ast)
+
+      rhs_ast = node.children[2]
+      rhs_code = WrapCall.rewrite(@type_map, rhs_ast)
+
+      op_meth = node.children[1]
+      mutation_meth = node.children[0].children[1].to_s + "="
+
+      overall_type = @type_map[node.object_id.object_id]
+      rhs_type = @type_map[node.object_id]
+
+      if rhs_type
+        op_code = "#{rec_meth_code}.__rdl_dyn_type_check(:#{op_meth}, '#{rhs_type}', #{rhs_code})"
+      else
+        op_code = "#{rec_meth_code}.send(:#{op_meth}, #{rhs_code})"
+      end
+
+      if overall_type
+        align_replace(node.location.expression, @offset, "#{rec_code}__rdl_dyn_type_check(:#{mutation_meth}, '#{overall_type}', #{elargs_code}, #{op_code})")
+      end
+    else
+      lhs = node.location.name.source
+      meth = node.children[1]
+      rhs_ast = node.children[2]
+      rhs_code = WrapCall.rewrite(@type_map, rhs_ast)
+      meth_type = @type_map[node.object_id]
+      if meth_type
+        align_replace(node.location.expression, @offset, "#{lhs} = #{lhs}.__rdl_dyn_type_check(:#{meth}, '#{meth_type}', #{rhs_code})")
+      end
+    end
+  end
+
+  def on_or_asgn(node)
+    if node.children[0].type == :send
+      rec_ast = node.children[0].children[0]
+      rec_code = WrapCall.rewrite(@type_map, rec_ast)+"." if rec_ast.is_a?(AST::Node)
+
+      rec_meth_ast = node.children[0]
+      rec_meth_code = WrapCall.rewrite(@type_map, rec_meth_ast)
+
+      elargs_ast = node.children[0].children[2]
+      elargs_code = WrapCall.rewrite(@type_map, elargs_ast)
+
+      rhs_ast = node.children[1]
+      rhs_code = WrapCall.rewrite(@type_map, rhs_ast)
+
+      mutation_meth = node.children[0].children[1].to_s + "="
+      meth_type = @type_map[node.object_id]
+
+      if meth_type
+        align_replace(node.location.expression, @offset, "#{rec_code}__rdl_dyn_type_check(:#{mutation_meth}, '#{meth_type}', #{elargs_code}, #{rec_meth_code} || #{rhs_code})")
+      end
+    else
+      lhs = node.location.name.source
+      rhs_ast = node.children[1]
+      rhs_code = WrapCall.rewrite(@type_map, rhs_ast)
+      align_replace(node.location.expression, @offset, "#{lhs} = #{lhs} || #{rhs_code}")
+    end
+  end
+
+  def on_and_asgn(node)
+    if node.children[0].type == :send
+      rec_ast = node.children[0].children[0]
+      rec_code = WrapCall.rewrite(@type_map, rec_ast)+"." if rec_ast.is_a?(AST::Node)
+
+      rec_meth_ast = node.children[0]
+      rec_meth_code = WrapCall.rewrite(@type_map, rec_meth_ast)
+
+      elargs_ast = node.children[0].children[2]
+      elargs_code = WrapCall.rewrite(@type_map, elargs_ast)
+
+      rhs_ast = node.children[1]
+      rhs_code = WrapCall.rewrite(@type_map, rhs_ast)
+
+      mutation_meth = node.children[0].children[1].to_s + "="
+      meth_type = @type_map[node.object_id]
+
+      if meth_type
+        align_replace(node.location.expression, @offset, "#{rec_code}__rdl_dyn_type_check(:#{mutation_meth}, '#{meth_type}', #{elargs_code}, #{rec_meth_code} && #{rhs_code})")
+      end
+    else
+      lhs = node.location.name.source
+      rhs_ast = node.children[1]
+      rhs_code = WrapCall.rewrite(@type_map, rhs_ast)
+      align_replace(node.location.expression, @offset, "#{lhs} = #{lhs} && #{rhs_code}")
+    end
+  end
+
   
   def initialize(type_map, offset)
     @type_map = type_map

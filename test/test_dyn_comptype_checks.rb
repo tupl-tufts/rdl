@@ -116,5 +116,21 @@ class TestDynChecks < Minitest::Test
   def op_asgn_test(x)
     x += 1
   end
+
+  def test_op_asgn
+    assert self.class.new(nil).op_asgn_test(1)
+    assert_raises(RDL::Type::TypeError) { self.class.new(nil).op_asgn_test(1.5) } ## Because `op_asgn_test` isn't wrapped, this should only raise error once :+ is called    
+  end
+
+  type "([1,2,3]) -> Integer", typecheck: :now, wrap: false
+  def op_asgn_arr(arr)
+    arr[1] += 1
+  end
+
+  def test_op_asgn_arr
+    assert self.class.new(nil).op_asgn_arr([1,2,3])
+    assert_raises(RDL::Type::TypeError) { self.class.new(nil).op_asgn_arr([1,42, 3]) } ## same issue as above
+  end
+  
   
 end
