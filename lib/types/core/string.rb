@@ -3,7 +3,7 @@ RDL.nowrap :String
 def String.output_type(trec, targs, meth, type)
   case trec
   when RDL::Type::PreciseStringType
-    return RDL::Globals.parser.scan_str "T #{type}" unless trec.vals.size == 1 ## Can maybe get more precise than this for some methods, but in most cases we have to sacrifice precision. Might return to this.
+    return RDL::Globals.parser.scan_str "#T #{type}" unless trec.vals.size == 1 ## Can maybe get more precise than this for some methods, but in most cases we have to sacrifice precision. Might return to this.
     if targs.empty?
       res = trec.vals[0].send(meth)
     elsif targs.size == 1
@@ -13,7 +13,7 @@ def String.output_type(trec, targs, meth, type)
       when RDL::Type::PreciseStringType
         res = trec.vals[0].send(meth, targs.vals[0])
       else
-        RDL::Globals.parser.scan_str "T #{type}"
+        RDL::Globals.parser.scan_str "#T #{type}"
       end
     elsif targs.size > 1 && targs.all? { |a| a.is_a?(RDL::Type::SingletonType) }
       vals = targs.map { |t| t.val }
