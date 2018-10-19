@@ -8,7 +8,7 @@ def Numeric.sing_or_type(trec, targs, meth, type)
     else
       v = RDL.type_cast(RDL.type_cast(trec, "RDL::Type::SingletonType<Integer>").val.send(meth), "Integer", force: true)
     end
-    RDL::Type::SingletonType.new(v)
+    RDL::Type::SingletonType.new(v.__getobj__)
   else
     RDL::Globals.parser.scan_str "#T #{type}"
   end

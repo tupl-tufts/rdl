@@ -131,6 +131,38 @@ class TestDynChecks < Minitest::Test
     assert self.class.new(nil).op_asgn_arr([1,2,3])
     assert_raises(RDL::Type::TypeError) { self.class.new(nil).op_asgn_arr([1,42, 3]) } ## same issue as above
   end
+
+
+  # Now, we'll test the re-running of computed types; this has been tested in all the examples above, but here we'll test that it fails correctly.
+
+  class CompFail
+    extend RDL::Annotate
+    @@compfail = 1
+
+    def self.get_val()
+      @@compfail
+    end
+
+    def self.set_val(v)
+      @@compfail = v
+    end
+
+    type "(``if (get_val == 1) then RDL::Globals.types[:integer] else RDL::Type::UnionType.new(RDL::Globals.types[:integer], RDL::Globals.types[:string]) end``) -> Integer", wrap: false ## pathological type depending on @@compfail
+    def bar(x)
+      x
+    end
+
+    type "(Integer) -> Integer", typecheck: :now, wrap: false ## will type check fine
+    def foo(x)
+      bar(x)
+    end
+  end
+
+  def test_rerun_comp_type
+    assert CompFail.new.foo(1) ## will run fine
+    CompFail.set_val(2) ## change heap
+    assert_raises(RDL::Type::TypeError) { CompFail.new.foo(1) }
+  end
   
   
 end

@@ -7,7 +7,7 @@ class RDL::Config
   attr_accessor :gather_stats
   attr_reader :report # writer is custom defined
   attr_accessor :weak_update_promote, :widen_bound, :promote_widen, :use_dep_types, :check_comp_types
-  attr_accessor :type_defaults, :pre_defaults, :post_defaults
+  attr_accessor :type_defaults, :pre_defaults, :post_defaults, :rerun_comp_types
 
   def initialize
     @nowrap = Set.new # Set of symbols
@@ -22,7 +22,8 @@ class RDL::Config
     @post_defaults = { wrap: true }
     @widen_bound = 5
     @use_dep_types = true
-    @check_comp_types = true
+    @check_comp_types = true ## this for dynamically checking that the result of a computed type still holds
+    @rerun_comp_types = true ## this is for dynamically checking that a type computation still evaluates to the same thing as it did at type checking time
   end
 
   def report=(val)

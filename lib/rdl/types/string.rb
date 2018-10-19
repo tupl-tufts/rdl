@@ -40,9 +40,10 @@ module RDL::Type
       printed_vals = @vals.map { |v|
         case v
         when String
-          '"'+v+'"'
+          "'"+v+"'"
         when Type
-          '#{' + v.to_s + '}'
+          #'#{' + v.to_s.gsub('"',"'") + '}'
+          return "String"
         end
       }
       return printed_vals.join
