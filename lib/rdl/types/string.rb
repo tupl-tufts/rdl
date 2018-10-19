@@ -55,6 +55,12 @@ module RDL::Type
       return (other.instance_of? PreciseStringType) && (other.vals == @vals)
     end
 
+    def member?(obj, *args)
+      return false unless obj.is_a?(String)
+      raise "Checking membership of PreciseStringType not currently supported for interpolated strings." unless @vals.all? { |v| v.is_a?(String) }
+      return (@vals.join == obj)
+    end
+
     def promote!
       return false if @cant_promote
       @promoted = true

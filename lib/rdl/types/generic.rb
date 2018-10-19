@@ -40,6 +40,21 @@ module RDL::Type
     end
 
     def member?(obj, *args)
+      if base.name == "Table"
+        return false unless obj.class.ancestors.map { |a| a.to_s}.include?("Sequel::Dataset")#is_a?(Sequel::Dataset) (obj.class.to_s == "Sequel::SQLite::Dataset")
+        raise RDL::Type::TypeError, "Expected Table type to be parameterized by finite hash, instead got #{@params}." unless @params[0].is_a?(RDL::Type::FiniteHashType)
+        if @params[0].elts[:__all_joined].is_a?(RDL::Type::TupleType) && obj.joined_dataset?
+          type_joined_tables = @params[0].elts[:__all_joined].map { |t| t.val }
+          obj_joined_tables = obj.opts[:from] + obj.opts[:join].map { |t| t.table }
+          return (type_joined_tables.sort == obj_joined_tables.sort)
+        elsif !@params[0].elts[:__all_joined].is_a?(RDL::Type::TupleType) && !obj.joined_dataset?
+          return true
+        else
+          return false
+        end
+      elsif base.name == "ActiveRecord_Relation"
+        return (obj.class.name == "ActiveRecord::Relation" || obj.class.name == "ActiveRecord::Associations::CollectionProxy" || obj.class.name == "ActiveRecord::AssociationRelation") ## TODO: check for joins?
+      end
       raise "No type parameters defined for #{base.name}" unless RDL::Globals.type_params[base.name]
 #      formals = RDL::Globals.type_params[base.name][0]
       t = RDL::Util.rdl_type obj

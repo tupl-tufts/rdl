@@ -1376,12 +1376,12 @@ RUBY
 
     # convert trecvs to array containing all receiver types
     trecvs = trecvs.canonical
-    trecvs = if trecvs.is_a? RDL::Type::UnionType then trecvs.types else [trecvs] end
+    trecvs = if trecvs.is_a? RDL::Type::UnionType then union = true; trecvs.types else union = false; [trecvs] end
 
     trets = []
     eff = [:+, :+]
     trecvs.each { |trecv|
-      ts, es = tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn)
+      ts, es = tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union)
       if es.nil? || (es.all? { |e| e.nil? }) ## could be multiple, because every time e is called, nil is added to effects
         ## should probably change default effect to be [:-, :-], but for now I want it like this,
         ## so I can easily see when a method has been used and its effect set to the default.
@@ -1398,7 +1398,7 @@ RUBY
 
   # Like tc_send but trecv should never be a union type
   # Returns array of possible return types, or throws exception if there are none
-  def self.tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn)
+  def self.tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union)
     return [tc_send_class(trecv, e), [[:+, :+]]] if (meth == :class) && (tactuals.empty?)
     ts = [] # Array<MethodType>, i.e., an intersection types
     case trecv
@@ -1516,7 +1516,7 @@ RUBY
         ts = [trecv]
       else
         # treat as Proc
-        tc_send_one_recv(scope, env, RDL::Globals.types[:proc], meth, tactuals, block, e, op_asgn)
+        tc_send_one_recv(scope, env, RDL::Globals.types[:proc], meth, tactuals, block, e, op_asgn, union)
       end
     else
       raise RuntimeError, "receiver type #{trecv} not supported yet, meth=#{meth}"
@@ -1588,7 +1588,7 @@ RUBY
               trets_tmp << init_typ
             else
               trets_tmp << (tmeth.ret.instantiate(tmeth_inst)) # found a match for this subunion; add its return type to trets_tmp
-              if comp_type && RDL::Config.instance.check_comp_types
+              if comp_type && RDL::Config.instance.check_comp_types && !union
                 if (e.type == :op_asgn) && op_asgn
                   ## Hacky trick here. Because the ast `e` is used twice when type checking an op_asgn,
                   ## in one of the cases we will use the object_id of its object_id to get two different mappings.
@@ -2019,12 +2019,12 @@ class Object
     inst = Hash[RDL::Globals.type_params[klass][0].zip []] if (not(inst) && RDL::Globals.type_params[klass])
     inst = {} if not inst
 
-    matches, args, blk, bind = RDL::Type::MethodType.check_arg_types("#{__rdl_meth}", self, bind, [meth_type], inst, *args, &blk)
+    matches, args, blk, bind = RDL::Type::MethodType.check_arg_types("#{__rdl_meth}", self, bind, [meth_type], inst, *args, &block)
 
     ret = self.send(__rdl_meth, *args, &block)
 
     if matches
-      ret = RDL::Type::MethodType.check_ret_types(self, "#{__rdl_meth}", [meth_type], inst, matches, ret, bind, *args, &blk) unless __rdl_meth == :initialize
+      ret = RDL::Type::MethodType.check_ret_types(self, "#{__rdl_meth}", [meth_type], inst, matches, ret, bind, *args, &block) unless __rdl_meth == :initialize
     end
 
     return ret
