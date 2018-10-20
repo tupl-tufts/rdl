@@ -215,7 +215,6 @@ module RDL::Typecheck
 
   def self.typecheck(klass, meth, ast=nil, types = nil, effects = nil)
     @cur_meth = [klass, meth]
-    @comp_type_map = {}
     ast = get_ast(klass, meth) unless ast
     types = RDL::Globals.info.get(klass, meth, :type) unless types
     effects = RDL::Globals.info.get(klass, meth, :effect) unless effects
@@ -266,8 +265,8 @@ module RDL::Typecheck
       error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || meth == :initialize || body_type <= type.ret
       error :bad_effect, [body_effect, effect], body unless body.nil? || effect.nil? || effect_leq(body_effect, effect)
     }
-    if RDL::Config.instance.check_comp_types && !@comp_type_map.empty?
-      new_meth = WrapCall.rewrite(@comp_type_map, ast) # rewrite ast to insert dynamic checks
+    if RDL::Config.instance.check_comp_types
+      new_meth = WrapCall.rewrite(ast) # rewrite ast to insert dynamic checks
       RDL::Util.to_class(klass).class_eval(new_meth) # redefine method in the same class
     end
     RDL::Globals.info.set(klass, meth, :typechecked, true)
@@ -1595,9 +1594,9 @@ RUBY
                 if (e.type == :op_asgn) && op_asgn
                   ## Hacky trick here. Because the ast `e` is used twice when type checking an op_asgn,
                   ## in one of the cases we will use the object_id of its object_id to get two different mappings.
-                  @comp_type_map[e.object_id.object_id] = [tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old]
+                  RDL::Globals.comp_type_map[e.object_id.object_id] = [tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old]
                   else
-                    @comp_type_map[e.object_id] = [tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old]
+                    RDL::Globals.comp_type_map[e.object_id] = [tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old]
                 end
               end
             end
@@ -2009,33 +2008,19 @@ class Object
   ## Method to replace dependently typed methods, and insert dynamic checks of types.
   ## This method will check that given args satisfy given type, run the original method,
   ## then check that the returned value satisfies the returned type, and finally return that value.
-  ## [+ __rdl_meth +] is a symbol naming the method being replaced.
-  ## [+ __rdl_type +] is a String representing a method type, which includes *only non-dependent types* to be type checked
-  ## [+ __tmeth_old +] is a String representing a method type *before type-level computations were evaluated*
-  ## [+ __meth_res +] is a String representing a method type *after type-levle computations were evalutated*. Note that it may be different from __rdl_type, because __rdl_type has had `instantiate` called on it.
-  ## [+ __self_klass +] is the class in which the ComputedType is defined. Used to make correct binding when reevaluating the type.
-  ## [+ __trecv_old +] is a String representing the receiver argument passed to the type-level computation.
-  ## [+ __targs_old +] is a String, delimited by ",", representing the type arguments passed to the type-level computation.
+  ## [+ __rdl_meth +] is a Symbol naming the method being replaced.
+  ## [+ node_id +] is an Integer representing the object_id of the relevant AST node to be looked up in the comp_type_map.
   ## [+ *args +], [+ &block +] are the original arguments and blocked passed in a method call.
   ## returns whatever is returned by calling the given method with the given args and block.
-  def __rdl_dyn_type_check(__rdl_meth, __rdl_type, __tmeth_old, __tmeth_res, __self_klass,  __trecv_old, __targs_old, *args, &block)
+  def __rdl_dyn_type_check(__rdl_meth, node_id, *args, &block)
+    tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old = RDL::Globals.comp_type_map[node_id]
+    raise RuntimeError, "Could not find cached type-level computation results for method #{__rdl_meth}." unless tmeth
     if RDL::Config.instance.rerun_comp_types
-      tmeth_old = RDL::Globals.parser.scan_str __tmeth_old
-      tmeth_res = RDL::Globals.parser.scan_str __tmeth_res
-      if __trecv_old.start_with?("[s]")
-        val = eval(__trecv_old[3, __trecv_old.length-1])
-        trecv_old = RDL::Type::SingletonType.new(val)
-      else
-        trecv_old = RDL::Globals.parser.scan_str "#T #{__trecv_old}"
-      end
-      targs_old = RDL::Globals.parser.scan_str("(#{__targs_old}) -> dummy").args ## hacky way to use parser to extract argument types (delimited by commas) from string
-      #self_klass = self.is_a?(Module) ? self : self.class ## is_a?(Module) returns True for classes, too
-      tmeth_new = RDL::Typecheck.compute_types(tmeth_old, __self_klass, trecv_old, targs_old)
+      tmeth_new = RDL::Typecheck.compute_types(tmeth_old, self_klass, trecv_old, targs_old)
       unless tmeth_new == tmeth_res
-        raise RDL::Type::TypeError, "Type-level computation evaluated to different result from type checking time for class #{__self_klass} method #{__rdl_meth}.\n Got #{tmeth_res} the first time, but #{tmeth_new} the second time."
+        raise RDL::Type::TypeError, "Type-level computation evaluated to different result from type checking time for class #{self_klass} method #{__rdl_meth}.\n Got #{tmeth_res} the first time, but #{tmeth_new} the second time."
       end
     end
-    meth_type = RDL::Globals.parser.scan_str(__rdl_type)
     bind = binding
     inst = nil
     inst = @__rdl_type.to_inst if ((defined? @__rdl_type) && @__rdl_type.is_a?(RDL::Type::GenericType))
@@ -2043,12 +2028,12 @@ class Object
     inst = Hash[RDL::Globals.type_params[klass][0].zip []] if (not(inst) && RDL::Globals.type_params[klass])
     inst = {} if not inst
 
-    matches, args, blk, bind = RDL::Type::MethodType.check_arg_types("#{__rdl_meth}", self, bind, [meth_type], inst, *args, &block)
+    matches, args, blk, bind = RDL::Type::MethodType.check_arg_types("#{__rdl_meth}", self, bind, [tmeth], inst, *args, &block)
 
     ret = self.send(__rdl_meth, *args, &block)
 
     if matches
-      ret = RDL::Type::MethodType.check_ret_types(self, "#{__rdl_meth}", [meth_type], inst, matches, ret, bind, *args, &block) unless __rdl_meth == :initialize
+      ret = RDL::Type::MethodType.check_ret_types(self, "#{__rdl_meth}", [tmeth], inst, matches, ret, bind, *args, &block) unless __rdl_meth == :initialize
     end
 
     return ret
@@ -2095,16 +2080,12 @@ class WrapCall < Parser::TreeRewriter
 
   def on_send(node)
     rec_ast = node.children[0]
-    rec_code = WrapCall.rewrite(@type_map, rec_ast)+"." if rec_ast.is_a?(AST::Node) ## receiver is nil, or it gets rewritten
-    args_code = node.children[2..-1].map { |n| WrapCall.rewrite(@type_map, n) if n.is_a?(AST::Node) }
+    rec_code = WrapCall.rewrite(rec_ast)+"." if rec_ast.is_a?(AST::Node) ## receiver is nil, or it gets rewritten
+    args_code = node.children[2..-1].map { |n| WrapCall.rewrite(n) if n.is_a?(AST::Node) }
     args_code = args_code.empty? ? nil : ","+args_code.join(",") ## no args, or args get rewritten
     unless node.children[1] == :__rdl_dyn_type_check ## I don't believe this check is necessary, but at one point I had this issue so I'm leaving it in
-      meth_type, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old = @type_map[node.object_id]
-      if meth_type ## Only do this if a call is associated with a type in the map. Otherwise, it may be a call to a non-dependently typed method.
-        targs_string = targs_old.map { |t| t.to_s }.join(",")
-        trecv_string = trecv_old.is_a?(RDL::Type::SingletonType) ? "[s]#{trecv_old.val}" : "#{trecv_old}"
-        tmeth_old = "#{tmeth_old}".gsub('"', "'")
-        align_replace(node.location.expression, @offset, "#{rec_code}__rdl_dyn_type_check(:#{node.children[1]}, \"#{meth_type}\",\"#{tmeth_old}\", \"#{tmeth_res}\", #{self_klass}, \"#{trecv_string}\", \"#{targs_string}\" #{args_code})")
+      if RDL::Globals.comp_type_map[node.object_id] ## Only do this if a call is associated with a type in the map. Otherwise, it may be a call to a non-dependently typed method.
+        align_replace(node.location.expression, @offset, "#{rec_code}__rdl_dyn_type_check(:#{node.children[1]}, #{node.object_id} #{args_code})")
       end
     end
   end
@@ -2112,49 +2093,36 @@ class WrapCall < Parser::TreeRewriter
   def on_op_asgn(node)
     if node.children[0].type == :send
       rec_ast = node.children[0].children[0]
-      rec_code = WrapCall.rewrite(@type_map, rec_ast) + "." if rec_ast.is_a?(AST::Node)
+      rec_code = WrapCall.rewrite(rec_ast) + "." if rec_ast.is_a?(AST::Node)
 
       rec_meth_ast = node.children[0]
-      rec_meth_code = WrapCall.rewrite(@type_map, rec_meth_ast)
+      rec_meth_code = WrapCall.rewrite(rec_meth_ast)
 
       elargs_ast = node.children[0].children[2]
-      elargs_code = WrapCall.rewrite(@type_map, elargs_ast)
+      elargs_code = WrapCall.rewrite(elargs_ast)
 
       rhs_ast = node.children[2]
-      rhs_code = WrapCall.rewrite(@type_map, rhs_ast)
+      rhs_code = WrapCall.rewrite(rhs_ast)
 
       op_meth = node.children[1]
       mutation_meth = node.children[0].children[1].to_s + "="
 
-      overall_type, ov_tmeth_old, ov_tmeth_res, ov_self_klass, ov_trecv_old, ov_targs_old = @type_map[node.object_id.object_id]
-      rhs_type, rhs_tmeth_old, rhs_tmeth_res, rhs_self_klass, rhs_trecv_old, rhs_targs_old= @type_map[node.object_id]
-
-      if rhs_type
-        rhs_targs_string = rhs_targs_old.map { |t| t.to_s}.join(",")
-        rhs_trecv_string = rhs_trecv_old.is_a?(RDL::Type::SingletonType) ? "[s]#{rhs_trecv_old.val}" : "#{rhs_trecv_old}"
-        rhs_tmeth_old = "#{rhs_tmeth_old}".gsub('"', "'")
-        op_code = "#{rec_meth_code}.__rdl_dyn_type_check(:#{op_meth}, \"#{rhs_type}\", \"#{rhs_tmeth_old}\", \"#{rhs_tmeth_res}\", #{rhs_self_klass}, \"#{rhs_trecv_string}\", \"#{rhs_targs_string}\", #{rhs_code})"
+      if RDL::Globals.comp_type_map[node.object_id]
+        op_code = "#{rec_meth_code}.__rdl_dyn_type_check(:#{op_meth}, #{node.object_id}, #{rhs_code})"
       else
         op_code = "#{rec_meth_code}.send(:#{op_meth}, #{rhs_code})"
       end
 
-      if overall_type
-        ov_targs_string = ov_targs_old.map { |t| t.to_s }.join(",")
-        ov_trecv_string = ov_trecv_old.is_a?(RDL::Type::SingletonType) ? "[s]#{ov_trecv_old.val}" : "#{ov_trecv_old}"
-        ov_tmeth_old = "#{ov_tmeth_old}".gsub('"', "'")
-        align_replace(node.location.expression, @offset, "#{rec_code}__rdl_dyn_type_check(:#{mutation_meth}, \"#{overall_type}\", \"#{ov_tmeth_old}\", \"#{ov_tmeth_res}\", #{ov_self_klass}, \"#{ov_trecv_string}\", \"#{ov_targs_string}\", #{elargs_code}, #{op_code})")
+      if RDL::Globals.comp_type_map[node.object_id.object_id]
+        align_replace(node.location.expression, @offset, "#{rec_code}__rdl_dyn_type_check(:#{mutation_meth}, #{node.object_id.object_id}, #{elargs_code}, #{op_code})")
       end
     else
       lhs = node.location.name.source
       meth = node.children[1]
       rhs_ast = node.children[2]
-      rhs_code = WrapCall.rewrite(@type_map, rhs_ast)
-      meth_type, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old = @type_map[node.object_id]
-      if meth_type
-        targs_string = targs_old.map { |t| t.to_s }.join(",")
-        trecv_string = trecv_old.is_a?(RDL::Type::SingletonType) ? "[s]#{trecv_old.val}" : "#{trecv_old}"
-        tmeth_old = "#{tmeth_old}".gsub('"', "'")
-        align_replace(node.location.expression, @offset, "#{lhs} = #{lhs}.__rdl_dyn_type_check(:#{meth}, \"#{meth_type}\", \"#{tmeth_old}\", \"#{tmeth_res}\", #{self_klass}, \"#{trecv_string}\", \"#{targs_string}\", #{rhs_code})")
+      rhs_code = WrapCall.rewrite(rhs_ast)
+      if RDL::Globals.comp_type_map[node.object_id]
+        align_replace(node.location.expression, @offset, "#{lhs} = #{lhs}.__rdl_dyn_type_check(:#{meth}, #{node.object_id}, #{rhs_code})")
       end
     end
   end
@@ -2162,30 +2130,26 @@ class WrapCall < Parser::TreeRewriter
   def on_or_asgn(node)
     if node.children[0].type == :send
       rec_ast = node.children[0].children[0]
-      rec_code = WrapCall.rewrite(@type_map, rec_ast)+"." if rec_ast.is_a?(AST::Node)
+      rec_code = WrapCall.rewrite(rec_ast)+"." if rec_ast.is_a?(AST::Node)
 
       rec_meth_ast = node.children[0]
-      rec_meth_code = WrapCall.rewrite(@type_map, rec_meth_ast)
+      rec_meth_code = WrapCall.rewrite(rec_meth_ast)
 
       elargs_ast = node.children[0].children[2]
-      elargs_code = WrapCall.rewrite(@type_map, elargs_ast)
+      elargs_code = WrapCall.rewrite(elargs_ast)
 
       rhs_ast = node.children[1]
-      rhs_code = WrapCall.rewrite(@type_map, rhs_ast)
+      rhs_code = WrapCall.rewrite(rhs_ast)
 
       mutation_meth = node.children[0].children[1].to_s + "="
-      meth_type, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old = @type_map[node.object_id]
 
-      if meth_type
-        targs_string = targs_old.map { |t| t.to_s }.join(',')
-        trecv_string = trecv_old.is_a?(RDL::Type::SingletonType) ? "[s]#{trecv_old.val}" : "#{trecv_old}"
-        tmeth_old = "#{tmeth_old}".gsub('"', "'")
-        align_replace(node.location.expression, @offset, "#{rec_code}__rdl_dyn_type_check(:#{mutation_meth}, \"#{meth_type}\", \"#{tmeth_old}\", \"#{tmeth_res}\", #{self_klass}, \"#{trecv_string}\", \"#{targs_string}\", #{elargs_code}, #{rec_meth_code} || #{rhs_code})")
+      if RDL::Globals.comp_type_map[node.object_id]
+        align_replace(node.location.expression, @offset, "#{rec_code}__rdl_dyn_type_check(:#{mutation_meth}, #{node.object_id}, #{elargs_code}, #{rec_meth_code} || #{rhs_code})")
       end
     else
       lhs = node.location.name.source
       rhs_ast = node.children[1]
-      rhs_code = WrapCall.rewrite(@type_map, rhs_ast)
+      rhs_code = WrapCall.rewrite(rhs_ast)
       align_replace(node.location.expression, @offset, "#{lhs} = #{lhs} || #{rhs_code}")
     end
   end
@@ -2193,42 +2157,37 @@ class WrapCall < Parser::TreeRewriter
   def on_and_asgn(node)
     if node.children[0].type == :send
       rec_ast = node.children[0].children[0]
-      rec_code = WrapCall.rewrite(@type_map, rec_ast)+"." if rec_ast.is_a?(AST::Node)
+      rec_code = WrapCall.rewrite(rec_ast)+"." if rec_ast.is_a?(AST::Node)
 
       rec_meth_ast = node.children[0]
-      rec_meth_code = WrapCall.rewrite(@type_map, rec_meth_ast)
+      rec_meth_code = WrapCall.rewrite(rec_meth_ast)
 
       elargs_ast = node.children[0].children[2]
-      elargs_code = WrapCall.rewrite(@type_map, elargs_ast)
+      elargs_code = WrapCall.rewrite(elargs_ast)
 
       rhs_ast = node.children[1]
-      rhs_code = WrapCall.rewrite(@type_map, rhs_ast)
+      rhs_code = WrapCall.rewrite(rhs_ast)
 
       mutation_meth = node.children[0].children[1].to_s + "="
-      meth_type, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old = @type_map[node.object_id]
 
-      if meth_type
-        targs_string = targs_old.map { |t| t.to_s }.join(',')
-        trecv_string = trecv_old.is_a?(RDL::Type::SingletonType) ? "[s]#{trecv_old.val}" : "#{trecv_old}"
-        tmeth_old = "#{tmeth_old}".gsub('"', "'")
-        align_replace(node.location.expression, @offset, "#{rec_code}__rdl_dyn_type_check(:#{mutation_meth}, \"#{meth_type}\", \"#{tmeth_old}\", \"#{tmeth_res}\", #{self_klass}, \"#{trecv_string}\", \"#{targs_string}\", #{elargs_code}, #{rec_meth_code} && #{rhs_code})")
+      if RDL::Globals.comp_type_map[node.object_id]
+        align_replace(node.location.expression, @offset, "#{rec_code}__rdl_dyn_type_check(:#{mutation_meth}, #{node.object_id}, #{elargs_code}, #{rec_meth_code} && #{rhs_code})")
       end
     else
       lhs = node.location.name.source
       rhs_ast = node.children[1]
-      rhs_code = WrapCall.rewrite(@type_map, rhs_ast)
+      rhs_code = WrapCall.rewrite(rhs_ast)
       align_replace(node.location.expression, @offset, "#{lhs} = #{lhs} && #{rhs_code}")
     end
   end
 
   
-  def initialize(type_map, offset)
-    @type_map = type_map
+  def initialize(offset)
     @offset = offset
   end
 
-  def self.rewrite(type_map, ast)
-    rewriter = WrapCall.new(type_map, ast.location.expression.begin_pos)
+  def self.rewrite(ast)
+    rewriter = WrapCall.new(ast.location.expression.begin_pos)
     buffer = Parser::Source::Buffer.new("(ast)")
     buffer.source = ast.location.expression.source
     rewriter.rewrite(buffer, ast)
