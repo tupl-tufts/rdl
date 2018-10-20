@@ -115,6 +115,7 @@ module RDL::Type
       return t <= self if t
       right_elts = @elts.clone # shallow copy
 
+      return true if obj.nil?
       return false unless obj.instance_of? Hash
 
       # Check that every mapping in obj exists in @map and matches the type
