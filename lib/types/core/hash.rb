@@ -98,8 +98,19 @@ def Hash.weak_promote(val)
 end
 RDL.type Hash, 'self.weak_promote', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
-RDL.type :Hash, 'self.[]', '(*%any) -> ``hash_create_output(targs)``'
+RDL.type :Hash, 'self.[]', '(*%any) -> ``hash_create_output_from_list(targs)``'
 
+def Hash.hash_create_output_from_list(targs)
+  raise RDL::Typecheck::StaticTypeError, "Hash[...] expect only 1 argument. Have #{targs}." if targs.size > 1
+  raise RDL::Typecheck::StaticTypeError, "The argument has to be an array or tuple" unless (targs[0].is_a?(RDL::Type::GenericType) && targs[0].base.klass == Array)
+
+  case targs[0].params[0]
+  when RDL::Type::GenericType
+    return RDL::Globals.parser.scan_str "#T Hash<#{targs[0].params[0].params[0]}, #{targs[0].params[0].params[0]}>"
+  when RDL::Type::TupleType
+    return RDL::Type::GenericType.new(RDL::Type::NominalType.new(Hash), targs[0].params[0].params[0], targs[0].params[0].params[1])
+  end
+end
 
 def Hash.hash_create_output(targs)
   raise RDL::Typecheck::StaticTypeError, "Hash.[] expects an even number of arguments. Have #{targs}." if targs.size.odd?

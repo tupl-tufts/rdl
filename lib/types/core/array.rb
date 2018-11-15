@@ -329,9 +329,6 @@ end
 RDL.type Array, 'self.include_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 
-RDL.type :Array, :initialize, '() -> self'
-RDL.type :Array, :initialize, '(Integer) -> self'
-RDL.type :Array, :initialize, '(Integer, t) -> self<t>'
 RDL.type :Array, :insert, '(Integer, ``promoted_or_t(trec)``) -> ``promote_tuple!(trec)``'
 RDL.type :Array, :inspect, '() -> String'
 RDL.type :Array, :join, '(?String) -> String'
@@ -505,6 +502,7 @@ RDL.type :Array, :include?, '(u) -> %bool', effect: [:+, :+]
 RDL.type :Array, :initialize, '() -> self'
 RDL.type :Array, :initialize, '(Integer) -> self'
 RDL.type :Array, :initialize, '(Integer, t) -> self<t>'
+RDL.type :Array, :initialize, '(Array<k>) -> self<k>'
 RDL.type :Array, :insert, '(Integer, *t) -> Array<t>'
 RDL.type :Array, :inspect, '() -> String'
 RDL.type :Array, :join, '(?String) -> String'
