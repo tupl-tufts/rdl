@@ -22,6 +22,7 @@ rule
   \}            { [:RBRACE, text] }
   \[            { [:LBRACKET, text] }
   \]            { [:RBRACKET, text] }
+  <\:\:		{ [:BIND, text] }
   <             { [:LESS, text] }
   >             { [:GREATER, text] }
   =             { [:EQUAL, text] }

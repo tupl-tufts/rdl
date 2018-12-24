@@ -88,6 +88,9 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/\]/))
          action { [:RBRACKET, text] }
 
+      when (text = @ss.scan(/<\:\:/))
+         action { [:BIND, text] }
+
       when (text = @ss.scan(/</))
          action { [:LESS, text] }
 

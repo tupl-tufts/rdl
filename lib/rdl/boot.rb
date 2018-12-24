@@ -90,6 +90,7 @@ end
 
 require 'rdl/types/type.rb'
 require 'rdl/types/annotated_arg.rb'
+require 'rdl/types/bound_arg.rb'
 require 'rdl/types/bot.rb'
 require 'rdl/types/computed.rb'
 require 'rdl/types/dependent_arg.rb'
