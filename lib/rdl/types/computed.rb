@@ -10,11 +10,6 @@ module RDL::Type
     end
 
     def compute(bind)
-=begin
-      bind.local_variables.each { |v|
-        puts "Variable #{v} maps to #{bind.local_variable_get(v)}."
-      }
-=end
       res = bind.eval(@code)
       raise RuntimeError, "Expected ComputedType to evaluate to type, instead got #{res}." unless res.is_a?(Type)
       res

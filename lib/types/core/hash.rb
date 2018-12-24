@@ -98,7 +98,8 @@ def Hash.weak_promote(val)
 end
 RDL.type Hash, 'self.weak_promote', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
-RDL.type :Hash, 'self.[]', '(*%any) -> ``hash_create_output_from_list(targs)``'
+#RDL.type :Hash, 'self.[]', '(*%any) -> ``hash_create_output_from_list(targs)``'
+RDL.type :Hash, 'self.[]', '(*%any) -> ``hash_create_output(targs)``'
 
 def Hash.hash_create_output_from_list(targs)
   raise RDL::Typecheck::StaticTypeError, "Hash[...] expect only 1 argument. Have #{targs}." if targs.size > 1

@@ -16,7 +16,7 @@ module RDL::Type
     end
 
     def to_s
-      return "#{@type.to_s} #{@name}"
+      return "#{@name}<::#{@type.to_s}"
     end
 
     def ==(other) # :nodoc:

@@ -365,7 +365,7 @@ module RDL::Typecheck
     args.children.each { |arg|
       error :type_args_fewer, [kind, kind], arg if tpos >= type.args.length && arg.type != :blockarg  # blocks could be called with yield
       targ = type.args[tpos]
-      (if (targ.is_a?(RDL::Type::AnnotatedArgType) || targ.is_a?(RDL::Type::DependentArgType)) then targ = targ.type end)
+      (if (targ.is_a?(RDL::Type::AnnotatedArgType) || targ.is_a?(RDL::Type::DependentArgType) || targ.is_a?(RDL::Type::BoundArgType)) then targ = targ.type end)
       if arg.type == :arg
         error :type_arg_kind_mismatch, [kind, 'optional', 'required'], arg if targ.optional?
         error :type_arg_kind_mismatch, [kind, 'vararg', 'required'], arg if targ.vararg?
@@ -1391,7 +1391,7 @@ RUBY
       end
       trets.concat(ts)
     }
-    trets.map! {|t| t.is_a?(RDL::Type::AnnotatedArgType) ? t.type : t}
+    trets.map! {|t| (t.is_a?(RDL::Type::AnnotatedArgType) || t.is_a?(RDL::Type::BoundArgType)) ? t.type : t}
     return [RDL::Type::UnionType.new(*trets), eff]
   end
 
@@ -1546,7 +1546,9 @@ RUBY
             tmeth_old = tmeth
             trecv_old = trecv.copy
             targs_old = tactuals_expanded.map { |t| t.copy }
-            tmeth = tmeth_res = compute_types(tmeth, self_klass, trecv, tactuals_expanded) 
+            binds = tc_bind_arg_types(tmeth, tactuals_expanded)
+            #binds = {} if binds.nil?
+            tmeth = tmeth_res = compute_types(tmeth, self_klass, trecv, tactuals_expanded, binds) unless binds.nil?
             comp_type = true
           end
           ### TODO: change below once figuring out a way of promote!-ing without side-effect.
@@ -1582,7 +1584,7 @@ RUBY
               init_typ = RDL::Type::NominalType.new(trecv.val)
               if (tmeth.ret.instance_of?(RDL::Type::GenericType))
                 error :bad_initialize_type, [], e unless (tmeth.ret.base == init_typ)
-              elsif (tmeth.ret.instance_of?(RDL::Type::AnnotatedArgType) || tmeth.ret.instance_of?(RDL::Type::DependentArgType))
+              elsif (tmeth.ret.instance_of?(RDL::Type::AnnotatedArgType) || tmeth.ret.instance_of?(RDL::Type::DependentArgType) || tmeth.ret.instance_of?(RDL::Type::BoundArgType))
                 error :bad_initialize_type, [], e unless (tmeth.ret.type == init_typ)
               else
                 error :bad_initialize_type, [], e unless (tmeth.ret == init_typ)
@@ -1594,9 +1596,9 @@ RUBY
                 if (e.type == :op_asgn) && op_asgn
                   ## Hacky trick here. Because the ast `e` is used twice when type checking an op_asgn,
                   ## in one of the cases we will use the object_id of its object_id to get two different mappings.
-                  RDL::Globals.comp_type_map[e.object_id.object_id] = [tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old]
+                  RDL::Globals.comp_type_map[e.object_id.object_id] = [tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old, (binds || {})]
                   else
-                    RDL::Globals.comp_type_map[e.object_id] = [tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old]
+                    RDL::Globals.comp_type_map[e.object_id] = [tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old, (binds || {})]
                 end
               end
             end
@@ -1641,17 +1643,25 @@ RUBY
   # [+ self_klass +] is the class of the receiver to the method call
   # [+ trecv +] is the type of the receiver to the method call
   # [+ tactuals +] is a list Array<Type> of types of the input to a method call
+  # [+ binds +] is a Hash<Symbol, Type> mapping bound type names to the corresponding actual type.
   # Returns a new MethodType where all ComputedTypes in tmeth have been evaluated
-  def self.compute_types(tmeth, self_klass, trecv, tactuals)
+  def self.compute_types(tmeth, self_klass, trecv, tactuals, binds={})
     bind = nil
     self_klass.class_eval { bind = binding() }
     bind.local_variable_set(:trec, trecv)
     bind.local_variable_set(:targs, tactuals)
+    binds.each { |name, t| bind.local_variable_set(name, t) }
     new_args = []
     tmeth.args.each { |targ|
       case targ
       when RDL::Type::ComputedType
         new_args << targ.compute(bind)
+      when RDL::Type::BoundArgType
+        if targ.type.instance_of?(RDL::Type::ComputedType)
+          new_args << targ.type.compute(bind)
+        else
+          new_args << targ
+        end
       else
         new_args << targ
       end
@@ -1659,10 +1669,16 @@ RUBY
     case tmeth.ret
     when RDL::Type::ComputedType
       new_ret = tmeth.ret.compute(bind)
+    when RDL::Type::BoundArgType
+      if targ.type.instance_of?(RDL::Type::ComputedType)
+        new_ret << targ.type.compute(bind)
+      else
+        new_ret << targ
+      end
     else
       new_ret = tmeth.ret
     end
-    new_block = compute_types(tmeth.block, self_klass, trecv, tactuals) if tmeth.block
+    new_block = compute_types(tmeth.block, self_klass, trecv, tactuals, binds) if tmeth.block
     RDL::Type::MethodType.new(new_args, new_block, new_ret)
   end
 
@@ -1710,7 +1726,7 @@ RUBY
       end
       next if formal >= tformals.size # Too many actuals to match
       t = tformals[formal]
-      if t.instance_of? RDL::Type::AnnotatedArgType
+      if t.instance_of?(RDL::Type::AnnotatedArgType) || t.instance_of?(RDL::Type::BoundArgType)
         t = t.type
       end
       case t
@@ -1751,6 +1767,84 @@ RUBY
     end
     return nil
   end
+
+
+  # [+ tmeth +] is MethodType
+  # [+ actuals +] is Array<Type> containing the actual argument types
+  # return binding of BoundArgType names to the corresponding actual type
+  # Very similar to MethodType#pre_cond?
+  def self.tc_bind_arg_types(tmeth, tactuals)
+    states = [[0, 0, Hash.new, Hash.new]] # position in tmeth, position in tactuals, inst of free vars in tmeth
+    tformals = tmeth.args
+    until states.empty?
+      formal, actual, inst, binds = states.pop
+      inst = inst.dup # avoid aliasing insts in different states since Type.leq mutates inst arg
+      if formal == tformals.size && actual == tactuals.size # Matched everything
+        return binds
+      end
+      next if formal >= tformals.size # Too many actuals to match
+      t = tformals[formal]
+      if t.instance_of? RDL::Type::AnnotatedArgType
+        t = t.type
+      end
+      case t
+      when RDL::Type::OptionalType
+        t = t.type
+        if actual == tactuals.size
+          states << [formal+1, actual, inst, binds] # skip over optinal formal
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t, inst, false)
+          states << [formal+1, actual+1, inst, binds] # match
+          states << [formal+1, actual, inst, binds] # skip
+        else
+          states << [formal+1, actual, inst, binds] # types don't match; must skip this formal
+        end
+      when RDL::Type::VarargType
+        if actual == tactuals.size
+          states << [formal+1, actual, inst, binds] # skip to allow empty vararg at end
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t.type, inst, false)
+          states << [formal, actual+1, inst, binds] # match, more varargs coming
+          states << [formal+1, actual+1, inst, binds] # match, no more varargs
+          states << [formal+1, actual, inst, binds] # skip over even though matches
+        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(tactuals[actual].type, t.type, inst, false) &&
+                                                               RDL::Type::Type.leq(t.type, tactuals[actual].type, inst, true)
+          states << [formal+1, actual+1, inst, binds] # match, no more varargs; no other choices!
+        else
+          states << [formal+1, actual, inst, binds] # doesn't match, must skip
+        end
+      when RDL::Type::ComputedType
+        ## arbitrarily count this as a match, we only care about binding names
+        ## treat this same as VarargType but without call to leq
+      #states << [formal+1, actual+1, inst, binds]
+        if actual == tactuals.size
+          states << [formal+1, actual, inst, binds] # skip to allow empty vararg at end
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType)))
+          states << [formal, actual+1, inst, binds] # match, more varargs coming
+          states << [formal+1, actual+1, inst, binds] # match, no more varargs
+          states << [formal+1, actual, inst, binds] # skip over even though matches
+        elsif tactuals[actual].is_a?(RDL::Type::VarargType)
+          states << [formal+1, actual+1, inst, binds] # match, no more varargs; no other choices!
+        else
+          states << [formal+1, actual, inst, binds] # doesn't match, must skip
+        end
+      else
+        if actual == tactuals.size
+          next unless t.instance_of? RDL::Type::FiniteHashType
+          if @@empty_hash_type <= t
+            states << [formal+1, actual, inst, binds]
+          end
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) #&& RDL::Type::Type.leq(tactuals[actual], t, inst, false)
+          if t.is_a?(RDL::Type::BoundArgType)
+            binds[t.name.to_sym] = tactuals[actual]
+            t = t.type
+          end
+          states << [formal+1, actual+1, inst, binds] if (t.is_a?(RDL::Type::ComputedType) || RDL::Type::Type.leq(tactuals[actual], t, inst, false))# match!
+          # no else case; if there is no match, this is a dead end
+        end
+      end
+    end
+    return nil
+  end
+
 
   # [+ tblock +] is the type of the block (a MethodType)
   # [+ block +] is a pair [block-args, block-body] from the block AST node OR [block-type, block-arg-AST-node]
@@ -1848,7 +1942,7 @@ RUBY
       when RDL::Type::MethodType
         block_types = (if typ.block then typ.block.args + [typ.block.ret] else [] end)
         typs = typ.args + block_types + [typ.ret]
-        if typs.any? { |t| t.is_a?(RDL::Type::ComputedType) }
+        if typs.any? { |t| t.is_a?(RDL::Type::ComputedType) || (t.is_a?(RDL::Type::BoundArgType) && t.type.is_a?(RDL::Type::ComputedType))  }
           dep_ts << typ
         else
           non_dep_ts << typ
@@ -2013,10 +2107,10 @@ class Object
   ## [+ *args +], [+ &block +] are the original arguments and blocked passed in a method call.
   ## returns whatever is returned by calling the given method with the given args and block.
   def __rdl_dyn_type_check(__rdl_meth, node_id, *args, &block)
-    tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old = RDL::Globals.comp_type_map[node_id]
+    tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old, binds = RDL::Globals.comp_type_map[node_id]
     raise RuntimeError, "Could not find cached type-level computation results for method #{__rdl_meth}." unless tmeth
     if RDL::Config.instance.rerun_comp_types
-      tmeth_new = RDL::Typecheck.compute_types(tmeth_old, self_klass, trecv_old, targs_old)
+      tmeth_new = RDL::Typecheck.compute_types(tmeth_old, self_klass, trecv_old, targs_old, binds)
       unless tmeth_new == tmeth_res
         raise RDL::Type::TypeError, "Type-level computation evaluated to different result from type checking time for class #{self_klass} method #{__rdl_meth}.\n Got #{tmeth_res} the first time, but #{tmeth_new} the second time."
       end

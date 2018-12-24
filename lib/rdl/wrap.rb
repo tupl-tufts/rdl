@@ -340,7 +340,7 @@ module RDL::Annotate
                         end
     effect[0] = :- if effect && effect[0] == :~ ## For now, treating pure-ish :~ as :-, since we realized it doesn't actually affect termination checking.
     typs = type.args + [type.ret, type.block]
-    RDL::Globals.dep_types << [klass, meth, type] if typs.any? { |t| t.is_a?(RDL::Type::ComputedType) }
+    RDL::Globals.dep_types << [klass, meth, type] if typs.any? { |t| t.is_a?(RDL::Type::ComputedType) || (t.is_a?(RDL::Type::BoundArgType) && t.type.is_a?(RDL::Type::ComputedType)) }
     if meth
 # It turns out Ruby core/stdlib don't always follow this convention...
 #        if (meth.to_s[-1] == "?") && (type.ret != RDL::Globals.types[:bool])
