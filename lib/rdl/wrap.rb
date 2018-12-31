@@ -598,17 +598,30 @@ module RDL
   def self.check_type_code
     RDL.config { |config| config.use_dep_types = false }
     count = 1
-    code_type = RDL::Globals.parser.scan_str "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
+    #code_type = RDL::Globals.parser.scan_str "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
     RDL::Globals.dep_types.each { |klass, meth, typ|
       klass = RDL::Util.has_singleton_marker(klass) ? RDL::Util.remove_singleton_marker(klass) : klass
+      binds = {}
+      arg_list = "(trec, targs"
+      type_list = "(RDL::Type::Type, Array<RDL::Type::Type>"
+      (typ.args+[typ.ret]+[typ.block]).each { |t|
+        ## First collect all bindings to be used during type checking.
+        if (t.is_a?(RDL::Type::BoundArgType))
+          arg_list << ", #{t.name}"
+          type_list << ", #{t.type.class}"
+        end
+      }
+      arg_list << ")"
+      type_list << ")"
+      code_type = RDL::Globals.parser.scan_str "#{type_list} -> RDL::Type::Type"
       (typ.args+[typ.ret]+[typ.block]).each { |t|
         if t.is_a?(RDL::Type::ComputedType)
           meth = cleanse_meth_name(meth)
           if klass.to_s.include?("::") ## hacky way around namespace issue
-            tmp_meth =  "def klass.tc_#{meth}#{count}(trec, targs) #{t.code}; end"
+            tmp_meth =  "def klass.tc_#{meth}#{count}#{arg_list} #{t.code}; end"
             tmp_eval = "klass = #{klass} ; #{tmp_meth}"
           else
-            tmp_meth = tmp_eval = "def #{klass}.tc_#{meth}#{count}(trec, targs) #{t.code}; end"
+            tmp_meth = tmp_eval = "def #{klass}.tc_#{meth}#{count}#{arg_list} #{t.code}; end"
           end
           eval tmp_eval
           ast = Parser::CurrentRuby.parse tmp_meth

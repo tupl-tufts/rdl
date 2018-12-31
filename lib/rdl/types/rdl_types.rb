@@ -42,3 +42,4 @@ RDL.type 'RDL::Globals', 'self.types', "() -> Hash<Symbol, RDL::Type::Type>", wr
 RDL.type 'RDL::Type::Parser', :scan_str, "(String) -> RDL::Type::Type", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Config', 'self.instance', "() -> RDL::Config", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Config', 'weak_update_promote', "() -> %bool", wrap: false, effect: [:+, :+]
+RDL.type "Object", '__getobj__', "() -> self", wrap: false, effect: [:+, :+] ## needed due to type casting

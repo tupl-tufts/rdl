@@ -11,7 +11,9 @@ module RDL::Type
       @name = name
       @type = type
       raise RuntimeError, "Attempt to create bound type with non-type" unless type.is_a? Type
-      raise RuntimeError, "Attempt to create doubly annotated type" if type.is_a? BoundArgType
+      raise RuntimeError, "Attempt to create doubly annotated type" if (type.is_a?(BoundArgType) || type.is_a?(AnnotatedArgType))
+      raise RuntimeError, "Cannot create bound type with optional type" if type.is_a? OptionalType
+      raise RuntimeError, "Cannot create bound type with variable argument type" if type.is_a? VarargType                                                                       
       super()
     end
 
