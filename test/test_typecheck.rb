@@ -1651,6 +1651,35 @@ class TestTypecheck < Minitest::Test
     }
   end
 
+  def test_dyn
+    # any method call on %dyn type return %dyn
+    self.class.class_eval {
+      type "(%dyn) -> %dyn", typecheck: :now
+      def self.do_add(x); x + 1; end
+    }
+
+    # any method can return a %dyn type
+    self.class.class_eval {
+      type "() -> %dyn", typecheck: :now
+      def self.ret_dyn; "blah"; end
+    }
+
+    # %dyn shouldn't violate existing type specifications
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        def inc(x); x + 1; end
+        def use_val; v = get_val; inc(v); end
+        def get_val; return "blah"; end
+
+        type :inc, '(Integer) -> Integer', typecheck: :error
+        type :use_val, '() -> Integer', typecheck: :error
+        type :get_val, '() -> %dyn', typecheck: :error
+
+        RDL.do_typecheck :error
+      }
+    }
+  end
+
   def test_method_missing
     skip "method_missing not supported yet"
     RDL.do_typecheck :later_mm1
