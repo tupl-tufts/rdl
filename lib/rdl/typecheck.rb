@@ -1240,6 +1240,8 @@ RUBY
         # treat as Proc
         tc_send_one_recv(scope, env, RDL::Globals.types[:proc], meth, tactuals, block, e)
       end
+    when RDL::Type::DynamicType
+      tmeth_inter = [trecv]
     else
       raise RuntimeError, "receiver type #{trecv} not supported yet, meth=#{meth}"
     end
@@ -1252,7 +1254,9 @@ RUBY
       # AT LEAST ONE of the possible intesection arms must match
       trets_tmp = []
       tmeth_inter.each { |tmeth| # MethodType
-        if ((tmeth.block && block) || (tmeth.block.nil? && block.nil?))
+        if tmeth.is_a? RDL::Type::DynamicType
+          trets_tmp << RDL::Type::DynamicType.new
+        elsif ((tmeth.block && block) || (tmeth.block.nil? && block.nil?))
           tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)
           if tmeth_inst
             tc_block(scope, env, tmeth.block, block, tmeth_inst) if block

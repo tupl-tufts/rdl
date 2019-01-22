@@ -86,6 +86,7 @@ require 'rdl/types/annotated_arg.rb'
 require 'rdl/types/bot.rb'
 require 'rdl/types/dependent_arg.rb'
 require 'rdl/types/dots_query.rb'
+require 'rdl/types/dynamic.rb'
 require 'rdl/types/finite_hash.rb'
 require 'rdl/types/generic.rb'
 require 'rdl/types/intersection.rb'
@@ -150,6 +151,7 @@ module RDL
       @types[:nil] = RDL::Type::NominalType.new NilClass # actually creates singleton type
       @types[:top] = RDL::Type::TopType.new
       @types[:bot] = RDL::Type::BotType.new
+      @types[:dyn] = RDL::Type::DynamicType.new
       @types[:object] = RDL::Type::NominalType.new Object
       @types[:true] = RDL::Type::NominalType.new TrueClass # actually creates singleton type
       @types[:false] = RDL::Type::NominalType.new FalseClass # also singleton type
@@ -171,7 +173,8 @@ module RDL
       # Hash from special type names to their values
       @special_types = {'%any' => @types[:top],
                         '%bot' => @types[:bot],
-                        '%bool' => @types[:bool]}
+                        '%bool' => @types[:bool],
+                        '%dyn' => @types[:dyn]}
     }
   end
 end

@@ -49,6 +49,9 @@ module RDL::Type
       return true if left.is_a? BotType
       return true if right.is_a? TopType
 
+      # dynamic
+      return true if right.is_a? DynamicType
+
       # type variables
       begin inst.merge!(left.name => right); return true end if inst && ileft && left.is_a?(VarType)
       begin inst.merge!(right.name => left); return true end if inst && !ileft && right.is_a?(VarType)
