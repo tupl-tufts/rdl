@@ -1469,9 +1469,13 @@ RUBY
           klass = '(singleton) ' + klass
         end
 
-        return nil if the_klass.to_s.start_with?('#<Class:') and name ==:new
+        if the_klass.to_s.start_with?('#<Class:') and name ==:new
+          return [RDL::Type::DynamicType.new] if RDL::Config.instance.assume_dyn_type && name != :initialize
+          return nil
+        end
       end
     }
+    return [RDL::Type::DynamicType.new] if RDL::Config.instance.assume_dyn_type && name != :initialize
     return nil
   end
 

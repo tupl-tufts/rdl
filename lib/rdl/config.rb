@@ -6,7 +6,7 @@ class RDL::Config
   attr_accessor :nowrap
   attr_accessor :gather_stats
   attr_reader :report # writer is custom defined
-  attr_accessor :type_defaults, :pre_defaults, :post_defaults
+  attr_accessor :type_defaults, :pre_defaults, :post_defaults, :assume_dyn_type
 
   def initialize
     @nowrap = Set.new # Set of symbols
@@ -17,6 +17,7 @@ class RDL::Config
     @type_defaults = { wrap: true, typecheck: false }
     @pre_defaults = { wrap: true }
     @post_defaults = { wrap: true }
+    @assume_dyn_type = false
   end
 
   def report=(val)
