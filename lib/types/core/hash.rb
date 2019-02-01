@@ -114,6 +114,8 @@ def Hash.hash_create_output_from_list(targs)
 end
 
 def Hash.hash_create_output(targs)
+  return hash_create_output_from_list(targs) if targs.size == 1
+
   raise RDL::Typecheck::StaticTypeError, "Hash.[] expects an even number of arguments. Have #{targs}." if targs.size.odd?
   args = RDL.type_cast([], "Array<%any>", force: true)
   i = -1
