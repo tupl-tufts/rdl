@@ -579,18 +579,33 @@ module RDL
 
   # Invokes all callbacks from rdl_at(sym), in unspecified order.
   # Afterwards, type checks all methods that had annotation `typecheck: sym' at type call, in unspecified order.
-  def self.do_typecheck(sym)
+  def self.do_typecheck(sym, log=nil)
     if RDL::Globals.to_do_at[sym]
       RDL::Globals.to_do_at[sym].each { |blk| blk.call(sym) }
     end
     RDL::Globals.to_do_at[sym] = Array.new
     return unless RDL::Globals.to_typecheck[sym]
+    num_errs = num_casts = time = 0
     RDL::Globals.to_typecheck[sym].each { |klass, meth|
+      print "Type checking #{RDL::Util.pp_klass_method(klass, meth)}... "
       t1 = Time.now
-      RDL::Typecheck.typecheck(klass, meth)
+      begin
+        RDL::Typecheck.typecheck(klass, meth)
+        puts "passed.".green      
+      rescue => e
+        num_errs += 1
+        puts "error found.".red
+        puts e
+      end
       t2 = Time.now
-      #puts "GOT #{t2 -t1} for #{[klass, meth]}"
+      time = time + (t2-t1)
+      num_casts += RDL::Typecheck.get_num_casts
     }
+    num_meths = RDL::Globals.to_typecheck[sym].size
+    puts "NUMBER OF METHODS CHECKED: #{num_meths}"
+    puts "NUMBER OF CASTS USED: #{num_casts}"
+    puts "NUMBER OF ERRORS FOUND: #{num_errs}"
+    puts "TIME TAKEN: #{time} seconds"
     RDL::Globals.to_typecheck[sym] = Set.new
     nil
   end
@@ -780,3 +795,17 @@ class SimpleDelegator
 
 end
 
+class String
+  # colorization
+  def colorize(color_code)
+    "\e[#{color_code}m#{self}\e[0m"
+  end
+
+  def red
+    colorize(31)
+  end
+
+  def green
+    colorize(32)
+  end
+end

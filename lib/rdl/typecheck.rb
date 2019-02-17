@@ -16,7 +16,7 @@ module RDL::Typecheck
 
     def handler_missing(node)
       node.children.each { |n| process n if n.is_a?(AST::Node) }
-    end
+    end    
 
     def on_def(node)
       # (def name args body)
@@ -258,6 +258,7 @@ module RDL::Typecheck
           body_type = RDL::Globals.types[:nil]
         else
           targs_dup = Hash[targs.map { |k, t| [k, t.copy] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
+          @num_casts = 0          
           _, body_type, body_effect = tc(scope, Env.new(targs_dup.merge(scope[:captured])), body)
         end
         old_captured, scope[:captured] = widen_scopes(old_captured, scope[:captured])
@@ -270,6 +271,10 @@ module RDL::Typecheck
       RDL::Util.to_class(klass).class_eval(new_meth) # redefine method in the same class
     end
     RDL::Globals.info.set(klass, meth, :typechecked, true)
+  end
+
+  def self.get_num_casts
+    return @num_casts
   end
 
   def self.effect_leq(e1, e2)
@@ -1294,6 +1299,7 @@ RUBY
     end
     sub_expr = e.children[2]
     env2, _ = tc(scope, env, sub_expr)
+    @num_casts += 1
     [env2, typ]
   end
 
@@ -1502,9 +1508,9 @@ RUBY
       ## need to promote in this case
         error :tuple_finite_hash_promote, ['precise string type', 'String'], e unless trecv.promote!
         trev = trecv.canonical
-        ts, es = lookup(scope, trecv.name, meth, e)
+        ts, es = lookup(scope, "String", meth, e)
         error :no_instance_method_type, [trecv.name, meth], e unless ts
-        inst = trecv.to_inst.merge(self: trecv)
+        inst = { self: RDL::Type::NominalType.new(String) } 
         self_klass = RDL::Util.to_class(trecv.name)
       end
     when RDL::Type::VarType
