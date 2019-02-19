@@ -1509,9 +1509,9 @@ RUBY
         error :tuple_finite_hash_promote, ['precise string type', 'String'], e unless trecv.promote!
         trev = trecv.canonical
         ts, es = lookup(scope, "String", meth, e)
-        error :no_instance_method_type, [trecv.name, meth], e unless ts
+        error :no_instance_method_type, ["String", meth], e unless ts
         inst = { self: RDL::Type::NominalType.new(String) } 
-        self_klass = RDL::Util.to_class(trecv.name)
+        self_klass = RDL::Util.to_class("String")
       end
     when RDL::Type::VarType
       error :recv_var_type, [trecv], e

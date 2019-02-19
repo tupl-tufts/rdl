@@ -579,7 +579,7 @@ module RDL
 
   # Invokes all callbacks from rdl_at(sym), in unspecified order.
   # Afterwards, type checks all methods that had annotation `typecheck: sym' at type call, in unspecified order.
-  def self.do_typecheck(sym, log=nil)
+  def self.do_typecheck(sym, nolog=nil)
     if RDL::Globals.to_do_at[sym]
       RDL::Globals.to_do_at[sym].each { |blk| blk.call(sym) }
     end
@@ -587,25 +587,30 @@ module RDL
     return unless RDL::Globals.to_typecheck[sym]
     num_errs = num_casts = time = 0
     RDL::Globals.to_typecheck[sym].each { |klass, meth|
-      print "Type checking #{RDL::Util.pp_klass_method(klass, meth)}... "
+      print "Type checking #{RDL::Util.pp_klass_method(klass, meth)}... " if nolog.nil?
       t1 = Time.now
       begin
         RDL::Typecheck.typecheck(klass, meth)
-        puts "passed.".colorize(:green)
+        puts "passed.".colorize(:green) if nolog.nil?
       rescue => e
         num_errs += 1
-        puts "error found.".colorize(:red)
-        puts e
+        if nolog.nil?
+          puts "error found.".colorize(:red)
+          puts e
+        end
       end
       t2 = Time.now
       time = time + (t2-t1)
       num_casts += RDL::Typecheck.get_num_casts
     }
     num_meths = RDL::Globals.to_typecheck[sym].size
-    puts "NUMBER OF METHODS CHECKED: #{num_meths}"
-    puts "NUMBER OF CASTS USED: #{num_casts}"
-    puts "NUMBER OF ERRORS FOUND: #{num_errs}"
-    puts "TIME TAKEN: #{time} seconds"
+    if nolog.nil?
+      puts "\n****************************************\n"
+      puts "Number of methods checked: #{num_meths}"
+      puts "Number of casts used: #{num_casts}"
+      puts "Number of errors found: #{num_errs}"
+      puts "Time taken: #{time} seconds"
+    end
     RDL::Globals.to_typecheck[sym] = Set.new
     nil
   end
