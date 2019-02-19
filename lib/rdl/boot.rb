@@ -2,6 +2,7 @@ require 'delegate'
 require 'digest'
 require 'set'
 require 'parser/current'
+require 'colorize'
 require 'bigdecimal' ## needed for now to avoid "undefined constant" errors
 
 module RDL

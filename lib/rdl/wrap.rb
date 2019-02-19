@@ -591,10 +591,10 @@ module RDL
       t1 = Time.now
       begin
         RDL::Typecheck.typecheck(klass, meth)
-        puts "passed.".green      
+        puts "passed.".colorize(:green)
       rescue => e
         num_errs += 1
-        puts "error found.".red
+        puts "error found.".colorize(:red)
         puts e
       end
       t2 = Time.now
