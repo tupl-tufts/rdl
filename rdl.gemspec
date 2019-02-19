@@ -19,4 +19,5 @@ EOF
   s.homepage    = 'https://github.com/plum-umd/rdl'
   s.license     = 'BSD-3-Clause'
   s.add_runtime_dependency 'parser', '~>2.3', '>= 2.3.1.4'
+  s.add_runtime_dependency 'colorize'
 end

@@ -36,6 +36,7 @@ RDL.type 'RDL::Type::VarargType', :initialize, '(RDL::Type::Type) -> self', wrap
 RDL.type 'RDL::Type::VarType', :initialize, "(String) -> self", wrap: false, effect: [:+, :+]
 
 RDL.type "RDL::Type::Type", 'self.leq', "(RDL::Type::Type, RDL::Type::Type) -> %bool", wrap: false, effect: [:+, :+]
+RDL.type "RDL::Type::Type", :<=, "(RDL::Type::Type) -> %bool", wrap: false, effect: [:+, :+]
 
 RDL.type 'RDL::Globals', 'self.parser', "() -> RDL::Type::Parser", wrap: false, effect: [:+, :+]
 RDL.type 'RDL::Globals', 'self.types', "() -> Hash<Symbol, RDL::Type::Type>", wrap: false, effect: [:+, :+]

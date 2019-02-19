@@ -794,7 +794,7 @@ class SimpleDelegator
   end
 
 end
-
+=begin
 class String
   # colorization
   def colorize(color_code)
@@ -809,3 +809,4 @@ class String
     colorize(32)
   end
 end
+=end

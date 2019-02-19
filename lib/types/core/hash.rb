@@ -103,13 +103,15 @@ RDL.type :Hash, 'self.[]', '(*%any) -> ``hash_create_output(targs)``'
 
 def Hash.hash_create_output_from_list(targs)
   raise RDL::Typecheck::StaticTypeError, "Hash[...] expect only 1 argument. Have #{targs}." if targs.size > 1
-  raise RDL::Typecheck::StaticTypeError, "The argument has to be an array or tuple" unless (targs[0].is_a?(RDL::Type::GenericType) && targs[0].base.klass == Array)
+  raise RDL::Typecheck::StaticTypeError, "The argument has to be an array or tuple" unless (targs[0].is_a?(RDL::Type::GenericType) && RDL.type_cast(targs[0], "RDL::Type::GenericType").base.klass == Array)
 
-  case targs[0].params[0]
+  arg0 = RDL.type_cast(targs[0], "RDL::Type::GenericType")
+  arg0param0 = arg0.params[0]
+  case arg0param0
   when RDL::Type::GenericType
-    return RDL::Globals.parser.scan_str "#T Hash<#{targs[0].params[0].params[0]}, #{targs[0].params[0].params[0]}>"
+    return RDL::Globals.parser.scan_str "#T Hash<#{arg0param0.params[0]}, #{arg0param0.params[0]}>"
   when RDL::Type::TupleType
-    return RDL::Type::GenericType.new(RDL::Type::NominalType.new(Hash), targs[0].params[0].params[0], targs[0].params[0].params[1])
+    return RDL::Type::GenericType.new(RDL::Type::NominalType.new(Hash), arg0param0.params[0], arg0param0.params[1])
   end
 end
 
@@ -127,6 +129,8 @@ def Hash.hash_create_output(targs)
 =end
   RDL::Type::FiniteHashType.new(RDL.type_cast(Hash[*args], "Hash<%any, RDL::Type::Type>", force: true), nil)
 end
+
+RDL.type Hash, 'self.hash_create_output_from_list', "(Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 RDL.type Hash, 'self.hash_create_output', "(Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 RDL.type :Hash, :[], '(``any_or_k(trec)``) -> ``output_type(trec, targs, :[], :promoted_val, "v", nil_default: true)``', effect: [:+, :+]
