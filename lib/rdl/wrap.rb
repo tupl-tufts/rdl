@@ -587,7 +587,11 @@ module RDL
     return unless RDL::Globals.to_typecheck[sym]
     num_errs = num_casts = time = 0
     RDL::Globals.to_typecheck[sym].each { |klass, meth|
-      print "Type checking #{RDL::Util.pp_klass_method(klass, meth)}... " if nolog.nil?
+      if tlc
+        print "Type and termination checking helper method #{RDL::Util.pp_klass_method(klass, meth)}..."
+      else
+        print "Type checking #{RDL::Util.pp_klass_method(klass, meth)}... " if nolog.nil?
+      end
       t1 = Time.now
       begin
         RDL::Typecheck.typecheck(klass, meth)
