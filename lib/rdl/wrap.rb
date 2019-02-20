@@ -579,7 +579,7 @@ module RDL
 
   # Invokes all callbacks from rdl_at(sym), in unspecified order.
   # Afterwards, type checks all methods that had annotation `typecheck: sym' at type call, in unspecified order.
-  def self.do_typecheck(sym, nolog=nil)
+  def self.do_typecheck(sym, nolog=nil, tlc=false)
     if RDL::Globals.to_do_at[sym]
       RDL::Globals.to_do_at[sym].each { |blk| blk.call(sym) }
     end
@@ -604,7 +604,7 @@ module RDL
       num_casts += RDL::Typecheck.get_num_casts
     }
     num_meths = RDL::Globals.to_typecheck[sym].size
-    if nolog.nil?
+    if !tlc && nolog.nil?
       puts "\n****************************************\n"
       puts "Number of methods checked: #{num_meths}"
       puts "Number of casts used: #{num_casts}"
@@ -620,6 +620,7 @@ module RDL
     count = 1
     #code_type = RDL::Globals.parser.scan_str "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
     RDL::Globals.dep_types.each { |klass, meth, typ|
+      print "Type and termination checking the type-level code for annotation of RDL::Util.pp_klass_method(klass, meth)..."
       klass = RDL::Util.has_singleton_marker(klass) ? RDL::Util.remove_singleton_marker(klass) : klass
       binds = {}
       arg_list = "(trec, targs"
@@ -645,12 +646,19 @@ module RDL
           end
           eval tmp_eval
           ast = Parser::CurrentRuby.parse tmp_meth
-          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type], [[:-, :+]]) 
+          begin
+            RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type], [[:-, :+]])
+            puts "passed.".colorize(:green)
+          rescue => e
+            puts "error found.".colorize(:red)
+            puts e
+          end          
           count += 1
         end
       }
     }
-    RDL.do_typecheck :type_code
+    puts "Now type checking helper methods called from type-level code..."
+    RDL.do_typecheck :type_code, nil, true
     RDL.config { |config| config.use_dep_types = true }
     true
   end

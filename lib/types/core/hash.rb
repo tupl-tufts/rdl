@@ -156,7 +156,7 @@ def Hash.assign_output(trec, targs)
     RDL::Globals.parser.scan_str "#T v"
   end
 end
-RDL.type Hash, 'self.assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:-, :+]
 
 RDL.type :Hash, :store, '(``any_or_k(trec)``, ``any_or_v(trec)``) -> ``assign_output(trec, targs)``'
 RDL.type :Hash, :assoc, '(``any_or_k(trec)``) -> ``RDL::Type::TupleType.new(targs[0], output_type(trec, targs, :[], :promoted_val, "v", nil_default: true))``'
@@ -331,7 +331,7 @@ def Hash.merge_output(trec, targs, mutate=false)
   end
 
 end
-RDL.type Hash, 'self.merge_output', "(RDL::Type::Type, Array<RDL::Type::Type>, ?%bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.merge_output', "(RDL::Type::Type, Array<RDL::Type::Type>, ?%bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:-, :+]
 
 RDL.type :Hash, :merge, '(Hash<a,b>) { (k,v,b) -> v or b } -> Hash<a or k, b or v>'
 RDL.type :Hash, :rassoc, '(``any_or_v(trec)``) -> ``RDL::Type::TupleType.new(output_type(trec, targs, :key, :promoted_key, "k", nil_default: true, use_sing_val: false),targs[0])``'
@@ -369,7 +369,7 @@ def Hash.values_at_input(trec)
     RDL::Type::VarargType.new(RDL::Type::VarType.new("k"))
   end
 end
-RDL.type Hash, 'self.values_at_input', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.values_at_input', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:-, :+]
 
 
 def Hash.values_at_output(trec, targs)
@@ -389,7 +389,7 @@ def Hash.values_at_output(trec, targs)
     RDL::Globals.parser.scan_str "#T Array<v>"
   end
 end
-RDL.type Hash, 'self.values_at_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Hash, 'self.values_at_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:-, :+]
 
 
 

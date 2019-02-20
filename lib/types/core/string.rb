@@ -67,7 +67,7 @@ def String.string_promote!(trec)
   end
 end
 
-RDL.type String, 'self.string_promote!', "(%any) -> RDL::Type::Type", effect: [:~, :+]
+RDL.type String, 'self.string_promote!', "(%any) -> RDL::Type::Type", effect: [:-, :+]
 
 
 RDL.type :String, :initialize, '(?String str) -> self new_str'

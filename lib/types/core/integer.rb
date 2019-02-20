@@ -13,7 +13,7 @@ def Numeric.sing_or_type(trec, targs, meth, type)
     RDL::Globals.parser.scan_str "#T #{type}"
   end
 end
-RDL.type Numeric, 'self.sing_or_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, String) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Numeric, 'self.sing_or_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, String) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:-, :+]
 
 
 RDL.type :Integer, :%, '(Integer x {{ x!=0 }}) -> ``sing_or_type(trec, targs, :%, "Integer")``'
