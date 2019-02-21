@@ -624,7 +624,7 @@ module RDL
     count = 1
     #code_type = RDL::Globals.parser.scan_str "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
     RDL::Globals.dep_types.each { |klass, meth, typ|
-      print "Type and termination checking the type-level code for annotation of RDL::Util.pp_klass_method(klass, meth)..."
+      print "Type and termination checking the type-level code for annotation of #{RDL::Util.pp_klass_method(klass, meth)}..."
       klass = RDL::Util.has_singleton_marker(klass) ? RDL::Util.remove_singleton_marker(klass) : klass
       binds = {}
       arg_list = "(trec, targs"
