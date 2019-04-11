@@ -6,6 +6,7 @@ class TestIntersection < Minitest::Test
   include RDL::Type
 
   def setup
+    RDL.reset
     @parser = RDL::Type::Parser.new
 
     @integer = NominalType.new(Integer)

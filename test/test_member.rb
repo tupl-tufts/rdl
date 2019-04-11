@@ -1,6 +1,7 @@
 require 'minitest/autorun'
 $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
+RDL.reset
 
 class TestMember < Minitest::Test
   include RDL::Type
@@ -15,6 +16,7 @@ class TestMember < Minitest::Test
   end
 
   def setup
+    RDL.reset
     @tbasicobject = NominalType.new "BasicObject"
     @tsymfoo = SingletonType.new :foo
     @tarraystring = GenericType.new(RDL::Globals.types[:array], RDL::Globals.types[:string])

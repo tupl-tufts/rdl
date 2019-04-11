@@ -565,6 +565,12 @@ type MyClass, :foo, '(a: Integer, b: String) { () -> %any } -> %any'
 ```
 Here `foo`, takes a hash where key `:a` is mapped to an `Integer` and key `:b` is mapped to a `String`. Similarly, `{'a'=>Integer, 2=>String}` types a hash where keys `'a'` and `2` are mapped to `Integer` and `String`, respectively. Both syntaxes can be used to define hash types.
 
+Value types can also be declared as optional, indicating that the key/value pair is an optional part of the hash:
+```ruby
+type MyClass, :foo, '(a: Integer, b: ?String) { () -> %any } -> %any'
+```
+With this type, `foo` takes a hash where key `:a` is mapped to an `Integer`, and furthermore the hash may or may not include a key `:b` that is mapped to a `String`. 
+
 RDL also allows a "rest" type in finite hashes (of course, they're not so finite if they use it!):
 ```ruby
 type MyClass, :foo, '(a: Integer, b: String, **Float) -> %any'
@@ -770,25 +776,28 @@ The following methods are available in `RDL::Annotate`.
 
 The methods above can also be accessed as `rdl_method` after `extend RDL::RDLAnnotate`. They can also be accessed as `RDL.method`, but when doing so, however, the `klass` and `meth` arguments are not optional and must be specified. The `RDL` module also includes several other useful methods:
 
-* `RDL.type_alias '%name', typ` - indicates that if `%name` appears in a type annotations, it should be expanded to `typ`.
-
-* `RDL.nowrap [klass]`, if called at the top-level of a class, causes RDL to behave as if `wrap: false` were passed to all `type`, `pre`, and `post` calls in `klass`. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead. If `klass` is omitted it's assumed to be `self`.
-
-* `RDL.do_typecheck(sym)` statically type checks all methods whose type annotations include argument `typecheck: sym`.
-
 * `RDL.at(sym, &blk)` invokes `blk.call(sym)` when `RDL.do_typecheck(sym)` is called. Useful when type annotations need to be generated at some later time, e.g., because not all classes are loaded.
-
-* `RDL.note_type e` - evaluates `e` and returns it at run time. During static type checking, prints out the type of `e`.
-
-* `RDL.remove_type klass, meth` removes the type annotation for meth in klass. Fails if meth does not have a type annotation.
-
-* `RDL.insantiate!(var, typ1, ...)` - `var` must have a generic type. Instantiates the type of `x` with type parameters `typ1`, ...
 
 * `RDL.deinsantiate!(var)` - remove `var`'s instantiation.
 
-* `RDL.type_cast(e, typ, force: false)` - evaluate `e` and return it at run time. During dynamic contract checking, the returned object will have `typ` associated with it. If `force` is `false`, will also check that `e`'s run-time type is compatible with `typ`. If `force` is true then `typ` will be applied regardless of `e`'s type. During static type checking, the type checker will treat the object returned by `type_cast` has having type `typ`.
+* `RDL.do_typecheck(sym)` statically type checks all methods whose type annotations include argument `typecheck: sym`.
+
+* `RDL.insantiate!(var, typ1, ...)` - `var` must have a generic type. Instantiates the type of `x` with type parameters `typ1`, ...
+
+* `RDL.note_type e` - evaluates `e` and returns it at run time. During static type checking, prints out the type of `e`.
+
+* `RDL.nowrap [klass]`, if called at the top-level of a class, causes RDL to behave as if `wrap: false` were passed to all `type`, `pre`, and `post` calls in `klass`. This is mostly used for the core and standard libraries, which have trustworthy behavior hence enforcing their types and contracts is not worth the overhead. If `klass` is omitted it's assumed to be `self`.
 
 * `RDL.query` prints information about types; see below for details.
+
+* `RDL.remove_type klass, meth` removes the type annotation for meth in klass. Fails if meth does not have a type annotation.
+
+* `RDL.reset` resets all global state stored internally inside RDL back to their original settings. Note: this is really only for internal RDL testing, as it doesn't completely undo RDL's effect (e.g., wrapped methods will be broken by a reset).
+
+* `RDL.type_alias '%name', typ` - indicates that if `%name` appears in a type annotations, it should be expanded to `typ`.
+
+* `RDL.type_cast(e, typ, force: false)` - evaluate `e` and return it at run time. During dynamic contract checking, the returned object will have `typ` associated with it. If `force` is `false`, will also check that `e`'s run-time type is compatible with `typ`. If `force` is true then `typ` will be applied regardless of `e`'s type. During static type checking, the type checker will treat the object returned by `type_cast` has having type `typ`.
+
 
 
 # Performance

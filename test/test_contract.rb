@@ -5,6 +5,10 @@ require 'rdl'
 class TestContract < Minitest::Test
   include RDL::Contract
 
+  def setup
+    RDL.reset
+  end
+  
   def test_flat
     pos = FlatContract.new("Positive") { |x| x > 0 }
     assert_equal "Positive", pos.to_s

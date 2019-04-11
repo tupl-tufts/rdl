@@ -9,6 +9,10 @@ class TestTypes < Minitest::Test
   class B; end
   class C; end
 
+  def setup
+    RDL.reset
+  end
+
   def test_nil_top
     tnil = NominalType.new :NilClass
     assert_equal RDL::Globals.types[:nil], tnil
@@ -219,5 +223,10 @@ class TestTypes < Minitest::Test
     assert_equal tmethbAABn, tmethbAABn.instantiate(inst)
     assert_equal tmethbssfn, tmethbaabn.instantiate(inst)
     assert_equal tstructinst, tstructorig.instantiate(inst)
+  end
+
+  def test_canonical
+    t = RDL::Globals.parser.scan_str '#T Array<Fixnum or Fixnum>'
+    assert_equal 'Array<Fixnum>', t.canonical.to_s
   end
 end
