@@ -184,7 +184,6 @@ class TestDynChecks < Minitest::Test
       RDL::Config.instance.check_comp_types = true
       RDL::Config.instance.rerun_comp_types = true
       
-      puts "ABOUT TO TYPE CHECK foo2"
       type "(Integer) -> Integer", typecheck: :now, wrap: false ## will type check fine
       def foo2(x)
         bar(x)
