@@ -8,7 +8,7 @@ class TestStringTypes < Minitest::Test
   extend RDL::Annotate
 
   def setup
-    require 'types/core'
+    RDL.reset
     RDL.readd_comp_types
   end  
 

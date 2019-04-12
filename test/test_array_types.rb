@@ -7,7 +7,7 @@ class TestArrayTypes < Minitest::Test
   extend RDL::Annotate
 
   def setup
-    require 'types/core'
+    RDL.reset
     RDL.readd_comp_types
     RDL.type_params :Array, [:t], :all? unless RDL::Globals.type_params["Array"]
     RDL.type_params(:Range, [:t], nil, variance: [:+]) { |t| t.member?(self.begin) && t.member?(self.end) } unless RDL::Globals.type_params["Range"]
