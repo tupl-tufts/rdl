@@ -6,25 +6,28 @@ require 'types/core'
 class TestDynChecks < Minitest::Test
   extend RDL::Annotate
 
-  type :bar, "(Integer) -> ``RDL::Type::SingletonType.new(2)``", wrap: false
+  RDL::Config.instance.check_comp_types = true
+  RDL::Config.instance.rerun_comp_types = true
+
+  type :bar1, "(Integer) -> ``RDL::Type::SingletonType.new(2)``", wrap: false
   
   type "(Integer) -> Integer", typecheck: :now, wrap: false
-  def foo(x)
-    bar(x)
+  def foo1(x)
+    bar1(x)
   end
 
-  ## First, a silly example. `bar` (defined below) always returns 1, but its comp type says it always returns 2.
-  ## `foo` will type check properly, but the `bar` error won't be caught until `foo` is called after type checking.
-  def test_foo_fail
-    self.class.class_eval("def bar(x) 1; end")
-    assert_raises(RDL::Type::TypeError) { self.class.new(nil).foo(1) }
+  ## First, a silly example. `bar1` (defined below) always returns 1, but its comp type says it always returns 2.
+  ## `foo1` will type check properly, but the `bar1` error won't be caught until `foo` is called after type checking.
+  def test_foo1_fail
+    self.class.class_eval("def bar1(x) 1; end")
+    assert_raises(RDL::Type::TypeError) { self.class.new(nil).foo1(1) }
   end
 
-  ## If we redefine `bar`, it should work.
+  ## If we redefine `bar1`, it should work.
 
-  def test_foo_pass
-    self.class.class_eval("def bar(x) 2; end")
-    assert self.class.new(nil).foo(1)
+  def test_foo1_pass
+    self.class.class_eval("def bar1(x) 2; end")
+    assert self.class.new(nil).foo1(1)
   end
 
 
@@ -137,8 +140,8 @@ class TestDynChecks < Minitest::Test
 
   class CompFail
     extend RDL::Annotate
-    @@compfail = 1
-
+    #@@compfail = 1
+=begin
     def self.get_val()
       @@compfail
     end
@@ -156,13 +159,49 @@ class TestDynChecks < Minitest::Test
     def foo(x)
       bar(x)
     end
+=end
   end
 
   def test_rerun_comp_type
-    assert CompFail.new.foo(1) ## will run fine
+    CompFail.class_eval {
+      #RDL::Config.instance.check_comp_types = true
+      #RDL::Config.instance.rerun_comp_types = true
+
+      @@compfail = 1
+      def self.get_val()
+        @@compfail
+      end
+
+      def self.set_val(v)
+        @@compfail = v
+      end
+
+      type "(``if (get_val == 1) then RDL::Globals.types[:integer] else RDL::Type::UnionType.new(RDL::Globals.types[:integer], RDL::Globals.types[:string]) end``) -> Integer", wrap: false ## pathological type depending on @@compfail
+      def bar(x)
+        x
+      end
+
+      RDL::Config.instance.check_comp_types = true
+      RDL::Config.instance.rerun_comp_types = true
+      
+      puts "ABOUT TO TYPE CHECK foo2"
+      type "(Integer) -> Integer", typecheck: :now, wrap: false ## will type check fine
+      def foo2(x)
+        bar(x)
+      end
+    }
+
+    ## These are needed out here too due to weird orderings involving RDL.reset.
+    assert CompFail.new.foo2(1) ## will run fine
     CompFail.set_val(2) ## change heap
-    assert_raises(RDL::Type::TypeError) { CompFail.new.foo(1) }
+    assert_raises(RDL::Type::TypeError) { CompFail.new.foo2(1) }
+
+    RDL::Config.instance.check_comp_types = false
+    RDL::Config.instance.rerun_comp_types = false
   end
+
+  RDL::Config.instance.check_comp_types = false
+  RDL::Config.instance.rerun_comp_types = false
   
   
 end

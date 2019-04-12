@@ -137,7 +137,6 @@ class << RDL::Globals
   attr_reader :special_types
 end
 
-require 'rdl/types/rdl_types.rb'
 module RDL
   def self.reset
     RDL::Globals.module_eval {
@@ -191,4 +190,4 @@ module RDL
 end
 
 RDL.reset
-
+require 'rdl/types/rdl_types.rb'

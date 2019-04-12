@@ -360,8 +360,8 @@ RDL.type :String, :to_c, '() -> Complex'
 RDL.type :String, :to_f, '() -> ``output_type(trec, targs, :to_f, "Float")``'
 RDL.type :String, :to_i, '(?Integer) -> ``output_type(trec, targs, :to_i, "Integer")``'
 RDL.type :String, :to_r, '() -> Rational'
-RDL.type :String, :to_s, '() -> ``output_type(trec, targs, :to_s, "String")``', effect: [:+, :+]
-RDL.type :String, :to_str, '() -> ``output_type(trec, targs, :to_str, "String")``'
+RDL.type :String, :to_s, '() -> self', effect: [:+, :+]
+RDL.type :String, :to_str, '() -> self'
 RDL.type :String, :to_sym, '() -> ``output_type(trec, targs, :to_sym, "Symbol")``', effect: [:+, :+]
 RDL.type :String, :tr, '(String, String) -> ``output_type(trec, targs, :tr, "String")``'
 RDL.type :String, :tr!, '(String, String) -> ``string_promote!(trec)``'

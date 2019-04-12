@@ -1551,20 +1551,13 @@ RUBY
             tmeth = tmeth_res = compute_types(tmeth, self_klass, trecv, tactuals_expanded, binds) unless binds.nil?
             comp_type = true
           end
-          ### TODO: change below once figuring out a way of promote!-ing without side-effect.
-=begin
-          if trecv.is_a?(RDL::Type::FiniteHashType) && trecv.the_hash
-            trecv = trecv.canonical
-            inst = trecv.to_inst.merge(self: trecv)
-          end
-=end
           tmeth = tmeth.instantiate(inst) if inst
           tmeth_names << tmeth
           tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)
           if tmeth_inst
             effblock = tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
             if es
-              es = es.map { |e| e.clone } 
+              es = es.map { |e| if e.nil? then e else e.clone end } 
               es.each { |e| ## expecting just one effect per method right now. can clean this up later.
                 if !e.nil? && (e[1] == :blockdep || e[0] == :blockdep)
                   raise "Got block-dependent effect, but no block." unless block && effblock

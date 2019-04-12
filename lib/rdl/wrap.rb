@@ -339,7 +339,11 @@ module RDL::Annotate
                           raise err
                         end
     effect[0] = :- if effect && effect[0] == :~ ## For now, treating pure-ish :~ as :-, since we realized it doesn't actually affect termination checking.
-    typs = type.args + [type.ret, type.block]
+    typs = type.args + [type.ret]
+    if type.block
+      block_type = type.block.is_a?(RDL::Type::OptionalType) ? type.block.type : type.block
+      typs = typs + block_type.args + [block_type.ret]
+    end
     RDL::Globals.dep_types << [klass, meth, type] if typs.any? { |t| t.is_a?(RDL::Type::ComputedType) || (t.is_a?(RDL::Type::BoundArgType) && t.type.is_a?(RDL::Type::ComputedType)) }
     if meth
 # It turns out Ruby core/stdlib don't always follow this convention...
@@ -374,6 +378,10 @@ module RDL::Annotate
                                                typecheck: typecheck, effect: effect}]
     end
     nil
+  end
+
+  def readd_comp_types
+    RDL::Globals.dep_types.each { |klass, meth, t| RDL::Globals.info.add(klass, meth, :type, t) unless meth.nil? }
   end
 
   # [+ klass +] is the class containing the variable; self if omitted; ignored for local and global variables

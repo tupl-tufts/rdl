@@ -135,7 +135,6 @@ end
 
 class SingletonInheritA
   extend RDL::Annotate
-  type 'self.foo', '(Integer) -> Integer'
 end
 
 class SingletonInheritB < SingletonInheritA; end
@@ -147,6 +146,12 @@ class TestTypecheck < Minitest::Test
   def setup
     RDL.reset
     RDL.type TestTypecheck, :_any_object, '() -> Object', wrap: false # a method that could return true or false
+    RDL.readd_comp_types
+    RDL.type_params :Hash, [:k, :v], :all? unless RDL::Globals.type_params["Hash"]
+    RDL.type_params :Array, [:t], :all? unless RDL::Globals.type_params["Array"]
+    RDL.rdl_alias :Array, :size, :length 
+    RDL.type_params 'RDL::Type::SingletonType', [:t], :satisfies? unless RDL::Globals.type_params["RDL::Type::SingletonType"]
+=begin
     RDL.type_params :Array, [:t], :all?
     RDL.type :Array, :[]=, '(Integer, t) -> t', wrap: false
     RDL.type :Array, :[]=, '(Integer, Integer, t) -> t', wrap: false
@@ -164,15 +169,18 @@ class TestTypecheck < Minitest::Test
     RDL.rdl_alias :Array, :size, :length
     RDL.type :Hash, :[], '(k) -> v', wrap: false
     RDL.type :Hash, :[]=, '(k, v) -> v', wrap: false
-    RDL.type_params(:Range, [:t], nil, variance: [:+]) { |t| t.member?(self.begin) && t.member?(self.end) }
+=end
+    RDL.type_params(:Range, [:t], nil, variance: [:+]) { |t| t.member?(self.begin) && t.member?(self.end) } unless RDL::Globals.type_params["Range"]
     RDL.type :Range, :each, '() { (t) -> %any } -> self'
     RDL.type :Range, :each, '() -> Enumerator<t>'
+=begin
     RDL.type :Integer, :<, '(Integer) -> %bool', wrap: false
     RDL.type :Integer, :>, '(Integer) -> %bool', wrap: false
     RDL.type :Integer, :>=, '(Integer) -> %bool', wrap: false
     RDL.type :Integer, :+, '(Integer) -> Integer', wrap: false
     RDL.type :Integer, :&, '(Integer) -> Integer', wrap: false
     RDL.type :Integer, :*, '(Integer) -> Integer', wrap: false
+=end
     RDL.type :Integer, :to_s, '() -> String', wrap: false
     RDL.type :Fixnum, :<, '(Integer) -> %bool', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
     RDL.type :Fixnum, :>, '(Integer) -> %bool', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
@@ -188,10 +196,10 @@ class TestTypecheck < Minitest::Test
     RDL.type :Kernel, :raise, '(Exception, ?String, ?Array<String>) -> %bot', wrap: false
     RDL.type :Object, :===, '(%any other) -> %bool', wrap: false
     RDL.type :Object, :clone, '() -> self', wrap: false
-    RDL.type :String, :*, '(Integer) -> String', wrap: false
-    RDL.type :String, :+, '(String) -> String', wrap: false
-    RDL.type :String, :===, '(%any) -> %bool', wrap: false
-    RDL.type :String, :length, '() -> Integer', wrap: false
+#    RDL.type :String, :*, '(Integer) -> String', wrap: false
+#    RDL.type :String, :+, '(String) -> String', wrap: false
+#    RDL.type :String, :===, '(%any) -> %bool', wrap: false
+#    RDL.type :String, :length, '() -> Integer', wrap: false
     RDL.type :NilClass, :&, '(%any obj) -> false', wrap: false
     @t3 = RDL::Type::SingletonType.new 3
     @t4 = RDL::Type::SingletonType.new 4
@@ -1901,7 +1909,9 @@ class TestTypecheck < Minitest::Test
     end
   end
 
+  
   def test_sing_method_inheritence
+    RDL.type SingletonInheritA, 'self.foo', '(Integer) -> Integer'
     self.class.class_eval do
       type '(Integer) -> Integer', typecheck: :now
       def calls_inherited_sing_meth(x)

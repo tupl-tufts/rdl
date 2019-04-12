@@ -22,8 +22,8 @@ class RDL::Config
     @post_defaults = { wrap: true }
     @widen_bound = 5
     @use_dep_types = true
-    @check_comp_types = true ## this for dynamically checking that the result of a computed type still holds
-    @rerun_comp_types = true ## this is for dynamically checking that a type computation still evaluates to the same thing as it did at type checking time
+    @check_comp_types = false ## this for dynamically checking that the result of a computed type still holds
+    @rerun_comp_types = false ## this is for dynamically checking that a type computation still evaluates to the same thing as it did at type checking time
   end
 
   def report=(val)
