@@ -2,6 +2,7 @@
 # null allowed
 
 RDL.type_alias '%symstr', 'Symbol or String'
+RDL.type_alias '%jsonb', 'String or Float or Integer or Hash or Array or %bool' 
 
 class RDL::Rails
 
@@ -9,8 +10,10 @@ class RDL::Rails
   # returns a String containing an RDL type
   def self.column_to_rdl(rails_type)
     case rails_type
-    when :string, :text, :binary
+    when :string, :text, :binary, :uuid, :jsonb
       return 'String'
+    when :jsonb
+      return '%jsonb'
     when :integer
       return 'Fixnum'
     when :float
