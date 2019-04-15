@@ -1,6 +1,6 @@
 RDL.nowrap :Dir
 
-RDL.rdl_alias :Dir, :[], :glob
+RDL.rdl_alias :Dir, :'self.[]', :'self.glob'
 
 RDL.type :Dir, 'self.chdir', '(?(String or Pathname)) -> 0'
 RDL.type :Dir, 'self.chdir', '(?(String or Pathname)) { (String) -> u } -> u'

@@ -62,7 +62,7 @@ RDL.type :IO, :ioctl, '(Integer integer_cmd, String or Integer arg) -> Integer'
 RDL.type :IO, :isatty, '() -> %bool'
 RDL.type :IO, :lineno, '() -> Integer'
 RDL.type :IO, :lineno=, '(Integer) -> Integer'
-RDL.rdl_alias :IO, :lines, :each_line # deprecated
+RDL.rdl_alias :IO, :lines, :each # deprecated
 RDL.type :IO, :pid, '() -> Integer'
 RDL.type :IO, :pos, '() -> Integer'
 RDL.type :IO, :pos=, '(Integer) -> Integer'

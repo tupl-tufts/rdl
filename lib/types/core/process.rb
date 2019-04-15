@@ -86,7 +86,6 @@ RDL.nowrap :'Process::Status'
  RDL.type :'Process::Status', :success?, '() -> %bool'
  RDL.type :'Process::Status', :termsig, '() -> Integer or nil'
  RDL.type :'Process::Status', :to_i, '() -> Integer'
-RDL.rdl_alias :'Process::Status', :to_int, :to_i
 RDL.type :'Process::Status', :to_s, '() -> String'
 
 RDL.nowrap :'Process::Sys'
