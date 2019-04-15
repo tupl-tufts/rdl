@@ -28,7 +28,7 @@ class TestGeneric < Minitest::Test
   class B
     extend RDL::Annotate
     # class for checking other variance annotations
-    type_params [:a, :b], nil, variance: [:+, :-] { |a, b| true }
+    type_params([:a, :b], nil, variance: [:+, :-]) { |a, b| true }
     type "(a) -> nil"
     def m1(x)
       nil
