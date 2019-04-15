@@ -980,7 +980,7 @@ RUBY
       when RDL::Type::NominalType
         self_klass = tcollect.klass
         teaches, eeaches = lookup(scope, tcollect.name, :each, e.children[1])
-        teaches = filter_comp_types(teaches, RDL::Config.instance.use_dep_types)
+        teaches = filter_comp_types(teaches, RDL::Config.instance.use_comp_types)
       when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType, RDL::Type::PreciseStringType
         unless tcollect.is_a? RDL::Type::GenericType
           error :tuple_finite_hash_promote, (if tcollect.is_a? RDL::Type::TupleType then ['tuple', 'Array'] elsif tcollect.is_a? RDL::Type::PreciseStringType then ['precise string', 'String'] else ['finite hash', 'Hash'] end), e.children[1] unless tcollect.promote!
@@ -988,7 +988,7 @@ RUBY
         end
         self_klass = tcollect.base.klass
         teaches, eeaches = lookup(scope, tcollect.base.name, :each, e.children[1])
-        teaches = filter_comp_types(teaches, RDL::Config.instance.use_dep_types)
+        teaches = filter_comp_types(teaches, RDL::Config.instance.use_comp_types)
         inst = tcollect.to_inst.merge(self: tcollect)
         teaches = teaches.map { |typ|
           block_types = (if typ.block then typ.block.args + [typ.block.ret] else [] end)
@@ -1461,7 +1461,7 @@ RUBY
       inst = trecv.to_inst.merge(self: trecv)
       self_klass = RDL::Util.to_class(trecv.base.name)
     when RDL::Type::TupleType
-      if RDL::Config.instance.use_dep_types
+      if RDL::Config.instance.use_comp_types
         ts, es = lookup(scope, "Array", meth, e)
         error :no_instance_method_type, ["Array", meth], e unless ts
         #inst = trecv.to_inst.merge(self: trecv)
@@ -1477,7 +1477,7 @@ RUBY
         self_klass = RDL::Util.to_class(trecv.base.name)
       end
     when RDL::Type::FiniteHashType
-      if RDL::Config.instance.use_dep_types
+      if RDL::Config.instance.use_comp_types
         ts, es = lookup(scope, "Hash", meth, e)
         error :no_instance_method_type, ["Hash", meth], e unless ts
         #inst = trecv.to_inst.merge(self: trecv)
@@ -1493,7 +1493,7 @@ RUBY
         self_klass = RDL::Util.to_class(trecv.base.name)
       end
     when RDL::Type::PreciseStringType
-      if RDL::Config.instance.use_dep_types
+      if RDL::Config.instance.use_comp_types
         ts, es = lookup(scope, "String", meth, e)
         error :no_instance_method_type, ["String", meth], e unless ts
         inst = { self: trecv }
@@ -1525,7 +1525,7 @@ RUBY
     # there might be more than one return type because multiple cases of an intersection type might match
     tmeth_names = [] ## necessary for more precise error messages with ComputedTypes
     # for ALL of the expanded lists of actuals...
-    if RDL::Config.instance.use_dep_types
+    if RDL::Config.instance.use_comp_types
       ts = filter_comp_types(ts, true)
     else
       ts = filter_comp_types(ts, false)
