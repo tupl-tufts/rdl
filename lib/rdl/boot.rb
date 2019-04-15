@@ -60,6 +60,9 @@ module RDL::Globals
 
   ## Hash mapping node object IDs (integers) to a list [tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old], where: tmeth is a MethodType that is fully evaluated (i.e., no ComputedTypes) *and instantiated*, tmeth_old is the unevaluated method type (i.e., with ComputedTypes), tmeth_res is the result of evaluating tmeth_old *but not instantiating it*, self_klass is the class where the MethodType is defined, trecv_old was the receiver type used to evaluate tmeth_old, and targs_old is an Array of the argument types used to evaluate tmeth_old.
   @comp_type_map = {}
+
+  # Map from ActiveRecord table names (symbols) to their schema types, which should be a Table type
+  @ar_db_schema = {}
 end
 
 class << RDL::Globals # add accessors and readers for module variables
@@ -73,6 +76,7 @@ class << RDL::Globals # add accessors and readers for module variables
   attr_accessor :deferred
   attr_accessor :dep_types
   attr_accessor :comp_type_map
+  attr_accessor :ar_db_schema
 end
 
 # Create switches to control whether wrapping happens and whether
@@ -147,6 +151,7 @@ module RDL
       @to_typecheck = Hash.new
       @to_typecheck[:now] = Set.new
       @to_do_at = Hash.new
+      @ar_db_schema = Hash.new
       @deferred = []
 
       @parser = RDL::Type::Parser.new
