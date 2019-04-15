@@ -660,7 +660,7 @@ module RDL
   end
 
   def self.check_type_code
-    RDL.config { |config| config.use_dep_types = false }
+    RDL.config { |config| config.use_comp_types = false }
     count = 1
     #code_type = RDL::Globals.parser.scan_str "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
     RDL::Globals.dep_types.each { |klass, meth, typ|
@@ -695,7 +695,7 @@ module RDL
       }
     }
     RDL.do_typecheck :type_code
-    RDL.config { |config| config.use_dep_types = true }
+    RDL.config { |config| config.use_comp_types = true }
     true
   end
 

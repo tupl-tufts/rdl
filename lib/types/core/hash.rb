@@ -120,11 +120,6 @@ def Hash.hash_create_output(targs)
   args = RDL.type_cast([], "Array<%any>", force: true)
   i = -1
   args = targs.map { |a| i = i+1 ; if i.even? && a.is_a?(RDL::Type::SingletonType) then RDL.type_cast(a, "RDL::Type::SingletonType", force: true).val else a end }
-=begin                                     
-  targs.each_with_index { |a, i|
-    args[i] = (if i.even? && a.is_a?(RDL::Type::SingletonType) then RDL.type_cast(a, "RDL::Type::SingletonType", force: true).val else a end)
-  }
-=end
   RDL::Type::FiniteHashType.new(RDL.type_cast(Hash[*args], "Hash<%any, RDL::Type::Type>", force: true), nil)
 end
 RDL.type Hash, 'self.hash_create_output', "(Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
@@ -289,21 +284,6 @@ def Hash.merge_output(trec, targs, mutate=false)
           return trec
         end
         trec.elts = RDL.type_cast(Hash[trec.elts.map { |k, v| if arg.elts.has_key?(k) then [k, RDL::Type::UnionType.new(arg.elts[k], v).canonical] else [k, v] end } ].merge(arg.elts), "Hash<%any, RDL::Type::Type>", force: true)
-=begin        
-## changed below after checking for termination 
-        arg.elts.each { |k, v|
-          case k
-          when Symbol
-            trec.elts[k] = RDL::Type::UnionType.new(trec.elts[k], v).canonical
-            trec.elts[k] = weak_promote(trec.elts[k]) if RDL::Config.instance.weak_update_promote
-          else
-            arg_key = arg.promote.params[0]
-            arg_val = arg.promote.params[1]
-            raise "Unable to promote tuple #{trec} to Hash." unless trec.promote!(arg_key, arg_val)
-            return trec
-          end
-        }
-=end
         raise RDL::Typecheck::StaticTypeError, "Failed to mutate hash: new hash does not match prior type constraints." unless trec.check_bounds(true)
         return trec
       else

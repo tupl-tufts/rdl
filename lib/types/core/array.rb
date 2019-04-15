@@ -280,12 +280,6 @@ def Array.fill_output(trec, targs)
         RDL::Type::UnionType.new(e, targs[0]).canonical
       end
     }
-=begin    
-    trec.params.each_with_index { |e, i|
-      trec.params[i] = RDL::Type::UnionType.new(e, targs[0]).canonical
-      trec.params[i] = Hash.weak_promote(trec.params[i]) if RDL::Config.instance.weak_update_promote ## There was a type error here, caught by the type checker (receiver of `weak_promote` call was originally self).
-    }
-=end
     trec.check_bounds(true)
     trec
   else
@@ -369,12 +363,6 @@ def Array.reverse_output(trec)
         un
       end
     }
-=begin    
-    trec.params.each_with_index { |e, i|
-      trec.params[i] = RDL::Type::UnionType.new(e, rev[i]).canonical
-      trec.params[i] = Hash.weak_promote(trec.params[i]) if RDL::Config.instance.weak_update_promote ## There was a type error here, caught by the type checker (receiver of `weak_promote` call was originally self).
-    }
-=end
     trec.check_bounds(true)
     trec
   else
