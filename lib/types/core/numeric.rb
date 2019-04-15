@@ -2,8 +2,6 @@ RDL.nowrap :Numeric
 
 RDL.type :Numeric, :%, '(%numeric) -> %numeric'
 RDL.pre(:Numeric, :%) { |x| x!=0}
-RDL.type :Numeric, :+, '(%numeric) -> %numeric'
-RDL.type :Numeric, :-, '() -> %numeric'
 RDL.type :Numeric, :-@, '() -> %numeric'
 RDL.type :Numeric, :+@, '() -> %numeric'
 RDL.type :Numeric, :<=>, '(%numeric) -> Object'
