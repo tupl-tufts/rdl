@@ -48,7 +48,7 @@ class TestGeneric < Minitest::Test
     RDL.reset
     RDL.type_params A, [:t], :all?
     RDL.type_params H, [:k, :v], :all?
-    RDL.type_params B, [:a, :b], nil, variance: [:+, :-] { |a, b| true }
+    RDL.type_params(B, [:a, :b], nil, variance: [:+, :-]) { |a, b| true }
     RDL.type B, :m1, "(a) -> nil"
     RDL.type C, :m1, "() -> self"
     RDL.type C, :m2, "() -> self"
