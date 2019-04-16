@@ -1,6 +1,6 @@
 RDL.nowrap :String
 RDL.type :String, :initialize, '(?String str) -> self new_str'
-RDL.type :String, :try_convert, '(Object obj) -> String or nil new_string'
+RDL.type :String, :'self.try_convert', '(Object obj) -> String or nil new_string'
 RDL.type :String, :%, '(Object) -> String'
 RDL.type :String, :*, '(Integer) -> String'
 RDL.type :String, :+, '(String) -> String'
@@ -98,7 +98,7 @@ RDL.type :String, :scrub, '(?String) -> String'
 RDL.type :String, :scrub, '(?String) {(%any) -> %any} -> String'
 RDL.type :String, :scrub!, '(?String) -> String'
 RDL.type :String, :scrub!, '(?String) {(%any) -> %any} -> String'
-RDL.type :String, :set_byte, '(Integer, Integer) -> Integer'
+RDL.type :String, :setbyte, '(Integer, Integer) -> Integer'
 RDL.type :String, :size, '() -> Integer'
 RDL.rdl_alias :String, :slice, :[]
 RDL.type :String, :slice!, '(Integer, ?Integer) -> String or nil'

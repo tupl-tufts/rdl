@@ -18,7 +18,7 @@ RDL.type :Set, :add, '(t o) -> self'
 RDL.type :Set, :add?, '(t o) -> self or nil'
 RDL.type :Set, :classify, '() { (u) -> t } -> Hash<u, Set<t>>'
 RDL.type :Set, :clear, '() -> self'
-RDL.rdl_alias :Set, :collect!, :map
+RDL.rdl_alias :Set, :collect!, :map!
 RDL.type :Set, :delete, '(t o) -> self'
 RDL.type :Set, :delete?, '(t o) -> self or nil'
 RDL.type :Set, :delete_if, '() { (t) -> %bool } -> self'

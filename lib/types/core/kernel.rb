@@ -71,7 +71,7 @@ RDL.type :Kernel, 'self.select',
 # RDL.type :Kernel, 'self.set_trace_func' #TODO
 RDL.type :Kernel, 'self.sleep', '(Numeric duration) -> Integer'
 # RDL.type :Kernel, 'self.spawn' #TODO
-RDL.rdl_alias :Kernel, :sprintf, :format # TODO: are they aliases?
+RDL.rdl_alias :Kernel, :'self.sprintf', :'self.format' # TODO: are they aliases?
 RDL.type :Kernel, 'self.srand', '(Numeric number) -> Numeric'
 RDL.type :Kernel, 'self.syscall', '(Integer num, *%any args) -> %any' # TODO : ?
 # RDL.type :Kernel, 'self.system' # TODO

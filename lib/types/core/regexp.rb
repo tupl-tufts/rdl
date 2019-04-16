@@ -5,8 +5,8 @@ RDL.type :Regexp, 'self.last_match', '() -> MatchData', wrap: false # Can't wrap
 RDL.type :Regexp, 'self.last_match', '(Integer) -> String', wrap: false
 RDL.type :Regexp, :initialize, '(String, ?%any options, ?String kcode) -> self'
 RDL.type :Regexp, :initialize, '(Regexp) -> self'
-RDL.rdl_alias :Regexp, 'self.compile', 'self.new'
-RDL.rdl_alias :Regexp, 'self.quote', 'self.escape'
+RDL.rdl_alias :Regexp, :'self.compile', :initialize
+RDL.rdl_alias :Regexp, :'self.quote', :'self.escape'
 RDL.type :Regexp, 'self.try_convert', '(%any obj) -> Regexp or nil'
 RDL.type :Regexp, 'self.union', '(*(Regexp or String) pats) -> Regexp'
 RDL.type :Regexp, 'self.union', '(Array<Regexp or String> pats) -> Regexp'

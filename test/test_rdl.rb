@@ -243,27 +243,27 @@ RUBY
   end
 
   def test_wrap_new
-    self.class.class_eval "class B; def initialize(x); @x = x end; def get(); return @x end end"
-    RDL.pre("TestRDL::B", "self.new") { |x| x > 0 }
-    assert_equal 3, TestRDL::B.new(3).get
-    assert_raises(RDL::Contract::ContractError) { TestRDL::B.new(-3) }
+    self.class.class_eval "class WrapB; def initialize(x); @x = x end; def get(); return @x end end"
+    RDL.pre("TestRDL::WrapB", "self.new") { |x| x > 0 }
+    assert_equal 3, TestRDL::WrapB.new(3).get
+    assert_raises(RDL::Contract::ContractError) { TestRDL::WrapB.new(-3) }
 
-    self.class.class_eval "class C; extend RDL::Annotate; pre { |x| x > 0 }; def initialize(x); @x = x end; def get(); return @x end end"
-    assert_equal 3, TestRDL::C.new(3).get
-    assert_raises(RDL::Contract::ContractError) { TestRDL::C.new(-3) }
+    self.class.class_eval "class WrapC; extend RDL::Annotate; pre { |x| x > 0 }; def initialize(x); @x = x end; def get(); return @x end end"
+    assert_equal 3, TestRDL::WrapC.new(3).get
+    assert_raises(RDL::Contract::ContractError) { TestRDL::WrapC.new(-3) }
 
-    self.class.class_eval "class D; def get(); return @x end end"
-    RDL.pre("TestRDL::D", "self.new") { |x| x > 0 }
-    self.class.class_eval "class D; def initialize(x); @x = x end end"
-    assert_equal 3, TestRDL::D.new(3).get
-    assert_raises(RDL::Contract::ContractError) { TestRDL::D.new(-3) }
+    self.class.class_eval "class WrapD; def get(); return @x end end"
+    RDL.pre("TestRDL::WrapD", "self.new") { |x| x > 0 }
+    self.class.class_eval "class WrapD; def initialize(x); @x = x end end"
+    assert_equal 3, TestRDL::WrapD.new(3).get
+    assert_raises(RDL::Contract::ContractError) { TestRDL::WrapD.new(-3) }
 
     skip "Can't defer contracts on new yet"
     RDL.
-    pre("TestRDL::E", "self.new") { |x| x > 0 }
-    self.class.class_eval "class E; def initialize(x); @x = x end end"
-    assert (TestRDL::E.new(3))
-    assert_raises(RDL::Contract::ContractError) { TestRDL::E.new(-3) }
+    pre("TestRDL::WrapE", "self.new") { |x| x > 0 }
+    self.class.class_eval "class WrapE; def initialize(x); @x = x end end"
+    assert (TestRDL::WrapE.new(3))
+    assert_raises(RDL::Contract::ContractError) { TestRDL::WrapE.new(-3) }
   end
 
   def test_class_method
