@@ -63,6 +63,9 @@ module RDL::Globals
 
   # Map from ActiveRecord table names (symbols) to their schema types, which should be a Table type
   @ar_db_schema = {}
+
+  # Map from Sequel table names (symbols) to their schema types, which should be a Table type
+  @seq_db_schema = {}
 end
 
 class << RDL::Globals # add accessors and readers for module variables
@@ -77,6 +80,7 @@ class << RDL::Globals # add accessors and readers for module variables
   attr_accessor :dep_types
   attr_accessor :comp_type_map
   attr_accessor :ar_db_schema
+  attr_accessor :seq_db_schema
 end
 
 # Create switches to control whether wrapping happens and whether
@@ -152,6 +156,7 @@ module RDL
       @to_typecheck[:now] = Set.new
       @to_do_at = Hash.new
       @ar_db_schema = Hash.new
+      @seq_db_schema = Hash.new
       @deferred = []
 
       @parser = RDL::Type::Parser.new

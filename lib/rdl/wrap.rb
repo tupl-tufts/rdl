@@ -603,6 +603,29 @@ module RDL
     nil
   end
 
+  def self.load_sequel_schema(db)
+    db.tables.each { |table|
+      hash_str = "{ "
+      kl_name = table.to_s.camelize.singularize
+      db.schema(table).each { |col|
+        hash_str << "#{col[0]}: "
+        typ = col[1][:type].to_s.camelize
+        if typ == "Datetime"
+          typ = "DateTime or Time" ## Sequel accepts both
+        elsif typ == "Boolean"
+          typ = "%bool"
+        elsif typ == "Text"
+          typ = "String"
+        end
+        hash_str << "#{typ},"
+        RDL.type kl_name, col[0], "() -> #{typ}", wrap: false
+        RDL.type kl_name, "#{col[0]}=", "(#{typ}) -> #{typ}", wrap: false
+      }
+      hash_str.chomp!(",") << " }"
+      RDL::Globals.seq_db_schema[table] = RDL::Globals.parser.scan_str "#T #{hash_str}"
+    }
+  end
+
   def self.load_rails_schema
     return unless defined?(Rails)
     ::Rails.application.eager_load! # load Rails app
