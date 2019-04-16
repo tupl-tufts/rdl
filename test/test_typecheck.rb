@@ -1247,7 +1247,6 @@ class TestTypecheck < Minitest::Test
     assert do_tc("begin puts 'foo'; 3; rescue; 4; end", env: @env) <= @t34
     assert do_tc("begin puts 'foo'; 3; rescue => e; e; end", env: @env) <= tt("StandardError or 3")
     assert do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; end", env: @env) <= tt("RuntimeError or 3")
-    assert do_tc("begin puts 'foo'; 3; else; 4; end", env: @env) <= tt("4") # parser discards else clause!
     assert do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; rescue ArgumentError => x; x; end", env: @env) <= tt("RuntimeError or ArgumentError or 3")
     assert do_tc("begin puts 'foo'; 3; rescue RuntimeError => e; e; rescue ArgumentError => x; x; else 42; end", env: @env) <= tt("RuntimeError or ArgumentError or 42 or 3")
     assert do_tc("begin puts 'foo'; 3; rescue RuntimeError, ArgumentError => e; e; end", env: @env) <= tt("RuntimeError or ArgumentError or 3")
