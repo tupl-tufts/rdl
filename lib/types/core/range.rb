@@ -26,7 +26,7 @@ RDL.type :Range, :max, '() -> t'
 RDL.type :Range, :max, '() { (t, t) -> Integer } -> t'
 RDL.type :Range, :max, '(Integer n) -> Array<t>'
 RDL.type :Range, :max, '(Integer n) { (t, t) -> Integer } -> Array<t>'
-RDL.rdl_alias :Range, :member?, :include
+RDL.rdl_alias :Range, :member?, :include?
 RDL.type :Range, :min, '() -> t'
 RDL.type :Range, :min, '() { (t, t) -> Integer } -> t'
 RDL.type :Range, :min, '(Integer n) -> Array<t>'

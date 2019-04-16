@@ -51,8 +51,8 @@ module RDL
   def self.at(*args); end
   def self.note_type(*args); end
   def self.remove_type(*args); end
-  def self.instantaite!(*args); self; end
-  def self.deinstantaite!(*args); self; end
+  def self.instantiate!(*args); self; end
+  def self.deinstantiate!(*args); self; end
   def self.type_cast(*args); self; end
   def self.query(*args); end
 end

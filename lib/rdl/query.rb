@@ -71,7 +71,7 @@ module RDL
 
   def self.query(q)
     RDL::Globals.contract_switch.off {
-      if q =~ /^[A-Z]\w*(#|\.)([a-z_]\w*(!|\?|=)?|!|~|\+|\*\*|-|\*|\/|%|<<|>>|&|\||\^|<|<=|=>|>|==|===|!=|=~|!~|<=>|\[\]|\[\]=)$/
+      if q =~ /^[A-Z]\w*(::[A-Z]\w*)*(#|\.)([a-z_]\w*(!|\?|=)?|!|~|\+|\*\*|-|\*|\/|%|<<|>>|&|\||\^|<|<=|=>|>|==|===|!=|=~|!~|<=>|\[\]|\[\]=)$/
         typs = RDL::Query.method_query(q)
         if typs.nil? then
           puts "No types for #{q}"
@@ -80,7 +80,7 @@ module RDL
             puts "#{q}: #{t}"
           }
         end
-      elsif q =~ /^[A-Z]\w*$/
+      elsif q =~ /^[A-Z]\w*(::[A-Z]\w*)*$/
         typs = RDL::Query.class_query(q)
         if typs.nil? then
           puts "No method types for #{q}"

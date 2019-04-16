@@ -19,6 +19,8 @@
 - Remove (most) ordering dependencies among test cases
 - Undefined identified issue for Rails assocation types
 - Type check expressions within casts
+- Fix to `var_type` method when called from outside class
+- Add `RDL.query` support for nested classes, e.g., `RDL.query "ActiveRecord::Base#id`
 
 ### Added
 - Support for type-level computations, including new annotations with type-level computations for Array, Hash, String, Integer, Float, and database query libraries
