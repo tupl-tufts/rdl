@@ -40,6 +40,7 @@
   * [Tuples, Finite Hashes, and Subtyping](#tuples-finite-hashes-and-subtyping)
   * [Other Features and Limitations](#other-features-and-limitations)
   * [Assumptions](#assumptions)
+* [Type-Level Computations](#type-level-computations)
 * [RDL Method Reference](#rdl-method-reference)
 * [Performance](#performance)
 * [Queries](#queries)
@@ -792,7 +793,13 @@ type '(Integer) -> ``if trec.is_a?(RDL::Type::SingletonType) && t.is_a?(RDL::Typ
 ```
 
 We have written type-level computations for methods from the Integer, Float, Array, Hash, and String core libraries. For more examples, you can find these in the `/lib/types/core/` directory. We have also written them for a
-number of database query methods from both the (ActiveRecord)[https://github.com/rails/rails/tree/master/activerecord] and (Sequel)[https://github.com/jeremyevans/sequel] DSLs. This can be found in TODO.
+number of database query methods from both the [ActiveRecord](https://github.com/rails/rails/tree/master/activerecord) and [Sequel](https://github.com/jeremyevans/sequel) DSLs. They can be found in `comp_types.rb` file in the `/lib/types/rails/active_record` and `/lib/types/sequel` directories respectively. These type-level computations for the database query methods depend on RDL pre-processing the schema of the database before type checking any user code. RDL provides helper methods to process the database schema:
+
+```ruby
+RDL.load_sequel_schema(DATABASE) # `DATABASE` is the Sequel Database object
+
+RDL.load_rails_schema # Automatically triggered if RDL is loaded in a Rails environment. If you want to use ActiveRecord without Rails, you need to call this method
+```
 
 Because type-level computations are used for methods which themselves are not type checked, we include
 an optional configuration for inserting dynamic checks that ensure that these methods return values
@@ -944,6 +951,10 @@ RDL supports the following configuration options:
 # Bibliography
 
 Here are some research papers we have written exploring types, contracts, and Ruby.
+
+* Milod Kazerounian, Sankha Narayan Guria, Niki Vazou, Jeffrey S. Foster, David Van Horn.
+Type-Level Computations for Ruby Libraries.
+In ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI), Phoenix, AZ, June 2019.
 
 * Brianna M. Ren and Jeffrey S. Foster.
 [Just-in-Time Static Type Checking for Dynamic Languages](http://www.cs.umd.edu/~jfoster/papers/pldi16.pdf).
