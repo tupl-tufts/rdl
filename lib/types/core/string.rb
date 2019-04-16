@@ -392,7 +392,7 @@ RDL.type :String, :valid_encoding?, '() -> ``output_type(trec, targs, :valid_enc
 
 
 RDL.type :String, :initialize, '(?String str) -> self new_str'
-RDL.type :String, :try_convert, '(Object obj) -> String or nil new_string'
+RDL.type :String, :'self.try_convert', '(Object obj) -> String or nil new_string'
 RDL.type :String, :%, '(Object) -> String'
 RDL.type :String, :*, '(Integer) -> String'
 RDL.type :String, :+, '(String) -> String'
@@ -490,7 +490,7 @@ RDL.type :String, :scrub, '(?String) -> String'
 RDL.type :String, :scrub, '(?String) {(%any) -> %any} -> String'
 RDL.type :String, :scrub!, '(?String) -> String'
 RDL.type :String, :scrub!, '(?String) {(%any) -> %any} -> String'
-RDL.type :String, :set_byte, '(Integer, Integer) -> Integer'
+RDL.type :String, :setbyte, '(Integer, Integer) -> Integer'
 RDL.type :String, :size, '() -> Integer'
 RDL.type :String, :slice!, '(Integer, ?Integer) -> String or nil'
 RDL.type :String, :slice!, '(Range<Integer> or Regexp) -> String or nil'
