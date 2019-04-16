@@ -18,7 +18,7 @@ RDL.type :Enumerator, :next, '() -> t'
 RDL.type :Enumerator, :next_values, '() -> Array<t>'
 RDL.type :Enumerator, :peek, '() -> t'
 RDL.type :Enumerator, :peek_values, '() -> Array<t>'
-RDL.type :Enumerator, :rewrind, '() -> self'
+RDL.type :Enumerator, :rewind, '() -> self'
 RDL.type :Enumerator, :size, '() -> Integer or Float or nil'
 RDL.rdl_alias :Enumerator, :with_index, :each_with_index
 RDL.rdl_alias :Enumerator, :with_object, :each_with_object

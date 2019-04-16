@@ -39,7 +39,7 @@ RDL.type :Time, :monday?, '() -> %bool'
 RDL.rdl_alias :Time, :month, :mon
 RDL.type :Time, :nsec, '() -> Integer'
 RDL.type :Time, :round, '(Integer) -> Time'
-RDL.type :Time, :saturday, '() -> %bool'
+RDL.type :Time, :saturday?, '() -> %bool'
 RDL.type :Time, :sec, '() -> Integer'
 RDL.type :Time, :strftime, '(String) -> String'
 RDL.type :Time, :subsec, '() -> Numeric'
