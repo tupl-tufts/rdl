@@ -945,6 +945,7 @@ it matches the latest gem version.
 * [T. Stephen Strickland](https://www.cs.umd.edu/~sstrickl/)
 * Alexander T. Yu
 * Milod Kazerounian
+* [Sankha Narayan Guria](https://sankhs.com/)
 
 # Contributors
 
