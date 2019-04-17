@@ -219,6 +219,7 @@ RUBY
           raise RuntimeError, "Deferred #{kind} contract from class #{prev_klass} being applied in class #{tmp_klass} to #{meth}"
         end
         RDL::Globals.info.add(klass, meth, kind, contract)
+        RDL::Globals.info.add(klass, meth, :effect, h[:effect]) if h.has_key?(:effect)
         RDL::Wrap.wrap(klass, meth) if h[:wrap]
         unless !h.has_key?(:typecheck) || RDL::Globals.info.set(klass, meth, :typecheck, h[:typecheck])
           raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
@@ -323,7 +324,7 @@ module RDL::Annotate
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
-  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil)
+  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil, effect: nil)
     return if version && !(Gem::Requirement.new(version).satisfied_by? Gem.ruby_version)
     klass, meth, type = begin
                           RDL::Wrap.process_type_args(self, *args)
@@ -337,12 +338,20 @@ module RDL::Annotate
                           err.set_backtrace bt
                           raise err
                         end
+    effect[0] = :- if effect && effect[0] == :~ ## For now, treating pure-ish :~ as :-, since we realized it doesn't actually affect termination checking.
+    typs = type.args + [type.ret]
+    if type.block
+      block_type = type.block.is_a?(RDL::Type::OptionalType) ? type.block.type : type.block
+      typs = typs + block_type.args + [block_type.ret]
+    end
+    RDL::Globals.dep_types << [klass, meth, type] if typs.any? { |t| t.is_a?(RDL::Type::ComputedType) || (t.is_a?(RDL::Type::BoundArgType) && t.type.is_a?(RDL::Type::ComputedType)) }
     if meth
 # It turns out Ruby core/stdlib don't always follow this convention...
 #        if (meth.to_s[-1] == "?") && (type.ret != RDL::Globals.types[:bool])
 #          warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
 #        end
       RDL::Globals.info.add(klass, meth, :type, type)
+      RDL::Globals.info.add(klass, meth, :effect, effect)
       unless RDL::Globals.info.set(klass, meth, :typecheck, typecheck)
         raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
       end
@@ -357,20 +366,22 @@ module RDL::Annotate
           end
           RDL::Wrap.wrap(klass, meth) if wrap
         else
-          if wrap
-            RDL::Globals.to_wrap << [klass, meth]
-            if (typecheck && typecheck != :call)
-              RDL::Globals.to_typecheck[typecheck] = Set.new unless RDL::Globals.to_typecheck[typecheck]
-              RDL::Globals.to_typecheck[typecheck].add([klass, meth])
-            end
+          RDL::Globals.to_wrap << [klass, meth] if wrap
+          if (typecheck && typecheck != :call)
+            RDL::Globals.to_typecheck[typecheck] = Set.new unless RDL::Globals.to_typecheck[typecheck]
+            RDL::Globals.to_typecheck[typecheck].add([klass, meth])
           end
         end
       end
     else
       RDL::Globals.deferred << [klass, :type, type, {wrap: wrap,
-                                               typecheck: typecheck}]
+                                               typecheck: typecheck, effect: effect}]
     end
     nil
+  end
+
+  def readd_comp_types
+    RDL::Globals.dep_types.each { |klass, meth, t| RDL::Globals.info.add(klass, meth, :type, t) unless meth.nil? }
   end
 
   # [+ klass +] is the class containing the variable; self if omitted; ignored for local and global variables
@@ -581,10 +592,154 @@ module RDL
     RDL::Globals.to_do_at[sym] = Array.new
     return unless RDL::Globals.to_typecheck[sym]
     RDL::Globals.to_typecheck[sym].each { |klass, meth|
+      t1 = Time.now
       RDL::Typecheck.typecheck(klass, meth)
+      t2 = Time.now
+      #puts "GOT #{t2 -t1} for #{[klass, meth]}"
     }
     RDL::Globals.to_typecheck[sym] = Set.new
     nil
+  end
+
+  def self.load_sequel_schema(db)
+    db.tables.each { |table|
+      hash_str = "{ "
+      kl_name = table.to_s.camelize.singularize
+      db.schema(table).each { |col|
+        hash_str << "#{col[0]}: "
+        typ = col[1][:type].to_s.camelize
+        if typ == "Datetime"
+          typ = "DateTime or Time" ## Sequel accepts both
+        elsif typ == "Boolean"
+          typ = "%bool"
+        elsif typ == "Text"
+          typ = "String"
+        end
+        hash_str << "#{typ},"
+        RDL.type kl_name, col[0], "() -> #{typ}", wrap: false
+        RDL.type kl_name, "#{col[0]}=", "(#{typ}) -> #{typ}", wrap: false
+      }
+      hash_str.chomp!(",") << " }"
+      RDL::Globals.seq_db_schema[table] = RDL::Globals.parser.scan_str "#T #{hash_str}"
+    }
+  end
+
+  def self.load_rails_schema
+    return unless defined?(Rails)
+    ::Rails.application.eager_load! # load Rails app
+    models = ActiveRecord::Base.descendants.each { |m|
+      begin
+        ## load schema for each Rails model
+        m.send(:load_schema) unless m.abstract_class?
+      rescue
+      end }
+
+    models.each { |model|
+      next if model.to_s == "ApplicationRecord"
+      next if model.to_s == "GroupManager"
+      RDL.nowrap model
+      s1 = {}
+      model.columns_hash.each { |k, v| t_name = v.type.to_s.camelize
+        ## Map SQL column types to the corresponding RDL type
+        if t_name == "Boolean"
+          t_name = "%bool"
+          s1[k] = RDL::Globals.types[:bool]
+        elsif t_name == "Datetime"
+          t_name = "DateTime or Time"
+          s1[k] = RDL::Type::UnionType.new(RDL::Type::NominalType.new(Time), RDL::Type::NominalType.new(DateTime))
+        elsif t_name == "Text"
+          ## difference between `text` and `string` is in the SQL types they're mapped to, not in Ruby types
+          t_name = "String"
+          s1[k] = RDL::Globals.types[:string]
+        else
+          s1[k] = RDL::Type::NominalType.new(t_name)
+        end
+        RDL.type model, (k+"=").to_sym, "(#{t_name}) -> #{t_name}", wrap: false ## create method type for column setter
+        RDL.type model, (k).to_sym, "() -> #{t_name}", wrap: false ## create method type for column getter
+      }
+      s2 = s1.transform_keys { |k| k.to_sym }
+      assoc = {}
+      model.reflect_on_all_associations.each { |a|
+        ## Generate method types based on associations
+        add_ar_assoc(assoc, a.macro, a.name)
+        if a.name.to_s.pluralize == a.name.to_s ## plural association
+          ## This actually returns an Associations CollectionProxy, which is a descendant of ActiveRecord_Relation (see below actual type). This makes no difference in practice.
+          RDL.type model, a.name, "() -> ActiveRecord_Relation<#{a.name.to_s.camelize.singularize}>", wrap: false
+          #ActiveRecord_Associations_CollectionProxy<#{a.name.to_s.camelize.singularize}>'
+        else
+          ## association is singular, we just return an instance of associated class
+          RDL.type model, a.name, "() -> #{a.name.to_s.camelize.singularize}", wrap: false
+        end
+      }
+      s2[:__associations] = RDL::Type::FiniteHashType.new(assoc, nil)
+      base_name = model.to_s
+      base_type = RDL::Type::NominalType.new(model.to_s)
+      hash_type = RDL::Type::FiniteHashType.new(s2, nil)
+      schema = RDL::Type::GenericType.new(base_type, hash_type)
+      RDL::Globals.ar_db_schema[base_name.to_sym] = schema
+    }
+  end
+
+  def self.check_type_code
+    RDL.config { |config| config.use_comp_types = false }
+    count = 1
+    #code_type = RDL::Globals.parser.scan_str "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
+    RDL::Globals.dep_types.each { |klass, meth, typ|
+      klass = RDL::Util.has_singleton_marker(klass) ? RDL::Util.remove_singleton_marker(klass) : klass
+      binds = {}
+      arg_list = "(trec, targs"
+      type_list = "(RDL::Type::Type, Array<RDL::Type::Type>"
+      (typ.args+[typ.ret]+[typ.block]).each { |t|
+        ## First collect all bindings to be used during type checking.
+        if (t.is_a?(RDL::Type::BoundArgType))
+          arg_list << ", #{t.name}"
+          type_list << ", #{t.type.class}"
+        end
+      }
+      arg_list << ")"
+      type_list << ")"
+      code_type = RDL::Globals.parser.scan_str "#{type_list} -> RDL::Type::Type"
+      (typ.args+[typ.ret]+[typ.block]).each { |t|
+        if t.is_a?(RDL::Type::ComputedType)
+          meth = cleanse_meth_name(meth)
+          if klass.to_s.include?("::") ## hacky way around namespace issue
+            tmp_meth =  "def klass.tc_#{meth}#{count}#{arg_list} #{t.code}; end"
+            tmp_eval = "klass = #{klass} ; #{tmp_meth}"
+          else
+            tmp_meth = tmp_eval = "def #{klass}.tc_#{meth}#{count}#{arg_list} #{t.code}; end"
+          end
+          eval tmp_eval
+          ast = Parser::CurrentRuby.parse tmp_meth
+          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type], [[:-, :+]]) 
+          count += 1
+        end
+      }
+    }
+    RDL.do_typecheck :type_code
+    RDL.config { |config| config.use_comp_types = true }
+    true
+  end
+
+  def self.cleanse_meth_name(meth)
+    meth = meth.to_s
+    meth.gsub!("%", "percent")
+    meth.gsub!("&", "ampersand")
+    meth.gsub!("*", "asterisk")
+    meth.gsub!("+", "plus")
+    meth.gsub!("-", "dash")
+    meth.gsub!("@", "at")
+    meth.gsub!("/", "slash")
+    meth.gsub!("<", "lt")
+    meth.gsub!(">", "gt")
+    meth.gsub!("=", "eq")
+    meth.gsub!("[", "lbracket")
+    meth.gsub!("]", "rbracket")
+    meth.gsub!("^", "carrot")
+    meth.gsub!("|", "line")
+    meth.gsub!("~", "line")
+    meth.gsub!("?", "qmark")
+    meth.gsub!("!", "bang")
+    meth
   end
 
   # Does nothing at run time
@@ -601,7 +756,7 @@ module RDL
   # Returns a new object that wraps self in a type cast. If force is true this cast is *unchecked*, so use with caution
   def self.type_cast(obj, typ, force: false)
     new_typ = if typ.is_a? RDL::Type::Type then typ else RDL::Globals.parser.scan_str "#T #{typ}" end
-    raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || typ.member?(obj)
+    raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || new_typ.member?(obj)
     new_obj = SimpleDelegator.new(obj)
     new_obj.instance_variable_set('@__rdl_type', new_typ)
     new_obj
@@ -648,6 +803,17 @@ module RDL
     obj.instance_variable_set(:@__rdl_type, nil)
     obj
   end
+
+  private
+  def self.add_ar_assoc(hash, aname, aklass)
+    kl_type = RDL::Type::SingletonType.new(aklass)
+    if hash[aname]
+      hash[aname] = RDL::Type::UnionType.new(hash[aname], kl_type)
+    else
+      hash[aname] = kl_type unless hash[aname]
+    end
+    hash
+  end
 end
 
 class Object
@@ -669,5 +835,44 @@ class Module
     RDL::Wrap.do_method_added(self, false, klass, meth)
     nil
   end
+end
+
+class Class
+  def ===(x)
+    if x.method(:is_a?).owner == SimpleDelegator then super(x.__getobj__) else super(x) end
+  end
+end
+
+class SimpleDelegator
+  ## pass methods through to wrapped object
+  ## necessary when type casts are inside type-level code
+  def is_a?(c)
+    __getobj__.is_a?(c)
+  end
+
+  def instance_of?(c)
+    __getobj__.instance_of?(c)
+  end
+
+  def kind_of?(c)
+    __getobj__.kind_of?(c)
+  end
+
+  def ===(x)
+    __getobj__ === x
+  end
+
+  def ==(x)
+    __getobj__ == x
+  end
+
+  def class
+     __getobj__.class
+  end
+
+  def nil?
+     __getobj__.nil?
+  end
+
 end
 

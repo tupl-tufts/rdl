@@ -40,6 +40,22 @@ module RDL::Type
     end
 
     def member?(obj, *args)
+      if base.name == "Table"
+        return true if obj.class.to_s == "Mocha::Mock" ## mock object class appearing in one of the benchmarks. Not much we can do here.
+        return false unless obj.class.ancestors.map { |a| a.to_s}.include?("Sequel::Dataset")#is_a?(Sequel::Dataset) (obj.class.to_s == "Sequel::SQLite::Dataset")
+        raise RDL::Type::TypeError, "Expected Table type to be parameterized by finite hash, instead got #{@params}." unless @params[0].is_a?(RDL::Type::FiniteHashType)
+        if @params[0].elts[:__all_joined].is_a?(RDL::Type::UnionType) && obj.joined_dataset?
+          type_joined_tables = @params[0].elts[:__all_joined].types.map { |t| t.val }
+          obj_joined_tables = obj.opts[:from] + obj.opts[:join].map { |t| t.table }
+          return (type_joined_tables.sort == obj_joined_tables.sort)
+        elsif !@params[0].elts[:__all_joined].is_a?(RDL::Type::TupleType) && !obj.joined_dataset?
+          return true
+        else
+          return false
+        end
+      elsif base.name == "ActiveRecord_Relation"
+        return (obj.class.name == "ActiveRecord::Relation" || obj.class.name == "ActiveRecord::Associations::CollectionProxy" || obj.class.name == "ActiveRecord::AssociationRelation") ## TODO: check for joins?
+      end
       raise "No type parameters defined for #{base.name}" unless RDL::Globals.type_params[base.name]
 #      formals = RDL::Globals.type_params[base.name][0]
       t = RDL::Util.rdl_type obj
@@ -50,6 +66,14 @@ module RDL::Type
 
     def instantiate(inst)
       GenericType.new(base.instantiate(inst), *params.map { |t| t.instantiate(inst) })
+    end
+
+    def widen
+      GenericType.new(base.widen, *params.map { |t| t.widen })
+    end
+
+    def copy
+      GenericType.new(base.copy, *params.map { |t| t.copy })
     end
 
     def hash

@@ -46,5 +46,13 @@ module RDL::Type
     def instantiate(inst)
       return NonNullType.new(@type.instantiate(inst))
     end
+
+    def widen
+      return NonNullType.new(@type.widen)
+    end
+
+    def copy
+      NonNullType.new(@type.copy)
+    end
   end
 end

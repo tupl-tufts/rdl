@@ -1,9 +1,9 @@
 RDL.nowrap :BasicObject
 
-RDL.type :BasicObject, :==, '(%any other) -> %bool'
+RDL.type :BasicObject, :==, '(%any other) -> %bool', effect: [:+, :+]
 RDL.type :BasicObject, :equal?, '(%any other) -> %bool'
-RDL.type :BasicObject, :!, '() -> %bool'
-RDL.type :BasicObject, :!=, '(%any other) -> %bool'
+RDL.type :BasicObject, :!, '() -> %bool', effect: [:+, :+]
+RDL.type :BasicObject, :!=, '(%any other) -> %bool', effect: [:+, :+]
 RDL.type :BasicObject, :instance_eval, '(String, ?String filename, ?Integer lineno) -> %any'
 RDL.type :BasicObject, :instance_eval, '() { () -> %any } -> %any'
 RDL.type :BasicObject, :instance_exec, '(*%any args) { (*%any) -> %any } -> %any'

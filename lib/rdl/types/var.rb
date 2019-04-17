@@ -57,5 +57,15 @@ module RDL::Type
       return inst[@name] if inst[@name]
       return self
     end
+
+    def widen
+      return inst[@name] if inst[@name]
+      return self
+    end
+
+    def copy
+      self
+    end
+
   end
 end

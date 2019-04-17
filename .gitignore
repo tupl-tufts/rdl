@@ -26,6 +26,7 @@
 *.rar\
 *.tar\
 *.zip\
+*.gem\
 \'a0\
 # Logs and databases #\
 ######################\

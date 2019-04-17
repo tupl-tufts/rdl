@@ -83,6 +83,8 @@ module RDL::Type
 	        t = t.type
         end
         case t
+        when ComputedType
+          raise "We do not currently support dynamic checks of unevaulated ComputedTypes."
         when OptionalType
           t = t.type.instantiate(inst)
           if actual == args.size
@@ -292,6 +294,18 @@ RUBY
       return MethodType.new(@args.map { |arg| arg.instantiate(inst) },
                             @block ? @block.instantiate(inst) : nil,
                             @ret.instantiate(inst))
+    end
+
+    def widen
+      return MethodType.new(@args.map { |arg| arg.widen },
+                            @block ? @block.widen : nil,
+                            @ret.widen)
+    end
+
+    def copy
+      return MethodType.new(@args.map { |arg| arg.copy },
+                            @block ? @block.copy : nil,
+                            @ret.copy)
     end
 
     # Return +true+ if +other+ is the same type

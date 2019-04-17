@@ -1,6 +1,6 @@
 module RDL::Type
   class SingletonType < Type
-    attr_reader :val
+    attr_accessor :val
     attr_reader :nominal
 
     @@cache = {}
@@ -59,11 +59,24 @@ module RDL::Type
     def member?(obj, *args)
       t = RDL::Util.rdl_type obj
       return t <= self if t
+      return true if obj.nil?
       obj.equal?(@val)
     end
 
     def instantiate(inst)
       return self
+    end
+
+    def widen
+      return self
+    end
+
+    def copy
+      return self
+    end
+
+    def satisfies?
+      yield(val)
     end
   end
 end

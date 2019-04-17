@@ -52,5 +52,14 @@ module RDL::Type
     def instantiate(inst)
       return DependentArgType.new(@name, @type.instantiate(inst), @predicate)
     end
+
+    def widen
+      return DependentArgType.new(@name, @type.widen, @predicate)
+    end
+
+    def copy
+      return DependentArgType.new(@name, @type.copy, @predicate)
+    end
+
   end
 end

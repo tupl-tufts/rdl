@@ -53,7 +53,7 @@ RDL.type :Module, :public_instance_methods, '(?%bool include_super) -> Array<Sym
 RDL.type :Module, :public_method_defined?, '(Symbol or String) -> %bool'
 RDL.type :Module, :remove_class_variable, '(Symbol) -> %any'
 RDL.type :Module, :singleton_class?, '() -> %bool'
-RDL.type :Module, :to_s, '() -> String'
+RDL.type :Module, :to_s, '() -> String', effect: [:+, :+]
 # private methods below here
 RDL.type :Module, :alias_method, '(Symbol new_name, Symbol old_name) -> self'
 RDL.type :Module, :append_features, '(Module) -> self'

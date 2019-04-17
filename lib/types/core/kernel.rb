@@ -2,6 +2,7 @@ RDL.nowrap :Kernel
 
 # RDL.type :Kernel, 'self.Array', '([to_ary: () -> Array<t>]) -> Array<t>'
 # RDL.type :Kernel, 'self.Array', '([to_a: () -> Array<t>]) -> Array<t>'
+RDL.type :Kernel, 'self.===', "(%any) -> %bool"
 RDL.type :Kernel, 'self.Complex', '(Numeric x, Numeric y) -> Complex'
 RDL.type :Kernel, 'self.Complex', '(String x) -> Complex'
 RDL.type :Kernel, 'self.Float', '(Numeric x) -> Float'
@@ -57,8 +58,9 @@ RDL.type :Kernel, 'self.open', '(String path, ?(String or Integer) mode, ?String
 RDL.type :Kernel, 'self.printf', '(?IO, ?String, *%any) -> nil'
 RDL.type :Kernel, :proc, '() {(*%any) -> %any} -> Proc' # TODO more precise
 RDL.type :Kernel, 'self.putc', '(Integer) -> Integer'
-RDL.type :Kernel, 'self.puts', '(*[to_s : () -> String]) -> nil'
-RDL.type :Kernel, 'self.raise', '() -> %bot'
+RDL.type :Kernel, 'self.puts', '(*[to_s : () -> String]) -> nil', effect: [:-,:+]
+RDL.type :Kernel, 'self.raise', '() -> %bot', effect: [:+, :+]
+RDL.type :Kernel, 'raise', '() -> %bot', effect: [:+, :+]
 # RDL.type :Kernel, 'self.raise', '(String or [exception : () -> String], ?String, ?Array<String>) -> %any'
 # TODO: above same as fail?
 RDL.type :Kernel, 'self.rand', '(Integer or Range max) -> Numeric'
@@ -81,7 +83,7 @@ RDL.type :Kernel, 'self.test', '(String cmd, String file1, ?String file2) -> %bo
 # RDL.type :Kernel, 'self.trap' # TODO
 # RDL.type :Kernel, 'self.untrace_var' # TODO
 RDL.type :Kernel, 'self.warn', '(*String msg) -> nil'
-RDL.type :Kernel, :clone, '() -> self'
+RDL.type :Kernel, :clone, '() -> self', effect: [:~, :+]
 RDL.type :Kernel, :raise, '() -> %bot'
 RDL.type :Kernel, :raise, '(String) -> %bot'
 RDL.type :Kernel, :raise, '(Class, ?String, ?Array<String>) -> %bot'

@@ -23,6 +23,7 @@
 - Add `RDL.query` support for nested classes, e.g., `RDL.query "ActiveRecord::Base#id`
 
 ### Added
+- Support for type-level computations, including new annotations with type-level computations for Array, Hash, String, Integer, Float, and database query libraries
 - `RDL.reset` method
 
 ## [2.1.0] - 2017-06-14

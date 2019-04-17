@@ -4,6 +4,7 @@ if Rails.env.development? || Rails.env.test?
 
   require_relative "../types/rails/_helpers.rb" # load type aliases first
   Dir[File.dirname(__FILE__) + "/../types/rails/**/*.rb"].each { |f| require f }
+  RDL.load_rails_schema
 elsif Rails.env.production?
   require 'rdl_disable'
   class ActionController::Base

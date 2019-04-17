@@ -2,8 +2,8 @@ RDL.nowrap :Enumerable
 
 RDL.type_params :Enumerable, [:t], :all?
 
-RDL.type :Enumerable, :all?, '() -> %bool'
-RDL.type :Enumerable, :all?, '() { (t) -> %bool } -> %bool'
+RDL.type :Enumerable, :all?, '() -> %bool', effect: [:blockdep, :blockdep]
+RDL.type :Enumerable, :all?, '() { (t) -> %bool } -> %bool', effect: [:blockdep, :blockdep]
 RDL.type :Enumerable, :any?, '() -> %bool'
 RDL.type :Enumerable, :any?, '() { (t) -> %bool } -> %bool'
 # RDL.type :Enumerable, :chunk, '(XXXX : *XXXX)' # TODO
@@ -24,8 +24,8 @@ RDL.type :Enumerable, :each_cons, '(Integer n) { (Array<t>) -> %any } -> nil'
 RDL.type :Enumerable, :each_cons, '(Integer n) -> Enumerator<t>'
 # RDL.type :Enumerable, :each_entry, '(XXXX : *XXXX)' # TODO
 RDL.rdl_alias :Enumerable, :each_slice, :each_cons
-RDL.type :Enumerable, :each_with_index, '() { (t, Integer) -> %any } -> Enumerable<t>' # args! note may not return self
-RDL.type :Enumerable, :each_with_index, '() -> Enumerable<t>' # args! note may not return self
+RDL.type :Enumerable, :each_with_index, '() { (t, Integer) -> %any } -> Enumerable<t>', effect: [:blockdep, :blockdep] # args! note may not return self
+RDL.type :Enumerable, :each_with_index, '() -> Enumerable<t>', effect: [:blockdep, :blockdep] # args! note may not return self
 # RDL.type :Enumerable, :each_with_object, '(XXXX : XXXX)' #TODO
 RDL.type :Enumerable, :entries, '() -> Array<t>' # TODO args?
 RDL.rdl_alias :Enumerable, :find, :detect
