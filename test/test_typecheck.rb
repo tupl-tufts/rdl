@@ -1748,6 +1748,15 @@ class TestTypecheck < Minitest::Test
     }
 
     RDL.config { |config| config.assume_dyn_type = false }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "() -> String", typecheck: :now
+        def dynamic_1()
+          unknown
+        end
+      }
+    }
   end
 
   def test_method_missing
