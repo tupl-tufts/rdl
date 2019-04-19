@@ -47,6 +47,14 @@ module RDL::Type
       StructuralType.new(Hash[*@methods.each_pair.map { |m, t| [m, t.instantiate(inst)] }.flatten])
     end
 
+    def widen
+      StructuralType.new(Hash[*@methods.each_pair.map { |m, t| [m, t.widen] }.flatten])
+    end
+
+    def copy
+      StructuralType.new(Hash[*@methods.each_pair.map { |m, t| [m, t.copy] }.flatten])
+    end
+
     def ==(other)  # :nodoc:
       return false if other.nil?
       other = other.canonical

@@ -88,6 +88,9 @@ class Parser < Racc::Parser
       when (text = @ss.scan(/\]/))
          action { [:RBRACKET, text] }
 
+      when (text = @ss.scan(/<\:\:/))
+         action { [:BIND, text] }
+
       when (text = @ss.scan(/</))
          action { [:LESS, text] }
 
@@ -129,6 +132,9 @@ class Parser < Racc::Parser
 
       when (text = @ss.scan(/\./))
          action { [:DOT, text] }
+
+      when (text = @ss.scan(/``(?:(?!``).)+``/))
+         action { [:COMP, text[2..-3]] }
 
       when (text = @ss.scan(/-?\d\.\d+/))
          action { [:FLOAT, text] } # Must go before FIXNUM

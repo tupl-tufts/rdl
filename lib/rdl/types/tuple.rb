@@ -44,12 +44,23 @@ module RDL::Type
       return (other.instance_of? TupleType) && (@params.length == other.params.length) && (@params.zip(other.params).all? { |t,o| t.match(o) })
     end
 
-    def promote!
+    def promote(t=nil)
       return false if @cant_promote
-      @array = GenericType.new(RDL::Globals.types[:array], UnionType.new(*@params))
-      # note since we promoted this, lbounds and ubounds will be ignored in future constraints, which
-      # is good because otherwise we'd get infinite loops
-      return (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
+      param = UnionType.new(*@params, t)
+      param = param.widen if RDL::Config.instance.promote_widen
+      GenericType.new(RDL::Globals.types[:array], param)
+    end
+
+    ### TODO: similar question as in tuple types. Should [1,2,3] be promoted to Array<1 or 2 or 3> or Array<Integer>
+    def promote!(t=nil)
+      array = promote(t)
+      return false if !array
+      @array = array
+      check_bounds
+    end
+
+    def check_bounds(no_promote=false)
+      return (@lbounds.all? { |lbound|  lbound.<=(self, no_promote )}) && (@ubounds.all? { |ubound| self.<=(ubound, no_promote) })
     end
 
     def cant_promote!
@@ -57,8 +68,8 @@ module RDL::Type
       @cant_promote = true
     end
 
-    def <=(other)
-      return Type.leq(self, other)
+    def <=(other, no_constraint=false)
+      return Type.leq(self, other, no_constraint: no_constraint)
     end
 
     def member?(obj, *args)
@@ -71,7 +82,20 @@ module RDL::Type
 
     def instantiate(inst)
       return @array.instantiate(inst) if @array
-      return TupleType.new(*@params.map { |t| t.instantiate(inst) })
+      #return TupleType.new(*@params.map { |t| t.instantiate(inst) })
+      @params.map! { |t| t.instantiate(inst) }
+      self
+    end
+
+    def widen
+      return @array.widen if @array
+      #return TupleType.new(*@params.map { |t| t.widen })
+      @params.map! { |t| t.widen }
+      self
+    end
+
+    def copy
+      return TupleType.new(*@params.map { |t| t.copy })      
     end
 
     def hash

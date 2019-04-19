@@ -6,7 +6,8 @@ class RDL::Config
   attr_accessor :nowrap
   attr_accessor :gather_stats
   attr_reader :report # writer is custom defined
-  attr_accessor :type_defaults, :pre_defaults, :post_defaults, :assume_dyn_type
+  attr_accessor :weak_update_promote, :widen_bound, :promote_widen, :use_comp_types, :check_comp_types
+  attr_accessor :type_defaults, :pre_defaults, :post_defaults, :rerun_comp_types, :assume_dyn_type
 
   def initialize
     @nowrap = Set.new # Set of symbols
@@ -14,10 +15,16 @@ class RDL::Config
     @report = false # if this is enabled by default, modify @at_exit_installed
     @guess_types = [] # same as above
     @at_exit_installed = false
+    @weak_update_promote = false
+    @promote_widen = false
     @type_defaults = { wrap: true, typecheck: false }
     @pre_defaults = { wrap: true }
     @post_defaults = { wrap: true }
     @assume_dyn_type = false
+    @widen_bound = 5
+    @use_comp_types = true
+    @check_comp_types = false ## this for dynamically checking that the result of a computed type still holds
+    @rerun_comp_types = false ## this is for dynamically checking that a type computation still evaluates to the same thing as it did at type checking time
   end
 
   def report=(val)

@@ -69,6 +69,14 @@ module RDL::Type
       return IntersectionType.new(*(@types.map { |t| t.instantiate(inst) }))
     end
 
+    def widen
+      return IntersectionType.new(*(@types.map { |t| t.widen }))
+    end
+
+    def copy
+      return IntersectionType.new(*(@types.map { |t| t.copy }))
+    end
+
     def hash  # :nodoc:
       return 47 + @types.hash
     end

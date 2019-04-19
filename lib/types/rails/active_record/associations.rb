@@ -1,4 +1,5 @@
 RDL.nowrap :'ActiveRecord::Associations::CollectionProxy'
+RDL.nowrap :'ActiveRecord::Associations::ClassMethods'
 
 RDL.type_params :'ActiveRecord::Associations::CollectionProxy', [:t], :all?
 
@@ -158,6 +159,7 @@ module ActiveRecord::Associations::ClassMethods
   rdl_type :'ActiveRecord::Associations::ClassMethods', :has_many,
     '(%symstr name, ?{ (?ActiveRecord::Base) -> %any } scope, class_name: ?%symstr,' +
     'foreign_key: ?%symstr, foreign_type: ?%symstr, primary_key: ?%symstr,' +
+    'join_table: ?%symstr,'+
     'dependent: ?(:destroy or :delete_all or :nullify or :restrict_with_exception or :restrict_with_error),' +
     'counter_cache: ?(%bool or %symstr), as: ?%symstr, through: ?%symstr, source: ?%symstr,' +
     'source_type: ?%symstr, validate: ?%bool, inverse_of: ?%symstr, extend: ?(Module or Array<Module>))' +
@@ -166,7 +168,7 @@ module ActiveRecord::Associations::ClassMethods
   rdl_pre :'ActiveRecord::Associations::ClassMethods', :has_many do
     |name, scope=nil, class_name: nil, foreign_key: nil, foreign_type: nil, primary_key: nil,
      dependent: nil, counter_cache: nil, as: nil, through: nil, source: nil, source_type: nil,
-     validate: nil, inverse_of: nil, extend: nil|
+     validate: nil, inverse_of: nil, extend: nil, join_table: nil|
 
     if class_name
       collect_type = class_name.to_s.classify

@@ -1,3 +1,5 @@
+RDL.nowrap :'ActionController::MimeResponds'
+
 RDL.type :'ActionController::MimeResponds', :respond_to,
   '(*(String or Symbol)) { (ActionController::MimeResponds::Collector) -> %any } -> Array<String> or String'
 

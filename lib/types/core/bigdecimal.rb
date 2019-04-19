@@ -1,5 +1,10 @@
 RDL.nowrap :BigDecimal
 
+class BigDecimal < Numeric; end ## Hacky way around existing issue.
+## The issue is any types that even reference BigDecimal, e.g., Integer#+ etc., will
+## call const_get on it, but without the above, the class is undefined.
+## May want to come up with more elegant solution in the future.
+
 RDL.type :BigDecimal, :%, '(%numeric) -> BigDecimal'
 RDL.pre(:BigDecimal, :%) { |x| x!=0&&(if x.is_a?(Float) then x!=Float::INFINITY && !x.nan? else true end)}
 

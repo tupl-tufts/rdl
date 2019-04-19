@@ -6,7 +6,7 @@ module RDL::Type
   # Finite hashes can also have a "rest" type (okay, they're not exactly finite in this case...)
   # which is treated as a hash from Symbol to the type.
   class FiniteHashType < Type
-    attr_reader :elts
+    attr_accessor :elts
     attr_reader :rest
     attr_reader :the_hash # either nil or hash type if self has been promoted to hash
     attr_accessor :ubounds  # upper bounds this tuple has been compared with using <=
@@ -58,18 +58,42 @@ module RDL::Type
               @elts.all? { |k, v| (other.elts.has_key? k) && (v.match(other.elts[k]))})
     end
 
-    def promote!
+    def promote(key=nil, value=nil)
       return false if @cant_promote
       # TODO look at key types
-      domain_type = UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }))
-      range_type = UnionType.new(*@elts.values)
+      if key
+        domain_type = UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }), key)
+      else
+        domain_type = UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }))
+      end
+      if value
+        range_type = UnionType.new(*@elts.values, value)
+      else
+        range_type = UnionType.new(*@elts.values)
+      end
       if @rest
         domain_type = UnionType.new(domain_type, RDL::Globals.types[:symbol])
         range_type = UnionType.new(range_type, @rest)
       end
-      @the_hash = GenericType.new(RDL::Globals.types[:hash], domain_type, range_type)
+      if RDL::Config.instance.promote_widen
+        case range_type
+        when RDL::Type::SingletonType
+          range_type = range_type.nominal if range_type.val
+        when RDL::Type::UnionType
+          range_type = range_type.widen
+        end
+      end
+      return GenericType.new(RDL::Globals.types[:hash], domain_type.canonical, range_type.canonical)
+    end
+
+    ### [+ key +] is type to add to promoted key types
+    ### [+ value +] is type to add to promoted value types
+    def promote!(key=nil, value=nil)
+      hash = promote(key, value)
+      return hash if !hash
+      @the_hash = hash
       # same logic as Tuple
-      return (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound })
+      return check_bounds
     end
 
     def cant_promote!
@@ -77,8 +101,12 @@ module RDL::Type
       @cant_promote = true
     end
 
-    def <=(other)
-      return Type.leq(self, other)
+    def check_bounds(no_promote=false)
+      return (@lbounds.all? { |lbound| lbound.<=(self, no_promote) }) && (@ubounds.all? { |ubound| self.<=(ubound, no_promote) })
+    end
+
+    def <=(other, no_constraint=false)
+      return Type.leq(self, other, no_constraint: no_constraint)
     end
 
     def member?(obj, *args)
@@ -87,6 +115,7 @@ module RDL::Type
       return t <= self if t
       right_elts = @elts.clone # shallow copy
 
+      return true if obj.nil?
       return false unless obj.instance_of? Hash
 
       # Check that every mapping in obj exists in @map and matches the type
@@ -111,7 +140,23 @@ module RDL::Type
 
     def instantiate(inst)
       return @the_hash.instantiate(inst) if @the_hash
-      return FiniteHashType.new(Hash[@elts.map { |k, t| [k, t.instantiate(inst)] }], (if @rest then @rest.instantiate(inst) end))
+      #return FiniteHashType.new(Hash[@elts.map { |k, t| [k, t.instantiate(inst)] }], (if @rest then @rest.instantiate(inst) end))
+      @elts = Hash[@elts.map { |k, t| [k, t.instantiate(inst)] }]
+      @rest = @rest.instantiate(inst) if @rest
+      self
+    end
+
+    def widen
+      return @the_hash.widen if @the_hash
+      #return FiniteHashType.new(Hash[@elts.map { |k, t| [k, t.widen] }], (if @rest then @rest.widen end))
+      @elts = Hash[@elts.map { |k, t| [k, t.widen] }]
+      @rest = @rest.widen if @rest
+      self
+    end
+
+    def copy
+      rest = @rest.copy if @rest
+      return FiniteHashType.new(Hash[@elts.map { |k,t| [k, t.copy] }], rest)
     end
 
     def hash

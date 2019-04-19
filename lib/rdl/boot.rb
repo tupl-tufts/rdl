@@ -54,6 +54,18 @@ module RDL::Globals
 
   # List of contracts that should be applied to the next method definition
   @deferred = []
+
+  # List of method types that have a dependent type. Used to type check type-level code.
+  @dep_types = []
+
+  ## Hash mapping node object IDs (integers) to a list [tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old], where: tmeth is a MethodType that is fully evaluated (i.e., no ComputedTypes) *and instantiated*, tmeth_old is the unevaluated method type (i.e., with ComputedTypes), tmeth_res is the result of evaluating tmeth_old *but not instantiating it*, self_klass is the class where the MethodType is defined, trecv_old was the receiver type used to evaluate tmeth_old, and targs_old is an Array of the argument types used to evaluate tmeth_old.
+  @comp_type_map = {}
+
+  # Map from ActiveRecord table names (symbols) to their schema types, which should be a Table type
+  @ar_db_schema = {}
+
+  # Map from Sequel table names (symbols) to their schema types, which should be a Table type
+  @seq_db_schema = {}
 end
 
 class << RDL::Globals # add accessors and readers for module variables
@@ -65,6 +77,10 @@ class << RDL::Globals # add accessors and readers for module variables
   attr_accessor :to_typecheck
   attr_accessor :to_do_at
   attr_accessor :deferred
+  attr_accessor :dep_types
+  attr_accessor :comp_type_map
+  attr_accessor :ar_db_schema
+  attr_accessor :seq_db_schema
 end
 
 # Create switches to control whether wrapping happens and whether
@@ -83,7 +99,9 @@ end
 
 require 'rdl/types/type.rb'
 require 'rdl/types/annotated_arg.rb'
+require 'rdl/types/bound_arg.rb'
 require 'rdl/types/bot.rb'
+require 'rdl/types/computed.rb'
 require 'rdl/types/dependent_arg.rb'
 require 'rdl/types/dots_query.rb'
 require 'rdl/types/dynamic.rb'
@@ -93,6 +111,7 @@ require 'rdl/types/intersection.rb'
 require 'rdl/types/lexer.rex.rb'
 require	'rdl/types/method.rb'
 require 'rdl/types/singleton.rb'
+require 'rdl/types/ast_node.rb'
 require 'rdl/types/nominal.rb'
 require	'rdl/types/non_null.rb'
 require 'rdl/types/optional.rb'
@@ -105,6 +124,7 @@ require 'rdl/types/union.rb'
 require 'rdl/types/var.rb'
 require	'rdl/types/vararg.rb'
 require 'rdl/types/wild_query.rb'
+require	'rdl/types/string.rb'
 
 require 'rdl/contracts/contract.rb'
 require 'rdl/contracts/and.rb'
@@ -136,6 +156,8 @@ module RDL
       @to_typecheck = Hash.new
       @to_typecheck[:now] = Set.new
       @to_do_at = Hash.new
+      @ar_db_schema = Hash.new
+      @seq_db_schema = Hash.new
       @deferred = []
 
       @parser = RDL::Type::Parser.new
@@ -180,3 +202,4 @@ module RDL
 end
 
 RDL.reset
+require 'rdl/types/rdl_types.rb'

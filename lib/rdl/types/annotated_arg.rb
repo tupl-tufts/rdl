@@ -41,6 +41,14 @@ module RDL::Type
       return AnnotatedArgType.new(@name, @type.instantiate(inst))
     end
 
+    def widen
+      return AnnotatedArgType.new(@name, @type.widen)
+    end
+
+    def copy
+      return AnnotatedArgType.new(@name, @type.copy)
+    end
+
     def optional?
       return type.optional?
     end

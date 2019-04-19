@@ -45,6 +45,14 @@ module RDL::Type
       return self
     end
 
+    def widen
+      return self
+    end
+
+    def copy
+      self
+    end
+
     def hash
       13
     end
