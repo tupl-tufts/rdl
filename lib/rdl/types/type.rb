@@ -51,6 +51,7 @@ module RDL::Type
       return true if right.is_a? TopType
 
       # dynamic
+      return true if left.is_a? DynamicType
       return true if right.is_a? DynamicType
 
       # type variables

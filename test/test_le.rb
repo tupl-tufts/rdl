@@ -55,18 +55,20 @@ class TestLe < Minitest::Test
   end
 
   def test_dyn
-    assert (not (RDL::Globals.types[:dyn] <= RDL::Globals.types[:nil]))
-    assert (not (RDL::Globals.types[:dyn] <= RDL::Globals.types[:string]))
-    assert (not (RDL::Globals.types[:dyn] <= RDL::Globals.types[:object]))
-    assert (not (RDL::Globals.types[:dyn] <= @tbasicobject))
-    assert (not (RDL::Globals.types[:dyn] <= @tsymfoo))
-    # next two asserts show that %top and %dyn are equivalent
-    assert (RDL::Globals.types[:top] <= RDL::Globals.types[:dyn])
+    assert (RDL::Globals.types[:dyn] <= RDL::Globals.types[:nil])
+    assert (RDL::Globals.types[:nil] <= RDL::Globals.types[:dyn])
     assert (RDL::Globals.types[:dyn] <= RDL::Globals.types[:top])
+    assert (RDL::Globals.types[:top] <= RDL::Globals.types[:dyn])
+    assert (RDL::Globals.types[:dyn] <= RDL::Globals.types[:bot])
+    assert (RDL::Globals.types[:bot] <= RDL::Globals.types[:dyn])
     assert (RDL::Globals.types[:dyn] <= RDL::Globals.types[:dyn])
+    assert (RDL::Globals.types[:dyn] <= RDL::Globals.types[:string])
     assert (RDL::Globals.types[:string] <= RDL::Globals.types[:dyn])
+    assert (RDL::Globals.types[:dyn] <= RDL::Globals.types[:object])
     assert (RDL::Globals.types[:object] <= RDL::Globals.types[:dyn])
+    assert (RDL::Globals.types[:dyn] <= @tbasicobject)
     assert (@tbasicobject <= RDL::Globals.types[:dyn])
+    assert (RDL::Globals.types[:dyn] <= @tsymfoo)
     assert (@tsymfoo <= RDL::Globals.types[:dyn])
   end
 

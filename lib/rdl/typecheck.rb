@@ -653,6 +653,16 @@ module RDL::Typecheck
           end
         }
         [envi, tright, effi]
+      elsif (tright.is_a? RDL::Type::DynamicType)
+        tasgn = tright
+        lhs.each { |asgn|
+          if asgn.type == :splat
+            envi, _ = tc_vasgn(scope, envi, asgn.children[0].type, asgn.children[0].children[0], tright, asgn)
+          else
+            envi, _ = tc_vasgn(scope, envi, asgn.type, asgn.children[0], tasgn, asgn)
+          end
+        }
+        [env, tright, effi]
       else
         error :masgn_bad_rhs, [tright], e.children[1]
       end
@@ -1202,13 +1212,17 @@ RUBY
       end
     when :ivar, :cvar, :gvar
       klass = (if kind == :gvar then RDL::Util::GLOBAL_NAME else env[:self] end)
-      unless RDL::Globals.info.has?(klass, name, :type)
+      if RDL::Globals.info.has?(klass, name, :type)
+        type = RDL::Globals.info.get(klass, name, :type)
+      elsif RDL::Config.instance.assume_dyn_type
+        type = RDL::Globals.types[:dyn]
+      else
         kind_text = (if kind == :ivar then "instance"
                      elsif kind == :cvar then "class"
                      else "global" end)
         error :untyped_var, [kind_text, name, klass], e
       end
-      [env, RDL::Globals.info.get(klass, name, :type).canonical]
+      [env, type.canonical]
     else
       raise RuntimeError, "unknown kind #{kind}"
     end
@@ -1232,13 +1246,16 @@ RUBY
       end
     when :ivasgn, :cvasgn, :gvasgn
       klass = (if kind == :gvasgn then RDL::Util::GLOBAL_NAME else env[:self] end)
-      unless RDL::Globals.info.has?(klass, name, :type)
+      if RDL::Globals.info.has?(klass, name, :type)
+        tleft = RDL::Globals.info.get(klass, name, :type)
+      elsif RDL::Config.instance.assume_dyn_type
+        tleft = RDL::Globals.types[:dyn]
+      else
         kind_text = (if kind == :ivasgn then "instance"
                     elsif kind == :cvasgn then "class"
                     else "global" end)
         error :untyped_var, [kind_text, name, klass], e
       end
-      tleft = RDL::Globals.info.get(klass, name, :type)
       error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless tright <= tleft
       [env, tright.canonical]
     when :send
@@ -1443,19 +1460,13 @@ RUBY
       error :no_singleton_method_type, [trecv.val, meth], e unless ts
       inst = {self: self_inst}
       self_klass = trecv.val
-      tmeth_inter = ts.map { |t| t.instantiate(inst) }
+      ts = ts.map { |t| t.instantiate(inst) }
     when RDL::Type::NominalType
       ts, es = lookup(scope, trecv.name, meth, e)
       error :no_instance_method_type, [trecv.name, meth], e unless ts
       inst = {self: trecv}
       self_klass = RDL::Util.to_class(trecv.name)
-    when RDL::Type::GenericType#, RDL::Type::TupleType, RDL::Type::FiniteHashType
-=begin
-      unless trecv.is_a? RDL::Type::GenericType
-        error :tuple_finite_hash_promote, (if trecv.is_a? RDL::Type::TupleType then ['tuple', 'Array'] else ['finite hash', 'Hash'] end), e unless trecv.promote!
-        trecv = trecv.canonical
-      end
-=end
+    when RDL::Type::GenericType
       ts, es = lookup(scope, trecv.base.name, meth, e)
       error :no_instance_method_type, [trecv.base.name, meth], e unless ts
       inst = trecv.to_inst.merge(self: trecv)
@@ -1518,7 +1529,7 @@ RUBY
         tc_send_one_recv(scope, env, RDL::Globals.types[:proc], meth, tactuals, block, e, op_asgn, union)
       end
     when RDL::Type::DynamicType
-      tmeth_inter = [trecv]
+      return [[trecv]]
     else
       raise RuntimeError, "receiver type #{trecv} not supported yet, meth=#{meth}"
     end
@@ -1924,14 +1935,33 @@ RUBY
           klass = '(singleton) ' + klass
         end
 
-        if the_klass.to_s.start_with?('#<Class:') and name ==:new
-          return [RDL::Type::DynamicType.new] if RDL::Config.instance.assume_dyn_type && name != :initialize
-          return nil
-        end
+        return nil if the_klass.to_s.start_with?('#<Class:') and name == :new
       end
     }
-    return [RDL::Type::DynamicType.new] if RDL::Config.instance.assume_dyn_type && name != :initialize
-    return nil
+
+    if RDL::Config.instance.assume_dyn_type
+      # method is nil when it isn't found? maybe log something here or raise exception
+      method = the_klass.instance_method(name) rescue nil
+      if method
+        arity = method.arity
+        has_varargs = false
+        if arity < 0
+          has_varargs = true
+          arity = -arity - 1
+        end
+        args = arity.times.map { RDL::Globals.types[:dyn] }
+        args << RDL::Type::VarargType.new(RDL::Globals.types[:dyn]) if has_varargs
+      else
+        args = [RDL::Type::VarargType.new(RDL::Globals.types[:dyn])]
+      end
+
+      ret = RDL::Globals.types[:dyn]
+      ret = RDL::Type::NominalType.new(the_klass) if name == :initialize
+
+      return [[RDL::Type::MethodType.new(args, nil, ret)]]
+    else
+      return nil
+    end
   end
 
   def self.filter_comp_types(ts, use_dep_types)

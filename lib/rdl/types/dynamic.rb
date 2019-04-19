@@ -50,6 +50,10 @@ module RDL::Type
       return self
     end
 
+    def copy
+      return self
+    end
+
     def hash
       16
     end
