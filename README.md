@@ -261,7 +261,7 @@ RDL has the dynamic type `%dyn` that is the subtype and supertype of any type.
 ```ruby
 type Example, :method, '(%dyn) -> %dyn'
 ```
-This is useful for typed parts of a Ruby program that is interacting with untyped Ruby program. RDL allows setting a [configuration option](#configuration) `assume_dyn_type` to `true` so that any method that is missing a type will be assumed to be dynamic. By default this option is set to `false`.
+This is useful for typed portions of a Ruby program that interact with untyped portions. RDL allows setting a [configuration option](#configuration) `assume_dyn_type` to `true` so that any method that is missing a type will be assumed to take and return the dynamic type. By default, this option is set to `false`.
 
 ## Union Types
 
