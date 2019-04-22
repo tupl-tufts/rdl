@@ -54,6 +54,24 @@ class TestLe < Minitest::Test
     assert (@tsymfoo <= RDL::Globals.types[:top])
   end
 
+  def test_dyn
+    assert (RDL::Globals.types[:dyn] <= RDL::Globals.types[:nil])
+    assert (RDL::Globals.types[:nil] <= RDL::Globals.types[:dyn])
+    assert (RDL::Globals.types[:dyn] <= RDL::Globals.types[:top])
+    assert (RDL::Globals.types[:top] <= RDL::Globals.types[:dyn])
+    assert (RDL::Globals.types[:dyn] <= RDL::Globals.types[:bot])
+    assert (RDL::Globals.types[:bot] <= RDL::Globals.types[:dyn])
+    assert (RDL::Globals.types[:dyn] <= RDL::Globals.types[:dyn])
+    assert (RDL::Globals.types[:dyn] <= RDL::Globals.types[:string])
+    assert (RDL::Globals.types[:string] <= RDL::Globals.types[:dyn])
+    assert (RDL::Globals.types[:dyn] <= RDL::Globals.types[:object])
+    assert (RDL::Globals.types[:object] <= RDL::Globals.types[:dyn])
+    assert (RDL::Globals.types[:dyn] <= @tbasicobject)
+    assert (@tbasicobject <= RDL::Globals.types[:dyn])
+    assert (RDL::Globals.types[:dyn] <= @tsymfoo)
+    assert (@tsymfoo <= RDL::Globals.types[:dyn])
+  end
+
   def test_sym
     assert (RDL::Globals.types[:symbol] <= RDL::Globals.types[:symbol])
     assert (@tsymfoo <= @tsymfoo)

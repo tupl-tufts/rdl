@@ -1685,6 +1685,80 @@ class TestTypecheck < Minitest::Test
     }
   end
 
+  def test_dyn
+    # any method call on %dyn type return %dyn
+    self.class.class_eval {
+      type "(%dyn) -> %dyn", typecheck: :now
+      def self.do_add(x); x + 1; end
+    }
+
+    # any method can return a %dyn type
+    self.class.class_eval {
+      type "() -> %dyn", typecheck: :now
+      def self.ret_dyn; "blah"; end
+    }
+
+    # somewhat larger program
+    self.class.class_eval {
+      def inc(x); x + 1; end
+      def use_val; v = get_val; inc(v); end
+      def get_val; return "blah"; end
+
+      type :inc, '(Integer) -> Integer', typecheck: :dyntest
+      type :use_val, '() -> Integer', typecheck: :dyntest
+      type :get_val, '() -> %dyn', typecheck: :dyntest
+
+      RDL.do_typecheck :dyntest
+    }
+  end
+
+  def test_assume_dynamic
+    RDL.config { |config| config.assume_dyn_type = true }
+
+    dynamic = do_tc('unknown', env: @env)
+    assert dynamic <= tt('Integer')
+    assert tt('Integer') <= dynamic
+    assert dynamic <= tt('Array<Integer>')
+    assert tt('Array<Integer>') <= dynamic
+
+    tuple_of_dynamic = do_tc('[unknown]', env: @env)
+    refute tuple_of_dynamic <= tt('Integer')
+    assert tuple_of_dynamic <= tt('[Integer]')
+    refute tt('Integer') <= tuple_of_dynamic
+    assert tt('[Integer]') <= tuple_of_dynamic
+
+    assert_equal(dynamic, do_tc('unknown.unknown', env: @env))
+    assert_equal(dynamic, do_tc('a,b = unknown', env: @env))
+    assert_equal(dynamic, do_tc('(a,b = unknown).unknown', env: @env))
+    assert_equal(dynamic, do_tc('unknown[1]', env: @env))
+
+    self.class.class_eval {
+      type "() -> String", typecheck: :now
+      def dynamic_1()
+        unknown
+      end
+      type "() -> Array<Integer>", typecheck: :now
+      def dynamic_2()
+        unknown(unknown)
+      end
+      type "() -> %bot", typecheck: :now
+      def dynamic_2()
+        unknown(3)
+      end
+    }
+
+    RDL.config { |config| config.assume_dyn_type = false }
+
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      self.class.class_eval {
+        type "() -> String", typecheck: :now
+        def dynamic_1()
+          unknown
+        end
+      }
+    }
+  end
+
   def test_method_missing
     skip "method_missing not supported yet"
     RDL.do_typecheck :later_mm1

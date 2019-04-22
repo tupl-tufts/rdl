@@ -24,6 +24,7 @@
 
 ### Added
 - Support for type-level computations, including new annotations with type-level computations for Array, Hash, String, Integer, Float, and database query libraries
+- Dynamic type
 - `RDL.reset` method
 
 ## [2.1.0] - 2017-06-14

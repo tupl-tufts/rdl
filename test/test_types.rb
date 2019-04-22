@@ -24,6 +24,14 @@ class TestTypes < Minitest::Test
     assert (RDL::Globals.types[:nil] != ttop)
   end
 
+  def test_dyn
+    tdyn = DynamicType.new
+    tdyn2 = DynamicType.new
+    assert_equal tdyn, tdyn2
+    assert_equal RDL::Globals.types[:dyn], tdyn
+    assert (RDL::Globals.types[:nil] != tdyn)
+  end
+
   def test_nominal
     ta = NominalType.new :A
     ta2 = NominalType.new :A
