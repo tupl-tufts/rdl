@@ -12,7 +12,7 @@ RDL is a gem that adds types and contracts to Ruby. RDL includes extensive
 support for specifying method types, which can either be enforced as
 contracts or statically checked.
 EOF
-  s.authors     = ['Jeffrey S. Foster', 'Brianna M. Ren', 'T. Stephen Strickland', 'Alexander T. Yu', 'Milod Kazerounian']
+  s.authors     = ['Jeffrey S. Foster', 'Brianna M. Ren', 'T. Stephen Strickland', 'Alexander T. Yu', 'Milod Kazerounian', 'Sankha Narayan Guria']
   s.email       = ['rdl-users@googlegroups.com']
   s.files       = `git ls-files`.split($/)
   s.executables << 'rdl_query'
