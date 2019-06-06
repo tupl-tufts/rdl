@@ -592,10 +592,7 @@ module RDL
     RDL::Globals.to_do_at[sym] = Array.new
     return unless RDL::Globals.to_typecheck[sym]
     RDL::Globals.to_typecheck[sym].each { |klass, meth|
-      t1 = Time.now
       RDL::Typecheck.typecheck(klass, meth)
-      t2 = Time.now
-      #puts "GOT #{t2 -t1} for #{[klass, meth]}"
     }
     RDL::Globals.to_typecheck[sym] = Set.new
     nil
@@ -686,7 +683,6 @@ module RDL
     #code_type = RDL::Globals.parser.scan_str "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
     RDL::Globals.dep_types.each { |klass, meth, typ|
       klass = RDL::Util.has_singleton_marker(klass) ? RDL::Util.remove_singleton_marker(klass) : klass
-      binds = {}
       arg_list = "(trec, targs"
       type_list = "(RDL::Type::Type, Array<RDL::Type::Type>"
       (typ.args+[typ.ret]+[typ.block]).each { |t|
@@ -828,6 +824,8 @@ end
 
 class Module
   define_method :singleton_method_added, Object.instance_method(:singleton_method_added)
+
+  RDL::Util.silent_warnings { 
   
   def method_added(meth)
     klass = self.to_s
@@ -835,6 +833,8 @@ class Module
     RDL::Wrap.do_method_added(self, false, klass, meth)
     nil
   end
+
+  }
 end
 
 class Class

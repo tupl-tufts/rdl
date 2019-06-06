@@ -204,7 +204,9 @@ RDL.type :Array, :[]=, '(Integer, Integer, ``any_or_t(trec)``) -> t'
 
 def Array.multi_assign_output(trec, targs)
   ## this method could get more precise, but it would require many more cases
-  return RDL::Globals.types[:top] ### TODO: remove this. This is here to avoid promote!-ing when type does not actually match. Have to figure out better solution.
+  return RDL::Globals.types[:top] ### TODO: Figure out better solution. This is here to avoid promote!-ing when type does not actually match. 
+=begin
+  ## uncomment after figuring out above.
   case trec
   when RDL::Type::TupleType
     element = (if targs.length > 2 then targs[2] else targs[1] end)
@@ -213,6 +215,7 @@ def Array.multi_assign_output(trec, targs)
   else
     RDL::Globals.parser.scan_str "#T t"
   end
+=end
 end
 RDL.type Array, 'self.multi_assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
 

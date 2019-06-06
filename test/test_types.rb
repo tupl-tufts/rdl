@@ -234,7 +234,7 @@ class TestTypes < Minitest::Test
   end
 
   def test_canonical
-    t = RDL::Globals.parser.scan_str '#T Array<Fixnum or Fixnum>'
-    assert_equal 'Array<Fixnum>', t.canonical.to_s
+    t = RDL::Globals.parser.scan_str '#T Array<Integer or Integer>'
+    assert_equal 'Array<Integer>', t.canonical.to_s
   end
 end

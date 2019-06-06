@@ -182,13 +182,6 @@ class TestTypecheck < Minitest::Test
     RDL.type :Integer, :*, '(Integer) -> Integer', wrap: false
 =end
     RDL.type :Integer, :to_s, '() -> String', wrap: false
-    RDL.type :Fixnum, :<, '(Integer) -> %bool', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
-    RDL.type :Fixnum, :>, '(Integer) -> %bool', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
-    RDL.type :Fixnum, :>=, '(Integer) -> %bool', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
-    RDL.type :Fixnum, :+, '(Integer) -> Integer', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
-    RDL.type :Fixnum, :&, '(Integer) -> Integer', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
-    RDL.type :Fixnum, :*, '(Integer) -> Integer', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
-    RDL.type :Fixnum, :to_s, '() -> String', wrap: false, version: RDL::Globals::FIXBIG_VERSIONS
     RDL.type :Kernel, 'self.puts', '(*[to_s : () -> String]) -> nil', wrap: false
     RDL.type :Kernel, :raise, '() -> %bot', wrap: false
     RDL.type :Kernel, :raise, '(String) -> %bot', wrap: false
@@ -1742,7 +1735,7 @@ class TestTypecheck < Minitest::Test
         unknown(unknown)
       end
       type "() -> %bot", typecheck: :now
-      def dynamic_2()
+      def dynamic_3()
         unknown(3)
       end
     }
@@ -1752,7 +1745,7 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
         type "() -> String", typecheck: :now
-        def dynamic_1()
+        def dynamic_4()
           unknown
         end
       }

@@ -17,7 +17,7 @@ module RDL::Type
           ## interpolated string
           @interp = true
         else
-          raise RuntimeError, "Attempt to create precise string type with non-string or non-type value #{v}" unless vals.all? { |v| v.is_a?(Type) || v.is_a?(String) }
+          raise RuntimeError, "Attempt to create precise string type with non-string or non-type value #{v}" unless vals.all? { |val| val.is_a?(Type) || val.is_a?(String) }
         end
       }
       vals = [vals.join] if !@interp && vals.size > 1 ## if all elements of `vals` are strings, join them into one

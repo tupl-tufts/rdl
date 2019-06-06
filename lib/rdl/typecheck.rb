@@ -267,7 +267,7 @@ module RDL::Typecheck
     }
     if RDL::Config.instance.check_comp_types
       new_meth = WrapCall.rewrite(ast) # rewrite ast to insert dynamic checks
-      RDL::Util.to_class(klass).class_eval(new_meth) # redefine method in the same class
+      RDL::Util.silent_warnings { RDL::Util.to_class(klass).class_eval(new_meth) } # redefine method in the same class
     end
     RDL::Globals.info.set(klass, meth, :typechecked, true)
   end
@@ -1398,13 +1398,13 @@ RUBY
     eff = [:+, :+]
     trecvs.each { |trecv|
       ts, es = tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union)
-      if es.nil? || (es.all? { |e| e.nil? }) ## could be multiple, because every time e is called, nil is added to effects
+      if es.nil? || (es.all? { |effect| effect.nil? }) ## could be multiple, because every time e is called, nil is added to effects
         ## should probably change default effect to be [:-, :-], but for now I want it like this,
         ## so I can easily see when a method has been used and its effect set to the default.
         #puts "Going to assume method #{meth} for receiver #{trecv} has effect [:-, :-]."
         eff = [:-, :-]
       else
-        es.each { |e| eff = effect_union(eff, e) unless e.nil? }
+        es.each { |effect| eff = effect_union(eff, effect) unless effect.nil? }
       end
       trets.concat(ts)
     }
@@ -1512,7 +1512,7 @@ RUBY
       else
       ## need to promote in this case
         error :tuple_finite_hash_promote, ['precise string type', 'String'], e unless trecv.promote!
-        trev = trecv.canonical
+        trecv = trecv.canonical
         ts, es = lookup(scope, trecv.name, meth, e)
         error :no_instance_method_type, [trecv.name, meth], e unless ts
         inst = trecv.to_inst.merge(self: trecv)
@@ -1572,16 +1572,16 @@ RUBY
           if tmeth_inst
             effblock = tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
             if es
-              es = es.map { |e| if e.nil? then e else e.clone end } 
-              es.each { |e| ## expecting just one effect per method right now. can clean this up later.
-                if !e.nil? && (e[1] == :blockdep || e[0] == :blockdep)
+              es = es.map { |es_effect| if es_effect.nil? then es_effect else es_effect.clone end } 
+              es.each { |es_effect| ## expecting just one effect per method right now. can clean this up later.
+                if !es_effect.nil? && (es_effect[1] == :blockdep || es_effect[0] == :blockdep)
                   raise "Got block-dependent effect, but no block." unless block && effblock
                   if effblock[0] == :+ or effblock[0] == :~
-                    e[1] = :+
-                    e[0] = :+
+                    es_effect[1] = :+
+                    es_effect[0] = :+
                   elsif effblock[0] == :-
-                    e[1] = :-
-                    e[0] = :-
+                    es_effect[1] = :-
+                    es_effect[0] = :-
                   else
                     raise "unexpected effect #{effblock[0]}"
                   end
@@ -2153,7 +2153,7 @@ class Object
     inst = Hash[RDL::Globals.type_params[klass][0].zip []] if (not(inst) && RDL::Globals.type_params[klass])
     inst = {} if not inst
 
-    matches, args, blk, bind = RDL::Type::MethodType.check_arg_types("#{__rdl_meth}", self, bind, [tmeth], inst, *args, &block)
+    matches, args, _, bind = RDL::Type::MethodType.check_arg_types("#{__rdl_meth}", self, bind, [tmeth], inst, *args, &block)
 
     ret = self.send(__rdl_meth, *args, &block)
 

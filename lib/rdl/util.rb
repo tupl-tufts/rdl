@@ -88,4 +88,12 @@ class RDL::Util
       klass + "#" + meth.to_s
     end
   end
+
+  def self.silent_warnings
+    old_stderr = $stderr
+    $stderr = StringIO.new
+    yield
+  ensure
+    $stderr = old_stderr
+  end
 end

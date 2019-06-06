@@ -19,14 +19,14 @@ class TestDynChecks < Minitest::Test
   ## First, a silly example. `bar1` (defined below) always returns 1, but its comp type says it always returns 2.
   ## `foo1` will type check properly, but the `bar1` error won't be caught until `foo` is called after type checking.
   def test_foo1_fail
-    self.class.class_eval("def bar1(x) 1; end")
+    RDL::Util.silent_warnings { self.class.class_eval("def bar1(x) 1; end") } 
     assert_raises(RDL::Type::TypeError) { self.class.new(nil).foo1(1) }
   end
 
   ## If we redefine `bar1`, it should work.
 
   def test_foo1_pass
-    self.class.class_eval("def bar1(x) 2; end")
+    RDL::Util.silent_warnings { self.class.class_eval("def bar1(x) 2; end") }
     assert self.class.new(nil).foo1(1)
   end
 
@@ -42,12 +42,12 @@ class TestDynChecks < Minitest::Test
   end
 
   def test_array_fail
-    self.class.class_eval("def return_array() [1,2,3]; end")
+    RDL::Util.silent_warnings{ self.class.class_eval("def return_array() [1,2,3]; end") }
     assert_raises(RDL::Type::TypeError) { self.class.new(nil).calls_array }
   end
 
   def test_array_pass
-    self.class.class_eval("def return_array() [0,0,0]; end")
+    RDL::Util.silent_warnings { self.class.class_eval("def return_array() [0,0,0]; end") }
     assert self.class.new(nil).calls_array
   end
 
@@ -72,12 +72,12 @@ class TestDynChecks < Minitest::Test
   end
 
   def test_where_fail
-    People.class_eval("def person_to_look_up() {name: 'alice', age: '30'}; end")
+    RDL::Util.silent_warnings{ People.class_eval("def person_to_look_up() {name: 'alice', age: '30'}; end") }
     assert_raises(RDL::Type::TypeError) { People.new.calls_where }
   end
     
   def test_where_pass
-    People.class_eval("def person_to_look_up() {name: 'alice', age: 30}; end")
+    RDL::Util.silent_warnings { People.class_eval("def person_to_look_up() {name: 'alice', age: 30}; end") }
     assert People.new.calls_where
   end
 
@@ -97,18 +97,18 @@ class TestDynChecks < Minitest::Test
 
   type "(Integer) -> Integer", wrap: false, typecheck: :now
   def multi_caller(x)
-    first = called_thrice(x) ## should have type Integer
-    second = called_thrice(1) ## Should have type 2
-    third = called_thrice(2) ## Should have type 3
+    called_thrice(x) ## should have type Integer
+    called_thrice(1) ## Should have type 2
+    called_thrice(2) ## Should have type 3
   end
 
   def test_multi_pass
-    self.class.class_eval "def called_thrice(x) x+1; end" ## this will satisfy all call return types
+    RDL::Util.silent_warnings { self.class.class_eval "def called_thrice(x) x+1; end" } ## this will satisfy all call return types
     assert self.class.new(nil).multi_caller(0)
   end
 
   def test_multi_fail
-    self.class.class_eval "def called_thrice(x) if (x==2) then x+2 else x+1 end; end" ## silly
+    RDL::Util.silent_warnings { self.class.class_eval "def called_thrice(x) if (x==2) then x+2 else x+1 end; end" } ## silly
     assert_raises(RDL::Type::TypeError) { multi_caller(0) }
   end
 
