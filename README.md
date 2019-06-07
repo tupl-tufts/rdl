@@ -766,43 +766,25 @@ RDL's static type checker makes some assumptions that should hold unless your Ru
 
 # Type-Level Computations
 
-RDL includes support for type-level computations: embedding Ruby code *within* a method type signature.
-Using these type-level computations, we can write type signatures that are extremely precise. They can
-check more expressive properties, such as the correctness of column names and types in a database query,
-and we have found in practice that the use of type-level computations significantly reduces the need
-for manually inserted type casts. Here we will cover the basics of using type-level computations.
-For a closer look, check out our recent [paper](https://arxiv.org/abs/1904.03521) on the same topic.
+RDL includes support for type-level computations: embedding Ruby code *within* a method's type signature. Using these type-level computations, we can write type signatures that can check more expressive properties, such as the correctness of column names and types in a database query. We have found that type-level computations significantly reduce the need for manually inserted type casts. Below we will cover the basics of using type-level computations. For a closer look, check out our [paper](https://www.cs.tufts.edu/~jfoster/papers/pldi19.pdf) on the same topic.
 
-We use type-level computations only in type signatures for methods which themselves are *not* type checked.
-Thus, our primary focus is on applying them to library methods. We add a computation to a type by writing
-Ruby code, delimited by double backticks \`\`...\`\`, in place of a type within a method's signature.
-This Ruby code may refer to two special variables: `trec`, which names the RDL type of the receiver for a
-given method call, and `targs`, which names an array of RDL types of the arguments for a given method call.
-The code must itself evaluate to a type.
+We use type-level computations only in type signatures for methods which themselves are *not* type checked. Thus, our primary focus is on applying them to library methods. We add a computation to a type by writing Ruby code, delimited by double backticks \`\`...\`\`, in place of a type within a method's signature. This Ruby code may refer to two special variables: `trec`, which names the RDL type of the receiver for a given method call, and `targs`, which names an array of RDL types of the arguments for a given method call. The code must itself evaluate to a type.
 
-As an example, we will write a type-level computation for the `Integer#+` method. Normaly, this method
-would have the simple RDL type `type '(Integer) -> Integer'` (for the case that it takes another `Integer`).
-Using type level computations, we can write the following more precise type:
+As an example, we will write a type-level computation for the `Integer#+` method. Normaly, this method would have the simple RDL type `type '(Integer) -> Integer'` (for the case that it takes another `Integer`). Using type level computations, we can write the following more precise type:
 
 ```ruby
-type '(Integer) -> ``if trec.is_a?(RDL::Type::SingletonType) && targs[0].is_a?(RDL::Type::SingletonType) then RDL::Type::SingletonType.new(trec.val+targs[0].val) else RDL::Type::NominalType.new(Integer) end'
+type '(Integer) -> ``if trec.is_a?(RDL::Type::SingletonType) && targs[0].is_a?(RDL::Type::SingletonType) then RDL::Type::SingletonType.new(trec.val+targs[0].val) else RDL::Type::NominalType.new(Integer) end``'
 ```
 
-Now, in place of a simple return type, we have written some Ruby code. This code checks if both the receiver (`trec`) and argument (`targs[0]`) have a singleton type. If so, in the first arm of the branch we compute a new
-singleton type containing the sum of the receiver and argument. Otherwise, we fall back on returning the nominal
-type `Integer`. With this signature, RDL can determine the expression `1+2` has the type `3`, rather than the less
-precise type `Integer`.
+Now, in place of a simple return type, we have written some Ruby code. This code checks if both the receiver (`trec`) and argument (`targs[0]`) have a singleton type. If so, in the first arm of the branch we compute a new singleton type containing the sum of the receiver and argument. Otherwise, we fall back on returning the nominal type `Integer`. With this signature, RDL can determine the expression `1+2` has the type `3`, rather than the less precise type `Integer`.
 
-We also provide a way of binding variable names to argument types, to avoid using the variable `targs`.
-For example, for the type signature above, we can give the argument type the name `t`, which we then refer
-to in the type-level computation:
+We also provide a way of binding variable names to argument types, to avoid using the variable `targs`. For example, for the type signature above, we can give the argument type the name `t`, which we then refer to in the type-level computation:
 
 ```ruby
-type '(Integer) -> ``if trec.is_a?(RDL::Type::SingletonType) && t.is_a?(RDL::Type::SingletonType) then RDL::Type::SingletonType.new(trec.val+t.val) else RDL::Type::NominalType.new(Integer) end'
+type '(Integer) -> ``if trec.is_a?(RDL::Type::SingletonType) && t.is_a?(RDL::Type::SingletonType) then RDL::Type::SingletonType.new(trec.val+t.val) else RDL::Type::NominalType.new(Integer) end``'
 ```
 
-We have written type-level computations for methods from the Integer, Float, Array, Hash, and String core libraries. For more examples, you can find these in the `/lib/types/core/` directory. We have also written them for a
-number of database query methods from both the [ActiveRecord](https://github.com/rails/rails/tree/master/activerecord) and [Sequel](https://github.com/jeremyevans/sequel) DSLs. They can be found in `comp_types.rb` file in the `/lib/types/rails/active_record` and `/lib/types/sequel` directories respectively. These type-level computations for the database query methods depend on RDL pre-processing the schema of the database before type checking any user code. RDL provides helper methods to process the database schema:
+We have written type-level computations for methods from the Integer, Float, Array, Hash, and String core libraries, which you can find  in the `/lib/types/core/` directory. We have also written them for a number of database query methods from both the [ActiveRecord](https://github.com/rails/rails/tree/master/activerecord) and [Sequel](https://github.com/jeremyevans/sequel) DSLs. They can be found in `comp_types.rb` file in the `/lib/types/rails/active_record` and `/lib/types/sequel` directories, respectively. These type-level computations for the database query methods depend on RDL pre-processing the schema of the database before type checking any user code. RDL provides helper methods to process the database schema:
 
 ```ruby
 RDL.load_sequel_schema(DATABASE) # `DATABASE` is the Sequel Database object
@@ -810,14 +792,7 @@ RDL.load_sequel_schema(DATABASE) # `DATABASE` is the Sequel Database object
 RDL.load_rails_schema # Automatically triggered if RDL is loaded in a Rails environment. If you want to use ActiveRecord without Rails, you need to call this method
 ```
 
-Because type-level computations are used for methods which themselves are not type checked, we include
-an optional configuration for inserting dynamic checks that ensure that these methods return values
-of the type expected by their type-level computation. Additionally, because type-level computations
-can refer to mutable state, we include a second configuration for re-running type-level computations
-at runtime to ensure that they evaluate to the same value they did at type checking time. Both of these
-configurations are by default turned off. See the (Configuration)[#configuration] section for information on turning them on.
-
-
+Because type-level computations are used for methods which themselves are not type checked, we include an optional configuration for inserting dynamic checks that ensure that these methods return values of the type expected by their type-level computation. Additionally, because type-level computations can refer to mutable state, we include a second configuration for re-running type-level computations at runtime to ensure that they evaluate to the same value they did at type checking time. Both of these configurations are by default turned off. See the (Configuration)[#configuration] section for information on turning them on.
 
 # RDL Method Reference
 
@@ -953,52 +928,52 @@ RDL supports the following configuration options:
 * `config.pre_defaults` - Hash containing default options for `pre`. Initially `{ wrap: true }`.
 * `config.post_defaults` - same as `pre_defaults`, but for `post`.
 * `config.use_comp_types` - when true, RDL makes use of types with type-level computations. When false, RDL ignores such types. By default set to true.
-* `config.check_comp_types` - when true, RDL inserts dynamic checks which ensure that methods with type-level computations will return the expected type. By default set to false.
-* `config.rerun_comp_types` - when true, RDL inserts dynamic checks which rerun type-level computations at method call sites, ensuring that they evaluate to the same type they did at type checking time. 
+* `config.check_comp_types` - when true, RDL inserts dynamic checks which ensure that methods with type-level computations will return the expected type. False by default.
+* `config.rerun_comp_types` - when true, RDL inserts dynamic checks which rerun type-level computations at method call sites, ensuring that they evaluate to the same type they did at type checking time.  False by default
 
 
 # Bibliography
 
 Here are some research papers we have written exploring types, contracts, and Ruby.
 
-* Milod Kazerounian, Sankha Narayan Guria, Niki Vazou, Jeffrey S. Foster, David Van Horn.
-Type-Level Computations for Ruby Libraries.
+* Milod Kazerounian, Sankha Narayan Guria, Niki Vazou, Jeffrey S. Foster, and David Van Horn.
+[Type-Level Computations for Ruby Libraries](https://www.cs.tufts.edu/~jfoster/papers/pldi19.pdf).
 In ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI), Phoenix, AZ, June 2019.
 
 * Brianna M. Ren and Jeffrey S. Foster.
-[Just-in-Time Static Type Checking for Dynamic Languages](http://www.cs.umd.edu/~jfoster/papers/pldi16.pdf).
+[Just-in-Time Static Type Checking for Dynamic Languages](http://www.cs.tufts.edu/~jfoster/papers/pldi16.pdf).
 In ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI), Santa Barbara, CA, June 2016.
 
 * T. Stephen Strickland, Brianna Ren, and Jeffrey S. Foster.
-[Contracts for Domain-Specific Languages in Ruby](http://www.cs.umd.edu/~jfoster/papers/dls12.pdf).
+[Contracts for Domain-Specific Languages in Ruby](http://www.cs.tufts.edu/~jfoster/papers/dls12.pdf).
 In Dynamic Languages Symposium (DLS), Portland, OR, October 2014.
 
 * Brianna M. Ren, John Toman, T. Stephen Strickland, and Jeffrey S. Foster.
-[The Ruby Type Checker](http://www.cs.umd.edu/~jfoster/papers/oops13.pdf).
+[The Ruby Type Checker](http://www.cs.tufts.edu/~jfoster/papers/oops13.pdf).
 In Object-Oriented Program Languages and Systems (OOPS) Track at ACM Symposium on Applied Computing, pages 1565–1572, Coimbra, Portugal, March 2013.
 
 * Jong-hoon (David) An, Avik Chaudhuri, Jeffrey S. Foster, and Michael Hicks.
-[Dynamic Inference of Static Types for Ruby](http://www.cs.umd.edu/~jfoster/papers/popl11.pdf).
+[Dynamic Inference of Static Types for Ruby](http://www.cs.tufts.edu/~jfoster/papers/popl11.pdf).
 In ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages (POPL), pages 459–472, Austin, TX, USA, January 2011.
 
 * Jong-hoon (David) An.
-[Dynamic Inference of Static Types for Ruby](http://www.cs.umd.edu/~jfoster/papers/thesis-an.pdf).
+[Dynamic Inference of Static Types for Ruby](http://www.cs.tufts.edu/~jfoster/papers/thesis-an.pdf).
 MS thesis, University of Maryland, College Park, 2010.
 
 * Michael Furr.
-[Combining Static and Dynamic Typing in Ruby](https://www.cs.umd.edu/~jfoster/papers/thesis-furr.pdf).
+[Combining Static and Dynamic Typing in Ruby](https://www.cs.tufts.edu/~jfoster/papers/thesis-furr.pdf).
 PhD thesis, University of Maryland, College Park, 2009.
 
 * Michael Furr, Jong-hoon (David) An, Jeffrey S. Foster, and Michael Hicks.
-[The Ruby Intermediate Langauge](http://www.cs.umd.edu/~jfoster/papers/dls09-ril.pdf).
+[The Ruby Intermediate Langauge](http://www.cs.tufts.edu/~jfoster/papers/dls09-ril.pdf).
 In Dynamic Languages Symposium (DLS), pages 89–98, Orlando, Florida, October 2009.
 
 * Michael Furr, Jong-hoon (David) An, and Jeffrey S. Foster.
-[Profile-Guided Static Typing for Dynamic Scripting Languages](http://www.cs.umd.edu/~jfoster/papers/oopsla09.pdf).
+[Profile-Guided Static Typing for Dynamic Scripting Languages](http://www.cs.tufts.edu/~jfoster/papers/oopsla09.pdf).
 In ACM SIGPLAN International Conference on Object-Oriented Programming, Systems, Languages and Applications (OOPSLA), pages 283–300, Orlando, Floria, October 2009. Best student paper award.
 
 * Michael Furr, Jong-hoon (David) An, Jeffrey S. Foster, and Michael Hicks.
-[Static Type Inference for Ruby](http://www.cs.umd.edu/~jfoster/papers/oops09.pdf).
+[Static Type Inference for Ruby](http://www.cs.tufts.edu/~jfoster/papers/oops09.pdf).
 In Object-Oriented Program Languages and Systems (OOPS) Track at ACM Symposium on Applied Computing (SAC), pages 1859–1866, Honolulu, Hawaii, March 2009.
 
 # Copyright

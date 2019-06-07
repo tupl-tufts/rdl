@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [2.2.0] - 2019-06-07
+
 ### Fixed
 - Dynamic type checking of initialize method
 - Bug with handling constants of certain types
@@ -23,7 +25,9 @@
 - Add `RDL.query` support for nested classes, e.g., `RDL.query "ActiveRecord::Base#id`
 
 ### Added
-- Support for type-level computations, including new annotations with type-level computations for Array, Hash, String, Integer, Float, and database query libraries
+- Support for type-level computations, including new annotations with
+  type-level computations for Array, Hash, String, Integer, Float, and
+  database query libraries
 - Dynamic type
 - `RDL.reset` method
 
