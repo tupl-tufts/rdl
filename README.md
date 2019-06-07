@@ -142,7 +142,7 @@ end
 
 Given this program, RDL intercepts the call to `sqrt` and passes its argument to the `pre` block, which checks that the argument is positive. Then when `sqrt` returns, RDL passes the return value (as `r`) and the initial argument (as `x`) to the `post` block, which checks that the return is positive. (Let's ignore complex numbers to keep things simple...) RDL contracts are enforced at method entry and exit. For example, if we call `sqrt(49)`, RDL first checks that `49 > 0`; then it passes `49` to `sqrt`, which (presumably) returns `7`; then RDL checks that `7 > 0`; and finally it returns `7`. The `pre` and `post` methods can also be called as `RDL.pre` and `RDL.post`, as long as they are also given class and method arguments, similarly to `type`. Note that pre- and postconditions can't be searched for using `RDL.query`.
 
-Note: RDL is a research project from the (Tufts University Computer Science Department)[https://www.cs.tufts.edu] and the (University of Maryland, College Park Computer Science Department)[https://www.cs.umd.edu]. If you are looking for an industrial strength Ruby type system, check out Stripe’s (Sorbet)[https://sorbet.org] system.
+Note: RDL is a research project from the [Tufts University Computer Science Department](https://www.cs.tufts.edu) and the [University of Maryland, College Park Computer Science Department](https://www.cs.umd.edu). If you are looking for an industrial strength Ruby type system, check out Stripe’s [Sorbet](https://sorbet.org) system.
 
 # Using RDL
 
@@ -794,7 +794,7 @@ RDL.load_sequel_schema(DATABASE) # `DATABASE` is the Sequel Database object
 RDL.load_rails_schema # Automatically triggered if RDL is loaded in a Rails environment. If you want to use ActiveRecord without Rails, you need to call this method
 ```
 
-Because type-level computations are used for methods which themselves are not type checked, we include an optional configuration for inserting dynamic checks that ensure that these methods return values of the type expected by their type-level computation. Additionally, because type-level computations can refer to mutable state, we include a second configuration for re-running type-level computations at runtime to ensure that they evaluate to the same value they did at type checking time. Both of these configurations are by default turned off. See the (Configuration)[#configuration] section for information on turning them on.
+Because type-level computations are used for methods which themselves are not type checked, we include an optional configuration for inserting dynamic checks that ensure that these methods return values of the type expected by their type-level computation. Additionally, because type-level computations can refer to mutable state, we include a second configuration for re-running type-level computations at runtime to ensure that they evaluate to the same value they did at type checking time. Both of these configurations are by default turned off. See the [Configuration](#configuration) section for information on turning them on.
 
 # RDL Method Reference
 
