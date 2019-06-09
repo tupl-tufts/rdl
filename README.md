@@ -1,4 +1,4 @@
-[![Gem Version](https://badge.fury.io/rb/rdl.svg)](https://badge.fury.io/rb/rdl) [![Build Status](https://travis-ci.org/plum-umd/rdl.svg?branch=master)](https://travis-ci.org/plum-umd/rdl)
+[![Gem Version](https://badge.fury.io/rb/rdl.svg)](https://badge.fury.io/rb/rdl) [![Build Status](https://travis-ci.org/tupl-tufts/rdl.svg?branch=master)](https://travis-ci.org/tupl-tufts/rdl)
 
 
 # Table of Contents
