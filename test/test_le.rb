@@ -343,6 +343,13 @@ class TestLe < Minitest::Test
     assert tt("Integer") <= tt("!Object")
   end
 
+  def test_finite_hash_to_hash
+    assert tt("{a: Integer, b: String}") <= tt("Hash<Symbol,Integer or String>")
+    # Should these be true?
+    # assert tt("{a: Integer, b: String}") <= tt("Hash")
+    # assert tt("{a: Integer, b: String}") <= tt("Hash<Symbol,%any>")
+  end
+
   # def test_intersection
   #   skip "<= not defined on intersection"
   #   tobject_and_basicobject = IntersectionType.new(RDL::Globals.types[:object], @tbasicobject)
