@@ -989,7 +989,7 @@ it matches the latest gem version.
 
 # Authors
 
-* [Jeffrey S. Foster](http://www.cs.umd.edu/~jfoster/)
+* [Jeffrey S. Foster](http://www.cs.tufts.edu/~jfoster/)
 * [Brianna M. Ren](https://www.cs.umd.edu/~bren/)
 * [T. Stephen Strickland](https://www.cs.umd.edu/~sstrickl/)
 * Alexander T. Yu
