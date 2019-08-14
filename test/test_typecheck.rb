@@ -1825,6 +1825,32 @@ class TestTypecheck < Minitest::Test
     assert_nil TestTypecheck::A5.new.foo(:a)
   end
 
+  def test_reentrant
+    self.class.class_eval "module Reentrant; end"
+    Reentrant.class_eval do
+      extend RDL::Annotate
+      type '() -> String', :typecheck => :later
+      def self.foo
+        Reentrant::UNKNOWN
+      end
+
+      def self.const_defined?(name, inherit)
+        name == :UNKNOWN
+      end
+
+      def self.const_missing(name)
+        return nil unless name == :UNKNOWN
+        type :bar, '() -> nil', :typecheck => :later
+        'foo'
+      end
+      def bar
+      end
+    end
+
+    RDL.do_typecheck :later
+    assert_equal 'foo', Reentrant.foo
+  end
+
   module ModuleNesting
     module Foo
       extend RDL::Annotate
