@@ -32,13 +32,15 @@ module RDL::Type
     # [+ other +] is a Type
     # [+ inst +] is a Hash<Symbol, Type> representing an instantiation
     # [+ ileft +] is a %bool
+    # [+ deferred_constraints +] is an Array<[Type, Type]>. When provided, instead of applying
+    # constraints to VarTypes, we simply defer them by putting them in this array.
     # [+ no_constraint +] is a %bool indicating whether or not we should add to tuple/FHT constraints
     # if inst is nil, returns self <= other
     # if inst is non-nil and ileft, returns inst(self) <= other, possibly mutating inst to make this true
     # if inst is non-nil and !ileft, returns self <= inst(other), again possibly mutating inst
-    def self.leq(left, right, inst=nil, ileft=true, no_constraint: false)
-      left = inst[left.name] if inst && ileft && left.is_a?(VarType) && inst[left.name]
-      right = inst[right.name] if inst && !ileft && right.is_a?(VarType) && inst[right.name]
+    def self.leq(left, right, inst=nil, ileft=true, deferred_constraints=nil, no_constraint: false, ast: nil)
+      left = inst[left.name] if inst && ileft && left.is_a?(VarType) && !left.to_infer && inst[left.name]
+      right = inst[right.name] if inst && !ileft && right.is_a?(VarType) && !right.to_infer && inst[right.name]
       left = left.type if left.is_a? DependentArgType
       right = right.type if right.is_a? DependentArgType
       left = left.type if left.is_a? NonNullType # ignore nullness!
@@ -55,10 +57,36 @@ module RDL::Type
       return true if right.is_a? DynamicType
 
       # type variables
-      begin inst.merge!(left.name => right); return true end if inst && ileft && left.is_a?(VarType)
-      begin inst.merge!(right.name => left); return true end if inst && !ileft && right.is_a?(VarType)
-      if left.is_a?(VarType) && right.is_a?(VarType)
+      begin inst.merge!(left.name => right); return true end if inst && ileft && left.is_a?(VarType) && !left.to_infer
+      begin inst.merge!(right.name => left); return true end if inst && !ileft && right.is_a?(VarType) && !right.to_infer
+      if left.is_a?(VarType) && !left.to_infer && right.is_a?(VarType) && !right.to_infer
         return left.name == right.name
+      elsif left.is_a?(VarType) && left.to_infer && right.is_a?(VarType) && right.to_infer
+        if deferred_constraints.nil?
+          left.ubounds << [right, ast] unless (left.ubounds.any? { |t, loc| t == right } || left.equal?(right))
+          #left.add_upper_bound(right)
+          right.lbounds << [left, ast] unless (right.lbounds.any? { |t, loc| t == left } || right.equal?(left))
+          #right.add_lower_bound(left)
+        else
+          deferred_constraints << [left, right]
+        end
+        return true
+      elsif left.is_a?(VarType) && left.to_infer
+        if deferred_constraints.nil?
+          left.ubounds << [right, ast] unless (left.ubounds.any? { |t, loc| t == right } || left.equal?(right))
+          #left.add_upper_bound(right)
+        else
+          deferred_constraints << [left, right] 
+        end
+        return true
+      elsif right.is_a?(VarType) && right.to_infer
+        if deferred_constraints.nil?
+        right.lbounds << [left, ast] unless (right.lbounds.any? { |t, loc| t == left } || right.equal?(left))
+          #right.add_lower_bound(left)
+        else
+          deferred_constraints << [left, right]
+        end          
+        return true
       end
 
       # union

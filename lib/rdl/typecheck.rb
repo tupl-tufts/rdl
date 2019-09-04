@@ -213,6 +213,80 @@ module RDL::Typecheck
     return ast
   end
 
+  def self.infer(klass, meth)
+    puts "*************** Infering method #{meth} from class #{klass} ***************"
+    RDL::Config.instance.use_comp_types = false
+    @cur_meth = [klass, meth]
+    ast = get_ast(klass, meth)
+    types = RDL::Globals.info.get(klass, meth, :type)
+    if types == [] or types.nil?
+      ## in this case, have to create new arg/ret VarTypes for this method
+      meth_type = make_unknown_method_type(klass, meth)
+      arg_types = meth_type.args
+      ret_vartype = meth_type.ret
+    else
+      ## in this case, a MethodType was found for this method.
+      ## it had better be composed of VarTypes so we can infer something.
+      raise "Expected just one type composed of VarTypes for method to be inferred." if types.size > 1
+      meth_type = types[0]
+      raise "Block params not yet supported." if meth_type.block
+      
+      (meth_type.args + [meth_type.ret]).each { |t|
+        if !t.is_a?(RDL::Type::VarType)
+          raise "Expected VarType in MethodType to be inferred, got #{t}." unless t.is_a?(RDL::Type::OptionalType) && t.type.is_a?(RDL::Type::VarType)
+        end
+      }
+      arg_types = meth_type.args
+      ret_vartype = meth_type.ret      
+    end
+    
+    if ast.type == :def
+      name, args, body = *ast
+    elsif ast.type == :defs
+      _, name, args, body = *ast
+    else
+      raise RuntimeError, "Unexpected ast type #{ast.type}"
+    end
+    raise RuntimeError, "Method #{name} defined where method #{meth} expected" if name.to_sym != meth
+    context_types = RDL::Globals.info.get(klass, meth, :context_types)
+
+    if RDL::Util.has_singleton_marker(klass)
+      # to_class gets the class object itself, so remove singleton marker to get class rather than singleton class
+      self_type = RDL::Type::SingletonType.new(RDL::Util.to_class(RDL::Util.remove_singleton_marker(klass)))
+    else
+      self_type = RDL::Type::NominalType.new(klass)
+    end
+
+    inst = {self: self_type}
+
+    meth_type = meth_type.instantiate inst
+
+    _, targs = args_hash({}, Env.new(inst), meth_type, args, ast, 'method')
+    targs[:self] = self_type
+    scope = { tret: meth_type.ret, tblock: meth_type.block, captured: Hash.new, context_types: context_types }
+
+    begin
+      old_captured = scope[:captured].dup
+      if body.nil?
+        body_type = RDL.types[:nil]
+      else
+        _, body_type = tc(scope, Env.new(targs.merge(scope[:captured])), body) ## TODO: need separate argument indicating we're performing inference? or is this exactly the same as type checking...
+      end
+    end until old_captured == scope[:captured]
+
+    body_type = self_type if meth == :initialize
+    if body_type.is_a?(RDL::Type::UnionType)
+      body_type.types.each { |t| RDL::Type::Type.leq(t, ret_vartype, ast: ast) } ## TODO: is this done automatically in <= method? check
+    else
+      RDL::Type::Type.leq(body_type, ret_vartype, ast: ast)
+    end
+      
+    RDL::Globals.info.set(klass, meth, :typechecked, true)
+
+    RDL::Globals.constrained_types << [klass, meth]
+    puts "Done with constraint generation."
+  end
+  
   def self.typecheck(klass, meth, ast=nil, types = nil, effects = nil)
     @cur_meth = [klass, meth]
     ast = get_ast(klass, meth) unless ast
@@ -262,7 +336,7 @@ module RDL::Typecheck
         end
         old_captured, scope[:captured] = widen_scopes(old_captured, scope[:captured])
       end until old_captured == scope[:captured]
-      error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || meth == :initialize || body_type <= type.ret
+      error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || meth == :initialize ||RDL::Type::Type.leq(body_type, type.ret, ast: ast)
       error :bad_effect, [body_effect, effect], body unless body.nil? || effect.nil? || effect_leq(body_effect, effect)
     }
     if RDL::Config.instance.check_comp_types
@@ -376,7 +450,7 @@ module RDL::Typecheck
         error :type_arg_kind_mismatch, [kind, 'vararg', 'optional'], arg if targ.vararg?
         error :type_arg_kind_mismatch, [kind, 'required', 'optional'], arg if !targ.optional?
         env, default_type = tc(scope, env, arg.children[1])
-        error :optional_default_type, [default_type, targ.type], arg.children[1] unless default_type <= targ.type
+        error :optional_default_type, [default_type, targ.type], arg.children[1] unless RDL::Type::Type.leq(default_type, targ.type, ast: ast)
         targs[arg.children[0]] = targ.type
         env = env.merge(Env.new(arg.children[0] => targ.type))
         tpos += 1
@@ -401,7 +475,7 @@ module RDL::Typecheck
         tkw = targ.elts[kw]
         error :type_args_kw_mismatch, [kind, 'required', kw, 'optional'], arg if !tkw.is_a?(RDL::Type::OptionalType)
         env, default_type = tc(scope, env, arg.children[1])
-        error :optional_default_kw_type, [kw, default_type, tkw.type], arg.children[1] unless default_type <= tkw.type
+        error :optional_default_kw_type, [kw, default_type, tkw.type], arg.children[1] unless RDL::Type::Type(default_type, tkw.type, ast: ast)
         kw_args_matched << kw
         targs[kw] = tkw.type
         env = env.merge(Env.new(kw => tkw.type))
@@ -520,8 +594,8 @@ module RDL::Typecheck
             tis << RDL::Type::TupleType.new(*ti.params)
           elsif ti.is_a?(RDL::Type::SingletonType) && ti.val.nil?
             # nil gets thrown out
-          elsif (RDL::Globals.types[:array] <= ti) || (ti <= RDL::Globals.types[:array]) ||
-                (RDL::Globals.types[:hash] <= ti) || (ti <= RDL::Globals.types[:hash])
+          elsif RDL::Type::Type.leq(RDL::Globals.types[:array], ti, ast: e) || RDL::Type::Type.leq(ti, RDL::Globals.types[:array], ast: ast) ||
+                RDL::Type::Type.leq(RDL::Globals.types[:hash], ti, ast: e) || RDL::Type::Type.leq(ti, RDL::Globals.types[:hash], ast: e)
             # might or might not be array...can't splat...
             error :cant_splat, [ti], ei
           else
@@ -1062,7 +1136,7 @@ RUBY
       else
          env1, t1, effi = [env, RDL::Globals.types[:nil], [:+, :+]]
       end
-      error :bad_return_type, [t1.to_s, scope[:tret]], e unless t1 <= scope[:tret]
+      error :bad_return_type, [t1.to_s, scope[:tret]], e unless RDL::Type::Type.leq(t1, scope[:tret], ast: e)
       error :bad_effect, [effi, scope[:eff]], e unless (scope[:eff].nil? || effect_leq(effi, scope[:eff]))
       [env1, RDL::Globals.types[:bot], effi] # return is a void value expression
     when :begin, :kwbegin # sequencing
@@ -1201,6 +1275,9 @@ RUBY
   # [+ name +] is the variable name, which should be a symbol
   # [+ e +] is the expression for which errors should be reported
   def self.tc_var(scope, env, kind, name, e)
+    kind_text = (if kind == :ivar then "instance variable"
+                elsif kind == :cvar then "class variable"
+                else "global variable" end)
     case kind
     when :lvar  # local variable
       error :undefined_local_or_method, [name], e unless env.has_key? name
@@ -1216,10 +1293,9 @@ RUBY
         type = RDL::Globals.info.get(klass, name, :type)
       elsif RDL::Config.instance.assume_dyn_type
         type = RDL::Globals.types[:dyn]
+      elsif RDL::Globals.to_infer.values.any? { |set| set.include?([klass, name]) }
+        type = make_unknown_var_type(klass, name, kind_text)
       else
-        kind_text = (if kind == :ivar then "instance"
-                     elsif kind == :cvar then "class"
-                     else "global" end)
         error :untyped_var, [kind_text, name, klass], e
       end
       [env, type.canonical]
@@ -1232,6 +1308,9 @@ RUBY
   # [+ tright +] is type of right-hand side
   def self.tc_vasgn(scope, env, kind, name, tright, e)
     error :empty_env, [name], e if env.nil?
+    kind_text = (if kind == :ivasgn then "instance variable"
+                elsif kind == :cvasgn then "class variable"
+                else "global variable" end)
     case kind
     when :lvasgn
       if ((scope[:captured] && scope[:captured].has_key?(name)) ||
@@ -1239,7 +1318,7 @@ RUBY
         capture(scope, name, tright.canonical)
         [env, scope[:captured][name]]
       elsif (env.fixed? name)
-        error :vasgn_incompat, [tright, env[name]], e unless tright <= env[name]
+        error :vasgn_incompat, [tright, env[name]], e unless RDL::Type::Type.leq(tright, env[name], ast: e)
         [env, tright.canonical]
       else
         [env.bind(name, tright), tright.canonical]
@@ -1250,13 +1329,13 @@ RUBY
         tleft = RDL::Globals.info.get(klass, name, :type)
       elsif RDL::Config.instance.assume_dyn_type
         tleft = RDL::Globals.types[:dyn]
+      elsif RDL::Globals.to_infer.values.any? { |set| set.include?([klass, name]) }
+        type = make_unknown_var_type(klass, name, kind_text)
+
       else
-        kind_text = (if kind == :ivasgn then "instance"
-                    elsif kind == :cvasgn then "class"
-                    else "global" end)
         error :untyped_var, [kind_text, name, klass], e
       end
-      error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless tright <= tleft
+      error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless RDL::Type::Type.leq(tright, tleft, ast: e)
       [env, tright.canonical]
     when :send
       meth = e.children[1] # note method name include =!
@@ -1515,11 +1594,26 @@ RUBY
         trecv = trecv.canonical
         ts, es = lookup(scope, trecv.name, meth, e)
         error :no_instance_method_type, [trecv.name, meth], e unless ts
-        inst = trecv.to_inst.merge(self: trecv)
+        inst = { self: trecv }
         self_klass = RDL::Util.to_class(trecv.name)
       end
     when RDL::Type::VarType
-      error :recv_var_type, [trecv], e
+      if block
+        raise "Block arguments for VarType receiver not currently supported."
+      end
+
+      ret_type = RDL::Type::VarType.new(cls: trecv, meth: meth, category: :ret, name: "ret")
+
+      meth_type = RDL::Type::MethodType.new(tactuals, nil, ret_type)
+      RDL::Type::Type.leq(trecv, RDL::Type::StructuralType.new({ meth => meth_type }), ast: e)
+      #tmeth_inter = [meth_type]      
+      
+      #self_klass = nil
+    #error :recv_var_type, [trecv], e
+      return [[ret_type]]
+    ## MILOD TODO: Do we want to save the created MethodType some how?
+    ## this could be useful if the same method is called on a VarType
+    ## multiple times. But it's not exactly clear to me how we would save it.
     when RDL::Type::MethodType
       if meth == :call
         # Special case - invokes the Proc
@@ -1568,7 +1662,10 @@ RUBY
           end
           tmeth = tmeth.instantiate(inst) if inst
           tmeth_names << tmeth
-          tmeth_inst = tc_arg_types(tmeth, tactuals_expanded)
+          deferred_constraints = []
+          tmeth_inst = tc_arg_types(tmeth, tactuals_expanded, deferred_constraints)
+          apply_deferred_constraints(deferred_constraints, e) unless deferred_constraints.empty?
+          ## MILOD: Plan is to call tc_arg_types/Type.leq with deferred_constraints argument, then apply deferred_constraints
           if tmeth_inst
             effblock = tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
             if es
@@ -1643,7 +1740,19 @@ RUBY
       error :arg_type_single_receiver_error, [name, meth, msg], e
     end
     # TODO: issue warning if trets.size > 1 ?
-    return [trets, es]
+    return [trets, es] 
+  end
+
+  def self.apply_deferred_constraints(deferred_constraints, e)
+    if deferred_constraints.all? { |t1, t2| t1.equal?(deferred_constraints[0][0]) && t2.is_a?(RDL::Type::NominalType) && t2 <= RDL::Globals.types[:numeric] }
+    ## This is a temporary hack for Numeric types.
+    ## If all the LHS types are the same single type, and all the RHS types
+    ## are Numeric types (which is the case for almost all arithmetic methods),
+    ## then only apply the single constraint that t1 <= Numeric.
+      RDL::Type::Type.leq(deferred_constraints[0][0], RDL::Globals.types[:numeric], ast: e)
+    else
+      deferred_constraints.each { |t1, t2| RDL::Type::Type.leq(t1, t2, ast: e) }
+    end
   end
 
   # Evaluates any ComputedTypes in a method type
@@ -1723,13 +1832,18 @@ RUBY
   # [+ actuals +] is Array<Type> containing the actual argument types
   # return instiation (possibly empty) that makes actuals match method type (if any), nil otherwise
   # Very similar to MethodType#pre_cond?
-  def self.tc_arg_types(tmeth, tactuals)
-    states = [[0, 0, Hash.new]] # position in tmeth, position in tactuals, inst of free vars in tmeth
+  def self.tc_arg_types(tmeth, tactuals, deferred_constraints=[])
+    states = [[0, 0, Hash.new, deferred_constraints]] # position in tmeth, position in tactuals, inst of free vars in tmeth
     tformals = tmeth.args
     until states.empty?
-      formal, actual, inst = states.pop
+      formal, actual, inst, deferred_constraints = states.pop
       inst = inst.dup # avoid aliasing insts in different states since Type.leq mutates inst arg
       if formal == tformals.size && actual == tactuals.size # Matched everything
+=begin
+        deferred_constraints.each { |t1, t2|
+          t1 <= t2
+        }
+=end
         return inst
       end
       next if formal >= tformals.size # Too many actuals to match
@@ -1741,34 +1855,34 @@ RUBY
       when RDL::Type::OptionalType
         t = t.type
         if actual == tactuals.size
-          states << [formal+1, actual, inst] # skip over optinal formal
-        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t, inst, false)
-          states << [formal+1, actual+1, inst] # match
-          states << [formal+1, actual, inst] # skip
+          states << [formal+1, actual, inst, deferred_constraints] # skip over optinal formal
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t, inst, false, deferred_constraints)
+          states << [formal+1, actual+1, inst, deferred_constraints] # match
+          states << [formal+1, actual, inst, deferred_constraints] # skip
         else
-          states << [formal+1, actual, inst] # types don't match; must skip this formal
+          states << [formal+1, actual, inst, deferred_constraints] # types don't match; must skip this formal
         end
       when RDL::Type::VarargType
         if actual == tactuals.size
-          states << [formal+1, actual, inst] # skip to allow empty vararg at end
-        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t.type, inst, false)
-          states << [formal, actual+1, inst] # match, more varargs coming
-          states << [formal+1, actual+1, inst] # match, no more varargs
-          states << [formal+1, actual, inst] # skip over even though matches
-        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(tactuals[actual].type, t.type, inst, false) &&
-                                                               RDL::Type::Type.leq(t.type, tactuals[actual].type, inst, true)
-          states << [formal+1, actual+1, inst] # match, no more varargs; no other choices!
+          states << [formal+1, actual, inst, deferred_constraints] # skip to allow empty vararg at end
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t.type, inst, false, deferred_constraints)
+          states << [formal, actual+1, inst, deferred_constraints] # match, more varargs coming
+          states << [formal+1, actual+1, inst, deferred_constraints] # match, no more varargs
+          states << [formal+1, actual, inst, deferred_constraints] # skip over even though matches
+        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(tactuals[actual].type, t.type, inst, false, deferred_constraints) &&
+                                                               RDL::Type::Type.leq(t.type, tactuals[actual].type, inst, true, deferred_constraints)
+          states << [formal+1, actual+1, inst, deferred_constraints] # match, no more varargs; no other choices!
         else
-          states << [formal+1, actual, inst] # doesn't match, must skip
+          states << [formal+1, actual, inst, deferred_constraints] # doesn't match, must skip
         end
       else
         if actual == tactuals.size
           next unless t.instance_of? RDL::Type::FiniteHashType
           if @@empty_hash_type <= t
-            states << [formal+1, actual, inst]
+            states << [formal+1, actual, inst, deferred_constraints]
           end
-        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t, inst, false)
-          states << [formal+1, actual+1, inst] # match!
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t, inst, false, deferred_constraints)
+          states << [formal+1, actual+1, inst, deferred_constraints] # match!
           # no else case; if there is no match, this is a dead end
         end
       end
@@ -1959,11 +2073,55 @@ RUBY
       ret = RDL::Type::NominalType.new(the_klass) if name == :initialize
 
       return [[RDL::Type::MethodType.new(args, nil, ret)]]
+    elsif RDL::Globals.to_infer.values.any? { |set| set.include?([klass, name]) }
+      ## method types are to be inferred
+      return [[make_unknown_method_type(klass, name)]]
     else
       return nil
     end
   end
 
+  def self.make_unknown_method_type(klass, meth)
+    raise "Tried to make unknown method type for class #{klass} method #{meth}, but no such method was found." unless RDL::Util.to_class(klass).instance_methods.include?(meth)
+    params = RDL::Util.to_class(klass).instance_method(meth).parameters
+      req_params = params.select {|p| p[0] == :req}
+      opt_params = params.select {|p| p[0] == :opt}
+      blk_params = params.select {|p| p[0] == :block}
+      vararg_params = params.select {|p| p[0] == :rest}
+
+      raise "Block/VarArg params not yet supported" if !blk_params.empty? || !vararg_params.empty?
+
+      req_arg_vartypes = req_params.map { |param|
+        RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: param[1])
+      }
+      opt_arg_vartypes = opt_params.map { |param|
+        RDL::Type::OptionatlType.new(RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: param[1]))
+      }
+
+      vararg_vartypes = vararg_params.map { |param|
+        RDL::Type::VarargType.new(RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: param[1])) }
+      arg_types = req_arg_vartypes + opt_arg_vartypes + vararg_vartypes
+      
+      if meth == :initialize
+        ret_vartype = RDL::Type::VarType.new(:self) ## TODO: is this right? Or should it include klass/meth info?
+      else
+        ret_vartype = RDL::Type::VarType.new(cls: klass, meth: meth, category: :ret, name: "ret")
+      end
+
+      ## TODO: handling of block types
+
+      meth_type = RDL::Type::MethodType.new(arg_types, nil, ret_vartype)
+      RDL::Globals.info.add(klass, meth, :type, meth_type)
+      return meth_type
+  end
+
+  def make_unknown_var_type(klass, name, kind_text)
+    var_type = RDL::Type::VarType.new(cls: klass, name: name, category: kind_text)
+    RDL::Globals.info.add(klass, name, :type, var_type)
+    RDL::Globals.constrained_types << [klass, var]
+    return var_type
+  end
+  
   def self.filter_comp_types(ts, use_dep_types)
     return nil unless ts
     dep_ts = []
@@ -2082,7 +2240,7 @@ class Diagnostic < Parser::Diagnostic
     no_instance_method_type: "no type information for instance method `%s#%s'",
     no_singleton_method_type: "no type information for class/singleton method `%s.%s'",
     arg_type_single_receiver_error: "argument type error for instance method `%s#%s'\n%s",
-    untyped_var: "no type for %s variable `%s' in class %s",
+    untyped_var: "no type for %s `%s' in class %s, and it is not designated to be inferred",
     vasgn_incompat: "incompatible types: `%s' can't be assigned to variable of type `%s'",
     inconsistent_var_type: "local variable `%s' has declared type on some paths but not all",
     inconsistent_var_type_type: "local variable `%s' declared with inconsistent types %s",
@@ -2125,6 +2283,9 @@ class Diagnostic < Parser::Diagnostic
     no_type_for_symbol: "can't find type for method corresponding to `%s.to_proc'",
     no_non_dep_types: "no non-dependent types for receiver %s in call to method %s",
     empty_env: "for some reason, environment is nil when type checking assignment to variable %s.",
+
+
+    infer_constraint_error: "%s constraint generated here."
   }
 end
 

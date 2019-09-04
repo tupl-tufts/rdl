@@ -46,6 +46,8 @@ module RDL::Type
         ":#{@val}"
       elsif @val.nil?
         "nil"
+      elsif @val.is_a?(Class)
+        "[s]#{@val}"
       else
         @val.to_s
 #        "Singleton(#{@val.to_s})"

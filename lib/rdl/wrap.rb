@@ -150,6 +150,24 @@ RUBY
     return [klass, meth, type]
   end
 
+  def self.process_infer_args(default_class, *args)
+    klass = meth = nil
+    default_class = "Object" if (default_class.is_a? Object) && (default_class.to_s == "main") # special case for main
+    if args.size == 2
+      klass = class_to_string args[0]
+      slf, meth = meth_to_sym args[1]
+    elsif args.size == 1
+      klass = default_class.to_s
+      slf, meth = meth_to_sym args[0]
+    elsif args.size == 0
+      klass = default_class.to_s
+    else
+      raise ArgumentError, "Invalid arguments to `infer`"
+    end
+    klass = RDL::Util.add_singleton_marker(klass) if slf
+    return [klass, meth]
+  end
+
   private
 
   def self.wrapped_name(klass, meth)
@@ -229,6 +247,14 @@ RUBY
           RDL::Globals.to_typecheck[h[:typecheck]] = Set.new unless RDL::Globals.to_typecheck[h[:typecheck]]
           RDL::Globals.to_typecheck[h[:typecheck]].add([klass, meth])
         end
+        if kind == :infer
+          if contract == :now
+            RDL::Typecheck.infer(klass, meth)
+          else
+            RDL::Globals.to_infer[contract] = Set.new unless RDL::Globals.to_infer[contract]
+            RDL::Globals.to_infer[contract].add([klass, meth])
+          end
+        end
       }
     end
 
@@ -248,7 +274,7 @@ RUBY
     if RDL::Globals.to_typecheck[:now].member? [klass, meth]
       RDL::Globals.to_typecheck[:now].delete [klass, meth]
       RDL::Typecheck.typecheck(klass, meth)
-    end
+    end    
 
     if RDL::Config.instance.guess_types.include?(the_self.to_s.to_sym) && !RDL::Globals.info.has?(klass, meth, :type)
       # Added a method with no type annotation from a class we want to guess types for
@@ -384,6 +410,52 @@ module RDL::Annotate
     RDL::Globals.dep_types.each { |klass, meth, t| RDL::Globals.info.add(klass, meth, :type, t) unless meth.nil? }
   end
 
+  # Very similar to `type`, but arguments are:
+  # [+ klass +] may be Class, Symbol, or String
+  # [+ method +] may be Symbol or String
+  # [+ time +] indicates a method type that should be statically inferred at the given time, as follows
+  #    if :now, indicates method type should be inferred immediately
+  #    if other-symbol, indicates method type should be inferred when RDL.do_infer(other-symbol) is called
+  # time is currently a *required* parameter
+  # possible invocations:
+  # infer(klass, meth, time: sym)
+  # infer(meth, time: sym)
+  # infer(time: sym)
+  def infer(*args, time: RDL::Config.instance.infer_defaults[:time])
+    ## TODO: do we want to handle the case that time is :call?
+    raise RuntimeError, "Calls to `infer` must come with a specified time." if !time
+    ## might remove the above error later.
+    klass, meth = begin
+                    RDL::Wrap.process_infer_args(self, *args)
+                  rescue Racc::ParseError => err
+                    # Remove enough backtrace to only include actual source line
+                    # Warning: Adjust the -5 below if the code (or this comment) changes
+                    bt = err.backtrace
+                    bt.shift until bt[0] =~ /^#{__FILE__}:#{__LINE__-5}/
+                    bt.shift # remove RDL::Globals.contract_switch.off call
+                    bt.shift # remove type call itself
+                    err.set_backtrace bt
+                    raise err
+                  end
+    if meth
+      unless RDL::Globals.info.set(klass, meth, :infer, time)
+        raise RuntimeError, "Inconsistent infer time flag on #{RDL::Util.pp_klass_method(klass, meth)}"
+      end
+      if RDL::Util.method_defined?(klass, meth) #|| meth == :initialize
+        RDL::Globals.info.set(klass, meth, :source_location, RDL::Util.to_class(klass).instance_method(meth).source_location)
+        RDL::Typecheck.infer(klass, meth) if time == :now
+      end
+      RDL::Globals.to_infer[time] = Set.new unless RDL::Globals.to_infer[time]
+      RDL::Globals.to_infer[time].add([klass, meth])
+    else
+      RDL::Globals.deferred << [klass, :infer, time, { }]
+      
+    end
+    nil
+  end
+
+
+  
   # [+ klass +] is the class containing the variable; self if omitted; ignored for local and global variables
   # [+ var +] is a symbol or string containing the name of the variable
   # [+ typ +] is a string containing the type
@@ -395,6 +467,20 @@ module RDL::Annotate
       raise RuntimeError, "Type already declared for #{var}"
     end
     nil
+  end
+
+  def infer_var_type(klass=self, var)
+    raise RuntimeError, "Variable cannot begin with capital" if var.to_s =~ /^[A-Z]/
+    return if var.to_s =~ /^[a-z]/ # local variables handled specially, inside type checker
+    klass = RDL::Util::GLOBAL_NAME if var.to_s =~ /^\$/
+    unless RDL::Globals.info.set(klass, var, :type, RDL::Type::VarType.new(cls: klass, name: var, category: "variable"))
+      raise RuntimeError, "Type already declared for #{var}"
+    end
+    ## RDL::Globals.constrained_types includes the list of all types we want to perform constraint resolution/
+    ## solution extract for. VarTypes in methods get added to this list after calling RDL.do_infer.
+    ## Not sure when/where to add variable VarTypes so I'm doing it here.
+    RDL::Globals.constrained_types << [klass, var]
+    nil    
   end
 
   # In the following three methods
@@ -596,6 +682,44 @@ module RDL
     }
     RDL::Globals.to_typecheck[sym] = Set.new
     nil
+  end
+
+  def self.do_infer(sym)
+    return unless RDL::Globals.to_infer[sym]
+    RDL::Globals.to_infer[sym].each { |klass, meth|
+      RDL::Typecheck.infer klass, meth
+    }
+    RDL::Globals.to_infer[sym] = Set.new
+    nil
+    RDL::Typecheck.resolve_constraints
+    RDL::Typecheck.extract_solution
+    #RDL::Globals.constrained_types = []
+=begin    
+    puts "Here are the generated constraints: "
+    RDL::Globals.constrained_types.each { |klass, name|
+      typ = RDL::Globals.info.get(klass, name, :type)
+      if typ.is_a?(Array)
+        ## it's an array for method types (to handle intersections)
+        meth_type = typ[0]
+        raise "Expected MethodType, got #{meth_type}." unless meth_type.is_a?(RDL::Type::MethodType)
+        (meth_type.args + [meth_type.ret]).each { |var_type|
+          raise "Expected VarType, got #{var_type}." unless var_type.is_a?(RDL::Type::VarType)
+          puts "***** Lower bounds for #{var_type} *****"
+          var_type.lbounds.each { |t| puts t }
+          puts "***** Upper bounds for #{var_type} *****"
+          var_type.ubounds.each { |t| puts t }
+        }
+      else
+        ## variable type in this case
+        var_type = typ
+        raise "Expected VarType, got #{var_type}." unless var_type.is_a?(RDL::Type::VarType)
+        puts "***** Lower bounds for #{var_type} *****"
+        var_type.lbounds.each { |t| puts t }
+        puts "***** Upper bounds for #{var_type} *****"
+        var_type.ubounds.each { |t| puts t }
+      end
+    }
+=end
   end
 
   def self.load_sequel_schema(db)

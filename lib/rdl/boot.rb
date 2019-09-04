@@ -49,6 +49,17 @@ module RDL::Globals
   @to_typecheck = Hash.new
   @to_typecheck[:now] = Set.new
 
+  # Map from symbols to set of [class, method] pairs to infer when those symbols are rdl_do_infer'd
+  # (or the methods are defined, for the symbol :now)
+  @to_infer = Hash.new
+  @to_infer[:now] = Set.new
+
+  ## List of [klass, method] pairs for which we have generated constraints.
+  ## That is, if we look up RDL::Globals.info.get(klass, meth, :type), we will get a single MethodType
+  ## composed of VarTypes with constraints.
+  ## TODO: add inst/class vars to this list?
+  @constrained_types = []
+
   # Map from symbols to Array<Proc> where the Procs are called when those symbols are rdl_do_typecheck'd
   @to_do_at = Hash.new
 
@@ -75,6 +86,8 @@ class << RDL::Globals # add accessors and readers for module variables
   attr_reader :aliases
   attr_accessor :to_wrap
   attr_accessor :to_typecheck
+  attr_accessor :to_infer
+  attr_accessor :constrained_types
   attr_accessor :to_do_at
   attr_accessor :deferred
   attr_accessor :dep_types
@@ -136,6 +149,7 @@ require 'rdl/util.rb'
 require 'rdl/wrap.rb'
 require 'rdl/query.rb'
 require 'rdl/typecheck.rb'
+require 'rdl/constraint.rb'
 #require_relative 'rdl/stats.rb'
 
 class << RDL::Globals
