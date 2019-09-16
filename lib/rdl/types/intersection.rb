@@ -36,7 +36,32 @@ module RDL::Type
 
     def initialize(types)
       @types = types
+      @canonical = false
+      @canonicalized = false
       super()
+    end
+
+    def canonical
+      canonicalize!
+      return @canonical if @canonical
+      return self
+    end
+
+    def canonicalize!
+      return if @canonicalized
+      # for any type such that a subtype is already in ts, set its position to nil
+      for i in 0..(@types.length-1)
+        for j in (i+1)..(@types.length-1)
+          next if (@types[j].nil?) || (@types[i].nil?) || (@types[i].is_a?(VarType)) || (@types[j].is_a?(VarType))
+          (@types[j] = nil; break) if Type.leq(@types[i], @types[j], nil, true, [])
+          (@types[i] = nil) if Type.leq(@types[j], @types[i], nil, true, [])
+        end
+      end
+      @types.delete(nil)
+      @types.sort! { |a, b| a.object_id <=> b.object_id } # canonicalize order
+      @types.uniq!
+      @canonical = @types[0] if @types.size == 1
+      @canonicalized = true
     end
 
     def to_s  # :nodoc:

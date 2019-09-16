@@ -42,9 +42,9 @@ module RDL::Type
       @args = *args
 
       if block.instance_of? OptionalType
-        raise "Block must be MethodType" unless block.type.is_a? MethodType
+        raise "Block must be MethodType" unless block.type.is_a? MethodType or block.type.is_a?(VarType)
       else
-        raise "Block must be MethodType" unless (not block) or (block.instance_of? MethodType)
+        raise "Block must be MethodType" unless (not block) or (block.instance_of? MethodType) or block.instance_of?(VarType)
       end
       @block = block
 
@@ -300,6 +300,17 @@ RUBY
       return MethodType.new(@args.map { |arg| arg.widen },
                             @block ? @block.widen : nil,
                             @ret.widen)
+    end
+
+    def canonical
+      canonicalize!
+      return self
+    end
+
+    def canonicalize!
+      @args.map { |a| a.canonical }
+      @block.canonical if @block
+      @ret.canonical
     end
 
     def copy

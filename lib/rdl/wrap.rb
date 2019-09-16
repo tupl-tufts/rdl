@@ -692,7 +692,7 @@ module RDL
     RDL::Globals.to_infer[sym] = Set.new
     nil
     RDL::Typecheck.resolve_constraints
-    RDL::Typecheck.extract_solution
+    RDL::Typecheck.extract_solutions
     #RDL::Globals.constrained_types = []
 =begin    
     puts "Here are the generated constraints: "
@@ -785,11 +785,13 @@ module RDL
         add_ar_assoc(assoc, a.macro, a.name)
         if a.name.to_s.pluralize == a.name.to_s ## plural association
           ## This actually returns an Associations CollectionProxy, which is a descendant of ActiveRecord_Relation (see below actual type). This makes no difference in practice.
-          RDL.type model, a.name, "() -> ActiveRecord_Relation<#{a.name.to_s.camelize.singularize}>", wrap: false
+          RDL.type model, a.name, "() -> ActiveRecord_Relation<#{a.class_name}>", wrap: false
+          RDL.type model, "#{a.name}=", "(ActiveRecord_Relation<#{a.class_name}> or Array<#{a.class_name}>) -> ``targs[0]``", wrap: false
           #ActiveRecord_Associations_CollectionProxy<#{a.name.to_s.camelize.singularize}>'
         else
           ## association is singular, we just return an instance of associated class
-          RDL.type model, a.name, "() -> #{a.name.to_s.camelize.singularize}", wrap: false
+          RDL.type model, a.name, "() -> #{a.class_name}", wrap: false
+          RDL.type model, "#{a.name}=", "(#{a.class_name}) -> #{a.class_name}", wrap: false
         end
       }
       s2[:__associations] = RDL::Type::FiniteHashType.new(assoc, nil)

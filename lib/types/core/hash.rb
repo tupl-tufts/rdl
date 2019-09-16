@@ -10,6 +10,7 @@ def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_de
       res = RDL.type_cast(trec.elts.send(meth_name, *vals), "Object", force: true)
       if nil_default && res.nil?
         if default1 == :promoted_val
+          ret = trec.promote.params[1]
           return trec.promote.params[1]
         elsif default1 == :promoted_key
           return trec.promote.params[0]

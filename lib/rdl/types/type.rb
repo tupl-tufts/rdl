@@ -90,12 +90,12 @@ module RDL::Type
       end
 
       # union
-      return left.types.all? { |t| leq(t, right, inst, ileft) } if left.is_a?(UnionType)
+      return left.types.all? { |t| leq(t, right, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast) } if left.is_a?(UnionType)
       if right.instance_of?(UnionType)
         right.types.each { |t|
           # return true at first match, updating inst accordingly to first succeessful match
           new_inst = inst.dup unless inst.nil?
-          if leq(left, t, new_inst, ileft)
+          if leq(left, t, new_inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast)
             inst.update(new_inst) unless inst.nil?
             return true
           end
@@ -117,16 +117,26 @@ module RDL::Type
           lklass = left.klass
         end
         right.methods.each_pair { |m, t|
-          return false unless lklass.method_defined? m
+          return false unless lklass.method_defined?(m) || !(RDL::Globals.info.get(lklass, m, :type).empty?) ## Added the second condition because Rails lazily defines some methods.
           types = RDL::Globals.info.get(lklass, m, :type)
           if types
-            non_dep_types = RDL::Typecheck.filter_comp_types(types, false)
-            raise "Need non-dependent types for method #{m} of class #{lklass} in order to use a structural type." if non_dep_types.empty?
-            return false unless non_dep_types.all? { |tlm| leq(tlm, t, nil, ileft) }
-            # inst above is nil because the method types inside the class and
-            # inside the structural type have an implicit quantifier on them. So
-            # even if we're allowed to instantiate type variables we can't do that
-            # inside those types
+            #non_dep_types = RDL::Typecheck.filter_comp_types(types, false)
+            #raise "Need non-dependent types for method #{m} of class #{lklass} in order to use a structural type." if non_dep_types.empty?
+            return false unless types.all? { |tlm|
+              if (tlm.args + [tlm.ret]).any? { |t| t.is_a? ComputedType }## TODO: Include blocks.
+                ## In this case, need to actually evaluate the ComputedType.
+                ## Going to do this using the receiver `left` and the args from `t`
+                ## If subtyping holds for this, then we know `left` does indeed have a method of the relevant type.
+                computed_tlm = RDL::Typecheck.compute_types(tlm, lklass, left, t.args)
+                leq(computed_tlm.instantiate({ self: left }), t, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast)
+              else              
+              leq(tlm, t, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast) 
+              # inst above is nil because the method types inside the class and
+              # inside the structural type have an implicit quantifier on them. So
+              # even if we're allowed to instantiate type variables we can't do that
+              # inside those types
+              end
+            }
           end
         }
         return true
@@ -135,7 +145,7 @@ module RDL::Type
       # singleton
       return left.val == right.val if left.is_a?(SingletonType) && right.is_a?(SingletonType)
       return true if left.is_a?(SingletonType) && left.val.nil? # right cannot be a SingletonType due to above conditional
-      return leq(left.nominal, right, inst, ileft) if left.is_a?(SingletonType) # fall through case---use nominal type for reasoning
+      return leq(left.nominal, right, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast) if left.is_a?(SingletonType) # fall through case---use nominal type for reasoning
 
       # generic
       if left.is_a?(GenericType) && right.is_a?(GenericType)
@@ -148,11 +158,11 @@ module RDL::Type
         return variance.zip(left.params, right.params).all? { |v, tl, tr|
           case v
           when :+
-            leq(tl, tr, inst, ileft)
+            leq(tl, tr, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast)
           when :-
-            leq(tr, tl, inst, !ileft)
+            leq(tr, tl, inst, !ileft, deferred_constraints, no_constraint: no_constraint, ast: ast)
           when :~
-            leq(tl, tr, inst, ileft) && leq(tr, tl, inst, !ileft)
+            leq(tl, tr, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast) && leq(tr, tl, inst, !ileft, deferred_constraints, no_constraint: no_constraint, ast: ast)
           else
             raise RuntimeError, "Unexpected variance #{v}" # shouldn't happen
           end
@@ -165,10 +175,21 @@ module RDL::Type
         base_inst = Hash[*formals.zip(left.params).flatten] # instantiation for methods in base's class
         klass = left.base.klass
         right.methods.each_pair { |meth, t|
-          return false unless klass.method_defined? meth
+          return false unless klass.method_defined?(meth) || !(RDL::Globals.info.get(klass, meth, :type).empty?) ## Added the second condition because Rails lazily defines some methods.
           types = RDL::Globals.info.get(klass, meth, :type)
           if types
-            return false unless types.all? { |tlm| leq(tlm.instantiate(base_inst), t, nil, ileft) }
+            
+            return false unless types.all? { |tlm|
+              if (tlm.args + [tlm.ret]).any? { |t| t.is_a? ComputedType }## TODO: Include blocks.
+              ## In this case, need to actually evaluate the ComputedType.
+              ## Going to do this using the receiver `left` and the args from `t`
+                ## If subtyping holds for this, then we know `left` does indeed have a method of the relevant type.
+                computed_tlm = RDL::Typecheck.compute_types(tlm, klass, left, t.args)
+                leq(computed_tlm.instantiate({ self: left }), t, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast)
+              else
+                leq(tlm.instantiate(base_inst), t, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast)
+              end
+            }
           end
         }
         return true
@@ -177,11 +198,16 @@ module RDL::Type
 
       # method
       if left.is_a?(MethodType) && right.is_a?(MethodType)
+        if (left.args.size == 1) && left.args[0].is_a?(VarargType)
+          ## hack
+          new_args = Array.new(right.args.size, left.args[0].type)
+          left = RDL::Type::MethodType.new(new_args, left.block, left.ret)
+        end
         return false unless left.args.size == right.args.size
-        return false unless left.args.zip(right.args).all? { |tl, tr| leq(tr, tl, inst, !ileft) } # contravariance
-        return false unless leq(left.ret, right.ret, inst, ileft) # covariance
+        return false unless left.args.zip(right.args).all? { |tl, tr| leq(tr, tl, inst, !ileft, deferred_constraints, no_constraint: no_constraint, ast: ast) } # contravariance
+        return false unless leq(left.ret, right.ret, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast) # covariance
         if left.block && right.block
-          return leq(right.block, left.block, inst, !ileft) # contravariance
+          return leq(right.block, left.block, inst, !ileft, deferred_constraints, no_constraint: no_constraint, ast: ast) # contravariance
         elsif left.block.nil? && right.block.nil?
           return true
         else
@@ -195,7 +221,7 @@ module RDL::Type
         # allow width subtyping - methods of right have to be in left, but not vice-versa
         return right.methods.all? { |m, t|
           # in recursive call set inst to nil since those method types have implicit quantifier
-          left.methods.has_key?(m) && leq(left.methods[m], t, nil, ileft)
+          left.methods.has_key?(m) && leq(left.methods[m], t, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast)
         }
       end
       # Note we do not allow a structural type to be a subtype of a nominal type or generic type,
@@ -205,7 +231,7 @@ module RDL::Type
       if left.is_a?(TupleType) && right.is_a?(TupleType)
         # Tuples are immutable, so covariant subtyping allowed
         return false unless left.params.length == right.params.length
-        return false unless left.params.zip(right.params).all? { |lt, rt| leq(lt, rt, inst, ileft) }
+        return false unless left.params.zip(right.params).all? { |lt, rt| leq(lt, rt, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast) }
         # subyping check passed
         left.ubounds << right unless no_constraint
         right.lbounds << left unless no_constraint
@@ -214,7 +240,7 @@ module RDL::Type
       if left.is_a?(TupleType) && right.is_a?(GenericType) && right.base == RDL::Globals.types[:array]
         # TODO !ileft and right carries a free variable
         return false unless left.promote!
-        return leq(left, right, inst, ileft) # recheck for promoted type
+        return leq(left, right, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast) # recheck for promoted type
       end
 
       # finite hash
@@ -225,13 +251,20 @@ module RDL::Type
         left.elts.each_pair { |k, tl|
           if right_elts.has_key? k
             tr = right_elts[k]
+            if k == :action && tl.is_a?(RDL::Type::VarType)
+              if !$blah
+                $blah = true
+              else
+                #raise
+              end
+            end
             return false if tl.is_a?(OptionalType) && !tr.is_a?(OptionalType) # optional left, required right not allowed, since left may not have key
             tl = tl.type if tl.is_a? OptionalType
             tr = tr.type if tr.is_a? OptionalType
-            return false unless leq(tl, tr, inst, ileft)
+            return false unless leq(tl, tr, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast)
             right_elts.delete k
           else
-            return false unless right.rest && leq(tl, right.rest, inst, ileft)
+            return false unless right.rest && leq(tl, right.rest, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast)
           end
         }
         right_elts.each_pair { |k, t|
@@ -239,7 +272,7 @@ module RDL::Type
         }
         unless left.rest.nil?
           # If left has optional stuff, right needs to accept it
-          return false unless !(right.rest.nil?) && leq(left.rest, right.rest, inst, ileft)
+          return false unless !(right.rest.nil?) && leq(left.rest, right.rest, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast)
         end
         left.ubounds << right unless no_constraint
         right.lbounds << left unless no_constraint
@@ -248,7 +281,7 @@ module RDL::Type
       if left.is_a?(FiniteHashType) && right.is_a?(GenericType) && right.base == RDL::Globals.types[:hash]
         # TODO !ileft and right carries a free variable
         return false unless left.promote!
-        return leq(left, right, inst, ileft) # recheck for promoted type
+        return leq(left, right, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast) # recheck for promoted type
       end
 
       ## precise string

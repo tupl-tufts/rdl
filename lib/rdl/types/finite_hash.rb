@@ -60,17 +60,9 @@ module RDL::Type
 
     def promote(key=nil, value=nil)
       return false if @cant_promote
-      # TODO look at key types
-      if key
-        domain_type = UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }), key)
-      else
-        domain_type = UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }))
-      end
-      if value
-        range_type = UnionType.new(*@elts.values, value)
-      else
-        range_type = UnionType.new(*@elts.values)
-      end
+      domain_type = (@elts.empty? && !key) ? RDL::Type::VarType.new(:k) : UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }), key)
+      range_type = (@elts.empty? && !value) ? RDL::Type::VarType.new(:v) : UnionType.new(*@elts.values, value)
+
       if @rest
         domain_type = UnionType.new(domain_type, RDL::Globals.types[:symbol])
         range_type = UnionType.new(range_type, @rest)
@@ -105,8 +97,8 @@ module RDL::Type
       return (@lbounds.all? { |lbound| lbound.<=(self, no_promote) }) && (@ubounds.all? { |ubound| self.<=(ubound, no_promote) })
     end
 
-    def <=(other, no_constraint=false)
-      return Type.leq(self, other, no_constraint: no_constraint)
+    def <=(other, no_constraint=false, ast: nil)
+      return Type.leq(self, other, no_constraint: no_constraint, ast: ast)
     end
 
     def member?(obj, *args)

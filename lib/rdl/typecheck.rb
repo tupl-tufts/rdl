@@ -152,7 +152,9 @@ module RDL::Typecheck
   # add x:t to the captured map in scope
   def self.capture(scope, x, t)
     if scope[:captured][x]
-      scope[:captured][x] = RDL::Type::UnionType.new(scope[:captured][x], t).canonical unless t <= scope[:captured][x]
+      if !RDL::Type::Type.leq(t, scope[:captured][x], inst={}, true)#t <= scope[:captured][x]
+        scope[:captured][x] = RDL::Type::UnionType.new(scope[:captured][x], t.instantiate(inst)).canonical #unless RDL::Type::Type.leq(t, scope[:captured][x], inst={}, true)#t <= scope[:captured][x]
+      end
     else
       scope[:captured][x] = t
     end
@@ -215,7 +217,7 @@ module RDL::Typecheck
 
   def self.infer(klass, meth)
     puts "*************** Infering method #{meth} from class #{klass} ***************"
-    RDL::Config.instance.use_comp_types = false
+    RDL::Config.instance.use_comp_types = true
     @cur_meth = [klass, meth]
     ast = get_ast(klass, meth)
     types = RDL::Globals.info.get(klass, meth, :type)
@@ -223,6 +225,7 @@ module RDL::Typecheck
       ## in this case, have to create new arg/ret VarTypes for this method
       meth_type = make_unknown_method_type(klass, meth)
       arg_types = meth_type.args
+      block_type = meth_type.block
       ret_vartype = meth_type.ret
     else
       ## in this case, a MethodType was found for this method.
@@ -237,6 +240,7 @@ module RDL::Typecheck
         end
       }
       arg_types = meth_type.args
+      block_type = meth_type.block
       ret_vartype = meth_type.ret      
     end
     
@@ -270,12 +274,14 @@ module RDL::Typecheck
       if body.nil?
         body_type = RDL.types[:nil]
       else
-        _, body_type = tc(scope, Env.new(targs.merge(scope[:captured])), body) ## TODO: need separate argument indicating we're performing inference? or is this exactly the same as type checking...
+        targs_dup = Hash[targs.map { |k, t| [k, t.copy] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
+        _, body_type = tc(scope, Env.new(targs_dup.merge(scope[:captured])), body) ## TODO: need separate argument indicating we're performing inference? or is this exactly the same as type checking...
       end
+      old_captured, scope[:captured] = widen_scopes(old_captured, scope[:captured])
     end until old_captured == scope[:captured]
 
     body_type = self_type if meth == :initialize
-    if body_type.is_a?(RDL::Type::UnionType)
+    if false#body_type.is_a?(RDL::Type::UnionType)
       body_type.types.each { |t| RDL::Type::Type.leq(t, ret_vartype, ast: ast) } ## TODO: is this done automatically in <= method? check
     else
       RDL::Type::Type.leq(body_type, ret_vartype, ast: ast)
@@ -393,25 +399,25 @@ module RDL::Typecheck
       hash.each { |k, v|
         case v
         when RDL::Type::TupleType
-          if v.params.size > 50
+          if v.params.size > 10
             newhash[k] = v.promote
           else
             newhash[k] = v
           end
         when RDL::Type::FiniteHashType
-          if v.elts.size > 50
+          if v.elts.size > 10
             newhash[k] = v.promote
           else
             newhash[k] = v
           end
         when RDL::Type::PreciseStringType
-          if v.vals.size > 50 || (v.vals.size == 1 && v.vals[0].size > 50)
+          if v.vals.size > 10 || (v.vals.size == 1 && v.vals[0].size > 10)
             newhash[k] = RDL::Globals.types[:string]
           else
             newhash[k] = v
           end
         when RDL::Type::UnionType
-          if v.types.size > 50
+          if v.types.size > 10
             newhash[k] = v.widen
           else
             newhash[k] = v
@@ -848,6 +854,8 @@ module RDL::Typecheck
       tactuals = []
       eff = [:+, :+]
       block = scope[:block]
+      map_case = false
+      e_map_case = ti_map_case = nil
       scope_merge(scope, block: nil, break: env, next: env) { |sscope|
         e.children[2..-1].each { |ei|
           if ei.type == :splat
@@ -863,9 +871,21 @@ module RDL::Typecheck
             raise RuntimeError, "impossible to pass block arg and literal block" if scope[:block]
             envi, ti = tc(sscope, envi, ei.children[0])
             # convert using to_proc if necessary
-            ti, effi = tc_send(sscope, envi, ti, :to_proc, [], nil, ei) unless ti.is_a? RDL::Type::MethodType
-            eff = effect_union(eff, effi)
-            block = [ti, ei]
+            if e.children[1] == :map
+              ## block_pass calling map is a weird case:
+              ## it takes a symbol representing method being called,
+              ## where receiver is Array elements.
+              ## But we haven't type checked the receiver yet,
+              ## so we can't really determine the type of the block yet.
+              ## So we do that below.
+              map_case = true
+              e_map_case = ei
+              ti_map_case = ti
+            else
+              ti, effi = tc_send(sscope, envi, ti, :to_proc, [], nil, ei) unless ti.is_a? RDL::Type::MethodType
+              eff = effect_union(eff, effi)
+              block = [ti, ei]
+            end
           else
             envi, ti, effi = tc(sscope, envi, ei)
             eff = effect_union(eff, effi)
@@ -874,6 +894,15 @@ module RDL::Typecheck
         }
         envi, trecv, effrec = if e.children[0].nil? then [envi, envi[:self], [:+, :+]] else tc(sscope, envi, e.children[0]) end # if no receiver, self is receiver
         eff = effect_union(effrec, eff)
+
+        if map_case
+          raise "Expected GenericType, got #{trecv}." unless trecv.is_a?(RDL::Type::GenericType)
+          ti_map_case, effi = tc_send(sscope, { self: trecv.params[0] }, ti_map_case, :to_proc, [], nil, e_map_case)
+          map_block_type = RDL::Type::MethodType.new([trecv.params[0]], nil, ti_map_case.canonical.ret)
+          eff = effect_union(eff, effi)
+          block = [map_block_type, e_map_case]
+        end
+        
         tres, effres = tc_send(sscope, envi, trecv, e.children[1], tactuals, block, e)
         [envi, tres.canonical, effect_union(effres, eff) ]
       }
@@ -881,21 +910,28 @@ module RDL::Typecheck
       ## TODO: effects
       # very similar to send except the callee is the method's block
       error :no_block, [], e unless scope[:tblock]
-      error :block_block, [], e if scope[:tblock].block
+      error :block_block, [], e if scope[:tblock].is_a?(RDL::Type::MethodType) && scope[:tblock].block
       scope[:exn] = Env.join(e, scope[:exn], env) if scope.has_key? :exn # assume this call might raise an exception
       envi = env
       tactuals = []
       eff = [:+, :+]
       e.children[0..-1].each { |ei| envi, ti, effi = tc(scope, envi, ei); tactuals << ti ; eff = effect_union(effi, eff)}
-      unless tc_arg_types(scope[:tblock], tactuals)
-        msg = <<RUBY
+      if scope[:tblock].is_a?(RDL::Type::VarType)
+        block_ret_type = RDL::Type::VarType.new(cls: @cur_meth[0], meth: @cur_meth[1], category: :block_ret, name: "block_return")
+        block_type = RDL::Type::MethodType.new(tactuals, nil, block_ret_type)
+        RDL::Type::Type.leq(scope[:tblock], block_type, ast: e)
+        return [envi, block_ret_type, eff]
+      else
+        unless tc_arg_types(scope[:tblock], tactuals)
+          msg = <<RUBY
       Block type: #{scope[:tblock]}
 Actual arg types: (#{tactuals.map { |ti| ti.to_s }.join(', ')})
 RUBY
-        msg.chomp! # remove trailing newline
-        error :block_type_error, [msg], e
+          msg.chomp! # remove trailing newline
+          error :block_type_error, [msg], e
+        end
+        return [envi, scope[:tblock].ret, eff]
       end
-      [envi, scope[:tblock].ret, eff]
       # tblock
     when :block
       # (block send block-args block-body)
@@ -1318,7 +1354,8 @@ RUBY
         capture(scope, name, tright.canonical)
         [env, scope[:captured][name]]
       elsif (env.fixed? name)
-        error :vasgn_incompat, [tright, env[name]], e unless RDL::Type::Type.leq(tright, env[name], ast: e)
+        error :vasgn_incompat, [tright, env[name]], e unless RDL::Type::Type.leq(tright, env[name], inst={}, true, ast: e)
+        tright.instantiate(inst)
         [env, tright.canonical]
       else
         [env.bind(name, tright), tright.canonical]
@@ -1335,7 +1372,8 @@ RUBY
       else
         error :untyped_var, [kind_text, name, klass], e
       end
-      error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless RDL::Type::Type.leq(tright, tleft, ast: e)
+      error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless RDL::Type::Type.leq(tright, tleft, inst={}, true, ast: e)
+      tright.instantiate(inst)
       [env, tright.canonical]
     when :send
       meth = e.children[1] # note method name include =!
@@ -1598,22 +1636,34 @@ RUBY
         self_klass = RDL::Util.to_class(trecv.name)
       end
     when RDL::Type::VarType
-      if block
-        raise "Block arguments for VarType receiver not currently supported."
-      end
-
       ret_type = RDL::Type::VarType.new(cls: trecv, meth: meth, category: :ret, name: "ret")
 
-      meth_type = RDL::Type::MethodType.new(tactuals, nil, ret_type)
+      if block
+        blk_args = block[0].children.map {|a| a.children[0]}
+        blk_arg_vartypes = blk_args.map { |a|
+          RDL::Type::VarType.new(cls: trecv, meth: meth, category: :block_arg, name: block[0].children[0].to_s) }
+        blk_ret_vartype = RDL::Type::VarType.new(cls: trecv, meth: meth, category: :block_ret, name: "block_ret")
+        block_type = RDL::Type::MethodType.new(blk_arg_vartypes, nil, blk_ret_vartype)
+
+        meth_type = RDL::Type::MethodType.new(tactuals, block_type, ret_type)
+
+        tmeth_inst = tc_arg_types(meth_type, tactuals)
+              
+        raise "Expected method to be instantiated." unless tmeth_inst
+        tc_block(scope, env, block_type, block, tmeth_inst)
+      else
+        meth_type = RDL::Type::MethodType.new(tactuals, nil, ret_type)
+      end
+      
+
+
+
       RDL::Type::Type.leq(trecv, RDL::Type::StructuralType.new({ meth => meth_type }), ast: e)
       #tmeth_inter = [meth_type]      
       
       #self_klass = nil
     #error :recv_var_type, [trecv], e
       return [[ret_type]]
-    ## MILOD TODO: Do we want to save the created MethodType some how?
-    ## this could be useful if the same method is called on a VarType
-    ## multiple times. But it's not exactly clear to me how we would save it.
     when RDL::Type::MethodType
       if meth == :call
         # Special case - invokes the Proc
@@ -1645,12 +1695,12 @@ RUBY
         comp_type = false
         if tmeth.is_a? RDL::Type::DynamicType
           trets_tmp << RDL::Type::DynamicType.new
-        elsif ((tmeth.block && block) || (tmeth.block.nil? && block.nil?))
+        elsif ((tmeth.block && block) || (tmeth.block.nil? && block.nil?) || tmeth.block.is_a?(RDL::Type::VarType))
           if trecv.is_a?(RDL::Type::FiniteHashType) && trecv.the_hash
             trecv = trecv.canonical
             inst = trecv.to_inst.merge(self: trecv)
           end
-          block_types = (if tmeth.block then tmeth.block.args + [tmeth.block.ret] else [] end)
+          block_types = (if tmeth.block.is_a?(RDL::Type::MethodType) then tmeth.block.args + [tmeth.block.ret] else [] end)
           unless (tmeth.args+[tmeth.ret]+block_types).all? { |t| !t.instance_of?(RDL::Type::ComputedType) }
             tmeth_old = tmeth
             trecv_old = trecv.copy
@@ -1665,15 +1715,21 @@ RUBY
           deferred_constraints = []
           tmeth_inst = tc_arg_types(tmeth, tactuals_expanded, deferred_constraints)
           apply_deferred_constraints(deferred_constraints, e) unless deferred_constraints.empty?
-          ## MILOD: Plan is to call tc_arg_types/Type.leq with deferred_constraints argument, then apply deferred_constraints
           if tmeth_inst
             effblock = tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
             if es
               es = es.map { |es_effect| if es_effect.nil? then es_effect else es_effect.clone end } 
               es.each { |es_effect| ## expecting just one effect per method right now. can clean this up later.
                 if !es_effect.nil? && (es_effect[1] == :blockdep || es_effect[0] == :blockdep)
-                  raise "Got block-dependent effect, but no block." unless block && effblock
-                  if effblock[0] == :+ or effblock[0] == :~
+                  #raise "Got block-dependent effect for method #{meth}, but no block." unless block && effblock
+                  if !(block && effblock)
+                  ## In this case we called a block-dependent method,
+                  ## but with no block. It could, e.g., return an enumerator.
+                  ## Could have more intricate handling, but for now will just
+                  ## be conseervative and return [:-, :-]
+                    es_effect[0] = :-
+                    es_effect[1] = :-
+                  elsif effblock[0] == :+ or effblock[0] == :~
                     es_effect[1] = :+
                     es_effect[0] = :+
                   elsif effblock[0] == :-
@@ -1914,7 +1970,7 @@ RUBY
         t = t.type
         if actual == tactuals.size
           states << [formal+1, actual, inst, binds] # skip over optinal formal
-        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t, inst, false)
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t, inst, false, [])
           states << [formal+1, actual+1, inst, binds] # match
           states << [formal+1, actual, inst, binds] # skip
         else
@@ -1923,12 +1979,12 @@ RUBY
       when RDL::Type::VarargType
         if actual == tactuals.size
           states << [formal+1, actual, inst, binds] # skip to allow empty vararg at end
-        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t.type, inst, false)
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t.type, inst, false, [])
           states << [formal, actual+1, inst, binds] # match, more varargs coming
           states << [formal+1, actual+1, inst, binds] # match, no more varargs
           states << [formal+1, actual, inst, binds] # skip over even though matches
-        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(tactuals[actual].type, t.type, inst, false) &&
-                                                               RDL::Type::Type.leq(t.type, tactuals[actual].type, inst, true)
+        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(tactuals[actual].type, t.type, inst, false, []) &&
+                                                               RDL::Type::Type.leq(t.type, tactuals[actual].type, inst, true, [])
           states << [formal+1, actual+1, inst, binds] # match, no more varargs; no other choices!
         else
           states << [formal+1, actual, inst, binds] # doesn't match, must skip
@@ -1959,7 +2015,7 @@ RUBY
             binds[t.name.to_sym] = tactuals[actual]
             t = t.type
           end
-          states << [formal+1, actual+1, inst, binds] if (t.is_a?(RDL::Type::ComputedType) || RDL::Type::Type.leq(tactuals[actual], t, inst, false))# match!
+          states << [formal+1, actual+1, inst, binds] if (t.is_a?(RDL::Type::ComputedType) || RDL::Type::Type.leq(tactuals[actual], t, inst, false, []))# match!
           # no else case; if there is no match, this is a dead end
         end
       end
@@ -1977,7 +2033,7 @@ RUBY
     raise RuntimeError, "block with block arg?" unless tblock.block.nil?
     tblock = tblock.instantiate(inst)
     if block[0].is_a? RDL::Type::MethodType
-      error :bad_block_arg_type, [block[0], tblock], block[1] unless block[0] <= tblock
+      error :bad_block_arg_type, [block[0], tblock], block[1] unless RDL::Type::Type.leq(block[0], tblock, inst, false)#block[0] <= tblock
     elsif block[0].is_a?(RDL::Type::NominalType) && block[0].name == 'Proc'
       error :proc_block_arg_type, [tblock], block[1]
     else # must be [block-args, block-body]
@@ -1988,7 +2044,7 @@ RUBY
         targs_dup = Hash[targs.map { |k, t| [k, t.copy] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
         env = env.merge(Env.new(targs_dup))
         _, body_type, eff = if body.nil? then [nil, RDL::Globals.types[:nil], [:+, :+]] else tc(bscope, env.merge(Env.new(targs)), body) end
-        error :bad_return_type, [body_type, tblock.ret], body unless body.nil? || RDL::Type::Type.leq(body_type, tblock.ret, inst, false)
+        error :bad_return_type, [body_type, tblock.ret], body unless body.nil? || RDL::Type::Type.leq(body_type, tblock.ret, inst, false, ast: body)
         #
         eff
       }
@@ -2082,7 +2138,7 @@ RUBY
   end
 
   def self.make_unknown_method_type(klass, meth)
-    raise "Tried to make unknown method type for class #{klass} method #{meth}, but no such method was found." unless RDL::Util.to_class(klass).instance_methods.include?(meth)
+    raise "Tried to make unknown method type for class #{klass} method #{meth}, but no such method was found." unless (RDL::Util.to_class(klass).instance_methods + RDL::Util.to_class(klass).private_instance_methods).include?(meth)
     params = RDL::Util.to_class(klass).instance_method(meth).parameters
       req_params = params.select {|p| p[0] == :req}
       opt_params = params.select {|p| p[0] == :opt}
@@ -2108,9 +2164,9 @@ RUBY
         ret_vartype = RDL::Type::VarType.new(cls: klass, meth: meth, category: :ret, name: "ret")
       end
 
-      ## TODO: handling of block types
-
-      meth_type = RDL::Type::MethodType.new(arg_types, nil, ret_vartype)
+      block_type = RDL::Type::VarType.new(cls: klass, meth: meth, category: :block, name: "block")
+      
+      meth_type = RDL::Type::MethodType.new(arg_types, block_type, ret_vartype)
       RDL::Globals.info.add(klass, meth, :type, meth_type)
       return meth_type
   end
@@ -2129,7 +2185,7 @@ RUBY
     ts.each { |typ|
       case typ
       when RDL::Type::MethodType
-        block_types = (if typ.block then typ.block.args + [typ.block.ret] else [] end)
+        block_types = (if typ.block.is_a?(RDL::Type::MethodType) then typ.block.args + [typ.block.ret] else [] end)
         typs = typ.args + block_types + [typ.ret]
         if typs.any? { |t| t.is_a?(RDL::Type::ComputedType) || (t.is_a?(RDL::Type::BoundArgType) && t.type.is_a?(RDL::Type::ComputedType))  }
           dep_ts << typ
