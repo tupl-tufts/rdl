@@ -87,4 +87,11 @@ class RDL::Info
     @info[klass][label].delete kind
   end
 
+  def get_methods_from_class(klass)
+    klass = klass.to_s
+    return [] unless @info[klass]
+    a = @info[klass].keys.reject { |k| !@info[klass][k][:type].is_a?(Array) }
+    return a
+  end
+
 end

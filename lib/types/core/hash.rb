@@ -229,25 +229,27 @@ RDL.type :Hash, :key, '(%any) -> ``output_type(trec, targs, :key, :promoted_key,
 RDL.type :Hash, :keys, '() -> ``output_type(trec, targs, :keys, "Array<k>")``'
 RDL.type :Hash, :length, '() -> ``output_type(trec, targs, :length, "Integer")``'
 RDL.type :Hash, :size, '() -> ``output_type(trec, targs, :size, "Integer")``'
-RDL.type :Hash, :merge, '(``merge_input(targs)``) -> ``merge_output(trec, targs)``'
-RDL.type :Hash, :merge!, '(``merge_input(targs, true)``) -> ``merge_output(trec, targs, true)``'
+RDL.type :Hash, :merge, '(``merge_input(trec, targs)``) -> ``merge_output(trec, targs)``'
+RDL.type :Hash, :merge!, '(``merge_input(trec, targs, true)``) -> ``merge_output(trec, targs, true)``'
 
 
-def Hash.merge_input(targs, mutate=false)
+def Hash.merge_input(trec, targs, mutate=false)
   case targs[0]
   when RDL::Type::FiniteHashType
     return targs[0]
-  when RDL::Type::GenericType
+  else #when RDL::Type::GenericType
     if mutate
-      return RDL::Globals.parser.scan_str "#T Hash<k, v>"
+      raise "Unable to promote #{trec}." unless trec.promote!
+      return trec.canonical
+      #return RDL::Globals.parser.scan_str "#T Hash<k, v>"
     else
       return RDL::Globals.parser.scan_str "#T Hash<a, b>"
     end
-  else
-    RDL::Globals.types[:hash]
+  #else
+   # RDL::Globals.types[:hash]
   end
 end
-RDL.type Hash, 'self.merge_input', "(Array<RDL::Type::Type>, ?%bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+RDL.type Hash, 'self.merge_input', "(RDL::Type::Type, Array<RDL::Type::Type>, ?%bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
 
 def Hash.merge_output(trec, targs, mutate=false)
@@ -304,6 +306,7 @@ def Hash.merge_output(trec, targs, mutate=false)
     else
       ## targs[0] should just be Hash here
       return RDL::Globals.types[:hash]
+      #return RDL::Globals.parser.scan_str "#T Hash<k, v>"
     end
   end
 

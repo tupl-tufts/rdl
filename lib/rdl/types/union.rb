@@ -35,6 +35,7 @@ module RDL::Type
 
     def canonical
       canonicalize!
+      return RDL::Globals.types[:bot] if types.size == 0
       return @canonical if @canonical
       return self
     end
@@ -52,14 +53,20 @@ module RDL::Type
       end
       @types.delete(nil) # eliminate any "deleted" elements
       @types.sort! { |a, b| a.object_id <=> b.object_id } # canonicalize order
+      @types.map { |t| t.canonical }
       @types.uniq!
       @canonical = @types[0] if @types.size == 1
       @canonicalized = true
     end
 
+    def drop_vars!
+      @types.reject! { |t| t.is_a? VarType }
+      self
+    end
+
     def to_s  # :nodoc:
       return @canonical.to_s if @canonical
-      return "#{@types.map { |t| t.to_s }.join(' or ')}"
+      return "(#{@types.map { |t| t.to_s }.join(' or ')})"
     end
 
     def ==(other)  # :nodoc:

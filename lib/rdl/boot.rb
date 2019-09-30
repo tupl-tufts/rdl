@@ -150,6 +150,7 @@ require 'rdl/wrap.rb'
 require 'rdl/query.rb'
 require 'rdl/typecheck.rb'
 require 'rdl/constraint.rb'
+require 'rdl/heuristics.rb'
 #require_relative 'rdl/stats.rb'
 
 class << RDL::Globals

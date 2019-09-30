@@ -153,6 +153,9 @@ module ActiveRecord::Querying
   type :order, '(%any) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), DBType.rec_to_nominal(trec))``', wrap: false
   type :includes, '(``DBType.joins_one_input_type(trec, targs)``) -> ``DBType.joins_output(trec, targs)``', wrap: false
   type :includes, '(``DBType.joins_multi_input_type(trec, targs)``, %any, *%any) -> ``DBType.joins_output(trec, targs)``', wrap: false
+  type :preload, '(``DBType.joins_one_input_type(trec, targs)``) -> ``DBType.joins_output(trec, targs)``', wrap: false
+  type :preload, '(``DBType.joins_multi_input_type(trec, targs)``, %any, *%any) -> ``DBType.joins_output(trec, targs)``', wrap: false
+
   type :limit, '(Integer) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), DBType.rec_to_nominal(trec))``', wrap: false
   type :count, '() -> Integer', wrap: false
   type :count, '(``DBType.count_input(trec, targs)``) -> Integer', wrap: false
@@ -179,6 +182,9 @@ module ActiveRecord::Relation::QueryMethods
   type :order, '(%any) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), RDL.type_cast(trec, "RDL::Type::GenericType", force: true).params[0])``', wrap: false
   type :includes, '(``DBType.joins_one_input_type(trec, targs)``) -> ``DBType.joins_output(trec, targs)``', wrap: false
   type :includes, '(``DBType.joins_multi_input_type(trec, targs)``, %any, *%any) -> ``DBType.joins_output(trec, targs)``', wrap: false
+  type :preload, '(``DBType.joins_one_input_type(trec, targs)``) -> ``DBType.joins_output(trec, targs)``', wrap: false
+  type :preload, '(``DBType.joins_multi_input_type(trec, targs)``, %any, *%any) -> ``DBType.joins_output(trec, targs)``', wrap: false
+
   type :limit, '(Integer) -> ``trec``', wrap: false
   type :references, '(Symbol, *Symbol) -> self', wrap: false
 end
@@ -328,10 +334,11 @@ class DBType
           ## multiple tables joined to base table
           joined_hash = RDL.type_cast(Hash[pp1.types.map { |t|
                                joined_name = RDL.type_cast(t, "RDL::Type::NominalType", force: true).klass.to_s.singularize.to_sym
-                               joined_type = table_name_to_schema_type(joined_name, check_col, takes_array, include_assocs: include_assocs)
+                               joined_type = RDL::Type::OptionalType.new(table_name_to_schema_type(joined_name, check_col, takes_array, include_assocs: include_assocs))
                                [joined_name.to_s.pluralize.underscore.to_sym, joined_type]
                              }
-                            ], "Hash<Symbol, RDL::Type::FiniteHashType>", force: true)
+                                          ], "Hash<Symbol, RDL::Type::FiniteHashType>", force: true)
+          type_hash = type_hash.merge(joined_hash)
         else
           raise "unexpected type #{trec}"
         end
@@ -365,12 +372,13 @@ class DBType
     raise RDL::Typecheck::StaticTypeError, "No table type for #{tname} found." unless ttype
     tschema = RDL.type_cast(ttype.params[0], "RDL::Type::FiniteHashType", force: true).elts.except(:__associations)
     h = Hash[tschema.map { |k, v|
-      if check_col
-        v = RDL::Type::UnionType.new(v, RDL::Type::GenericType.new(RDL::Globals.types[:array], v)) if takes_array
-        [k, RDL::Type::OptionalType.new(v)]
-      else
-        [k, RDL::Type::OptionalType.new(RDL::Globals.types[:top])]
-      end
+               if check_col
+                 v = RDL::Type::UnionType.new(v, RDL::Globals.types[:symbol]) if v == RDL::Globals.types[:string] ## ran into cases where symbols can be accepted in addition to string values.
+                 v = RDL::Type::UnionType.new(v, RDL::Type::GenericType.new(RDL::Globals.types[:array], v)).canonical if takes_array
+                 [k, RDL::Type::OptionalType.new(v)]
+               else
+                 [k, RDL::Type::OptionalType.new(RDL::Globals.types[:top])]
+               end
              }]
     if include_assocs
       ## include associations in schema hash
@@ -380,7 +388,7 @@ class DBType
         if check_col
           assoc_type = RDL::Type::NominalType.new(a.class_name)
           if a.name.to_s == a.plural_name
-          ## association is plural
+            ## association is plural
             assoc_hash[a.name] = RDL::Type::OptionalType.new(RDL::Type::GenericType.new(RDL::Globals.types[:array], assoc_type))
           else
             assoc_hash[a.name] = RDL::Type::OptionalType.new(assoc_type)
@@ -567,10 +575,12 @@ class DBType
       arg_types = arg_types + [RDL::Type::NominalType.new(RDL.type_cast(arg.val, "Symbol", force: true).to_s.singularize.camelize)]
     when RDL::Type::FiniteHashType
       hsh = arg.elts
-      raise 'not supported' unless hsh.size == 1
-      key, val = RDL.type_cast(hsh.first, "[Symbol, RDL::Type::SingletonType<Symbol>]", force: true)
-      val = val.val
-      arg_types = arg_types + [RDL::Type::UnionType.new(RDL::Type::NominalType.new(key.to_s.singularize.camelize), RDL::Type::NominalType.new(val.to_s.singularize.camelize))]
+      #raise "got #{hsh} but it's not supported" unless hsh.size == 1
+      hsh.each { |key, val| 
+        #key, val = RDL.type_cast(hsh.first, "[Symbol, RDL::Type::SingletonType<Symbol>]", force: true)
+        val = val.val
+        arg_types = arg_types + [RDL::Type::UnionType.new(RDL::Type::NominalType.new(key.to_s.singularize.camelize), RDL::Type::NominalType.new(val.to_s.singularize.camelize))]
+      }
     else
       raise "Unexpected arg type #{arg} to joins."
     end
@@ -654,3 +664,4 @@ class DBType
     RDL.type DBType, 'self.count_input', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::OptionalType", wrap: false, typecheck: :type_code, effect: [:+, :+]
 
 end
+

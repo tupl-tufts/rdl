@@ -293,6 +293,8 @@ class Table
   RDL.type Table, 'self.all_output', "(RDL::Type::Type) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
   def self.select_map_output(trec, targs, meth)
+    raise "VarargType not supported for select_map." if meth == :select_map && targs[0].is_a?(RDL::Type::VarargType)
+    return trec if targs[0].is_a?(RDL::Type::VarargType)
     case trec
     when RDL::Type::GenericType
       raise RDL::Typecheck::StaticTypeError, 'unexpected type' unless trec.base.name == "Table"
@@ -409,6 +411,8 @@ class Table
       raise "expected Array, got #{arg1}" unless (arg1.base == RDL::Globals.types[:array])
       raise "`import` type not yet implemented for type #{arg1}" unless arg1.params[0].is_a?(RDL::Type::TupleType)
       schema_arg_tuple_type(trec, [targs[0], arg1.params[0]], :import)
+    when RDL::Type::VarType
+      schema_arg_tuple_type(trec, targs, :import)
     else
       raise "Not yet implemented for type #{arg1}."
     end
@@ -465,7 +469,7 @@ class Table
           else
             raise RDL::Typecheck::StaticTypeError, "No column #{column_name} for receiver #{trec}." unless receiver_schema.has_key?(cn)
             if meth == :where
-              type = get_nominal_where_type(type)
+              type = get_nominal_where_type(type) unless type.is_a?(RDL::Type::VarType)
               upper_type = RDL::Type::UnionType.new(receiver_schema[cn], RDL::Type::GenericType.new(RDL::Globals.types[:array], receiver_schema[cn]))
             else
               upper_type = receiver_schema[cn]
@@ -474,12 +478,18 @@ class Table
           end
         }
         return arg0
+      when RDL::Type::GenericType
+        raise RDL::Typecheck::StaticTypeError, "unexpected type #{arg0}" unless arg0.base.name == "Hash"
+        return RDL::Globals.parser.scan_str "#T Hash<Symbol, %any>"
+      when RDL::Type::NominalType
+        raise RDL::Typecheck::StaticTypeError, "unexpected type #{arg0}" unless arg0.name == "Hash"
+        return arg0
       else
         return arg0 if (meth==:where) && targs[0] <= RDL::Globals.types[:string]
         raise "TODO WITH #{trec} AND #{targs} AND #{meth}"
       end
     when RDL::Type::NominalType
-    ##TODO
+     raise "TODO"
     else
 
     end
@@ -543,6 +553,24 @@ class Table
             raise RDL::Typecheck::StaticTypeError, "Incompatible column types." unless RDL::Type::Type.leq(type, upper_type)
           end
         }
+        return targs[0]
+      elsif targs[0].is_a?(RDL::Type::TupleType) && targs[1].is_a?(RDL::Type::VarType)
+        new_tuple = []
+        targs[0].params.each_with_index { |column_name, i|
+          raise "Expected singleton symbol in call to insert, got #{column_name}" unless column_name.is_a?(RDL::Type::SingletonType) && column_name.val.is_a?(Symbol)
+          if column_name.val.to_s.include?("__") && (meth == :where)
+            raise "not yet implemented"
+          else
+            raise RDL::Typecheck::StaticTypeError, "No column #{column_name} for receiver in call to `insert`." unless receiver_schema.has_key?(column_name.val)
+            if meth == :where
+              upper_type = RDL::Type::UnionType.new(receiver_schema[column_name.val], RDL::Type::GenericType.new(RDL::Globals.types[:array], receiver_schema[column_name.val]))
+            else
+              upper_type = receiver_schema[column_name.val]
+            end
+            new_tuple <<  upper_type
+          end
+        }
+        RDL::Type::Type.leq(targs[1], RDL::Type::TupleType.new(*new_tuple))
         return targs[0]
       else
         raise "not yet implemented for types #{targs[0]} and #{targs[1]}"

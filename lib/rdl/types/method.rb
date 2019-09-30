@@ -24,7 +24,7 @@ module RDL::Type
         case arg
         when OptionalType
           raise "Optional arguments not allowed after varargs" if state == :vararg
-          raise "Optional arguments not allowed after named arguments" if state == :hash
+          #raise "Optional arguments not allowed after named arguments" if state == :hash
           state = :optional
         when VarargType
           raise "Multiple varargs not allowed" if state == :vararg

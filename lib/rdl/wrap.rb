@@ -473,7 +473,7 @@ module RDL::Annotate
     raise RuntimeError, "Variable cannot begin with capital" if var.to_s =~ /^[A-Z]/
     return if var.to_s =~ /^[a-z]/ # local variables handled specially, inside type checker
     klass = RDL::Util::GLOBAL_NAME if var.to_s =~ /^\$/
-    unless RDL::Globals.info.set(klass, var, :type, RDL::Type::VarType.new(cls: klass, name: var, category: "variable"))
+    unless RDL::Globals.info.set(klass, var, :type, RDL::Type::VarType.new(cls: klass, name: var, category: :var))
       raise RuntimeError, "Type already declared for #{var}"
     end
     ## RDL::Globals.constrained_types includes the list of all types we want to perform constraint resolution/
@@ -756,6 +756,7 @@ module RDL
       end }
 
     models.each { |model|
+      next if !model.table_exists?
       next if model.to_s == "ApplicationRecord"
       next if model.to_s == "GroupManager"
       RDL.nowrap model
@@ -781,17 +782,18 @@ module RDL
       s2 = s1.transform_keys { |k| k.to_sym }
       assoc = {}
       model.reflect_on_all_associations.each { |a|
+        class_name = a.class_name.starts_with?("::") ? a.class_name[2..-1] : a.class_name
         ## Generate method types based on associations
         add_ar_assoc(assoc, a.macro, a.name)
         if a.name.to_s.pluralize == a.name.to_s ## plural association
           ## This actually returns an Associations CollectionProxy, which is a descendant of ActiveRecord_Relation (see below actual type). This makes no difference in practice.
-          RDL.type model, a.name, "() -> ActiveRecord_Relation<#{a.class_name}>", wrap: false
-          RDL.type model, "#{a.name}=", "(ActiveRecord_Relation<#{a.class_name}> or Array<#{a.class_name}>) -> ``targs[0]``", wrap: false
+          RDL.type model, a.name, "() -> ActiveRecord_Relation<#{class_name}>", wrap: false
+          RDL.type model, "#{a.name}=", "(ActiveRecord_Relation<#{class_name}> or Array<#{class_name}>) -> ``targs[0]``", wrap: false
           #ActiveRecord_Associations_CollectionProxy<#{a.name.to_s.camelize.singularize}>'
         else
           ## association is singular, we just return an instance of associated class
-          RDL.type model, a.name, "() -> #{a.class_name}", wrap: false
-          RDL.type model, "#{a.name}=", "(#{a.class_name}) -> #{a.class_name}", wrap: false
+          RDL.type model, a.name, "() -> #{class_name}", wrap: false
+          RDL.type model, "#{a.name}=", "(#{class_name}) -> #{class_name}", wrap: false
         end
       }
       s2[:__associations] = RDL::Type::FiniteHashType.new(assoc, nil)

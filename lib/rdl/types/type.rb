@@ -24,6 +24,22 @@ module RDL::Type
       is_a?(SingletonType) && @val.nil?
     end
 
+    def var_type?
+      is_a?(VarType)
+    end
+
+    def optional_var_type?
+      is_a?(OptionalType) && @type.var_type?
+    end
+    
+    def fht_var_type?
+      is_a?(FiniteHashType) && @elts.keys.all? { |k| k.is_a?(Symbol) } && @elts.values.all? { |v| v.optional_var_type? || v.var_type? }
+    end
+
+    def kind_of_var_input?
+      var_type? || optional_var_type? || fht_var_type?
+    end
+
     # default behavior, override in appropriate subclasses
     def canonical; return self; end
     def optional?; return false; end
@@ -117,13 +133,14 @@ module RDL::Type
           lklass = left.klass
         end
         right.methods.each_pair { |m, t|
-          return false unless lklass.method_defined?(m) || !(RDL::Globals.info.get(lklass, m, :type).empty?) ## Added the second condition because Rails lazily defines some methods.
+          return false unless lklass.method_defined?(m) || RDL::Globals.info.get(lklass, m, :type) ## Added the second condition because Rails lazily defines some methods.
           types = RDL::Globals.info.get(lklass, m, :type)
           if types
             #non_dep_types = RDL::Typecheck.filter_comp_types(types, false)
             #raise "Need non-dependent types for method #{m} of class #{lklass} in order to use a structural type." if non_dep_types.empty?
-            return false unless types.all? { |tlm|
-              if (tlm.args + [tlm.ret]).any? { |t| t.is_a? ComputedType }## TODO: Include blocks.
+            return false unless types.any? { |tlm|
+              blk_typ = tlm.block.is_a?(RDL::Type::MethodType) ? tlm.block.args + [tlm.block.ret] : [tlm.block]
+              if (tlm.args + blk_typ + [tlm.ret]).any? { |t| t.is_a? ComputedType }
                 ## In this case, need to actually evaluate the ComputedType.
                 ## Going to do this using the receiver `left` and the args from `t`
                 ## If subtyping holds for this, then we know `left` does indeed have a method of the relevant type.
@@ -175,12 +192,13 @@ module RDL::Type
         base_inst = Hash[*formals.zip(left.params).flatten] # instantiation for methods in base's class
         klass = left.base.klass
         right.methods.each_pair { |meth, t|
-          return false unless klass.method_defined?(meth) || !(RDL::Globals.info.get(klass, meth, :type).empty?) ## Added the second condition because Rails lazily defines some methods.
+          return false unless klass.method_defined?(meth) || RDL::Globals.info.get(klass, meth, :type) ## Added the second condition because Rails lazily defines some methods.
           types = RDL::Globals.info.get(klass, meth, :type)
           if types
             
-            return false unless types.all? { |tlm|
-              if (tlm.args + [tlm.ret]).any? { |t| t.is_a? ComputedType }## TODO: Include blocks.
+            return false unless types.any? { |tlm|
+              blk_typ = tlm.block.is_a?(RDL::Type::MethodType) ? tlm.block.args + [tlm.block.ret] : [tlm.block]
+              if (tlm.args + blk_typ + [tlm.ret]).any? { |t| t.is_a? ComputedType }
               ## In this case, need to actually evaluate the ComputedType.
               ## Going to do this using the receiver `left` and the args from `t`
                 ## If subtyping holds for this, then we know `left` does indeed have a method of the relevant type.
@@ -209,6 +227,10 @@ module RDL::Type
         if left.block && right.block
           return leq(right.block, left.block, inst, !ileft, deferred_constraints, no_constraint: no_constraint, ast: ast) # contravariance
         elsif left.block.nil? && right.block.nil?
+          return true
+        elsif left.block.is_a?(VarType) || right.block.is_a?(VarType)
+          ## methods to be inferred all have a VarType for a block type, so it's okay if
+          ## the other method type doesn't have a block.
           return true
         else
           return false # one has a block and the other doesn't
