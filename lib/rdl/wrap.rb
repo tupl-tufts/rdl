@@ -778,6 +778,7 @@ module RDL
         end
         RDL.type model, (k+"=").to_sym, "(#{t_name}) -> #{t_name}", wrap: false ## create method type for column setter
         RDL.type model, (k).to_sym, "() -> #{t_name}", wrap: false ## create method type for column getter
+        RDL.type model, (k+"?").to_sym, "() -> %bool", wrap: false if t_name == "%bool" ## boolean column attributes get automatic `?` method
       }
       s2 = s1.transform_keys { |k| k.to_sym }
       assoc = {}

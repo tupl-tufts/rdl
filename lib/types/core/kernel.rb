@@ -63,7 +63,7 @@ RDL.type :Kernel, 'self.raise', '() -> %bot', effect: [:+, :+]
 RDL.type :Kernel, 'raise', '() -> %bot', effect: [:+, :+]
 # RDL.type :Kernel, 'self.raise', '(String or [exception : () -> String], ?String, ?Array<String>) -> %any'
 # TODO: above same as fail?
-RDL.type :Kernel, 'self.rand', '(Integer or Range max) -> Numeric'
+RDL.type :Kernel, 'self.rand', '(Integer or Range<Integer> max) -> Numeric'
 RDL.type :Kernel, 'self.readline', '(?String, ?Integer) -> String'
 RDL.type :Kernel, 'self.readlines', '(?String, ?Integer) -> Array<String>'
 RDL.type :Kernel, 'self.require', '(String name) -> %bool'

@@ -19,7 +19,8 @@ def String.output_type(trec, targs, meth, type)
       vals = targs.map { |t| t.val }
       to_type(trec.vals[0].send(meth, *vals))
     else
-      raise "not yet implemented"
+      #raise "not yet implemented with method #{meth} and trec #{trec} and targs #{targs} and type #{type}"
+      RDL::Globals.parser.scan_str "#T #{type}"
     end
     to_type(res)
   else
@@ -73,7 +74,7 @@ RDL.type String, 'self.string_promote!', "(%any) -> RDL::Type::Type", effect: [:
 RDL.type :String, :initialize, '(?String str) -> self new_str'
 RDL.type :String, 'self.try_convert', '(Object obj) -> String or nil new_string'
 RDL.type :String, :%, '(Object) -> ``output_type(trec, targs, :%, "String")``'
-RDL.type :String, :*, '(Integer) -> ``output_type(trec, targs, :*, "String")``'
+RDL.type :String, :*, '(Numeric) -> ``output_type(trec, targs, :*, "String")``'
 
 def String.plus_output(trec, targs)
   if trec.is_a?(RDL::Type::PreciseStringType) && targs[0].is_a?(RDL::Type::PreciseStringType)

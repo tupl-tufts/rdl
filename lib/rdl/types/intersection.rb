@@ -18,7 +18,7 @@ module RDL::Type
         elsif t.instance_of? IntersectionType
           ts.concat t.types
         else
-          raise RuntimeError, "Attempt to create intersection type with non-type" unless t.is_a? Type
+          raise RuntimeError, "Attempt to create intersection type with non-type #{t.inspect}" unless t.is_a? Type
           ts << t
         end
       }
@@ -43,6 +43,7 @@ module RDL::Type
 
     def canonical
       canonicalize!
+      #puts "HERE AND ABOUT TO RETURN #{@canonical} OR #{self}"
       return @canonical if @canonical
       return self
     end
@@ -50,8 +51,9 @@ module RDL::Type
     def canonicalize!
       return if @canonicalized
       # for any type such that a subtype is already in ts, set its position to nil
+      @types.map! { |t| t.canonical }
       for i in 0..(@types.length-1)
-        for j in (i+1)..(@types.length-1)
+        for j in i+1..(@types.length-1)
           next if (@types[j].nil?) || (@types[i].nil?) || (@types[i].is_a?(VarType)) || (@types[j].is_a?(VarType))
           (@types[j] = nil; break) if Type.leq(@types[i], @types[j], nil, true, [])
           (@types[i] = nil) if Type.leq(@types[j], @types[i], nil, true, [])

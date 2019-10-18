@@ -3,6 +3,7 @@ module RDL::Typecheck
   def self.resolve_constraints
     puts "Starting constraint resolution..."
     RDL::Globals.constrained_types.each { |klass, name|
+      puts "Resolving constraints from #{klass} and #{name}"
       typ = RDL::Globals.info.get(klass, name, :type)
       ## If typ is an Array, then it's an array of method types
       ## but for inference, we only use a single method type.
@@ -17,9 +18,11 @@ module RDL::Typecheck
         if var_type.var_type? || var_type.optional_var_type?        
           var_type = var_type.type if var_type.is_a?(RDL::Type::OptionalType)
           var_type.lbounds.each { |lower_t, ast|
+            #puts "1. Gonna apply #{lower_t} <= #{var_type}"
             var_type.add_and_propagate_lower_bound(lower_t, ast)
           }
           var_type.ubounds.each { |upper_t, ast|
+            #puts "2. Gonna apply #{var_type} <= #{upper_t}"
             var_type.add_and_propagate_upper_bound(upper_t, ast)
           }
         elsif var_type.fht_var_type?
@@ -37,67 +40,6 @@ module RDL::Typecheck
         end
       }
     }
-
-    if RDL::Config.instance.practical_infer
-      puts "practical inference!!!"
-      RDL::Globals.constrained_types.each { |klass, name|
-        typ = RDL::Globals.info.get(klass, name, :type)
-        if typ.is_a?(Array)
-          var_types = name == :initialize ? typ[0].args + [typ[0].block] : typ[0].args + [typ[0].block, typ[0].ret]
-        else
-          var_types = [typ]
-        end
-        
-        var_types.each { |var_type|
-          if var_type.fht_var_type?
-            var_type.elts.values.each { |v|
-              vt = v.is_a?(RDL::Type::OptionalType) ? v.type : v
-              puts "Applying struct_to_nominal to #{vt}."
-              struct_to_nominal(vt)
-            }
-          else
-            var_type = var_type.type if var_type.is_a?(RDL::Type::OptionalType)
-            puts "Applying struct_to_nominal to #{var_type}."
-            struct_to_nominal(var_type)
-          end
-        }
-      }
-    end
-    
-    puts "Done with constraint resolution."
-  end
-
-  def self.struct_to_nominal(var_type)
-    return unless (var_type.category == :arg) || (var_type.category == :var)#(var_type.category == :ivar) || (var_type.category == :cvar) || (var_type.category == :gvar) ## this rule only applies to args and (instance/class/global) variables
-    #return unless var_type.ubounds.all? { |t, loc| t.is_a?(RDL::Type::StructuralType) || t.is_a?(RDL::Type::VarType) } ## all upper bounds must be struct types or var types
-    return unless var_type.ubounds.any? { |t, loc| t.is_a?(RDL::Type::StructuralType) } ## upper bounds must include struct type(s)
-    struct_types = var_type.ubounds.select { |t, loc| t.is_a?(RDL::Type::StructuralType) }
-    struct_types.map! { |t, loc| t }
-    return if struct_types.empty?
-    meth_names = struct_types.map { |st| st.methods.keys }.flatten
-    matching_classes = ObjectSpace.each_object(Class).select { |c|
-      class_methods = c.instance_methods | RDL::Globals.info.get_methods_from_class(c.to_s)
-      (meth_names - class_methods).empty? } ## will only be empty if meth_names is a subset of c.instance_methods
-    ## Because every object inherits from Object/BasicObject,
-    ## we end up with some really weird issues regarding the eigenclasses
-    ## of objects if we try to include all possible matching classes.
-    ## We can just narrow things down here right off the bat.
-    if matching_classes.include?(BasicObject)
-      matching_classes = [BasicObject]
-    elsif matching_classes.include?(Object)
-      matching_classes = [Object]
-    end
-
-    ## TODO: special handling for arrays/hashes/generics?
-    ## TODO: special handling for Rails models? see Bree's `active_record_match?` method
-
-    raise "No matching classes found for structural types #{struct_types}." if matching_classes.empty?
-    return if matching_classes.size > 10 ## in this case, just keep the struct types
-    nom_sing_types = matching_classes.map { |c| if c.singleton_class? then RDL::Type::SingletonType.new(RDL::Util.singleton_class_to_class(c)) else RDL::Type::NominalType.new(c) end }
-    union = RDL::Type::UnionType.new(*nom_sing_types).canonical
-    struct_types.each { |st| var_type.ubounds.delete_if { |s, loc| s.equal?(st) } } ## remove struct types from upper bounds
-    #var_type.ubounds << [union, "Not providing a location."]
-    var_type.add_and_propagate_upper_bound(union, nil)
   end
 
   def self.extract_var_sol(var, category)
@@ -110,7 +52,7 @@ module RDL::Typecheck
     elsif category == :ret
       non_vartype_lbounds = var.lbounds.map { |t, ast| t}.reject { |t| t.is_a?(RDL::Type::VarType) }
       sol = RDL::Type::UnionType.new(*non_vartype_lbounds)
-      sol = sol.drop_vars!.canonical if sol.is_a?(RDL::Type::UnionType) ## could be, e.g., nominal type if only one type used to create union.
+      sol = sol.drop_vars!.canonical if sol.is_a?(RDL::Type::UnionType) && !sol.types.all? { |t| t.is_a?(RDL::Type::VarType) } ## could be, e.g., nominal type if only one type used to create union.
       #return sol
     elsif category == :var
       if var.lbounds.empty? || (var.lbounds.size == 1 && var.lbounds[0][0] == RDL::Globals.types[:bot])
@@ -122,26 +64,70 @@ module RDL::Typecheck
         ## use lower bounds
         non_vartype_lbounds = var.lbounds.map { |t, ast| t}.reject { |t| t.is_a?(RDL::Type::VarType) }
         sol = RDL::Type::UnionType.new(*non_vartype_lbounds)
-        sol = sol.drop_vars!.canonical if sol.is_a?(RDL::Type::UnionType) ## could be, e.g., nominal type if only one type used to create union.
+        sol = sol.drop_vars!.canonical if sol.is_a?(RDL::Type::UnionType) && !sol.types.all? { |t| t.is_a?(RDL::Type::VarType) } ## could be, e.g., nominal type if only one type used to create union.
         #return sol#RDL::Type::UnionType.new(*non_vartype_lbounds).canonical
       end
     else
       raise "Unexpected VarType category #{category}."
     end
-    
-    if sol.is_a?(RDL::Type::UnionType) || (sol == RDL::Globals.types[:bot]) || sol.is_a?(RDL::Type::StructuralType)
+    if sol.is_a?(RDL::Type::UnionType) || (sol == RDL::Globals.types[:bot]) || sol.is_a?(RDL::Type::StructuralType) || sol.is_a?(RDL::Type::IntersectionType) || (sol == RDL::Globals.types[:object]) 
       ## Try each rule. Return first non-nil result.
       ## If no non-nil results, return original solution.
       ## TODO: check constraints.
+
       RDL::Heuristic.rules.each { |name, rule|
         #puts "Trying rule `#{name}` for variable #{var}."
         typ = rule.call(var)
-        return typ if typ
+        new_cons = {}
+        begin
+          if typ
+            typ = typ.canonical
+            var.add_and_propagate_upper_bound(typ, nil, new_cons)
+            var.add_and_propagate_lower_bound(typ, nil, new_cons)
+            @new_constraints = true if !new_cons.empty?
+            return typ
+            #sol = typ
+          end
+        rescue RDL::Typecheck::StaticTypeError => e
+          puts "Attempted to apply rule #{name} to var #{var}, but go the following error: "
+          puts e
+          undo_constraints(new_cons)
+          ## no new constraints in this case so we'll leave it as is
+        end
       }
-      return sol
-    else
-      return sol
+
     end
+    ## out here, none of the heuristics applied.
+    ## Try to use `sol` as solution -- there is a chance it will 
+    begin
+      new_cons = {}
+      sol = var if sol == RDL::Globals.types[:bot] # just use var itself when result of solution extraction was %bot.
+      sol = sol.canonical
+      var.add_and_propagate_upper_bound(sol, nil, new_cons)
+      var.add_and_propagate_lower_bound(sol, nil, new_cons)
+      @new_constraints = true if !new_cons.empty?
+    rescue RDL::Typecheck::StaticTypeError => e
+      puts "Attempted to apply solution #{sol} for var #{var} but got the following error: "
+      puts e
+      undo_constraints(new_cons)
+      ## no new constraints in this case so we'll leave it as is
+      ### MILOD TODO TOMORROW: set sol = the original var here.
+    end
+
+    return sol
+  end
+
+  # [+ cons +] is Hash<VarType, [:upper or :lower], Type, AST> of constraints to be undone.
+  def self.undo_constraints(cons)
+    cons.each_key { |var_type|
+      cons[var_type].each { |upper_or_lower, bound_t, ast|
+        if upper_or_lower == :upper
+          var_type.ubounds.delete([bound_t, ast])
+        elsif upper_or_lower == :lower
+          var_type.lbounds.delete([bound_t, ast])
+        end
+      }
+    }
   end
 
   def self.extract_meth_sol(tmeth)
@@ -185,31 +171,37 @@ module RDL::Typecheck
   end
   
   def self.extract_solutions
-    puts "Starting solution extraction..."
     ## Go through once to come up with solution for all var types.
-    RDL::Globals.constrained_types.each { |klass, name|
-      typ = RDL::Globals.info.get(klass, name, :type)
-      if typ.is_a?(Array)
-        raise "Expected just one method type for #{klass}#{name}." unless typ.size == 1
-        tmeth = typ[0]
+    #until !@new_constraints
+    loop do
+      @new_constraints = false
+      puts "\n\nRunning solution extraction..."
+      RDL::Globals.constrained_types.each { |klass, name|
+        typ = RDL::Globals.info.get(klass, name, :type)
+        if typ.is_a?(Array)
+          raise "Expected just one method type for #{klass}#{name}." unless typ.size == 1
+          tmeth = typ[0]
 
-        arg_sols, block_sol, ret_sol = extract_meth_sol(tmeth)
-        block_string = block_sol ? " { #{block_sol} }" : nil
-        puts "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
+          arg_sols, block_sol, ret_sol = extract_meth_sol(tmeth)
 
-      elsif name.to_s == "splat_param"
-      else
-        ## Instance/Class (also some times splat parameter) variables:
-        ## There is no clear answer as to what to do in this case.
-        ## Just need to pick something in between bounds (inclusive).
-        ## For now, plan is to just use lower bound when it's not empty/%bot,
-        ## otherwise use upper bound.
-        ## Can improve later if desired.
-        var_sol = extract_var_sol(typ, :var)
-        #typ.solution = var_sol
-        
-        puts "Extracted solution for #{typ} is #{var_sol}."
-      end
-    }
+          block_string = block_sol ? " { #{block_sol} }" : nil
+          puts "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
+
+        elsif name.to_s == "splat_param"
+        else
+          ## Instance/Class (also some times splat parameter) variables:
+          ## There is no clear answer as to what to do in this case.
+          ## Just need to pick something in between bounds (inclusive).
+          ## For now, plan is to just use lower bound when it's not empty/%bot,
+          ## otherwise use upper bound.
+          ## Can improve later if desired.
+          var_sol = extract_var_sol(typ, :var)
+          #typ.solution = var_sol
+          
+          puts "Extracted solution for #{typ} is #{var_sol}."
+        end
+      }
+      break if !@new_constraints
+    end
   end
 end

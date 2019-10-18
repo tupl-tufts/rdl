@@ -43,6 +43,7 @@ module RDL::Type
     def canonicalize!
       return if @canonicalized
       # for any type such that a supertype is already in ts, set its position to nil
+      @types.map! { |t| t.canonical }
       for i in 0..(@types.length-1)
         for j in (i+1)..(@types.length-1)
           next if (@types[j].nil?) || (@types[i].nil?) || (@types[i].is_a?(VarType) && @types[i].to_infer) || (@types[j].is_a?(VarType) && @types[j].to_infer) ## now that we're doing inference, don't want to just treat VarType as a subtype of others in Union

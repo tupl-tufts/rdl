@@ -65,7 +65,7 @@ class ASTVisitor
       # base type is Array, maybe add check?
       raise RDL::Typecheck::StaticTypeError, "type error" unless promoted.params[0] <= schema_type
     else
-      raise RDL::Typecheck::StaticTypeError, "some other type after promotion"
+      raise RDL::Typecheck::StaticTypeError, "some other type #{promoted} after promotion"
     end
   end
 

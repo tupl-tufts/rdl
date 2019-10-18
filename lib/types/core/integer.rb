@@ -85,6 +85,8 @@ RDL.post(:Integer, :<=>) { |r,x| r == -1 || r == 0 || r == 1 }
 
 RDL.type :Integer, :==, '(Object) -> ``sing_or_type(trec, targs, :==, "%bool")``'
 
+RDL.type :Integer, :!=, '(``targs[0]``) -> ``sing_or_type(trec, targs, :==, "%bool")``'
+
 RDL.type :Integer, :===, '(Object) -> ``sing_or_type(trec, targs, :===, "%bool")``'
 
 RDL.type :Integer, :>, '(Integer) -> ``sing_or_type(trec, targs, :>, "%bool")``', effect: [:+, :+]

@@ -229,7 +229,8 @@ class Table
   type :count, "() -> Integer", wrap: false
   type :map, "() { (``map_block_input(trec)``) -> x } -> Array<x>", wrap: false
   type :each, "() { (``map_block_input(trec)``) -> x } -> self", wrap: false
-  type :import, "(``import_arg_type(trec, targs)``, Array<u>) -> Array<String>", wrap: false
+  type :import, "(``import_arg_type(trec, targs)``, Array<y>) -> Array<String>", wrap: false
+  type :limit, "(Integer) -> self", wrap: false
 
   def self.order_input(trec, targs)
     case trec
@@ -409,7 +410,7 @@ class Table
       arg1.params.each { |t| schema_arg_tuple_type(trec, [targs[0], t], :import) } ## check each individual tuple inside second arg tuple
     when RDL::Type::GenericType
       raise "expected Array, got #{arg1}" unless (arg1.base == RDL::Globals.types[:array])
-      raise "`import` type not yet implemented for type #{arg1}" unless arg1.params[0].is_a?(RDL::Type::TupleType)
+      raise "`import` type not yet implemented for type #{arg1}" unless arg1.params[0].is_a?(RDL::Type::TupleType) 
       schema_arg_tuple_type(trec, [targs[0], arg1.params[0]], :import)
     when RDL::Type::VarType
       schema_arg_tuple_type(trec, targs, :import)
@@ -550,7 +551,7 @@ class Table
             else
               upper_type = receiver_schema[cn.val]
             end            
-            raise RDL::Typecheck::StaticTypeError, "Incompatible column types." unless RDL::Type::Type.leq(type, upper_type)
+            raise RDL::Typecheck::StaticTypeError, "Incompatible column types #{type} and #{upper_type}." unless RDL::Type::Type.leq(type, upper_type)
           end
         }
         return targs[0]
@@ -570,7 +571,11 @@ class Table
             new_tuple <<  upper_type
           end
         }
-        RDL::Type::Type.leq(targs[1], RDL::Type::TupleType.new(*new_tuple))
+        if meth == :import
+          RDL::Type::Type.leq(targs[1], RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::TupleType.new(*new_tuple).promote))
+        else
+          RDL::Type::Type.leq(targs[1], RDL::Type::TupleType.new(*new_tuple))
+        end
         return targs[0]
       else
         raise "not yet implemented for types #{targs[0]} and #{targs[1]}"

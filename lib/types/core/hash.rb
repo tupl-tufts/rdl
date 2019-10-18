@@ -30,7 +30,13 @@ def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_de
       end
     end
   else
-    RDL::Globals.parser.scan_str "#T #{default2}"
+    if default2 == "k"
+      trec.params[0] ## equivalent of k in Hash<k, v>
+    elsif default2 == "v"
+      trec.params[1] ## equivalent of v in Hash<k, v>
+    else
+      RDL::Globals.parser.scan_str "#T #{default2}"
+    end
   end
 end
 RDL.type Hash, 'self.output_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, Symbol or String, ?(Symbol or String), { nil_default: ?%bool, use_sing_val: ?%bool } ) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
@@ -53,8 +59,11 @@ def Hash.any_or_k(trec)
   case trec
   when RDL::Type::FiniteHashType
     RDL::Globals.types[:top]
+  when RDL::Type::GenericType
+    #RDL::Globals.parser.scan_str "#T k"
+    trec.params[0] ## equivalent of k in Hash<k, v>
   else
-    RDL::Globals.parser.scan_str "#T k"
+    raise "unexpected, got #{trec}"
   end
 end
 RDL.type Hash, 'self.any_or_k', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
@@ -63,8 +72,11 @@ def Hash.any_or_v(trec)
   case trec
   when RDL::Type::FiniteHashType
     RDL::Globals.types[:top]
+  when RDL::Type::GenericType
+  #RDL::Globals.parser.scan_str "#T v"
+    trec.params[1] ## equivalent of v in Hash<k, v>
   else
-    RDL::Globals.parser.scan_str "#T v"
+    raise "unexpected"
   end
 end
 RDL.type Hash, 'self.any_or_v', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
@@ -73,8 +85,11 @@ def Hash.promoted_or_v(trec)
   case trec
   when RDL::Type::FiniteHashType
     trec.promote.params[1]
+  when RDL::Type::GenericType
+    #RDL::Globals.parser.scan_str "#T v"
+    trec.params[1]
   else
-    RDL::Globals.parser.scan_str "#T v"
+    raise "unexpected"
   end
 end
 RDL.type Hash, 'self.promoted_or_v', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
@@ -145,7 +160,8 @@ def Hash.assign_output(trec, targs)
       return targs[1]
     end
   else
-    RDL::Globals.parser.scan_str "#T v"
+    #RDL::Globals.parser.scan_str "#T v"
+    trec.params[1]
   end
 end
 RDL.type Hash, 'self.assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
@@ -218,7 +234,8 @@ def Hash.invert_output(trec)
     hash = Hash[hash.map { |k, v| if !RDL.type_cast(v, "Object", force: true).is_a?(RDL::Type::Type) then [k, RDL::Type::SingletonType.new(v)] else [k, v] end }]
     RDL::Type::FiniteHashType.new(RDL.type_cast(hash, "Hash<%any, RDL::Type::Type>", force: true), nil)
   else
-    RDL::Globals.parser.scan_str "#T Hash<v, k>"
+    RDL::Type::GenericType.new(RDL::Globals.types[:hash], trec.params[1], trec.params[0]) 
+    #RDL::Globals.parser.scan_str "#T Hash<v, k>"
   end
 end
 RDL.type Hash, 'self.invert_output', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
@@ -330,14 +347,37 @@ def Hash.shift_output(trec)
     promoted = trec.promote
     RDL::Type::TupleType.new(*promoted.params) ## Type error found by type checker here.
   else
-    RDL::Globals.parser.scan_str "#T [k, v]"
+    #RDL::Globals.parser.scan_str "#T [k, v]"
+    RDL::Type::TupleType.new(trec.params[0], trec.params[1])
   end
 end
 RDL.type Hash, 'self.shift_output', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
-RDL.type :Hash, :to_a, '() -> ``output_type(trec, targs, :to_a, "Array<[k, v]>")``'
+#RDL.type :Hash, :to_a, '() -> ``output_type(trec, targs, :to_a, "Array<[k, v]>")``'
+RDL.type :Hash, :to_a, '() -> ``to_a_output_type(trec)")``'
+
+def Hash.to_a_output_type(trec)
+  case trec
+  when RDL::Type::FiniteHashType
+    to_type(trec.elts.to_a)
+  else
+    RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::TupleType.new(trec,params[0], trec.params[1]))
+  end
+end
+
+
 RDL.type :Hash, :to_hash, '() -> self'
-RDL.type :Hash, :values, '() -> ``output_type(trec, targs, :values, "Array<v>")``'
+#RDL.type :Hash, :values, '() -> ``output_type(trec, targs, :values, "Array<v>")``'
+RDL.type :Hash, :values, '() -> ``values_output(trec)``'
+def Hash.values_output(trec)
+  case trec
+  when RDL::Type::FiniteHashType
+    to_type(trec.elts.values)
+  else
+    RDL::Type::GenericType.new(RDL::Globals.types[:array], trec.params[1])
+  end
+end
+
 RDL.type :Hash, :values_at, '(``values_at_input(trec)``) -> ``values_at_output(trec, targs)``'
 
 
@@ -346,7 +386,7 @@ def Hash.values_at_input(trec)
   when RDL::Type::FiniteHashType
     RDL::Type::VarargType.new(RDL::Globals.types[:top])
   else
-    RDL::Type::VarargType.new(RDL::Type::VarType.new("k"))
+    RDL::Type::VarargType.new(trec.params[0])
   end
 end
 RDL.type Hash, 'self.values_at_input', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
@@ -366,7 +406,7 @@ def Hash.values_at_output(trec, targs)
       RDL::Type::GenericType.new(RDL::Type::NominalType.new(Array), trec.promote.params[1])
     end
   else
-    RDL::Globals.parser.scan_str "#T Array<v>"
+    RDL::Type::GenericType.new(RDL::Type::NominalType.new(Array), trec.params[1])
   end
 end
 RDL.type Hash, 'self.values_at_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
@@ -449,3 +489,4 @@ RDL.type :Hash, :to_a, '() -> Array<Array<k or v>>'
 RDL.type :Hash, :to_hash, '() -> Hash<k,v>'
 RDL.type :Hash, :values, '() -> Array<v>'
 RDL.type :Hash, :values_at, '(*k) -> Array<v>', effect: [:+, :+]
+

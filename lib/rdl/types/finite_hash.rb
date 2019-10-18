@@ -15,7 +15,7 @@ module RDL::Type
     # [+ elts +] is a map from keys to types
     def initialize(elts, rest)
       elts.each { |k, t|
-        raise RuntimeError, "Got #{t.inspect} where Type expected" unless t.is_a? Type
+        raise RuntimeError, "Got #{t.inspect} for key #{k} where Type expected" unless t.is_a? Type
         raise RuntimeError, "Type may not be annotated or vararg" if (t.instance_of? AnnotatedArgType) || (t.instance_of? VarargType)
       }
       @elts = elts
@@ -60,8 +60,18 @@ module RDL::Type
 
     def promote(key=nil, value=nil)
       return false if @cant_promote
-      domain_type = (@elts.empty? && !key) ? RDL::Type::VarType.new(:k) : UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }), key)
-      range_type = (@elts.empty? && !value) ? RDL::Type::VarType.new(:v) : UnionType.new(*@elts.values, value)
+      #domain_type = (@elts.empty? && !key) ? RDL::Type::VarType.new({ name: :k, cls: Hash, to_infer: true }) : UnionType.new(*(@elts.keys.map { |k| NominalType.new(k.class) }), key)
+      if @elts.empty? && !key
+        domain_type = RDL::Type::VarType.new(:k)
+      else
+        domain_type = UnionType.new(*@elts.keys.map { |k| if k.is_a?(Type) then k else NominalType.new(k.class) end }, key)
+      end
+      #range_type = (@elts.empty? && !value) ? RDL::Type::VarType.new({ name: :v, cls: Hash, to_infer: true }) : UnionType.new(*@elts.values, value)
+      if @elts.empty? && !value
+        range_type = RDL::Type::VarType.new(:v)
+      else
+        range_type = UnionType.new(*@elts.values.map { |v| if v.is_a?(OptionalType) then v.type else v end }, value)
+      end
 
       if @rest
         domain_type = UnionType.new(domain_type, RDL::Globals.types[:symbol])
@@ -75,7 +85,8 @@ module RDL::Type
           range_type = range_type.widen
         end
       end
-      return GenericType.new(RDL::Globals.types[:hash], domain_type.canonical, range_type.canonical)
+      x = GenericType.new(RDL::Globals.types[:hash], domain_type.canonical, range_type.canonical)
+      return x#GenericType.new(RDL::Globals.types[:hash], domain_type.canonical, range_type.canonical)
     end
 
     ### [+ key +] is type to add to promoted key types
