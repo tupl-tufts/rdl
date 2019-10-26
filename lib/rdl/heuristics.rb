@@ -28,7 +28,7 @@ class RDL::Heuristic
     return if matching_classes.size > 10 ## in this case, just keep the struct types
     nom_sing_types = matching_classes.map { |c| if c.singleton_class? then RDL::Type::SingletonType.new(RDL::Util.singleton_class_to_class(c)) else RDL::Type::NominalType.new(c) end }
     union = RDL::Type::UnionType.new(*nom_sing_types).canonical
-    struct_types.each { |st| var_type.ubounds.delete_if { |s, loc| s.equal?(st) } } ## remove struct types from upper bounds
+    #struct_types.each { |st| var_type.ubounds.delete_if { |s, loc| s.equal?(st) } } ## remove struct types from upper bounds
 
     
     return union
