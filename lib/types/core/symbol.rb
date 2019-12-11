@@ -2,8 +2,8 @@ RDL.nowrap :Symbol
 
 RDL.type :Symbol, 'self.all_symbols', '() -> Array<Symbol>'
 RDL.type :Symbol, :<=>, '(Symbol other) -> Integer or nil'
-RDL.type :Symbol, :==, '(%any obj) -> %bool', effect: [:+, :+]
-RDL.type :Symbol, :=~, '(%any obj) -> Integer or nil'
+RDL.type :Symbol, :==, '(Object) -> %bool', effect: [:+, :+]
+RDL.type :Symbol, :=~, '(Object) -> Integer or nil'
 RDL.type :Symbol, :[], '(Integer idx) -> String'
 RDL.type :Symbol, :[], '(Integer b, Integer n) -> String'
 RDL.type :Symbol, :[], '(Range<Integer>) -> String'

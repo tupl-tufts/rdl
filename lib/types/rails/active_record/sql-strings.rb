@@ -18,7 +18,7 @@ class ASTVisitor
     schema_type = RDL::Globals.ar_db_schema[table.classify.to_sym].params[0].elts[column.to_sym]
     query_type = query_type.elts[column.to_sym] if query_type.is_a? RDL::Type::FiniteHashType
     # puts query_type, schema_type
-    raise RDL::Typecheck::StaticTypeError, "type error" unless query_type <= schema_type
+    raise RDL::Typecheck::StaticTypeError, "type error #{query_type} <= #{schema_type}" unless query_type <= schema_type
   end
 
   alias_method :visit_Greater, :binary_op
@@ -59,7 +59,7 @@ class ASTVisitor
     end
 
     schema_type = RDL::Globals.ar_db_schema[table.classify.to_sym].params[0].elts[column.to_sym]
-    # IN works with arrays
+uts    # IN works with arrays
     promoted = if query_type.is_a?(RDL::Type::TupleType) then query_type.promote else query_type end
     if promoted.is_a? RDL::Type::GenericType
       # base type is Array, maybe add check?
@@ -135,8 +135,12 @@ def handle_sql_strings(trec, targs)
   when RDL::Type::SingletonType
     base_klass = trec
     sql_query = "SELECT * FROM `#{base_klass.val.to_s.tableize}` WHERE #{build_string_from_precise_string(targs)}"
-    # puts sql_query
-    ast = parser.scan_str(sql_query)
+    #puts sql_query
+    begin
+      ast = parser.scan_str(sql_query)
+    rescue => e
+      return ## the ruby SQL parser is very picky, so if we get a parse error, we just won't precisely type check that case
+    end
     search_cond = ast.query_expression.table_expression.where_clause.search_condition
     visitor = ASTVisitor.new base_klass.val.to_s.tableize, targs
     visitor.visit(search_cond)

@@ -53,16 +53,16 @@ module RDL::Type
     # [+ ast +] is the AST where the bound originates from, used for error messages.
     # [+ new_cons +] is a Hash<VarType, [:upper or :lower, Type, AST]>. When provided, can be used to roll back constraints in case an error pops up.
     def add_and_propagate_upper_bound(typ, ast, new_cons = {})
+      #puts "1a. Adding upper bound #{self} <= #{typ}"
       return if self.equal?(typ)
-      #puts "About to add upper bound #{self} <= #{typ}"
       if !@ubounds.any? { |t, a| t == typ }
         @ubounds << [typ, ast]
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:upper, typ, ast]] : [[:upper, typ, ast]]
       end
-      #typ.ubounds.each { |t| add_and_propagate_upper_bound(typ) }
       @lbounds.each { |lower_t, a|
+        #puts "2a. Adding bound #{lower_t} <= #{typ}"
         if lower_t.is_a?(VarType)
-          lower_t.add_and_propagate_upper_bound(typ, ast, new_cons)
+          lower_t.add_and_propagate_upper_bound(typ, ast, new_cons) unless lower_t.ubounds.any? { |t, _| t == typ }
         else
           if typ.is_a?(VarType)
             new_cons[typ] = new_cons[typ] ? new_cons[typ] | [[:lower, lower_t, ast]] : [[:lower, lower_t, ast]]
@@ -79,17 +79,19 @@ module RDL::Type
 
     ## Similar to above.
     def add_and_propagate_lower_bound(typ, ast, new_cons = {})
+      #puts "1b. Adding lower bound #{typ} <= #{self}"
       raise if typ.to_s == "v"
       return if self.equal?(typ)
-      #puts "About to add lower bound #{typ} <= #{self}"
       if !@lbounds.any? { |t, a| t == typ }
         @lbounds << [typ, ast]
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:lower, typ, ast]] : [[:lower, typ, ast]]
       end
-      #typ.lbounds.each { |t| add_and_propagate_lower_bound(typ) } if typ.is_a?(VarType)
+      #puts "The upper bounds are: "#
+      #@ubounds.each { |u, _| puts u }
       @ubounds.each { |upper_t, a|
+        #puts "2b. Adding bound #{typ} <= #{upper_t}."
         if upper_t.is_a?(VarType)
-          upper_t.add_and_propagate_lower_bound(typ, ast, new_cons)
+          upper_t.add_and_propagate_lower_bound(typ, ast, new_cons) unless upper_t.lbounds.any? { |t, _| t == typ }
         else
           if typ.is_a?(VarType)
             new_cons[typ] = new_cons[typ] ? new_cons[typ] | [[:upper, upper_t, ast]] : [[:upper, upper_t, ast]]
@@ -118,7 +120,7 @@ module RDL::Type
         add_and_propagate_lower_bound(typ, ast, new_cons)
       else
         #puts "2. About to add lower bound #{typ} <= #{self}"
-        raise "blah" if typ.to_s == "Array<t>"
+        #raise "blah" if typ.to_s == "Array<t>"
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:lower, typ, ast]] : [[:lower, typ, ast]]
         @lbounds << [typ, ast] unless @lbounds.any? { |t, a| t == typ }
       end

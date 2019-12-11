@@ -10,6 +10,7 @@ module RDL::Type
 
     def self.new(name)
       name = name.to_s
+      name = "Integer" if RDL::Config.instance.number_mode && ["Float", "Rational", "Complex", "BigDecimal"].include?(name)
       t = @@cache[name]
       return t if t
       t = self.__new__ name
@@ -47,6 +48,8 @@ module RDL::Type
           n = @name
         end
         return RDL::Util.add_singleton_marker(n[8..-2])
+      elsif RDL::Config.instance.number_mode && (@name == "Integer")
+        return "Number"
       else
         return @name
       end

@@ -10,7 +10,7 @@ RDL.type :Kernel, 'self.Float', '(Numeric x) -> Float'
 # RDL.type :Kernel, 'self.Hash', '(x : [to_hash : () -> Hash<k,v>]) -> Hash<k,v>'
 RDL.type :Kernel, 'self.Hash', '(nil x) -> Hash<k,v>'
 # RDL.type :Kernel, 'self.Hash, '(x : []) -> Hash<k,v>'
-RDL.type :Kernel, 'self.Integer', '(Numeric or String arg, ?Integer base) -> Integer'
+RDL.type :Kernel, 'self.Integer', '(Numeric or String, ?Integer) -> Integer'
 # RDL.type :Kernel, 'self.Integer', '(arg : [to_int : () -> Integer], base : ?Integer) -> Integer'
 # RDL.type :Kernel, 'self.Integer', '(arg : [to_i : () -> Integer], base : ?Integer) -> Integer'
 RDL.type :Kernel, 'self.Rational', '(Numeric x, Numeric y) -> Rational'
@@ -45,6 +45,8 @@ RDL.type :Kernel, 'self.fail', '(Class, String, Array<String>) -> %bot'
 RDL.type :Kernel, 'self.format', '(String format, *%any args) -> String'
 RDL.type :Kernel, 'self.gets', '(?String, ?Integer) -> String'
 RDL.type :Kernel, 'self.global_variables', '() -> Array<Symbol>'
+RDL.type :Kernel, 'self.instance_variable_get', '(Symbol or String) -> Object', wrap: false
+RDL.type :Kernel, 'self.instance_variable_set', '(Symbol or String, %any) -> Object', wrap: false # returns 2nd argument
 RDL.type :Kernel, 'self.iterator?', '() -> %bool'
 # RDL.type :Kernel, 'self.lambda' # TODO
 RDL.type :Kernel, 'self.load', '(String filename, ?%bool) -> %bool'

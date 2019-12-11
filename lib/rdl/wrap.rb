@@ -406,6 +406,21 @@ module RDL::Annotate
     nil
   end
 
+  def orig_type(klass=self, meth, type, wrap: nil, typecheck: nil)
+    $orig_types = true
+    klass, meth, type = RDL::Wrap.process_type_args(self, klass, meth, type)
+    RDL::Globals.info.add(klass, meth, :orig_type, type)
+  end
+
+  def orig_var_type(klass=self, var, type)
+    raise RuntimeError, "Variable cannot begin with capital" if var.to_s =~ /^[A-Z]/
+    return if var.to_s =~ /^[a-z]/ # local variables handled specially, inside type checker
+    klass = RDL::Util::GLOBAL_NAME if var.to_s =~ /^\$/    
+    unless RDL::Globals.info.set(klass, var, :orig_type, RDL::Globals.parser.scan_str("#T #{type}"))
+      raise RuntimeError, "Type already declared for #{var}"
+    end
+  end
+
   def readd_comp_types
     RDL::Globals.dep_types.each { |klass, meth, t| RDL::Globals.info.add(klass, meth, :type, t) unless meth.nil? }
   end
@@ -454,7 +469,43 @@ module RDL::Annotate
     nil
   end
 
+  # [+ path +] is a String pathname, for which all direct ".rb" subfiles will be inferred.
+  def infer_all(path)
+    path = Pathname.new(path).expand_path
+    rb_files = Dir.entries(path).keep_if { |f| f.end_with?(".rb") }
+    rb_files.each { |f| infer_file(path+f, more: true) }
+    #RDL.do_infer :all
+  end
 
+  # [+ file +] is the String absolute path for a file, for which we want to infer all contained methods.
+  # [+ more +] is a %bool indicating whether there are other methods outside given file to infer.
+  #     When false, we infer after processing all methods in file. When true, we do not infer in this method.
+  def infer_file(file, more: false)
+    file = Pathname.new(file).expand_path.to_s
+    return if RDL::Globals.no_infer_files.include? file
+    index = ClassIndexer.process_file(file)
+    index.each { |klass, meth_list|
+      if RDL::Util.has_singleton_marker(klass)
+        klass = RDL::Util.remove_singleton_marker(klass)
+        meth_list.each { |meth|
+          infer(klass, "self." + meth[:name], time: :files) unless RDL::Globals.no_infer_meths.include?([klass.to_s, "self."+meth[:name]])
+        }
+      else
+        meth_list.each { |meth|
+          infer klass, meth[:name], time: :files unless RDL::Globals.no_infer_meths.include?([klass.to_s, meth[:name].to_s])
+        }
+      end
+    }
+    #RDL.do_infer :all
+  end
+
+  def no_infer_meth(klass, meth)
+    RDL::Globals.no_infer_meths << [klass.to_s, meth.to_s]
+  end
+
+  def no_infer_file(path)
+    RDL::Globals.no_infer_files << Pathname.new(path).expand_path.to_s
+  end
   
   # [+ klass +] is the class containing the variable; self if omitted; ignored for local and global variables
   # [+ var +] is a symbol or string containing the name of the variable
@@ -686,43 +737,25 @@ module RDL
 
   def self.do_infer(sym)
     return unless RDL::Globals.to_infer[sym]
+    $stn = 0
+    num_casts = 0
+    time = Time.now
     RDL::Globals.to_infer[sym].each { |klass, meth|
       RDL::Typecheck.infer klass, meth
+      num_casts += RDL::Typecheck.get_num_casts
     }
     RDL::Globals.to_infer[sym] = Set.new
     nil
     RDL::Typecheck.resolve_constraints
     RDL::Typecheck.extract_solutions
-    #RDL::Globals.constrained_types = []
-=begin    
-    puts "Here are the generated constraints: "
-    RDL::Globals.constrained_types.each { |klass, name|
-      typ = RDL::Globals.info.get(klass, name, :type)
-      if typ.is_a?(Array)
-        ## it's an array for method types (to handle intersections)
-        meth_type = typ[0]
-        raise "Expected MethodType, got #{meth_type}." unless meth_type.is_a?(RDL::Type::MethodType)
-        (meth_type.args + [meth_type.ret]).each { |var_type|
-          raise "Expected VarType, got #{var_type}." unless var_type.is_a?(RDL::Type::VarType)
-          puts "***** Lower bounds for #{var_type} *****"
-          var_type.lbounds.each { |t| puts t }
-          puts "***** Upper bounds for #{var_type} *****"
-          var_type.ubounds.each { |t| puts t }
-        }
-      else
-        ## variable type in this case
-        var_type = typ
-        raise "Expected VarType, got #{var_type}." unless var_type.is_a?(RDL::Type::VarType)
-        puts "***** Lower bounds for #{var_type} *****"
-        var_type.lbounds.each { |t| puts t }
-        puts "***** Upper bounds for #{var_type} *****"
-        var_type.ubounds.each { |t| puts t }
-      end
-    }
-=end
+    time = Time.now - time
+    puts "Total time taken: #{time}."
+    puts "Total number of type casts used: #{num_casts}."
+    puts "Total amount of time spent on stn: #{$stn}."
   end
 
   def self.load_sequel_schema(db)
+    db.disconnect
     db.tables.each { |table|
       hash_str = "{ "
       kl_name = table.to_s.camelize.singularize

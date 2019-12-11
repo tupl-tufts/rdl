@@ -1,6 +1,6 @@
 RDL.nowrap :Class
 
-RDL.type :Class, :allocate, '() -> %any' # Instance of class self
+RDL.type :Class, :allocate, '() -> ``RDL::Type::NominalType.new(trec.val)``' # Instance of class self
 RDL.type :Class, :inherited, '(Class) -> %any'
 #RDL.type :Class, 'initialize', '() -> '
 #RDL.type :Class, 'new', '(*%any) -> %any' #Causes two other test cases to fail

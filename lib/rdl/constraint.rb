@@ -1,3 +1,5 @@
+require 'csv'
+
 module RDL::Typecheck
 
   def self.resolve_constraints
@@ -15,19 +17,17 @@ module RDL::Typecheck
       end
       
       var_types.each { |var_type|
-        if var_type.var_type? || var_type.optional_var_type?        
-          var_type = var_type.type if var_type.is_a?(RDL::Type::OptionalType)
+        if var_type.var_type? || var_type.optional_var_type? || var_type.vararg_var_type?       
+          var_type = var_type.type if var_type.optional_var_type? || var_type.vararg_var_type?
           var_type.lbounds.each { |lower_t, ast|
-            #puts "1. Gonna apply #{lower_t} <= #{var_type}"
             var_type.add_and_propagate_lower_bound(lower_t, ast)
           }
           var_type.ubounds.each { |upper_t, ast|
-            #puts "2. Gonna apply #{var_type} <= #{upper_t}"
             var_type.add_and_propagate_upper_bound(upper_t, ast)
           }
         elsif var_type.fht_var_type?
           var_type.elts.values.each { |v|
-            vt = v.is_a?(RDL::Type::OptionalType) ? v.type : v
+            vt = v.optional_var_type? || v.vararg_var_type? ? v.type : v
             vt.lbounds.each { |lower_t, ast|
               vt.add_and_propagate_lower_bound(lower_t, ast)
             }
@@ -48,11 +48,12 @@ module RDL::Typecheck
     if category == :arg
       non_vartype_ubounds = var.ubounds.map { |t, ast| t}.reject { |t| t.is_a?(RDL::Type::VarType) }
       sol = non_vartype_ubounds.size == 1 ? non_vartype_ubounds[0] : RDL::Type::IntersectionType.new(*non_vartype_ubounds).canonical
+      sol = sol.drop_vars.canonical if sol.is_a?(RDL::Type::IntersectionType)  ## could be, e.g., nominal type if only one type used to create intersection.
       #return sol
     elsif category == :ret
       non_vartype_lbounds = var.lbounds.map { |t, ast| t}.reject { |t| t.is_a?(RDL::Type::VarType) }
       sol = RDL::Type::UnionType.new(*non_vartype_lbounds)
-      sol = sol.drop_vars!.canonical if sol.is_a?(RDL::Type::UnionType) && !sol.types.all? { |t| t.is_a?(RDL::Type::VarType) } ## could be, e.g., nominal type if only one type used to create union.
+      sol = sol.drop_vars.canonical if sol.is_a?(RDL::Type::UnionType)  ## could be, e.g., nominal type if only one type used to create union.
       #return sol
     elsif category == :var
       if var.lbounds.empty? || (var.lbounds.size == 1 && var.lbounds[0][0] == RDL::Globals.types[:bot])
@@ -64,13 +65,14 @@ module RDL::Typecheck
         ## use lower bounds
         non_vartype_lbounds = var.lbounds.map { |t, ast| t}.reject { |t| t.is_a?(RDL::Type::VarType) }
         sol = RDL::Type::UnionType.new(*non_vartype_lbounds)
-        sol = sol.drop_vars!.canonical if sol.is_a?(RDL::Type::UnionType) && !sol.types.all? { |t| t.is_a?(RDL::Type::VarType) } ## could be, e.g., nominal type if only one type used to create union.
+        sol = sol.drop_vars.canonical if sol.is_a?(RDL::Type::UnionType)  ## could be, e.g., nominal type if only one type used to create union.
         #return sol#RDL::Type::UnionType.new(*non_vartype_lbounds).canonical
       end
     else
       raise "Unexpected VarType category #{category}."
     end
-    if sol.is_a?(RDL::Type::UnionType) || (sol == RDL::Globals.types[:bot]) || sol.is_a?(RDL::Type::StructuralType) || sol.is_a?(RDL::Type::IntersectionType) || (sol == RDL::Globals.types[:object]) 
+    #sol.is_a?(RDL::Type::UnionType)
+    if  sol.is_a?(RDL::Type::UnionType) || (sol == RDL::Globals.types[:bot]) || (sol == RDL::Globals.types[:top]) || (sol == RDL::Globals.types[:nil]) || sol.is_a?(RDL::Type::StructuralType) || sol.is_a?(RDL::Type::IntersectionType) || (sol == RDL::Globals.types[:object]) 
       ## Try each rule. Return first non-nil result.
       ## If no non-nil results, return original solution.
       ## TODO: check constraints.
@@ -81,6 +83,7 @@ module RDL::Typecheck
         new_cons = {}
         begin
           if typ
+            #puts "Attempting to apply heuristic solution #{typ} to #{var}"
             typ = typ.canonical
             var.add_and_propagate_upper_bound(typ, nil, new_cons)
             var.add_and_propagate_lower_bound(typ, nil, new_cons)
@@ -102,18 +105,25 @@ module RDL::Typecheck
     begin
       new_cons = {}
       sol = var if sol == RDL::Globals.types[:bot] # just use var itself when result of solution extraction was %bot.
+      return sol if sol.is_a?(RDL::Type::VarType) ## don't add var type as solution
       sol = sol.canonical
       var.add_and_propagate_upper_bound(sol, nil, new_cons)
       var.add_and_propagate_lower_bound(sol, nil, new_cons)
       @new_constraints = true if !new_cons.empty?
+      if sol.is_a?(RDL::Type::GenericType)
+        new_params = sol.params.map { |p| extract_var_sol(p, category) }
+        sol = RDL::Type::GenericType.new(sol.base, *new_params)
+      elsif sol.is_a?(RDL::Type::TupleType)
+        new_params = sol.params.map { |t| extract_var_sol(t, category) }
+        sol = RDL::Type::TupleType.new(*new_params)
+      end
     rescue RDL::Typecheck::StaticTypeError => e
       puts "Attempted to apply solution #{sol} for var #{var} but got the following error: "
       puts e
       undo_constraints(new_cons)
       ## no new constraints in this case so we'll leave it as is
-      ### MILOD TODO TOMORROW: set sol = the original var here.
+      sol = var
     end
-
     return sol
   end
 
@@ -152,20 +162,42 @@ module RDL::Typecheck
 
     ## BLOCK SOLUTION
     if tmeth.block && !tmeth.block.ubounds.empty?
-      non_vartype_ubounds = tmeth.block.ubounds.map { |t, ast| t.canonical }.reject { |t| t.is_a?(RDL::Type::VarType) }          
-      block_sol = non_vartype_ubounds.size > 1 ? RDL::Type::IntersectionType.new(*non_vartype_ubounds).canonical : non_vartype_bounds[0] ## doing this once and calling canonical to remove any supertypes that would be eliminated anyway
+      non_vartype_ubounds = tmeth.block.ubounds.map { |t, ast| t.canonical }.reject { |t| t.is_a?(RDL::Type::VarType) }
+      non_vartype_ubounds.reject! { |t| t.is_a?(RDL::Type::StructuralType) && (t.methods.size == 1) && t.methods.has_key?(:to_proc) }
+
+      if non_vartype_ubounds.size == 0
+        block_sol = tmeth.block
+      elsif non_vartype_ubounds.size > 1
+        block_sols = []
+        RDL::Type::IntersectionType.new(*non_vartype_ubounds).canonical.types.each { |m|
+          raise "Expected block type to be a MethodType, got #{m}." unless m.is_a?(RDL::Type::MethodType)
+          block_sols << RDL::Type::MethodType.new(*extract_meth_sol(m))
+        }
+        block_sol = RDL::Type::IntersectionType.new(*block_sols).canonical                  
+      else
+        block_sol = RDL::Type::MethodType.new(*extract_meth_sol(non_vartype_ubounds[0]))
+      end
+=begin      
+      block_sol = non_vartype_ubounds.size > 1 ? RDL::Type::IntersectionType.new(*non_vartype_ubounds).canonical : non_vartype_ubounds[0] ## doing this once and calling canonical to remove any supertypes that would be eliminated anyway
       block_sols = []
+      puts "HERE 1 WITH #{block_sol.class}"
       block_sol.types.each { |m|
+        puts "here with #{m}"
         raise "Expected block type to be a MethodType, got #{m}." unless m.is_a?(RDL::Type::MethodType)
         block_sols << RDL::Type::MethodType.new(*extract_meth_sol(m))
       }
       block_sol = RDL::Type::IntersectionType.new(*block_sols).canonical
+      puts "HERE 2"
+=end
     else
       block_sol = nil
     end
-
     ## RET SOLUTION
-    ret_sol = tmeth.ret.is_a?(RDL::Type::VarType) ?  extract_var_sol(tmeth.ret, :ret) : tmeth.ret
+    if tmeth.ret.to_s == "self"
+      ret_sol = tmeth.ret
+    else
+      ret_sol = tmeth.ret.is_a?(RDL::Type::VarType) ?  extract_var_sol(tmeth.ret, :ret) : tmeth.ret
+    end
 
     return [arg_sols, block_sol, ret_sol]
   end
@@ -173,8 +205,10 @@ module RDL::Typecheck
   def self.extract_solutions
     ## Go through once to come up with solution for all var types.
     #until !@new_constraints
+    typ_sols = {}
     loop do
       @new_constraints = false
+      typ_sols = {}
       puts "\n\nRunning solution extraction..."
       RDL::Globals.constrained_types.each { |klass, name|
         typ = RDL::Globals.info.get(klass, name, :type)
@@ -186,7 +220,7 @@ module RDL::Typecheck
 
           block_string = block_sol ? " { #{block_sol} }" : nil
           puts "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
-
+          typ_sols[[klass.to_s, name.to_sym]] = "(#{arg_sols.join(', ')})#{block_string} -> #{ret_sol}"
         elsif name.to_s == "splat_param"
         else
           ## Instance/Class (also some times splat parameter) variables:
@@ -199,9 +233,83 @@ module RDL::Typecheck
           #typ.solution = var_sol
           
           puts "Extracted solution for #{typ} is #{var_sol}."
+          typ_sols[[klass.to_s, name.to_sym]] = var_sol.to_s
         end
       }
       break if !@new_constraints
     end
+
+    #return unless $orig_types
+
+    CSV.open("infer_data.csv", "wb") { |csv|
+      csv << ["Class", "Method", "Inferred Type", "Original Type", "Source Code", "Comments"]
+    }
+    
+    correct_types = 0
+    total_potential = 0
+    meth_types = 0
+    var_types = 0
+    typ_sols.each_pair { |km, typ|
+      klass, meth = km
+      orig_typ = RDL::Globals.info.get(klass, meth, :orig_type)
+      if orig_typ.is_a?(Array)
+        raise "expected just one original type for #{klass}##{meth}" unless orig_typ.size == 1
+        orig_typ = orig_typ[0]
+      end
+      if orig_typ.nil?
+        #puts "Original type not found for #{klass}##{meth}."
+        #puts "Inferred type is: #{typ}"
+      elsif orig_typ.to_s == typ
+        #puts "Type for #{klass}##{meth} was correctly inferred, as: "
+        #puts typ
+        if orig_typ.is_a?(RDL::Type::MethodType)
+          correct_types += orig_typ.args.size + 1 ## 1 for ret
+          total_potential += orig_typ.args.size + 1 ## 1 for ret
+          meth_types += 1
+          if !orig_typ.block.nil?
+            correct_types += orig_typ.block.args.size + 1 ## 1 for ret
+            total_potential += orig_typ.block.args.size + 1 ## 1 for ret
+          end
+        else
+          var_types += 1
+          correct_types += 1
+          total_potential += 1
+        end
+      else
+        puts "Difference encountered for #{klass}##{meth}."
+        puts "Inferred: #{typ}"
+        puts "Original: #{orig_typ}"
+        if orig_typ.is_a?(RDL::Type::MethodType)
+          total_potential += orig_typ.args.size + 1 ## 1 for ret
+          total_potential += orig_typ.block.args.size + 1 if !orig_typ.block.nil?
+          meth_types += 1
+        else
+          total_potential += 1
+          var_types += 1
+        end
+          
+      end
+
+      if !meth.to_s.include?("@") && !meth.to_s.include?("$")#orig_typ.is_a?(RDL::Type::MethodType)
+        CSV.open("infer_data.csv", "a+") { |csv|
+          ast = RDL::Typecheck.get_ast(klass, meth)
+          code = ast.loc.expression.source
+          if RDL::Util.has_singleton_marker(klass)
+            comment = RDL::Util.to_class(RDL::Util.remove_singleton_marker(klass)).method(meth).comment
+          else
+            comment = RDL::Util.to_class(klass).instance_method(meth).comment
+          end
+          csv << [klass, meth, typ, orig_typ, code, comment]
+        }
+      end
+    }
+
+    puts "Total correct (that could be automatically inferred): #{correct_types}"
+    puts "Total # method types: #{meth_types}"
+    puts "Total # variable types: #{var_types}"
+    puts "Total # individual types: #{total_potential}"
   end
+
+  
+  
 end

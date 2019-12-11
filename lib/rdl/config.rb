@@ -8,7 +8,7 @@ class RDL::Config
   attr_reader :report # writer is custom defined
   attr_accessor :weak_update_promote, :widen_bound, :promote_widen, :use_comp_types, :check_comp_types
   attr_accessor :type_defaults, :infer_defaults, :pre_defaults, :post_defaults, :rerun_comp_types, :assume_dyn_type
-  attr_accessor :practical_infer
+  attr_accessor :practical_infer, :use_precise_string, :number_mode
 
   def initialize
     @nowrap = Set.new # Set of symbols
@@ -28,6 +28,8 @@ class RDL::Config
     @check_comp_types = false ## this for dynamically checking that the result of a computed type still holds
     @rerun_comp_types = false ## this is for dynamically checking that a type computation still evaluates to the same thing as it did at type checking time
     @practical_infer = true
+    @use_precise_string = false
+    @number_mode = false
   end
 
   def report=(val)

@@ -587,6 +587,7 @@ class Table
   RDL.type Table, 'self.schema_arg_tuple_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
   def self.where_arg_type(trec, targs, tuple=false)
+    return targs[0] if targs[0] == RDL::Globals.types[:string]
     trp0 = RDL.type_cast(RDL.type_cast(trec, "RDL::Type::GenericType").params[0], "RDL::Type::FiniteHashType", force: true)
     if trp0.elts[:__all_joined].is_a?(RDL::Type::UnionType)
       arg0 = targs[0]

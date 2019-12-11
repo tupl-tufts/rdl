@@ -13,7 +13,7 @@ def String.output_type(trec, targs, meth, type)
       when RDL::Type::PreciseStringType
         res = trec.vals[0].send(meth, targs.vals[0])
       else
-        RDL::Globals.parser.scan_str "#T #{type}"
+        return RDL::Globals.parser.scan_str "#T #{type}"
       end
     elsif targs.size > 1 && targs.all? { |a| a.is_a?(RDL::Type::SingletonType) }
       vals = targs.map { |t| t.val }
@@ -73,7 +73,7 @@ RDL.type String, 'self.string_promote!', "(%any) -> RDL::Type::Type", effect: [:
 
 RDL.type :String, :initialize, '(?String str) -> self new_str'
 RDL.type :String, 'self.try_convert', '(Object obj) -> String or nil new_string'
-RDL.type :String, :%, '(Object) -> ``output_type(trec, targs, :%, "String")``'
+RDL.type :String, :%, '(x) -> ``output_type(trec, targs, :%, "String")``'
 RDL.type :String, :*, '(Numeric) -> ``output_type(trec, targs, :*, "String")``'
 
 def String.plus_output(trec, targs)
@@ -98,7 +98,7 @@ def String.append_output(trec, targs)
         trec.vals << v
       end
     }
-    raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds
+    raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds(true)
     trec
   elsif trec.is_a?(RDL::Type::PreciseStringType)
     trec.promote!
@@ -110,7 +110,7 @@ end
 
 RDL.type String, 'self.append_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", effect: [:+, :+]
 
-RDL.type :String, :<=>, '(String other) -> ``output_type(trec, targs, :<=>, "Integer")``'
+RDL.type :String, :<=>, '(String) -> ``output_type(trec, targs, :<=>, "Integer")``'
 RDL.type :String, :==, '(%any) -> ``output_type(trec, targs, :==, "%bool")``', effect: [:+, :+]
 RDL.type :String, :===, '(%any) -> ``output_type(trec, targs, :===, "%bool")``'
 RDL.type :String, :=~, '(Object) -> ``output_type(trec, targs, :=~, "Integer")``', wrap: false # Wrapping this messes up $1 etc
@@ -121,7 +121,7 @@ RDL.type :String, :[], '(Regexp, String) -> ``output_type(trec, targs, :[], "Str
 RDL.type :String, :[], '(String) -> ``output_type(trec, targs, :[], "String")``', effect: [:+, :+]
 RDL.type :String, :ascii_only?, '() -> ``output_type(trec, targs, :ascii_only?, "%bool")``'
 RDL.type :String, :b, '() -> ``output_type(trec, targs, :b, "String")``'
-RDL.type :String, :bytes, '() -> ``output_type(trec, targs, :bytes, "Array")``' 
+RDL.type :String, :bytes, '() -> ``output_type(trec, targs, :bytes, "Array<Integer>")``' 
 RDL.type :String, :bytesize, '() -> ``output_type(trec, targs, :bytesize, "Integer")``'
 RDL.type :String, :byteslice, '(Integer, ?Integer) -> ``output_type(trec, targs, :byteslice, "String")``'
 RDL.type :String, :byteslice, '(Range<Integer>) -> ``output_type(trec, targs, :byteslice, "String")``'
@@ -131,7 +131,7 @@ def String.cap_down_output(trec, meth)
   case trec
   when RDL::Type::PreciseStringType
     trec.vals.each { |v| v.send(meth) if v.is_a?(String) }
-    raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds
+    raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds(true)
     trec
   else
     RDL::Globals.types[:string]
@@ -153,7 +153,7 @@ def String.chop_output(trec)
   when RDL::Type::PreciseStringType
     if trec.vals.last.is_a?(String)
       trec.vals.last.chop!
-      raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds
+      raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds(true)
       trec
     else
       trec.promote!
@@ -173,7 +173,7 @@ def String.clear_output(trec)
   case trec
   when RDL::Type::PreciseStringType
     trec.vals = [""]
-    raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds
+    raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds(true)
     trec
   else
     RDL::Type::PreciseStringType.new("")
@@ -197,7 +197,7 @@ RDL.type :String, :each_char, '() {(String) -> %any} -> String'
 RDL.type :String, :each_char, '() -> Enumerator'
 RDL.type :String, :each_codepoint, '() {(Integer) -> %any} -> String'
 RDL.type :String, :each_codepoint, '() -> Enumerator'
-RDL.type :String, :each_line, '(?String) {(Integer) -> %any} -> String'
+RDL.type :String, :each_line, '(?String) {(String) -> %any} -> String'
 RDL.type :String, :each_line, '(?String) -> Enumerator'
 RDL.type :String,  :empty?, '() ->``output_type(trec, targs, :empty?, "%bool")``'
 # RDL.type :String, :encode, '(?Encoding, ?Encoding, *Symbol) -> String' # TODO: fix Hash arg:String,
@@ -211,10 +211,12 @@ RDL.type :String, :gsub, '(Regexp or String, String) -> ``output_type(trec, targ
 RDL.type :String, :gsub, '(Regexp or String, Hash) -> ``output_type(trec, targs, :gsub, "String")``'
 RDL.type :String, :gsub, '(Regexp or String, String) -> ``output_type(trec, targs, :gsub, "String")``', wrap: false
 RDL.type :String, :gsub, '(Regexp or String) {(String) -> %any } -> ``output_type(trec, targs, :gsub, "String")``'
+RDL.type :String, :gsub, '(Regexp or String) {() -> %any } -> ``output_type(trec, targs, :gsub, "String")``'
+
 RDL.type :String, :gsub, '(Regexp or String, String) -> ``output_type(trec, targs, :gsub, "String")``', wrap: false
 RDL.type :String, :gsub, '(Regexp or String) ->  ``output_type(trec, targs, :gsub, "String")``'
 RDL.type :String, :gsub!, '(Regexp or String, String) -> ``string_promote!(trec)``', wrap: false
-RDL.type :String, :gsub!, '(Regexp or String) {(String) -> %any } -> ``string_promote!(trec)``', wrap: false
+RDL.type :String, :gsub!, '(Regexp or String) {(?String) -> %any } -> ``string_promote!(trec)``', wrap: false
 RDL.type :String, :gsub!, '(Regexp or String) -> ``string_promote!(trec); RDL::Type::NominalType.new(Enumerator)``', wrap: false
 RDL.type :String, :hash, '() -> Integer'
 RDL.type :String, :hex, '() -> ``output_type(trec, targs, :getbyte, "Integer")``'
@@ -228,7 +230,7 @@ def String.replace_output(trec, targs)
     case targs[0]
     when RDL::Type::PreciseStringType
       trec.vals = targs[0].vals
-      raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds
+      raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds(true)
       trec
     else
       raise RDL::Typecheck::StaticTypeError, "Failed to promote string #{trec}." unless trec.promote!
@@ -251,7 +253,7 @@ def String.insert_output(trec, targs)
       arg_int = targs[0].val
       arg_str = targs[1].vals.join
       trec.vals = [rec_str.insert(arg_int, arg_str)]
-      raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds
+      raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds(true)
       trec
     else
       raise RDL::Typecheck::StaticTypeError, "Failed to promote string #{trec}." unless trec.promote!
@@ -279,7 +281,7 @@ def String.lrstrip_output(trec, meth)
     if trec.vals[0].is_a?(String)
       if trec.vals[0].send(check, " ")
         trec.vals[0].send(meth)
-        raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds
+        raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds(true)
         trec        
       else
         trec
@@ -305,7 +307,7 @@ def String.mutate_output(trec, meth)
   when RDL::Type::PreciseStringType
     if trec.vals.all? { |v| v.is_a?(String) }
       trec.vals = [trec.vals.join.send(meth)]
-      raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds
+      raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds(true)
       trec        
     else
       raise RDL::Typecheck::StaticTypeError, "Failed to promote string #{trec}." unless trec.promote!
@@ -330,7 +332,7 @@ RDL.type :String, :rpartition, '(String or Regexp) -> ``output_type(trec, targs,
 RDL.type :String, :rstrip, '() -> ``output_type(trec, targs, :rstrip, "String")``'
 RDL.type :String, :rstrip!, '() -> ``lrstrip_output(trec, :rstrip!)``'
 RDL.type :String, :scan, '(Regexp or String) -> ``output_type(trec, targs, :scan, "Array<String or Array<String>>")``', wrap: false # :String, Can't wrap or screws up last_match
-RDL.type :String, :scan, '(Regexp or String) {(*%any) -> %any} -> ``output_type(trec, targs, :scan, "Array<String or Array<String>>")``', wrap: false
+RDL.type :String, :scan, '(Regexp or String) {(*String) -> %any} -> ``output_type(trec, targs, :scan, "Array<String or Array<String>>")``', wrap: false
 RDL.type :String, :scrub, '(?String) -> ``output_type(trec, targs, :scrub, "String")``'
 RDL.type :String, :scrub, '(?String) {(%any) -> %any} -> String'
 RDL.type :String, :scrub!, '(?String) -> ``string_promote!(trec)``'
@@ -368,7 +370,7 @@ RDL.type :String, :tr, '(String, String) -> ``output_type(trec, targs, :tr, "Str
 RDL.type :String, :tr!, '(String, String) -> ``string_promote!(trec)``'
 RDL.type :String, :tr_s, '(String, String) -> ``output_type(trec, targs, :tr_s, "String")``'
 RDL.type :String, :tr_s!, '(String, String) -> ``string_promote!(trec)``'
-RDL.type :String, :unpack, '(String) -> ``output_type(trec, targs, :unpack, "Array<String>")``'
+RDL.type :String, :unpack, '(String) -> ``output_type(trec, targs, :unpack, "Array<Integer or String>")``'
 RDL.type :String, :upcase, '() -> ``output_type(trec, targs, :upcase, "String")``'
 RDL.type :String, :upcase!, '() -> ``mutate_output(trec, :upcase!)``'
 RDL.type :String, :upto, '(String, ?bool) -> Enumerator'
@@ -440,7 +442,7 @@ RDL.type :String, :each_char, '() {(String) -> %any} -> String'
 RDL.type :String, :each_char, '() -> Enumerator'
 RDL.type :String, :each_codepoint, '() {(Integer) -> %any} -> String'
 RDL.type :String, :each_codepoint, '() -> Enumerator'
-RDL.type :String, :each_line, '(?String) {(Integer) -> %any} -> String'
+RDL.type :String, :each_line, '(?String) {(String) -> %any} -> String'
 RDL.type :String, :each_line, '(?String) -> Enumerator'
 RDL.type :String,  :empty?, '() -> %bool'
 # RDL.type :String, :encode, '(?Encoding, ?Encoding, *Symbol) -> String' # TODO: fix Hash arg:String,

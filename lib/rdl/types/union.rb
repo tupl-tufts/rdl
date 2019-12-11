@@ -42,8 +42,8 @@ module RDL::Type
 
     def canonicalize!
       return if @canonicalized
-      # for any type such that a supertype is already in ts, set its position to nil
       @types.map! { |t| t.canonical }
+      # for any type such that a supertype is already in ts, set its position to nil
       for i in 0..(@types.length-1)
         for j in (i+1)..(@types.length-1)
           next if (@types[j].nil?) || (@types[i].nil?) || (@types[i].is_a?(VarType) && @types[i].to_infer) || (@types[j].is_a?(VarType) && @types[j].to_infer) ## now that we're doing inference, don't want to just treat VarType as a subtype of others in Union
@@ -61,13 +61,33 @@ module RDL::Type
     end
 
     def drop_vars!
+      @types.map! { |t|
+        if t.is_a?(IntersectionType) then
+          t.drop_vars! unless t.types.all? { |t| t.is_a?(VarType) }
+          if t.types.empty? then nil else t end
+        else t
+        end }
+      @types.delete(nil)
       @types.reject! { |t| t.is_a? VarType }
       self
     end
 
+    def drop_vars
+      return self if @types.all? { |t| t.is_a? VarType } ## when all are VarTypes, we have nothing concrete to reduce to, so don't want to drop vars
+      new_types = []
+      for i in 0..(@types.length-1)
+        if @types[i].is_a?(IntersectionType)
+          new_types <<  @types[i].drop_vars.canonical
+        else
+          new_types << @types[i] unless @types[i].is_a? VarType
+        end
+      end
+      RDL::Type::UnionType.new(*new_types).canonical
+    end
+
     def to_s  # :nodoc:
       return @canonical.to_s if @canonical
-      return "(#{@types.map { |t| t.to_s }.join(' or ')})"
+      return "(#{@types.map { |t| t.to_s }.sort.join(' or ')})"
     end
 
     def ==(other)  # :nodoc:

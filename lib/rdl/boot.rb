@@ -3,6 +3,7 @@ require 'digest'
 require 'set'
 require 'parser/current'
 
+
 module RDL
 end
 
@@ -77,6 +78,13 @@ module RDL::Globals
 
   # Map from Sequel table names (symbols) to their schema types, which should be a Table type
   @seq_db_schema = {}
+
+  # Array<[String, String]>, where each first string is a class name and each second one is a method name.
+  # klass/method pairs here should not be inferred.
+  @no_infer_meths = []
+
+  # Array<String> of absolute file paths for files that should not be inferred.
+  @no_infer_files = []
 end
 
 class << RDL::Globals # add accessors and readers for module variables
@@ -94,6 +102,8 @@ class << RDL::Globals # add accessors and readers for module variables
   attr_accessor :comp_type_map
   attr_accessor :ar_db_schema
   attr_accessor :seq_db_schema
+  attr_accessor :no_infer_meths
+  attr_accessor :no_infer_files
 end
 
 # Create switches to control whether wrapping happens and whether
@@ -146,6 +156,7 @@ require 'rdl/contracts/or.rb'
 require 'rdl/contracts/proc.rb'
 
 require 'rdl/util.rb'
+require 'rdl/class_indexer.rb'
 require 'rdl/wrap.rb'
 require 'rdl/query.rb'
 require 'rdl/typecheck.rb'

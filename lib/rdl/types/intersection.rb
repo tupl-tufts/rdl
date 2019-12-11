@@ -66,8 +66,33 @@ module RDL::Type
       @canonicalized = true
     end
 
+    def drop_vars!
+      @types.map! { |t|
+        if t.is_a?(UnionType) then
+          t.drop_vars! unless t.types.all? { |t| t.is_a?(VarType) }
+          if t.types.empty? then nil else t end
+        else t
+        end }
+      @types.delete(nil)
+      @types.reject! { |t| t.is_a? VarType }
+      self
+    end
+
+    def drop_vars
+      return self if @types.all? { |t| t.is_a? VarType } ## when all are VarTypes, we have nothing concrete to reduce to, so don't want to drop vars
+      new_types = []
+      for i in 0..(@types.length-1)
+        if @types[i].is_a?(UnionType)
+          new_types << @types[i].drop_vars.canonical
+        else
+          new_types << @types[i] unless @types[i].is_a? VarType
+        end
+      end
+      RDL::Type::IntersectionType.new(*new_types).canonical              
+    end
+
     def to_s  # :nodoc:
-      return "(#{@types.map { |t| t.to_s }.join(' and ')})"
+      return "(#{@types.map { |t| t.to_s }.sort.join(' and ')})"
     end
 
     def ==(other)  # :nodoc:

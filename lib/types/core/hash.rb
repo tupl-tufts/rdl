@@ -14,6 +14,12 @@ def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_de
           return trec.promote.params[1]
         elsif default1 == :promoted_key
           return trec.promote.params[0]
+        elsif default1 == :default_or_promoted_val
+          if trec.default then
+            return assign_output(trec, targs + [trec.default])
+          else
+            return trec.promote.params[1]
+          end
         else
           return RDL::Globals.parser.scan_str "#T #{default1}"
         end
@@ -21,10 +27,15 @@ def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_de
       to_type(res)
     else
       if default1 == :promoted_val
-        x = trec.promote.params[1]
-        return x
+        return trec.promote.params[1]
       elsif default1 == :promoted_key
         return trec.promote.params[0]
+      elsif default1 == :default_or_promoted_val
+        if trec.default then
+          return assign_output(trec, targs + [trec.default])
+        else
+          return trec.promote.params[1]
+        end
       else
         RDL::Globals.parser.scan_str "#T #{default1}"
       end
@@ -33,7 +44,11 @@ def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_de
     if default2 == "k"
       trec.params[0] ## equivalent of k in Hash<k, v>
     elsif default2 == "v"
-      trec.params[1] ## equivalent of v in Hash<k, v>
+      if trec.to_s == 'ActionController::Parameters'
+        return RDL::Globals.parser.scan_str "#T (Symbol or String)"
+      else
+        trec.params[1] ## equivalent of v in Hash<k, v>
+      end
     else
       RDL::Globals.parser.scan_str "#T #{default2}"
     end
@@ -62,6 +77,12 @@ def Hash.any_or_k(trec)
   when RDL::Type::GenericType
     #RDL::Globals.parser.scan_str "#T k"
     trec.params[0] ## equivalent of k in Hash<k, v>
+  when RDL::Type::NominalType
+    if trec.to_s == 'ActionController::Parameters'
+      return RDL::Globals.parser.scan_str "#T (Symbol or String)"
+    else
+      return RDL::Globals.parser.scan_str "#T k"
+    end
   else
     raise "unexpected, got #{trec}"
   end
@@ -94,6 +115,18 @@ def Hash.promoted_or_v(trec)
 end
 RDL.type Hash, 'self.promoted_or_v', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
+def Hash.promoted_or_k(trec)
+  case trec
+  when RDL::Type::FiniteHashType
+    trec.promote.params[0]
+  when RDL::Type::GenericType
+    #RDL::Globals.parser.scan_str "#T v"
+    trec.params[0]
+  else
+    raise "unexpected"
+  end
+end
+
 
 def Hash.weak_promote(val)
   case val
@@ -119,13 +152,18 @@ RDL.type :Hash, 'self.[]', '(*%any) -> ``hash_create_output(targs)``'
 
 def Hash.hash_create_output_from_list(targs)
   raise RDL::Typecheck::StaticTypeError, "Hash[...] expect only 1 argument. Have #{targs}." if targs.size > 1
-  raise RDL::Typecheck::StaticTypeError, "The argument has to be an array or tuple" unless (targs[0].is_a?(RDL::Type::GenericType) && targs[0].base.klass == Array)
+  raise RDL::Typecheck::StaticTypeError, "The argument has to be an array or tuple, got #{targs[0]}" unless ((targs[0].is_a?(RDL::Type::GenericType) && targs[0].base.klass == Array) || targs[0].is_a?(RDL::Type::VarType))
 
-  case targs[0].params[0]
-  when RDL::Type::GenericType
-    return RDL::Globals.parser.scan_str "#T Hash<#{targs[0].params[0].params[0]}, #{targs[0].params[0].params[0]}>"
-  when RDL::Type::TupleType
-    return RDL::Type::GenericType.new(RDL::Type::NominalType.new(Hash), targs[0].params[0].params[0], targs[0].params[0].params[1])
+  case targs[0]
+  when RDL::Type::VarType
+    return RDL::Globals.types[:hash]
+  else
+    case targs[0].params[0]
+    when RDL::Type::GenericType
+      return RDL::Globals.parser.scan_str "#T Hash<#{targs[0].params[0].params[0]}, #{targs[0].params[0].params[0]}>"
+    when RDL::Type::TupleType
+      return RDL::Type::GenericType.new(RDL::Type::NominalType.new(Hash), targs[0].params[0].params[0], targs[0].params[0].params[1])
+    end
   end
 end
 
@@ -140,7 +178,7 @@ def Hash.hash_create_output(targs)
 end
 RDL.type Hash, 'self.hash_create_output', "(Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
-RDL.type :Hash, :[], '(``any_or_k(trec)``) -> ``output_type(trec, targs, :[], :promoted_val, "v", nil_default: true)``', effect: [:+, :+]
+RDL.type :Hash, :[], '(``any_or_k(trec)``) -> ``output_type(trec, targs, :[], :default_or_promoted_val, "v", nil_default: true)``', effect: [:+, :+]
 
 RDL.type :Hash, :[]=, '(``any_or_k(trec)``, ``any_or_v(trec)``) -> ``assign_output(trec, targs)``'
 
@@ -165,6 +203,9 @@ def Hash.assign_output(trec, targs)
   end
 end
 RDL.type Hash, 'self.assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+
+RDL.type Hash, :initialize, "(*%any) -> ``RDL::Type::FiniteHashType.new({}, nil, default: targs[0])``"
+RDL.type Hash, :initialize, "() { (Hash, x) -> y } -> ``RDL::Type::GenericType.new(RDL::Globals.types[:hash], RDL::Globals.types[:top], RDL::Globals.types[:top])``"
 
 RDL.type :Hash, :store, '(``any_or_k(trec)``, ``any_or_v(trec)``) -> ``assign_output(trec, targs)``'
 RDL.type :Hash, :assoc, '(``any_or_k(trec)``) -> ``RDL::Type::TupleType.new(targs[0], output_type(trec, targs, :[], :promoted_val, "v", nil_default: true))``'
@@ -197,6 +238,7 @@ def Hash.delete_output(trec, targs, block)
       end
     end
   else
+    return RDL::Globals.types[:nil] if trec.to_s == "ActionController::Parameters"
     t = (if block then "u or v" else "v" end)
     RDL::Globals.parser.scan_str "#T #{t}"
   end
@@ -205,13 +247,13 @@ RDL.type Hash, 'self.delete_output', "(RDL::Type::Type, Array<RDL::Type::Type>, 
 
 RDL.type :Hash, :delete_if, '() { (``any_or_k(trec)``, ``any_or_v(trec)``) -> %any } -> self'
 RDL.type :Hash, :delete_if, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), RDL::Type::TupleType.new(any_or_k(trec), any_or_v(trec)))``' ## I had made a mistake here, type checker caught it.
-RDL.type :Hash, :each, '() { (``any_or_k(trec)``, ``any_or_v(trec)``) -> %any } -> self'
+RDL.type :Hash, :each, '() { (``promoted_or_k(trec)``, ``promoted_or_v(trec)``) -> %any } -> self'
 RDL.type :Hash, :each, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), RDL::Type::TupleType.new(any_or_k(trec), any_or_v(trec)))``' ## I had made a mistake here, type checker caught it.
-RDL.type :Hash, :each_pair, '() { (``any_or_k(trec)``, ``any_or_v(trec)``) -> %any } -> self'
+RDL.type :Hash, :each_pair, '() { (``promoted_or_k(trec)``, ``promoted_or_v(trec)``) -> %any } -> self'
 RDL.type :Hash, :each_pair, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), RDL::Type::TupleType.new(any_or_k(trec), any_or_v(trec)))``' ## I had made a mistake here, type checker caught it.
-RDL.type :Hash, :each_key, '() { (``any_or_k(trec)``) -> %any } -> self'
+RDL.type :Hash, :each_key, '() { (``promoted_or_k(trec)``) -> %any } -> self'
 RDL.type :Hash, :each_key, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), any_or_k(trec))``'
-RDL.type :Hash, :each_value, '() { (``any_or_v(trec)``) -> %any } -> self'
+RDL.type :Hash, :each_value, '() { (``promoted_or_v(trec)``) -> %any } -> self'
 RDL.type :Hash, :each_value, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), any_or_v(trec))``'
 RDL.type :Hash, :empty?, '() -> ``output_type(trec, targs, :empty?, "%bool")``'
 RDL.type :Hash, :fetch, '(``any_or_k(trec)``) -> ``output_type(trec, targs, :fetch, :promoted_val, "v", nil_default: true)``'

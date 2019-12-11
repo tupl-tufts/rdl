@@ -125,8 +125,8 @@ module ActiveRecord::Core::ClassMethods
   extend RDL::Annotate
   ## Types from this module are used when receiver is ActiveRecord::Base
 
-  type :find, '(Integer or String) -> ``DBType.find_output_type(trec, targs)``', wrap: false
-  type :find, '(Array<Integer>) -> ``DBType.find_output_type(trec, targs)``', wrap: false
+  type :find, '(Integer or String or Symbol or Array<Integer>) -> ``DBType.find_output_type(trec, targs)``', wrap: false
+  #type :find, '(Array<Integer>) -> ``DBType.find_output_type(trec, targs)``', wrap: false
   type :find, '(Integer, Integer, *Integer) -> ``DBType.find_output_type(trec, targs)``', wrap: false
   type :find_by, '(``DBType.find_input_type(trec, targs)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
   ## TODO: find_by's with conditions given as string
@@ -217,6 +217,20 @@ module ActiveRecord::Relation::QueryMethods
 end
 
 
+module ActionController::Instrumentation
+  extend RDL::Annotate
+=begin
+  type :redirect_to, "(``redirect_input(targs)``) -> String", wrap: false
+
+  ## When first input is a VarType, we want to associate that VarType with the first (optional) arg of redirect_to.
+  ## Same goes if first input is anything *other than* a FHT.
+  ## Otherwise, we drop first optional arg.
+  def self.redirect_input(targs)
+
+  end
+=end
+end
+
 class ActiveRecord::QueryMethods::WhereChain
   extend RDL::Annotate
   type_params [:t], :dummy
@@ -298,7 +312,10 @@ class ActiveRecord_Relation
   type :size, "() -> Integer", wrap: false
   type :update_all, '(``RDL::Type::UnionType.new(RDL::Globals.types[:string], DBType.rec_to_schema_type(trec, true))``) -> Integer', wrap: false
   type :valid, "() -> self", wrap: false
+  type :sort, "() { (t, t) -> Integer } -> Array<t>", wrap: false
 end
+
+
 
 
 class DBType
@@ -493,7 +510,7 @@ class DBType
     when 1
       arg0 = targs[0]
       case arg0
-      when RDL::Globals.types[:integer], RDL::Globals.types[:string]
+      when RDL::Globals.types[:integer], RDL::Globals.types[:string], RDL::Globals.types[:symbol]
         DBType.rec_to_nominal(trec)
       when RDL::Type::SingletonType
       # expecting symbol or integer here
@@ -656,7 +673,7 @@ p        else
     [trec, targs[0]].each { |t|
       case t
       when RDL::Type::GenericType
-        raise "Expected ActiveRecord_Relation." unless t.base.name == "ActiveRecord_Relation"
+        raise "Expected ActiveRecord_Relation, got #{t} for #{trec} and #{targs}." unless (t.base.name == "ActiveRecord_Relation") 
         param0 = t.params[0]
         case param0
         when RDL::Type::GenericType
@@ -668,6 +685,8 @@ p        else
         else
           raise "unexpected paramater type in #{t}"
         end
+      when RDL::Type::VarType
+        return RDL::Globals.types[:array]
       else
         raise "unexpected type #{t}"
       end

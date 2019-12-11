@@ -7,7 +7,7 @@ RDL.type :Enumerable, :all?, '() { (t) -> %bool } -> %bool', effect: [:blockdep,
 RDL.type :Enumerable, :any?, '() -> %bool'
 RDL.type :Enumerable, :any?, '() { (t) -> %bool } -> %bool'
 # RDL.type :Enumerable, :chunk, '(XXXX : *XXXX)' # TODO
-RDL.type :Enumerable, :collect, '() { (t) -> u } -> Array<u>'
+RDL.type :Enumerable, :collect, '() { (?t) -> u } -> Array<u>'
 RDL.type :Enumerable, :collect, '() -> Enumerator<t>'
 # RDL.type :Enumerable, :collect_concat # TODO
 RDL.type :Enumerable, :count, '() -> Integer'
@@ -16,6 +16,7 @@ RDL.type :Enumerable, :count, '() { (t) -> %bool } -> Integer'
 RDL.type :Enumerable, :cycle, '(?Integer n) { (t) -> %any } -> nil'
 RDL.type :Enumerable, :cycle, '(?Integer n) -> Enumerator<t>'
 RDL.type :Enumerable, :detect, '(?Proc ifnone) { (t) -> %bool } -> t or nil' # TODO ifnone
+RDL.type :Enumerable, :detect, '() { (t) -> %bool } -> t or nil' # TODO ifnone
 RDL.type :Enumerable, :detect, '(?Proc ifnone) -> Enumerator<t>'
 RDL.type :Enumerable, :drop, '(Integer n) -> Array<t>'
 RDL.type :Enumerable, :drop_while, '() { (t) -> %bool } -> Array<t>'

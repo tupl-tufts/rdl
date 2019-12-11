@@ -11,9 +11,10 @@ module RDL::Type
     attr_reader :the_hash # either nil or hash type if self has been promoted to hash
     attr_accessor :ubounds  # upper bounds this tuple has been compared with using <=
     attr_accessor :lbounds  # lower bounds...
-
+    attr_accessor :default # For hashes created with Hash.new, gives the default type to return for non-existent keys
+    
     # [+ elts +] is a map from keys to types
-    def initialize(elts, rest)
+    def initialize(elts, rest, default: nil)
       elts.each { |k, t|
         raise RuntimeError, "Got #{t.inspect} for key #{k} where Type expected" unless t.is_a? Type
         raise RuntimeError, "Type may not be annotated or vararg" if (t.instance_of? AnnotatedArgType) || (t.instance_of? VarargType)
@@ -24,6 +25,7 @@ module RDL::Type
       @cant_promote = false
       @ubounds = []
       @lbounds = []
+      @default = default
       super()
     end
 
