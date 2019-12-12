@@ -220,6 +220,7 @@ module RDL::Typecheck
   def self.infer(klass, meth)
     puts "*************** Infering method #{meth} from class #{klass} ***************"
     RDL::Config.instance.use_comp_types = true
+    RDL::Config.instance.number_mode = true
     @cur_meth = [klass, meth]
     ast = get_ast(klass, meth)
     types = RDL::Globals.info.get(klass, meth, :type)
@@ -1829,23 +1830,30 @@ RUBY
     trets = [] # all possible return types
     # there might be more than one return type because multiple cases of an intersection type might match
     tmeth_names = [] ## necessary for more precise error messages with ComputedTypes
+    arg_choices = Hash.new { |h, k| h[k] = {} } # Hash<VarType, Hash<Integer, Type>>. The keys are tactual arguments that are VarTypes. The values are choice hashes, to be turned into ChoiceTypes that will be upper bounds on the keys.
+    ret_choice = {} # Hash<Integer, Type> for return ChoiceType
+    deferred_constraints = [] ## Array<Array<VarType, Type>> of deferred constraints to apply.
+    
     # for ALL of the expanded lists of actuals...
     if RDL::Config.instance.use_comp_types
       ts = filter_comp_types(ts, true)
     else
       ts = filter_comp_types(ts, false)
       error :no_non_dep_types, [trecv, meth], e unless !ts.empty?
-    end
+    end    
     RDL::Type.expand_product(tactuals).each { |tactuals_expanded|
       # AT LEAST ONE of the possible intesection arms must match
       trets_tmp = []
-      deferred_constraints = []
+      #deferred_constraints = []
+      choice_num = 0 
       ts.each_with_index { |tmeth, ind| # MethodType
         got_match = false
         current_dcs = []
         comp_type = false
+        choice_num += 1
+        current_ret = nil
         if tmeth.is_a? RDL::Type::DynamicType
-          trets_tmp << RDL::Type::DynamicType.new
+          trets_tmp << (current_ret = RDL::Type::DynamicType.new)
         elsif ((tmeth.block && block) || (tmeth.block.nil? && block.nil?) || tmeth.block.is_a?(RDL::Type::VarType))
           if trecv.is_a?(RDL::Type::FiniteHashType) && trecv.the_hash
             trecv = trecv.canonical
@@ -1913,10 +1921,10 @@ RUBY
                 error :bad_initialize_type, [], e unless (tmeth.ret == init_typ) unless ((trecv.val == Hash) && tmeth.ret.is_a?(RDL::Type::FiniteHashType)) || ((trecv.val == Array) && tmeth.ret.is_a?(RDL::Type::TupleType))
               end
             #trets_tmp << init_typ unless block_mismatch
-              trets_tmp << tmeth.ret.instantiate(tmeth_inst)
+              trets_tmp << (current_ret = tmeth.ret.instantiate(tmeth_inst))
               got_match = true
             elsif !block_mismatch
-              trets_tmp << (tmeth.ret.instantiate(tmeth_inst)) # found a match for this subunion; add its return type to trets_tmp
+              trets_tmp << (current_ret = (tmeth.ret.instantiate(tmeth_inst))) # found a match for this subunion; add its return type to trets_tmp
               got_match = true
               if comp_type && RDL::Config.instance.check_comp_types && !union
                 if (e.type == :op_asgn) && op_asgn
@@ -1931,17 +1939,67 @@ RUBY
             block_mismatch = false
           end
         end
-        deferred_constraints += current_dcs if got_match
+        
+        if got_match
+          deferred_constraints += current_dcs
+          if ts.size > 1 && tactuals_expanded.any? { |t| t.is_a?(RDL::Type::VarType) }
+            ## need ChoiceTypes in this case
+            puts "DID WE MAKE IT HERE? WITH #{current_dcs}"
+            ## first convert constraints in current_dcs (which is of form [[t1, t2], [t3,t4]...])
+            ## into hash of form { t1 => t2, t3 => t4 }, combining multiple upper bounds into Union.
+            constraints_hash = current_dcs.inject({}) do |hash, constraint|
+              hash[constraint[0]] = RDL::Type::UnionType.new(hash[constraint[0]], constraint[1]).canonical
+              hash
+            end
+            puts "AHORA CONSTRAINTS_HASH IS #{constraints_hash}"
+            ## next, make the choice hashes and add them to arg_choices
+            constraints_hash.each { |vartype, ubound|
+              puts "GOING ROUND WITH #{vartype} AND #{ubound}"
+              arg_choices[vartype][choice_num] = ubound
+              puts "DOES IT HAVE SOMETHING NOW? #{arg_choices[vartype]}"
+            }
+
+            raise "Expected return type." unless current_ret
+            ret_choice[choice_num] = RDL::Type::UnionType.new(current_ret, ret_choice[choice_num]).canonical
+            puts "HERE WITH #{arg_choices}"
+          end
+        end
+            
       }
       if trets_tmp.empty?
         # no arm of the intersection matched this expanded actuals lists, so reset trets to signal error and break loop
         trets = []
         break
       else
-        apply_deferred_constraints(deferred_constraints, e) if !deferred_constraints.empty?
+        #apply_deferred_constraints(deferred_constraints, e) if !deferred_constraints.empty?
         trets.concat(trets_tmp)
       end
     }
+    ## Down here EITHER: apply all deferred constraints, continue with trets OR turn choices into ChoiceTypes, apply those deferred constraints, turn trets into [ret_choice_type]
+
+    if arg_choices.empty?
+      apply_deferred_constraints(deferred_constraints, e) if !deferred_constraints.empty?
+    else
+      new_dcs = []
+      all_args = []
+      arg_choices.each { |vartype, choice_hash|
+        ct = RDL::Type::ChoiceType.new(choice_hash)
+        new_dcs << [vartype, ct]
+        all_args << ct
+      }
+
+      raise "Expected non-empty return choice hash." if ret_choice.empty?
+      if ret_choice.values.uniq == 1
+        new_ret = ret_choice.values[0]
+        all_cts.each { |ct| ct.add_connecteds(*all_args) }
+      else
+        new_ret = RDL::Type::ChoiceType.new(ret_choice)
+        (all_cts+[new_ret]).each { |ct| ct.add_connecteds(new_ret, *all_args) }
+      end
+      trets = [new_ret]
+    end
+    
+    
     if trets.empty? # no possible matching call
       msg = <<RUBY
 Method type:

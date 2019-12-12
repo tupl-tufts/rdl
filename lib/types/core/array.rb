@@ -112,7 +112,7 @@ def Array.append_push_output(trec, targs, meth)
 end
 RDL.type Array, 'self.append_push_output', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
 
-#RDL.type :Array, :[], '(Range<Integer>) -> ``output_type(trec, targs, :[], :promoted_array, "Array<t>")``'
+RDL.type :Array, :[], '(Range<Integer>) -> ``output_type(trec, targs, :[], :promoted_array, "Array<t>")``'
 RDL.type :Array, :[], '(Integer or Float) -> ``output_type(trec, targs, :[], :promoted_param, "t")``'
 RDL.type :Array, :[], '(Integer, Integer) -> ``output_type(trec, targs, :[], :promoted_array, "Array<t>")``'
 RDL.type :Array, :&, '(Array<u>) -> ``output_type(trec, targs, :&, :promoted_array, "Array<t>")``'
