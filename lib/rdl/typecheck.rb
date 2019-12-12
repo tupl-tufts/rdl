@@ -1368,7 +1368,7 @@ RUBY
         [envi, tres.canonical, effres]
       }
     else
-      raise RuntimeError, "Expression kind #{e.type} unsupported"
+      raise RuntimeError, "Expression kind #{e.type} unsupported, for expression #{e}"
     end
   end
 
@@ -1508,7 +1508,11 @@ RUBY
     typ_str = e.children[3].children[0] if (e.children[3].type == :str) || (e.children[3].type == :string)
     error :type_cast_format, [], e.children[3] if typ_str.nil?
     begin
-      typ = RDL::Globals.parser.scan_str("#T " + typ_str)
+      if RDL::Util.has_singleton_marker(typ_str)
+        typ = RDL::Type::SingletonType.new(RDL::Globals.parser.scan_str("#T #{RDL::Util.remove_singleton_marker(typ_str)}").klass)
+      else
+        typ = RDL::Globals.parser.scan_str("#T " + typ_str)
+      end
     rescue Racc::ParseError => err
       error :generic_error, [err.to_s[1..-1]], e.children[3] # remove initial newline
     end
@@ -1627,6 +1631,7 @@ RUBY
   # Like tc_send but trecv should never be a union type
   # Returns array of possible return types, or throws exception if there are none
   def self.tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union)
+    raise "Type checking not currently supported for method #{meth}." if [:define_method, :module_exec].include?(meth)
 =begin
     puts "----------------------"
     puts "Type checking method call to #{meth} for receiver #{trecv} and tactuals of size #{tactuals.size}:"
@@ -1778,7 +1783,7 @@ RUBY
       end
 
       if block
-        if block[0].is_a?(RDL::Type::MethodType)
+        if block[0].is_a?(RDL::Type::MethodType) || block[0].is_a?(RDL::Type::VarType)
           meth_type = RDL::Type::MethodType.new(tactuals, block[0], ret_type)
         else
           blk_args = block[0].children.map {|a| a.children[0]}
@@ -1863,6 +1868,13 @@ RUBY
           #apply_deferred_constraints(deferred_constraints, e) unless deferred_constraints.empty?
           if tmeth_inst
             begin
+=begin              
+              if (meth == :define_method) && trecv.is_a?(RDL::Type::SingletonType)
+                new_env = env.bind(:self, RDL::Type::NominalType.new(trecv.val), force: true) ## define_method defines a new *instance* method... self in block is nominal, not singleton
+              else
+                new_env = env
+              end
+=end
               effblock = tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
             rescue BlockTypeError => err
               block_mismatch = true

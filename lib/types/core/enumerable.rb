@@ -5,7 +5,7 @@ RDL.type_params :Enumerable, [:t], :all?
 RDL.type :Enumerable, :all?, '() -> %bool', effect: [:blockdep, :blockdep]
 RDL.type :Enumerable, :all?, '() { (t) -> %bool } -> %bool', effect: [:blockdep, :blockdep]
 RDL.type :Enumerable, :any?, '() -> %bool'
-RDL.type :Enumerable, :any?, '() { (t) -> %bool } -> %bool'
+RDL.type :Enumerable, :any?, '() { (t) -> %any } -> %bool'
 # RDL.type :Enumerable, :chunk, '(XXXX : *XXXX)' # TODO
 RDL.type :Enumerable, :collect, '() { (?t) -> u } -> Array<u>'
 RDL.type :Enumerable, :collect, '() -> Enumerator<t>'

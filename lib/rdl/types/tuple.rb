@@ -46,7 +46,7 @@ module RDL::Type
 
     def promote(t=nil)
       return false if @cant_promote
-      param = (@params.empty? && !t) ? RDL::Type::VarType.new(:t) : UnionType.new(*@params, t)
+      param = (@params.empty? && !t) ? RDL::Type::VarType.new(:t) : UnionType.new(*@params.map { |p| if p.is_a?(RDL::Type::SingletonType) then p.nominal else p end }, t)
       param = param.widen if RDL::Config.instance.promote_widen
       GenericType.new(RDL::Globals.types[:array], param)
     end

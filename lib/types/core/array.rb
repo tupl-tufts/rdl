@@ -201,6 +201,8 @@ end
 RDL.type Array, 'self.assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
 
 RDL.type :Array, :[]=, '(Integer, Integer, ``any_or_t(trec)``) -> t'
+RDL.type :Array, :[]=, '(Integer, Integer, ``any_or_t(trec)``) -> t'
+RDL.type :Array, :[]=, '(Integer, Integer, ``RDL::Type::VarType.new(:self)``) -> self'
 
 
 def Array.multi_assign_output(trec, targs)
@@ -310,8 +312,8 @@ RDL.type :Array, :each_index, '() { (Integer) -> %any } -> self'
 RDL.type :Array, :each_index, '() -> Enumerator<Integer>'
 RDL.type :Array, :empty?, '() -> ``output_type(trec, targs, :empty?, "%bool")``', effect: [:+, :+]
 RDL.type :Array, :fetch, '(Integer) -> ``output_type(trec, targs, :[], :promoted_param, "t")``'
-RDL.type :Array, :fetch, '(Integer, u) -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("u"), output_type(trec, targs, :[], :promoted_param, "t"))``'
-RDL.type :Array, :fetch, '(Integer) { (Integer) -> u } -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("u"), output_type(trec, targs, :[], :promoted_param, "t"))``'
+RDL.type :Array, :fetch, '(Integer, u) -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("#T u"), output_type(trec, targs, :[], :promoted_param, "t"))``'
+RDL.type :Array, :fetch, '(Integer) { (Integer) -> u } -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("#T u"), output_type(trec, targs, :[], :promoted_param, "t"))``'
 RDL.type :Array, :fill, '(``any_or_t(trec)``) -> ``fill_output(trec, targs)``'
 
 
