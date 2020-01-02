@@ -11,7 +11,7 @@ module RDL::Type
     end
 
     def self.new(val)
-      if RDL::Config.instance.number_mode && val.is_a?(Numeric) && !val.is_a?(Integer)
+      if RDL::Config.instance.number_mode && val.is_a?(Numeric) #&& !val.is_a?(Integer)
         return RDL::Type::NominalType.new(Integer)
       end
       t = @@cache[val]

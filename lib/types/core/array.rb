@@ -126,8 +126,9 @@ def Array.plus_input(targs)
   when RDL::Type::TupleType
     return targs[0]
   when RDL::Type::GenericType, RDL::Type::VarType
-    parse_string = defined? Rails ? "Array<u> or ActiveRecord::Relation<u>" : "Array<u>"
-    return RDL::Globals.parser.scan_str "#T #{parse_string}"
+    parse_string = defined?(Rails) ? "Array<u> or ActiveRecord::Relation<u>" : "Array<u>"
+    x = RDL::Globals.parser.scan_str "#T #{parse_string}"
+    x
   else
     RDL::Globals.types[:array]
   end
@@ -145,7 +146,7 @@ def Array.plus_output(trec, targs)
       promoted = RDL.type_cast(targs[0], "RDL::Type::TupleType", force: true).promote
       param_union = RDL::Type::UnionType.new(promoted.params[0], trec.params[0])
       return RDL::Type::GenericType.new(trec.base, param_union)
-    when RDL::Type::GenericType
+    when RDL::Type::GenericType, RDL::Type::VarType
       return RDL::Globals.parser.scan_str "#T Array<u or t>"
     else
       ## targs[0] should just be array here
@@ -548,6 +549,7 @@ RDL.type :Array, :last, '() -> t'
 RDL.type :Array, :last, '(Integer) -> Array<t>'
 RDL.type :Array, :member?, '(u) -> %bool', effect: [:+, :+]
 RDL.type :Array, :length, '() -> Integer', effect: [:+, :+]
+RDL.type :Array, :pack, "(String) -> String"
 RDL.type :Array, :permutation, '(?Integer) -> Enumerator<t>'
 RDL.type :Array, :permutation, '(?Integer) { (Array<t>) -> %any } -> Array<t>'
 RDL.type :Array, :pop, '(Integer) -> Array<t>'

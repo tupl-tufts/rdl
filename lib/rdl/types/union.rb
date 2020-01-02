@@ -46,7 +46,7 @@ module RDL::Type
       # for any type such that a supertype is already in ts, set its position to nil
       for i in 0..(@types.length-1)
         for j in (i+1)..(@types.length-1)
-          next if (@types[j].nil?) || (@types[i].nil?) || (@types[i].is_a?(VarType) && @types[i].to_infer) || (@types[j].is_a?(VarType) && @types[j].to_infer) ## now that we're doing inference, don't want to just treat VarType as a subtype of others in Union
+          next if (@types[j].nil?) || (@types[i].nil?) || (@types[i].is_a?(VarType) && @types[i].to_infer) || (@types[j].is_a?(VarType) && @types[j].to_infer) || @types[i].is_a?(ChoiceType) || @types[j].is_a?(ChoiceType) ## now that we're doing inference, don't want to just treat VarType as a subtype of others in Union
           #next if (@types[j].nil?) || (@types[i].nil?) || (@types[i].is_a?(VarType)) || (@types[j].is_a?(VarType)) ## now that we're doing inference, don't want to just treat VarType as a subtype of others in Union
           (@types[i] = nil; break) if Type.leq(@types[i], @types[j], {}, true, [])
           (@types[j] = nil) if Type.leq(@types[j], @types[i], {}, true, [])

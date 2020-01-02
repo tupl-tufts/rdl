@@ -73,7 +73,7 @@ RDL.type String, 'self.string_promote!', "(%any) -> RDL::Type::Type", effect: [:
 
 RDL.type :String, :initialize, '(?String str) -> self new_str'
 RDL.type :String, 'self.try_convert', '(Object obj) -> String or nil new_string'
-RDL.type :String, :%, '(x) -> ``output_type(trec, targs, :%, "String")``'
+RDL.type :String, :%, '(``targs[0]``) -> ``output_type(trec, targs, :%, "String")``'
 RDL.type :String, :*, '(Numeric) -> ``output_type(trec, targs, :*, "String")``'
 
 def String.plus_output(trec, targs)
@@ -216,7 +216,8 @@ RDL.type :String, :gsub, '(Regexp or String) {() -> %any } -> ``output_type(trec
 RDL.type :String, :gsub, '(Regexp or String, String) -> ``output_type(trec, targs, :gsub, "String")``', wrap: false
 RDL.type :String, :gsub, '(Regexp or String) ->  ``output_type(trec, targs, :gsub, "String")``'
 RDL.type :String, :gsub!, '(Regexp or String, String) -> ``string_promote!(trec)``', wrap: false
-RDL.type :String, :gsub!, '(Regexp or String) {(?String) -> %any } -> ``string_promote!(trec)``', wrap: false
+RDL.type :String, :gsub!, '(Regexp or String) {(String) -> %any } -> ``string_promote!(trec)``', wrap: false
+RDL.type :String, :gsub!, '(Regexp or String) {() -> %any } -> ``string_promote!(trec)``', wrap: false
 RDL.type :String, :gsub!, '(Regexp or String) -> ``string_promote!(trec); RDL::Type::NominalType.new(Enumerator)``', wrap: false
 RDL.type :String, :hash, '() -> Integer'
 RDL.type :String, :hex, '() -> ``output_type(trec, targs, :getbyte, "Integer")``'
@@ -332,6 +333,9 @@ RDL.type :String, :rpartition, '(String or Regexp) -> ``output_type(trec, targs,
 RDL.type :String, :rstrip, '() -> ``output_type(trec, targs, :rstrip, "String")``'
 RDL.type :String, :rstrip!, '() -> ``lrstrip_output(trec, :rstrip!)``'
 RDL.type :String, :scan, '(Regexp or String) -> ``output_type(trec, targs, :scan, "Array<String or Array<String>>")``', wrap: false # :String, Can't wrap or screws up last_match
+RDL.type :String, :scan, '(Regexp or String) {() -> %any} -> ``output_type(trec, targs, :scan, "Array<String or Array<String>>")``', wrap: false
+RDL.type :String, :scan, '(Regexp or String) {(String) -> %any} -> ``output_type(trec, targs, :scan, "Array<String or Array<String>>")``', wrap: false
+RDL.type :String, :scan, '(Regexp or String) {(String, String) -> %any} -> ``output_type(trec, targs, :scan, "Array<String or Array<String>>")``', wrap: false
 RDL.type :String, :scan, '(Regexp or String) {(*String) -> %any} -> ``output_type(trec, targs, :scan, "Array<String or Array<String>>")``', wrap: false
 RDL.type :String, :scrub, '(?String) -> ``output_type(trec, targs, :scrub, "String")``'
 RDL.type :String, :scrub, '(?String) {(%any) -> %any} -> String'

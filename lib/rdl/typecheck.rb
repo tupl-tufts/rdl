@@ -222,6 +222,7 @@ module RDL::Typecheck
     RDL::Config.instance.use_comp_types = true
     RDL::Config.instance.number_mode = true
     @cur_meth = [klass, meth]
+    @var_cache = {}
     ast = get_ast(klass, meth)
     types = RDL::Globals.info.get(klass, meth, :type)
     if types == [] or types.nil?
@@ -572,7 +573,7 @@ module RDL::Typecheck
     when :complex, :rational # constants
       [env, RDL::Type::NominalType.new(e.children[0].class), [:+, :+]]
     when :int, :float
-      if RDL::Config.instance.number_mode && (e.type == :float)
+      if RDL::Config.instance.number_mode #&& (e.type == :float)
         [env, RDL::Type::NominalType.new(Integer), [:+, :+]]
       else
         [env, RDL::Type::SingletonType.new(e.children[0]), [:+, :+]]
@@ -963,7 +964,6 @@ module RDL::Typecheck
           eff = effect_union(eff, effi)
           block = [map_block_type, e_map_case]
         end
-        
         tres, effres = tc_send(sscope, envi, trecv, e.children[1], tactuals, block, e)
         [envi, tres.canonical, effect_union(effres, eff) ]
       }
@@ -1008,8 +1008,8 @@ RUBY
         else # e.type == :or
           if tleft.val then [envleft, tleft, effleft] else [envright, tright, effright] end
         end
-      elsif e.type == :and && !(tleft == RDL::Globals.types[:bool] || tleft == RDL::Globals.types[:false])
-        ## when :and and left is NOT false, then we always get back tright (or nil, which is a subtype of tright)
+      elsif e.type == :and && !(tleft == RDL::Globals.types[:bool] || tleft == RDL::Globals.types[:false] || tleft.is_a?(RDL::Type::VarType))
+        ## when :and and left is NOT false or a variable, then we always get back tright (or nil, which is a subtype of tright)
         ## no equivalent for :or, because if left is nil, could still get right
         [envleft.merge(envright), tright, effect_union(effleft, effright)]
       else
@@ -1380,7 +1380,7 @@ RUBY
     when TrueClass, FalseClass, Class, Module      
       RDL::Type::SingletonType.new(val)
     when Complex, Rational, Integer, Float
-      if RDL::Config.instance.number_mode && !(val.class == Integer)
+      if RDL::Config.instance.number_mode# && !(val.class == Integer)
         RDL::Type::NominalType.new(Integer)
       else
         RDL::Type::SingletonType.new(val)
@@ -1614,7 +1614,36 @@ RUBY
     trets = []
     eff = [:+, :+]
     trecvs.each { |trecv|
-      ts, es = tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union)
+      if trecv.is_a?(RDL::Type::ChoiceType)
+        choice_hash = { }
+        errs = []
+        trecv.choices.each { |num, t|
+          trecv.activate_all_connected(num) ## type check method call for this particular choice
+          begin
+            t = t.canonical
+            tarms = t.is_a?(RDL::Type::UnionType) ? t.types : [t]
+            tarms.each { |t|
+              ts, es = tc_send_one_recv(scope, env, t, meth, tactuals, block, e, op_asgn, union) 
+              choice_hash[num] = RDL::Type::UnionType.new(*ts).canonical
+            }
+          rescue StaticTypeError => err
+            errs << err
+            trecv.remove!(num) ## choice num failed to type check, remove it from choice type
+          end
+        }
+        trecv.deactivate_all_connected
+        if choice_hash.empty?
+          raise StaticTypeError, "Failed to type check call to method #{meth} for ChoiceType receiver #{trecv}. Errors received were: #{errs.each { |e| puts e }}"
+        elsif choice_hash.values.uniq.size == 1
+          ts = [choice_hash.values[0]] ## only one type resulted, no need for ChoiceType
+        else
+          ts = [RDL::Type::ChoiceType.new(choice_hash, [trecv] + trecv.connecteds)]
+        end
+      else
+        ts, es = tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union)
+      end
+
+
       if es.nil? || (es.all? { |effect| effect.nil? }) ## could be multiple, because every time e is called, nil is added to effects
         ## should probably change default effect to be [:-, :-], but for now I want it like this,
         ## so I can easily see when a method has been used and its effect set to the default.
@@ -1677,6 +1706,7 @@ RUBY
         else # SingletonType(class)
           klass = env[:self].val
         end
+        puts "TRYING FOR KLASS #{klass}"
         ts, es = lookup(scope, klass.to_s, trecv.val, e)
         error :no_type_for_symbol, [trecv.val.inspect], e if ts.nil?
         return [ts, nil] ## TODO: not sure what to do hear about effect
@@ -1780,7 +1810,12 @@ RUBY
       elsif meth == :to_i
         ret_type = RDL::Globals.types[:integer]
       else
-        ret_type = RDL::Type::VarType.new(cls: trecv, meth: meth, category: :ret, name: "ret")
+        if @var_cache.has_key?(e.object_id) ## cache is based on syntactic location of method call
+          ret_type = @var_cache[e.object_id]
+        else
+          ret_type = RDL::Type::VarType.new(cls: trecv, meth: meth, category: :ret, name: "ret")
+          @var_cache[e.object_id] = ret_type
+        end
       end
 
       if block
@@ -1824,7 +1859,7 @@ RUBY
     when RDL::Type::DynamicType
       return [[trecv]]
     else
-      raise RuntimeError, "receiver type #{trecv} not supported yet, meth=#{meth}"
+      raise RuntimeError, "receiver type #{trecv} of kind #{trecv.class} not supported yet, meth=#{meth}"
     end
 
     trets = [] # all possible return types
@@ -1840,7 +1875,8 @@ RUBY
     else
       ts = filter_comp_types(ts, false)
       error :no_non_dep_types, [trecv, meth], e unless !ts.empty?
-    end    
+    end
+
     RDL::Type.expand_product(tactuals).each { |tactuals_expanded|
       # AT LEAST ONE of the possible intesection arms must match
       trets_tmp = []
@@ -1944,24 +1980,21 @@ RUBY
           deferred_constraints += current_dcs
           if ts.size > 1 && tactuals_expanded.any? { |t| t.is_a?(RDL::Type::VarType) }
             ## need ChoiceTypes in this case
-            puts "DID WE MAKE IT HERE? WITH #{current_dcs}"
+
             ## first convert constraints in current_dcs (which is of form [[t1, t2], [t3,t4]...])
             ## into hash of form { t1 => t2, t3 => t4 }, combining multiple upper bounds into Union.
             constraints_hash = current_dcs.inject({}) do |hash, constraint|
               hash[constraint[0]] = RDL::Type::UnionType.new(hash[constraint[0]], constraint[1]).canonical
               hash
             end
-            puts "AHORA CONSTRAINTS_HASH IS #{constraints_hash}"
+
             ## next, make the choice hashes and add them to arg_choices
             constraints_hash.each { |vartype, ubound|
-              puts "GOING ROUND WITH #{vartype} AND #{ubound}"
               arg_choices[vartype][choice_num] = ubound
-              puts "DOES IT HAVE SOMETHING NOW? #{arg_choices[vartype]}"
             }
 
             raise "Expected return type." unless current_ret
             ret_choice[choice_num] = RDL::Type::UnionType.new(current_ret, ret_choice[choice_num]).canonical
-            puts "HERE WITH #{arg_choices}"
           end
         end
             
@@ -1981,22 +2014,27 @@ RUBY
       apply_deferred_constraints(deferred_constraints, e) if !deferred_constraints.empty?
     else
       new_dcs = []
-      all_args = []
+      ct_args = []
       arg_choices.each { |vartype, choice_hash|
-        ct = RDL::Type::ChoiceType.new(choice_hash)
-        new_dcs << [vartype, ct]
-        all_args << ct
+        if choice_hash.values.uniq.size == 1
+          new_dcs << [vartype, choice_hash.values[0]]
+        else
+          t = RDL::Type::ChoiceType.new(choice_hash)
+          new_dcs << [vartype, t]
+          ct_args << t
+        end
       }
 
       raise "Expected non-empty return choice hash." if ret_choice.empty?
-      if ret_choice.values.uniq == 1
+      if ret_choice.values.uniq.size == 1
         new_ret = ret_choice.values[0]
-        all_cts.each { |ct| ct.add_connecteds(*all_args) }
+        ct_args.each { |ct| ct.add_connecteds(*ct_args) }
       else
         new_ret = RDL::Type::ChoiceType.new(ret_choice)
-        (all_cts+[new_ret]).each { |ct| ct.add_connecteds(new_ret, *all_args) }
+        (ct_args+[new_ret]).each { |ct| ct.add_connecteds(new_ret, *ct_args) }
       end
       trets = [new_ret]
+      apply_deferred_constraints(new_dcs, e) if !new_dcs.empty?
     end
     
     

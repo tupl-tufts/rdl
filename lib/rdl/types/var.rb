@@ -4,6 +4,7 @@ module RDL::Type
     attr_accessor :lbounds, :ubounds, :solution
     
     @@cache = {}
+    @@print_XXX = false
 
     class << self
       alias :__new__ :new
@@ -30,6 +31,7 @@ module RDL::Type
 
     def initialize(name_or_hash)
       if name_or_hash.is_a?(Symbol) || name_or_hash.is_a?(String)
+        raise "weird" if name_or_hash.to_s == "expression"              
         @name = name_or_hash
         @to_infer = false
       elsif name_or_hash.is_a?(Hash)
@@ -64,7 +66,7 @@ module RDL::Type
         if lower_t.is_a?(VarType)
           lower_t.add_and_propagate_upper_bound(typ, ast, new_cons) unless lower_t.ubounds.any? { |t, _| t == typ }
         else
-          if typ.is_a?(VarType)
+          if typ.is_a?(VarType) && !typ.lbounds.any? { |t, _| t == lower_t }
             new_cons[typ] = new_cons[typ] ? new_cons[typ] | [[:lower, lower_t, ast]] : [[:lower, lower_t, ast]]
           end
           unless RDL::Type::Type.leq(lower_t, typ, {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons)
@@ -93,10 +95,12 @@ module RDL::Type
         if upper_t.is_a?(VarType)
           upper_t.add_and_propagate_lower_bound(typ, ast, new_cons) unless upper_t.lbounds.any? { |t, _| t == typ }
         else
-          if typ.is_a?(VarType)
+          if typ.is_a?(VarType) && !typ.ubounds.any? { |t, _| t == upper_t }
             new_cons[typ] = new_cons[typ] ? new_cons[typ] | [[:upper, upper_t, ast]] : [[:upper, upper_t, ast]]
           end
           unless RDL::Type::Type.leq(typ, upper_t, {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons)
+            #puts "FAILED"
+            # TZInfo::DataSource <= { [s]TZInfo::DataSource#get ret: ret }.
             d1 = ast.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [typ.to_s], ast.loc.expression).render.join("\n")
             d2 = a.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [upper_t.to_s], a.loc.expression).render.join("\n")
             raise RDL::Typecheck::StaticTypeError, ("Inconsistent type constraint #{typ} <= #{upper_t} generated during inference.\n #{d1}\n #{d2}")
@@ -106,23 +110,27 @@ module RDL::Type
     end
 
     def add_ubound(typ, ast, new_cons = {}, propagate: false)
+      raise "ABOUT TO ADD UBOUND #{self} <= #{typ}" if typ.is_a?(VarType) && !typ.to_infer
+      #typ = typ.canonical
       if propagate
         add_and_propagate_upper_bound(typ, ast, new_cons)
-      else
+      elsif !@ubounds.any? { |t, a| t == typ }
         #puts "1. About to add upper bound #{self} <= #{typ}"
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:upper, typ, ast]] : [[:upper, typ, ast]]
-        @ubounds << [typ, ast] unless @ubounds.any? { |t, a| t == typ }
+        @ubounds << [typ, ast] #unless @ubounds.any? { |t, a| t == typ }
       end
     end
 
     def add_lbound(typ, ast, new_cons = {}, propagate: false)
+      raise "ABOUT TO ADD LBOUND #{typ} <= #{self}" if typ.is_a?(VarType) && !typ.to_infer
+      #typ = typ.canonical
       if propagate
         add_and_propagate_lower_bound(typ, ast, new_cons)
-      else
+      elsif !@lbounds.any? { |t, a| t == typ }
         #puts "2. About to add lower bound #{typ} <= #{self}"
         #raise "blah" if typ.to_s == "Array<t>"
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:lower, typ, ast]] : [[:lower, typ, ast]]
-        @lbounds << [typ, ast] unless @lbounds.any? { |t, a| t == typ }
+        @lbounds << [typ, ast] #unless @lbounds.any? { |t, a| t == typ }
       end
     end
 
@@ -131,6 +139,7 @@ module RDL::Type
         if @solution
           return @solution.to_s
         else
+          return "XXX" if @@print_XXX
           return "{ #{@cls}##{@meth} #{@category}: #{@name} }"
         end
       else
@@ -184,6 +193,14 @@ module RDL::Type
 
     def copy
       self
+    end
+
+    def self.print_XXX!
+      @@print_XXX = true
+    end
+
+    def self.no_print_XXX!
+      @@print_XXX = false
     end
 
   end
