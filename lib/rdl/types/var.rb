@@ -53,7 +53,7 @@ module RDL::Type
     ## Adds an upper bound to self, and transitively pushes it to all of self's lower bounds.
     # [+ typ +] is the Type to add as upper bound.
     # [+ ast +] is the AST where the bound originates from, used for error messages.
-    # [+ new_cons +] is a Hash<VarType, [:upper or :lower, Type, AST]>. When provided, can be used to roll back constraints in case an error pops up.
+    # [+ new_cons +] is a Hash<VarType, Array<[:upper or :lower, Type, AST]>>. When provided, can be used to roll back constraints in case an error pops up.
     def add_and_propagate_upper_bound(typ, ast, new_cons = {})
       #puts "1a. Adding upper bound #{self} <= #{typ}"
       return if self.equal?(typ)

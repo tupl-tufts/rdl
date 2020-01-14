@@ -30,7 +30,7 @@ RDL.type :Kernel, 'self.caller', '(?Integer start, ?Integer length) -> Array<Str
 RDL.type :Kernel, 'self.caller', '(Range) -> Array<String> or nil'
 RDL.type :Kernel, 'self.caller_locations', '(?Integer start, ?Integer length) -> Array<String> or nil'
 RDL.type :Kernel, 'self.caller_locations', '(Range) -> Array<String> or nil'
-# RDL.type :Kernel, 'self.catch' # TODO
+ RDL.type :Kernel, 'self.catch', "(x) { (?x) -> u } -> u"
 RDL.type :Kernel, 'self.eval', '(String, ?Binding, ?String filename, ?Integer lineno) -> %any'
 # RDL.type :Kernel, 'self.exec' #TODO
 RDL.type :Kernel, 'self.exit', '() -> %bot'
@@ -65,7 +65,8 @@ RDL.type :Kernel, 'self.raise', '() -> %bot', effect: [:+, :+]
 RDL.type :Kernel, 'raise', '() -> %bot', effect: [:+, :+]
 # RDL.type :Kernel, 'self.raise', '(String or [exception : () -> String], ?String, ?Array<String>) -> %any'
 # TODO: above same as fail?
-RDL.type :Kernel, 'self.rand', '(Integer or Range<Integer> max) -> Numeric'
+RDL.type :Kernel, 'self.rand', '(Integer or Range<Integer> max) -> Integer'
+RDL.type :Kernel, 'self.rand', '() -> Float'
 RDL.type :Kernel, 'self.readline', '(?String, ?Integer) -> String'
 RDL.type :Kernel, 'self.readlines', '(?String, ?Integer) -> Array<String>'
 RDL.type :Kernel, 'self.require', '(String name) -> %bool'
@@ -73,10 +74,12 @@ RDL.type :Kernel, 'self.require_relative', '(String name) -> %bool'
 RDL.type :Kernel, 'self.select',
           '(Array<IO> read, ?Array<IO> write, ?Array<IO> error, ?Integer timeout) -> Array<String>' # TODO: return RDL.type?
 # RDL.type :Kernel, 'self.set_trace_func' #TODO
+RDL.type :Kernel, 'self.singleton_class', '() -> Class'
 RDL.type :Kernel, 'self.sleep', '(Numeric duration) -> Integer'
 # RDL.type :Kernel, 'self.spawn' #TODO
 RDL.rdl_alias :Kernel, :'self.sprintf', :'self.format' # TODO: are they aliases?
-RDL.type :Kernel, 'self.srand', '(Numeric number) -> Numeric'
+RDL.type :Kernel, :sprintf, "(String, %any) -> String"
+RDL.type :Kernel, 'self.srand', '(Numeric number) -> Integer'
 RDL.type :Kernel, 'self.syscall', '(Integer num, *%any args) -> %any' # TODO : ?
 # RDL.type :Kernel, 'self.system' # TODO
 RDL.type :Kernel, 'self.test', '(String cmd, String file1, ?String file2) -> %bool or Time' # TODO: better, dependent RDL.type?

@@ -116,13 +116,13 @@ module RDL::Typecheck
       first.env.each_pair { |var, h|
         first_typ = h[:type]
         if h[:fixed]
-          error :inconsistent_var_type, [var.to_s], e unless rest.all? { |other| (other.fixed? var) || (not (other.has_key? var)) }
+          RDL::Typecheck.error :inconsistent_var_type, [var.to_s], e unless rest.all? { |other| (other.fixed? var) || (not (other.has_key? var)) }
           neq = []
           rest.each { |other|
             other_typ = other[var]
             neq << other_typ unless first_typ == other_typ
           }
-          error :inconsistent_var_type_type, [var.to_s, (first_typ + neq).map { |t| t.to_s }.join(' and ')], e unless neq.empty?
+          RDL::Typecheck.error :inconsistent_var_type_type, [var.to_s, (first_typ + neq).map { |t| t.to_s }.join(' and ')], e unless neq.empty?
           env.env[var] = {type: h[:type], fixed: true}
         else
           typ = RDL::Type::UnionType.new(first_typ, *rest.map { |other| ((other.has_key? var) && other[var]) || RDL::Globals.types[:nil] })
@@ -890,8 +890,13 @@ module RDL::Typecheck
     when :nth_ref, :back_ref
       [env, RDL::Globals.types[:string], [:+, :+]]
     when :const
-      c = find_constant(env, e)
-      [env, to_type(c), [:+, :+]]
+      if e.children[0].nil? && e.children[1] == :ENV
+        ## ENV
+        c = RDL::Type::GenericType.new(RDL::Globals.types[:hash], RDL::Globals.types[:string], RDL::Globals.types[:string])
+      else
+        c = to_type(find_constant(env, e))
+      end
+      [env, c, [:+, :+]]
     when :defined?
       # do not type check subexpression, since it may not be type correct, e.g., undefined variable
       [env, RDL::Globals.types[:string], [:+, :+]]
@@ -918,21 +923,26 @@ module RDL::Typecheck
             elsif ti.is_a?(RDL::Type::GenericType) && ti.base == RDL::Globals.types[:array]
               tactuals << RDL::Type::VarargType.new(ti.params[0]) # Turn Array<t> into *t
             elsif ti.is_a?(RDL::Type::VarType)
-              new_arr_type = RDL::Type::GenericType.new(RDL::Globals.types[:array], v = make_unknown_var_type(ti, :splat_param, "splat param"))
-              RDL::Type::Type.leq(ti, new_arr_type, ast: e)
+              v = make_unknown_var_type(ti, :splat_param, "splat param")
+              #new_arr_type = RDL::Type::GenericType.new(RDL::Globals.types[:array], v = make_unknown_var_type(ti, :splat_param, "splat param"))
+              #RDL::Type::Type.leq(ti, new_arr_type, ast: e)
               tactuals << RDL::Type::VarargType.new(v)
               #tactuals << RDL::Type::VarargType.new(RDL::Globals.types[:top])
             elsif ti.is_a?(RDL::Type::UnionType) && ti.types.all? { |t| t.is_a?(RDL::Type::GenericType) && t.base == RDL::Globals.types[:array] }
               params_union = RDL::Type::UnionType.new(*ti.types.map { |t| t.params[0] }).canonical
               tactuals << RDL::Type::VarargType.new(params_union)
+            elsif ti.is_a?(RDL::Type::UnionType) && ti.types.any? { |t| t.is_a?(RDL::Type::TupleType) || (t.is_a?(RDL::Type::GenericType) && t.base == RDL::Globals.types[:array]) }
+              raise "TODO"
             else
-              error :cant_splat, [ti], ei.children[0]
+              #error :cant_splat, [ti], ei.children[0]
+              # Turns out you can splat anything!
+              tactuals << ti
             end
           elsif ei.type == :block_pass
             raise RuntimeError, "impossible to pass block arg and literal block" if scope[:block]
             envi, ti = tc(sscope, envi, ei.children[0])
             # convert using to_proc if necessary
-            if e.children[1] == :map
+            if (e.children[1] == :map) || e.children[1] == :sum
               ## block_pass calling map is a weird case:
               ## it takes a symbol representing method being called,
               ## where receiver is Array elements.
@@ -1052,10 +1062,10 @@ RUBY
           envguards << envi
         }
         initial_env = Env.join(e, *envguards)
-        if (tguards.all? { |typ| typ.is_a?(RDL::Type::SingletonType) && typ.val.is_a?(Class) }) && (e.children[0].type == :lvar)
+        if (tguards.all? { |typ| typ.is_a?(RDL::Type::SingletonType) && (typ.val.is_a?(Class) || typ.val.nil?) }) && (e.children[0].type == :lvar)
           # Special case! We're branching on the type of the guard, which is a local variable.
           # So rebind that local variable to have the union of the guard types
-          new_typ = RDL::Type::UnionType.new(*(tguards.map { |typ| RDL::Type::NominalType.new(typ.val) })).canonical
+          new_typ = RDL::Type::UnionType.new(*(tguards.map { |typ| typ.val.nil? ? typ : RDL::Type::NominalType.new(typ.val) })).canonical
           # TODO adjust following for generics!
           if tcontrol.is_a? RDL::Type::GenericType
             if new_typ == tcontrol.base
@@ -1094,6 +1104,7 @@ RUBY
         envelse, telse, effelse = tc(scope, envi, e.children[-1])
         effi = effect_union(effi, effelse)
         tbodies << telse
+        #envelse = envelse.bind(e.children[0].children[0], tcontrol, force: :true) if e.children[0].type == :lvar 
         envbodies << envelse
       end
       return [Env.join(e, *envbodies), RDL::Type::UnionType.new(*tbodies).canonical, effi]
@@ -1294,7 +1305,7 @@ RUBY
         e.children[0].children.each { |exn|
           envi, texn, eff_new = tc(scope, envi, exn)
           effi = effect_union(effi, eff_new)
-          error :exn_type, [], exn unless texn.is_a?(RDL::Type::SingletonType) && texn.val.is_a?(Class)
+          error :exn_type, [], exn unless texn.is_a?(RDL::Type::SingletonType) && (texn.val.is_a?(Class) || texn.val.is_a?(Module))
           texns << RDL::Type::NominalType.new(texn.val)
         }
       else
@@ -1360,7 +1371,8 @@ RUBY
       sklass_str = RDL::Util.to_class_str sklass
       stype = lookup(scope, sklass_str, mname, e)[0]#RDL::Globals.info.get_with_aliases(sklass_str, mname, :type)
       error :no_instance_method_type, [sklass_str, mname], e unless stype
-      raise Exception, "unsupported intersection type in super, e = #{e}" if stype.size > 1
+      stype = filter_comp_types(stype, RDL::Config.instance.use_comp_types) 
+      raise Exception, "unsupported intersection type in super, e = #{e}, stype = #{stype}" if stype.size > 1
       tactuals = stype[0].args
 
       scope_merge(scope, block: nil, break: env, next: env) { |sscope|
@@ -1662,12 +1674,12 @@ RUBY
   # Returns array of possible return types, or throws exception if there are none
   def self.tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union)
     raise "Type checking not currently supported for method #{meth}." if [:define_method, :module_exec].include?(meth)
-=begin
+
     puts "----------------------"
     puts "Type checking method call to #{meth} for receiver #{trecv} and tactuals of size #{tactuals.size}:"
     tactuals.each { |t| puts t }
     puts "----------------------"
-=end
+
     if (trecv == RDL::Globals.types[:array])
       trecv = RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Globals.types[:bot])
     elsif (trecv == RDL::Globals.types[:hash])
@@ -1680,8 +1692,9 @@ RUBY
     case trecv
     when RDL::Type::SingletonType
       if trecv.val.is_a? Class or trecv.val.is_a? Module
-        if meth == :new then
+        if (meth == :new) && trecv.val.method(:new).owner == Class then ## second condition makes sure :new isn't overriden
           meth_lookup = :initialize
+          init = true
           trecv_lookup = trecv.val.to_s
           self_inst = RDL::Type::NominalType.new(trecv.val)
         elsif (defined? ApplicationMailer) && trecv.val.ancestors.include?(ApplicationMailer)
@@ -1695,7 +1708,7 @@ RUBY
           self_inst = trecv
         end
         ts, es = lookup(scope, trecv_lookup, meth_lookup, e)
-        ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] if (meth == :new) && (ts.nil?) # there's always a nullary new if initialize is undefined
+        ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] if init && (ts.nil?) # there's always a nullary new if initialize is undefined
         error :no_singleton_method_type, [trecv.val, meth], e unless ts
         inst = {self: self_inst}
         self_klass = trecv.val
@@ -1703,11 +1716,14 @@ RUBY
         # Symbol#to_proc on a singleton symbol type produces a Proc for the method of the same name
         if env[:self].is_a?(RDL::Type::NominalType)
           klass = env[:self].klass
-        else # SingletonType(class)
+        #elsif env[:self].is_a?(
+        elsif env[:self].is_a?(RDL::Type::SingletonType) # SingletonType(class)          
           klass = env[:self].val
+        else
+          raise "unsupported self type for to_proc #{env[:self]}"
         end
-        puts "TRYING FOR KLASS #{klass}"
         ts, es = lookup(scope, klass.to_s, trecv.val, e)
+        ts = filter_comp_types(ts, false) ## no comp types in this case
         error :no_type_for_symbol, [trecv.val.inspect], e if ts.nil?
         return [ts, nil] ## TODO: not sure what to do hear about effect
       else
@@ -1947,7 +1963,7 @@ RUBY
                 end
               }
             end
-            if trecv.is_a?(RDL::Type::SingletonType) && meth == :new
+            if init#trecv.is_a?(RDL::Type::SingletonType) && meth == :new
               init_typ = RDL::Type::NominalType.new(trecv.val)
               if (tmeth.ret.instance_of?(RDL::Type::GenericType))
                 error :bad_initialize_type, [], e unless (tmeth.ret.base == init_typ)
@@ -2047,7 +2063,7 @@ Actual arg type#{tactuals.size > 1 ? "s" : ""}:
 RUBY
       msg.chomp! # remove trailing newline
       name = if trecv.is_a?(RDL::Type::SingletonType) && trecv.val.is_a?(Class) && (meth == :new) then
-        :initialize
+        trecv.val.to_s
       elsif trecv.is_a? RDL::Type::SingletonType
         trecv.val.class.to_s
       elsif [RDL::Type::NominalType, RDL::Type::GenericType, RDL::Type::FiniteHashType, RDL::Type::TupleType, RDL::Type::AstNode, RDL::Type::PreciseStringType].any? { |t| trecv.is_a? t }
@@ -2180,7 +2196,7 @@ RUBY
         ## want to match it with the subsequent FHT.
         else
           states << [formal+1, actual, inst, deferred_constraints] # types don't match; must skip this formal
-        end
+        end 
       when RDL::Type::VarargType
         if actual == tactuals.size
           states << [formal+1, actual, inst, deferred_constraints] # skip to allow empty vararg at end
@@ -2188,8 +2204,8 @@ RUBY
           states << [formal, actual+1, inst, deferred_constraints] # match, more varargs coming
           states << [formal+1, actual+1, inst, deferred_constraints] # match, no more varargs
           states << [formal+1, actual, inst, deferred_constraints] # skip over even though matches
-        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(tactuals[actual].type, t.type, inst, false, deferred_constraints) #&&
-                                                               #RDL::Type::Type.leq(t.type, tactuals[actual].type, inst, true, deferred_constraints)
+
+        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(tactuals[actual].type, t.type, inst, false, deferred_constraints) #&& RDL::Type::Type.leq(t.type, tactuals[actual].type, inst, true, deferred_constraints)
           states << [formal+1, actual+1, inst, deferred_constraints] # match, no more varargs; no other choices!
           states << [formal, actual+1, inst, deferred_constraints]
         else
@@ -2391,7 +2407,7 @@ RUBY
           klass = '(singleton) ' + klass
         end
 =end
-        return nil if the_klass.to_s.start_with?('#<Class:') and name == :new
+        return nil if the_klass.to_s.start_with?('#<Class:') and name == :new and !make_unknown
       end
     }
 
@@ -2429,7 +2445,6 @@ RUBY
   def self.make_unknown_method_type(klass, meth)
     raise "Tried to make unknown method type for class #{klass} method #{meth}, but no such method was found." unless (RDL::Util.to_class(klass).instance_methods + RDL::Util.to_class(klass).private_instance_methods).include?(meth)
     params = RDL::Util.to_class(klass).instance_method(meth).parameters
-
     arg_types = []
     keyword_args = {}
     params.each { |param|
@@ -2446,6 +2461,8 @@ RUBY
         keyword_args[param[1]] = RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: param[1])
       when :block
       ## all method types will be given a variable type for blocks anyway, so no need to add a new param here
+      when :keyrest
+        raise "Not currently supported"
       else
         raise "Unexpected parameter type #{param[0]}."
       end
@@ -2513,9 +2530,44 @@ RUBY
     new_name
   end
 
+
   def self.find_constant(env, e)
     # https://cirw.in/blog/constant-lookup.html
     # First look in Module.nesting for a lexically scoped variable
+    raise "Expected @cur_meth." unless @cur_meth
+    if (RDL::Util.has_singleton_marker(@cur_meth[0]))
+      klass = RDL::Util.to_class(RDL::Util.remove_singleton_marker(@cur_meth[0]))
+      mod_inst = false
+    else
+      klass = RDL::Util.to_class(@cur_meth[0])
+      if klass.instance_of?(Module)
+        mod_inst = true
+      else
+        mod_inst = false
+        klass = klass.send :allocate
+      end
+    end
+    if RDL::Wrap.wrapped?(@cur_meth[0], @cur_meth[1])
+      meth_name = RDL::Wrap.wrapped_name(@cur_meth[0], @cur_meth[1])
+    else
+      meth_name = @cur_meth[1]
+    end
+    if mod_inst
+      method = klass.instance_method(meth_name)
+      raise "Expected UnboundMethod, got #{method}." unless method.is_a?(UnboundMethod)
+      method_binding = method.bind(BasicObject.new).to_proc.binding ## For modules, just bind the UnboundMethod to an arbitrary BasicObject
+    else
+      method_binding = klass.method(meth_name).to_proc.binding
+    end
+    const_string = e.loc.expression.source
+    return method_binding.send(:eval, const_string)
+  end
+end
+=begin
+    if e.children[0] && e.children[0].type == :cbase
+      c = get_leaves(e).inject(Object) { |m, c2| m.const_get(c2) }
+      return c
+    end    
     if @cur_meth
       if (RDL::Util.has_singleton_marker(@cur_meth[0]))
         klass = RDL::Util.to_class(RDL::Util.remove_singleton_marker(@cur_meth[0]))
@@ -2526,7 +2578,7 @@ RUBY
           mod_inst = true
         else
           mod_inst = false
-          klass = klass.allocate
+          klass = klass.send :allocate
         end
       end
       if RDL::Wrap.wrapped?(@cur_meth[0], @cur_meth[1])
@@ -2558,9 +2610,6 @@ RUBY
         raise Exception, "unsupported env[self]=#{env[:self]}"
       end
       c = get_leaves(e).inject(ic) {|m, c2| m.const_get(c2)}
-    elsif e.children[0].type == :cbase
-    #raise "const cbase not implemented yet" # TODO!
-      c = get_leaves(e).inject(Object) { |m, c2| m.const_get(c2) }
     elsif e.children[0].type == :lvar
       raise "const lvar not implemented yet" # TODO!
     elsif e.children[0].type == :const
@@ -2571,6 +2620,7 @@ RUBY
     end
   end
 end
+=end
 
 # Use parser's Diagnostic to output RDL typechecker error messages
 class Diagnostic < Parser::Diagnostic

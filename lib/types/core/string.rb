@@ -142,7 +142,7 @@ RDL.type String, 'self.cap_down_output', "(RDL::Type::Type, Symbol) -> RDL::Type
   
 RDL.type :String, :casecmp, '(String) -> ``output_type(trec, targs, :casecmp, "Integer")``'
 RDL.type :String, :center, '(Integer, ?String) -> ``output_type(trec, targs, :center, "String")``'
-RDL.type :String, :chars, '() -> ``output_type(trec, targs, :chars, "Array")``'  #deprecated
+RDL.type :String, :chars, '() -> ``output_type(trec, targs, :chars, "Array<String>")``'  #deprecated
 RDL.type :String, :chomp, '(?String) -> ``output_type(trec, targs, :chomp, "String")``'
 RDL.type :String, :chomp!, '(?String) -> ``string_promote!(trec)``' ## chomp! depends on the value of $/, which is hard to reason about during type checking. So, keeping this imprecise.
 RDL.type :String, :chop, '() -> ``output_type(trec, targs, :chop, "String")``'
@@ -423,7 +423,7 @@ RDL.type :String, :capitalize, '() -> String'
 RDL.type :String, :capitalize!, '() -> String or nil'
 RDL.type :String, :casecmp, '(String) -> nil or Integer'
 RDL.type :String, :center, '(Integer, ?String) -> String'
-RDL.type :String, :chars, '() -> Array'  #deprecated
+RDL.type :String, :chars, '() -> Array<String>'  #deprecated
 RDL.type :String, :chomp, '(?String) -> String'
 RDL.type :String, :chomp!, '(?String) -> String or nil'
 RDL.type :String, :chop, '() -> String'

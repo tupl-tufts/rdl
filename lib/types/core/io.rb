@@ -17,7 +17,7 @@ RDL.type :IO, 'self.popen', '(?Hash<String, String> env, String cmd, ?String mod
 RDL.type :IO, 'self.popen', '(?Hash<String, String> env, String cmd, ?String mode, %open_args) { (IO) -> t } -> t'
 RDL.type :IO, 'self.read', '(String name, ?Integer length, ?Integer offset, %open_args) -> String'
 RDL.type :IO, 'self.readlines', '(String name, ?String sep, ?Integer limit, %open_args) -> Array<String>'
-RDL.type :IO, 'self.select', '(Array<IO> read_array, ?Array<IO> write_array, ?Array<IO> error_array, ?Integer timeout) -> Array<IO> or nil'
+RDL.type :IO, 'self.select', '(Array<IO> read_array, ?Array<IO> write_array, ?Array<IO> error_array, ?Integer timeout) -> Array<Array<IO>> or nil'
 RDL.type :IO, 'self.sysopen', '(String path, ?String mode, ?String perm) -> Integer' # TODO unsure of RDL.type of perm
 RDL.type :IO, 'self.try_convert', '([to_io: () -> IO]) -> IO or nil'
 RDL.type :IO, 'self.write', '(String name, String, ?Integer offset, %open_args) -> Integer'

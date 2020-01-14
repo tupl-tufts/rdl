@@ -15,6 +15,7 @@ class RDL::Config
     @gather_stats = false
     @report = false # if this is enabled by default, modify @at_exit_installed
     @guess_types = [] # same as above
+    @get_types = [] # Array<Array<[String, Symbol>>: list of class/method name pairs to collect type data for
     @at_exit_installed = false
     @weak_update_promote = false
     @promote_widen = false
@@ -45,6 +46,11 @@ class RDL::Config
   def guess_types=(val)
     install_at_exit
     @guess_types = val
+  end
+
+  def get_types
+    install_at_exit
+    return @get_types
   end
 
   def add_nowrap(*klasses)
@@ -190,6 +196,50 @@ RDL::Config.instance.profile_stats
     end
   end
 
+  def do_get_meth_type(klass, meth, the_meth)
+    puts "GETTING METH TYPE FOR #{klass} AND #{meth}"
+    params = the_meth.parameters
+    param_types = params.keep_if { |p| p.size == 2 }.to_h
+    param_names = []
+    params.each_with_index { |param, i|
+      kind, name = param
+      ## TODO: Differentiate based on kind here?
+      ## TODO: Anything with block here?
+      param_names << name if name
+    }
+    otypes = RDL::Globals.info.get(klass, meth, :otype) if RDL::Globals.info.has?(klass, meth, :otype) # observed types
+    return if otypes.nil?
+    #otargs = []
+    otargs = {}
+    otret = RDL::Globals.types[:bot]
+    otblock = false
+    binding_meth_name = "RDL_#{klass}_#{(meth.hash + meth.to_s.hash).abs}".gsub("::", "__").gsub("[s]", "singleton_")
+    otypes.each { |ot|
+      binds_hash = RDL.send(binding_meth_name, *ot[:args])
+      binds_hash.each { |param_name, typ|
+        if param_types[param_name] == :rest
+          raise "Expected Array of classes, got #{typ}" unless typ.is_a?(Array)
+          new_typ = RDL::Type::UnionType.new(*typ).canonical
+        else
+          new_typ = typ.is_a?(RDL::Type::Type) ? typ : RDL::Wrap.val_to_type(typ) ## may not be a Type for default arguments
+        end
+        otargs[param_name] = otargs[param_name] ? RDL::Type::UnionType.new(otargs[param_name], new_typ).canonical : new_typ
+      }
+      otret = RDL::Type::UnionType.new(otret, ot[:ret]).canonical if defined? otret
+      otblock = otblock || ot[:block]
+    }
+    require 'method_source'
+    otargs.each { |param, typ| if param_types[param] == :rest then otargs[param] = RDL::Type::VarargType.new(typ) end }
+    printed_args = ""
+    otargs.each { |param, typ| printed_args << "#{param} => #{typ}\n" }
+    #otargs.transform_values { |v| v.to_s }.to_s
+    CSV.open("#{File.basename(Dir.getwd)}_observed_types.csv", "a+") { |csv|
+      csv << [klass.to_s, meth.to_s, param_names.join(", "), printed_args, otret.to_s, the_meth.source, the_meth.comment]
+    }
+    
+  end
+
+
   def guess_meth(klass, meth, is_sing, the_meth)
     # first print based on signature according to Ruby
     first = true
@@ -230,9 +280,11 @@ RDL::Config.instance.profile_stats
     otypes.each { |ot|
       ot[:args].each_with_index { |t, i|
         otargs[i] = RDL::Globals.types[:bot] if otargs[i].nil?
-        otargs[i] = RDL::Type::UnionType.new(otargs[i], RDL::Type::NominalType.new(t)).canonical
+        begin 
+          otargs[i] = RDL::Type::UnionType.new(otargs[i], t).canonical
+        rescue NameError; end
       }
-      otret = RDL::Type::UnionType.new(otret, RDL::Type::NominalType.new(ot[:ret])).canonical
+      otret = RDL::Type::UnionType.new(otret, RDL::Type::NominalType.new(ot[:ret])).canonical if defined? otret
       otblock = otblock || ot[:block]
     }
     otargs.each { |t|
@@ -265,7 +317,28 @@ RDL::Config.instance.profile_stats
       puts "end"
     }
   end
+
+
+  def do_get_types
+    return if @get_types.empty?
+    require 'csv'
+
+    CSV.open("#{File.basename(Dir.getwd)}_observed_types.csv", "wb") { |csv|
+      csv << ["Class", "Method", "Parameter Names", "Observed Arg Types", "Observed Return Type", "Source Code", "Comments"]
+    }
+    
+    RDL::Config.instance.get_types.each { |klass, meth|
+      the_klass = RDL::Util.to_class(klass)
+      sklass = RDL::Util.add_singleton_marker(klass.to_s)
+      wrapped_name = RDL::Wrap.wrapped_name(klass, meth)
+      begin 
+        the_meth = RDL::Util.to_class(klass).instance_method(wrapped_name)
+        do_get_meth_type(klass, meth, the_meth)
+      rescue NameError; end
+    }
+  end
 end
+
 
 private
 
@@ -274,6 +347,7 @@ private
     at_exit do
       RDL::Config.instance.do_report
       RDL::Config.instance.do_guess_types
+      RDL::Config.instance.do_get_types
     end
     @at_exit_installed = true
   end

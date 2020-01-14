@@ -249,7 +249,7 @@ RDL.type :Array, :collect, '() -> ``RDL::Type::GenericType.new(RDL::Type::Nomina
 RDL.type :Array, :combination, '(Integer) { (self) -> %any } -> self'
 RDL.type :Array, :combination, '(Integer) -> Enumerator<self>'
 RDL.type :Array, :push, '(``any_or_t(trec, true)``) -> ``append_push_output(trec, targs, :push)``'
-RDL.type ::Array, :compact, '() -> ``RDL::Type::GenericType.new(RDL::Globals.types[:array], promoted_or_t(trec))``'
+RDL.type :Array, :compact, '() -> ``RDL::Type::GenericType.new(RDL::Globals.types[:array], promoted_or_t(trec))``'
 RDL.type :Array, :compact!, '() -> ``promote_tuple!(trec)``'
 RDL.type :Array, :concat, '(``promote_tuple(trec)``) -> ``promote_tuple!(trec)``' ## could be more precise here
 RDL.type :Array, :count, '() -> ``output_type(trec, targs, :count, "Integer")``'
@@ -259,7 +259,7 @@ RDL.type :Array, :cycle, '(?Integer) { (``promoted_or_t(trec)``) -> %any } -> %a
 RDL.type :Array, :cycle, '(?Integer) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), promoted_or_t(trec))``'
 RDL.type :Array, :delete, '(%any) -> ``promote_tuple!(trec); targs[0]``'
 RDL.type :Array, :delete, '(u) { () -> v } -> ``promote_tuple!(trec); RDL::Globals.parser.scan_str "#T u or v"``'
-RDL.type :Array, :delete_at, '(Integer) -> ``promote_tuple!(trec)``'
+RDL.type :Array, :delete_at, '(Integer) -> ``promote_tuple!(trec).params[0]``'
 RDL.type :Array, :delete_if, '() { (``promoted_or_t(trec)``) -> %bool } -> ``promote_tuple!(trec)``'
 RDL.type :Array, :delete_if, '() -> ``promote_tuple!(trec); RDL::Globals.parser.scan_str "#T Enumerator<t>"``'
 RDL.type :Array, :drop, '(Integer) -> ``promote_tuple!(trec)``'

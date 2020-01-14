@@ -43,7 +43,6 @@ module RDL::Type
 
     def canonical
       canonicalize!
-      #puts "HERE AND ABOUT TO RETURN #{@canonical} OR #{self}"
       return @canonical if @canonical
       return self
     end

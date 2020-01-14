@@ -8,6 +8,11 @@ class RDL::Heuristic
     @rules[name] = blk
   end
 
+  def self.matching_classes(meth_names)
+    matching_classes = ObjectSpace.each_object(Class).select { |c|
+      class_methods = c.instance_methods | RDL::Globals.info.get_methods_from_class(c.to_s)
+      (meth_names - class_methods).empty? } ## will only be empty if meth_names is a subset of c.instance_methods
+  end
 
   def self.struct_to_nominal(var_type)
     return unless (var_type.category == :arg) || (var_type.category == :var)#(var_type.category == :ivar) || (var_type.category == :cvar) || (var_type.category == :gvar) ## this rule only applies to args and (instance/class/global) variables
@@ -17,9 +22,7 @@ class RDL::Heuristic
     struct_types.map! { |t, loc| t }
     return if struct_types.empty?
     meth_names = struct_types.map { |st| st.methods.keys }.flatten.uniq
-    matching_classes = ObjectSpace.each_object(Class).select { |c|
-      class_methods = c.instance_methods | RDL::Globals.info.get_methods_from_class(c.to_s)
-      (meth_names - class_methods).empty? } ## will only be empty if meth_names is a subset of c.instance_methods
+    matching_classes = matching_classes(meth_names)
     matching_classes.reject! { |c| c.to_s.start_with?("#<Class") || /[^:]*::[a-z]/.match?(c.to_s) || c.to_s.include?("ARGF") } ## weird few constants where :: is followed by a lowecase letter... it's not a class and I can't find anything written about it.
     ## TODO: special handling for arrays/hashes/generics?
     ## TODO: special handling for Rails models? see Bree's `active_record_match?` method

@@ -306,9 +306,9 @@ module RDL::Type
             lklass = left.val.class
           end
         else
-          if (left == RDL::Globals.types[:array])
-            left = RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Globals.types[:bot])
-            lklass = Array
+          if (left == RDL::Globals.types[:array]) || (left == RDL::Type::NominalType.new(Range))
+            lklass = left.klass
+            left = RDL::Type::GenericType.new(left, RDL::Globals.types[:bot])
             base_inst = { self: left, t: RDL::Globals.types[:bot] }
           elsif (left == RDL::Globals.types[:hash])
             left = RDL::Type::GenericType.new(RDL::Globals.types[:hash], RDL::Globals.types[:bot], RDL::Globals.types[:bot])

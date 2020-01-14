@@ -1,6 +1,6 @@
 RDL.nowrap :Time
 
-RDL.type :Time, 'self.at', '(Numeric seconds, Numeric microseconds_with_frac) -> ``RDL::Type::NominalType.new(trec.val)``'
+RDL.type :Time, 'self.at', '(Numeric, ?Numeric) -> ``RDL::Type::NominalType.new(trec.val)``'
 RDL.type :Time, 'self.at', '(Time) -> Time'
 RDL.type :Time, 'self.at', '(Numeric seconds_with_frac) -> Time'
 RDL.type :Time, 'self.at', '(Numeric seconds, Numeric microseconds_with_frac) -> Time'

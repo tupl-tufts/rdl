@@ -29,6 +29,7 @@ class RDL::Wrap
     RDL::Globals.wrap_switch.off {
       klass_str = klass_str.to_s
       klass = RDL::Util.to_class klass_str
+      the_meth = klass.instance_method(meth)
       return if wrapped? klass, meth
       return if RDL::Config.instance.nowrap.member? klass_str.to_sym
       raise ArgumentError, "Attempt to wrap #{RDL::Util.pp_klass_method(klass, meth)}" if klass.to_s =~ /^RDL::/
@@ -76,8 +77,9 @@ class RDL::Wrap
                 ret = RDL::Type::MethodType.check_ret_types(self, "#{full_method_name}", types, inst, matches, ret, bind, *args, &blk) unless (meth.to_sym == :initialize)
               end
             end
-            if RDL::Config.instance.guess_types.include?("#{klass_str_without_singleton}".to_sym)
-              RDL::Globals.info.add(klass, meth, :otype, { args: (args.map { |arg| arg.class }), ret: ret.class, block: block_given? })
+            if RDL::Config.instance.guess_types.include?("#{klass_str_without_singleton}".to_sym) || RDL::Config.instance.get_types.include?([klass.to_s, meth])
+            #puts "adding to otypes!"
+              RDL::Globals.info.add(klass, meth, :otype, { args: (args.map { |arg| RDL::Wrap.val_to_type(arg) }), ret: RDL::Wrap.val_to_type(ret), block: block_given? })
             end
             return ret
           }
@@ -214,10 +216,37 @@ RUBY
     end
   end
 
+  def self.val_to_type(val)
+    case val
+    when TrueClass, FalseClass, NilClass
+      RDL::Type::SingletonType.new(val)
+    when Array
+      typs = []
+      val.each { |t| typs << val_to_type(t) }
+      param = RDL::Type::UnionType.new(*typs).canonical
+      RDL::Type::GenericType.new(RDL::Globals.types[:array], param)
+    when Hash
+      key_typs = []
+      val_typs = []
+      val.each_key { |k| key_typs << val_to_type(k) }
+      val.each_value { |v| val_typs << val_to_type(v) }
+      key_param = RDL::Type::UnionType.new(*key_typs).canonical
+      val_param = RDL::Type::UnionType.new(*val_typs).canonical
+      RDL::Type::GenericType.new(RDL::Globals.types[:hash], key_param, val_param)
+    else
+      RDL::Type::NominalType.new(val.class)
+    end
+  end
+  
   # called by Object#method_added (sing=false) and Object#singleton_method_added (sing=true)
   def self.do_method_added(the_self, sing, klass, meth)
+      if sing
+        loc = the_self.singleton_method(meth).source_location
+      else
+        loc = the_self.instance_method(meth).source_location
+      end
+      RDL::Globals.info.set(klass, meth, :source_location, loc)
     # Apply any deferred contracts and reset list
-
     if RDL::Globals.deferred.size > 0
       if sing
         loc = the_self.singleton_method(meth).source_location
@@ -278,6 +307,10 @@ RUBY
 
     if RDL::Config.instance.guess_types.include?(the_self.to_s.to_sym) && !RDL::Globals.info.has?(klass, meth, :type)
       # Added a method with no type annotation from a class we want to guess types for
+      RDL::Wrap.wrap(klass, meth)
+    end
+    if RDL::Config.instance.get_types.include?([klass, meth])
+      RDL.create_binding_meth(klass, meth)
       RDL::Wrap.wrap(klass, meth)
     end
   end
@@ -498,6 +531,64 @@ module RDL::Annotate
     }
     #RDL.do_infer :all
   end
+
+  def get_path_types(path, no_include = [])
+    require 'pathname'
+    path = ::Pathname.new(path).expand_path
+    rb_files = Dir.entries(path).keep_if { |f| f.end_with?(".rb") }
+    rb_files.each { |f| get_file_types(path+f) unless no_include.include?(f) }
+  end
+
+  def get_file_types(file)
+    file = Pathname.new(file).expand_path.to_s
+    puts "ABOUT TO INDEX FILE #{file}"
+    index = ClassIndexer.process_file(file)
+    index.each { |klass, meth_list|
+      meth_list.each { |meth|
+        meth = meth[:name].to_sym
+        #RDL::Config.instance.get_types << [klass, meth]
+        #RDL::Wrap.wrap(klass, meth) if RDL::Util.method_defined?(klass, meth)
+        get_type(klass, meth)
+      }
+    }
+  end
+
+  def get_type(klass, meth)
+    klass = klass.to_s
+    meth = meth.to_sym
+    RDL::Config.instance.get_types << [klass, meth]
+    if RDL::Util.method_defined?(klass, meth)
+      create_binding_meth(klass, meth)
+      RDL::Wrap.wrap(klass, meth)
+    end
+  end
+
+  def create_binding_meth(klass, meth)
+    puts "CREATING BINDING METH FOR #{klass} AND #{meth}"
+    require 'method_source'
+    klass = klass.to_s
+    meth = meth.to_sym
+    the_meth = RDL::Util.to_class(klass).instance_method(meth)
+    new_meth_name = "RDL_#{klass}_#{(meth.hash + meth.to_s.hash).abs}".gsub("::", "__").gsub("[s]", "singleton_")
+    return if RDL.singleton_class.method_defined? new_meth_name
+    if !RDL.method_defined?(new_meth_name)
+      ast = Parser::CurrentRuby.parse(the_meth.source) #RDL::Typecheck.get_ast(klass, meth)
+      if (ast.type != :def) && (ast.type != :defs)
+        ast = RDL::Typecheck.get_ast(klass, meth)
+      end
+      #args_expression = ast.children[1].loc.expression.source
+      args_expression = ast.children[1].loc.expression
+      args_string = args_expression ? args_expression.source : "" ## args_expression is nil if there are no arguments
+      arg_vals = []
+      the_meth.parameters.each { |kind, name|
+        arg_vals << "#{name}: #{name}" if name
+      }
+      vals_hash = "{ " + arg_vals.join(",") + " }"
+      meth_string = "def RDL.#{new_meth_name} #{args_string} \n #{vals_hash} \n end"
+      puts "ABOUT TO EVALUATE #{meth_string}"
+      RDL.class_eval meth_string
+    end
+  end    
 
   def no_infer_meth(klass, meth)
     RDL::Globals.no_infer_meths << [klass.to_s, meth.to_s]
@@ -920,7 +1011,7 @@ module RDL
               else
                 RDL::Globals.parser.scan_str "#T #{typ}"
               end
-    raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || new_typ.member?(obj)
+    raise RuntimeError, "type cast error: self  of class #{self.class} not a member of #{new_typ}" unless force || new_typ.member?(obj)
     new_obj = SimpleDelegator.new(obj)
     new_obj.instance_variable_set('@__rdl_type', new_typ)
     new_obj
@@ -1005,11 +1096,11 @@ class Module
   }
 end
 
-class Class
-  def ===(x)
-    if x.method(:is_a?).owner == SimpleDelegator then super(x.__getobj__) else super(x) end
-  end
-end
+#class Class
+#  def ===(x)
+#    if x.method(:is_a?).owner == SimpleDelegator then super(x.__getobj__) else super(x) end
+#  end
+#end
 
 class SimpleDelegator
   ## pass methods through to wrapped object

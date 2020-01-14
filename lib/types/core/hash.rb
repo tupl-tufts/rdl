@@ -205,7 +205,7 @@ end
 RDL.type Hash, 'self.assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
 
 RDL.type Hash, :initialize, "(*%any) -> ``RDL::Type::FiniteHashType.new({}, nil, default: targs[0])``"
-RDL.type Hash, :initialize, "() { (Hash, x) -> y } -> ``RDL::Type::GenericType.new(RDL::Globals.types[:hash], RDL::Globals.types[:top], RDL::Globals.types[:top])``"
+RDL.type Hash, :initialize, "() { (Hash<a, b>, x) -> y } -> ``RDL::Type::GenericType.new(RDL::Globals.types[:hash], RDL::Globals.types[:top], RDL::Globals.types[:top])``"
 
 RDL.type :Hash, :store, '(``any_or_k(trec)``, ``any_or_v(trec)``) -> ``assign_output(trec, targs)``'
 RDL.type :Hash, :assoc, '(``any_or_k(trec)``) -> ``RDL::Type::TupleType.new(targs[0], output_type(trec, targs, :[], :promoted_val, "v", nil_default: true))``'
@@ -245,7 +245,7 @@ def Hash.delete_output(trec, targs, block)
 end
 RDL.type Hash, 'self.delete_output', "(RDL::Type::Type, Array<RDL::Type::Type>, %bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
 
-RDL.type :Hash, :delete_if, '() { (``any_or_k(trec)``, ``any_or_v(trec)``) -> %any } -> self'
+RDL.type :Hash, :delete_if, '() { (``promoted_or_k(trec)``, ``promoted_or_v(trec)``) -> %any } -> self'
 RDL.type :Hash, :delete_if, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), RDL::Type::TupleType.new(any_or_k(trec), any_or_v(trec)))``' ## I had made a mistake here, type checker caught it.
 RDL.type :Hash, :each, '() { (``promoted_or_k(trec)``, ``promoted_or_v(trec)``) -> %any } -> self'
 RDL.type :Hash, :each, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), RDL::Type::TupleType.new(any_or_k(trec), any_or_v(trec)))``' ## I had made a mistake here, type checker caught it.
@@ -299,11 +299,15 @@ def Hash.merge_input(trec, targs, mutate=false)
     return targs[0]
   else #when RDL::Type::GenericType
     if mutate
-      raise "Unable to promote #{trec}." unless trec.promote!
+      raise "Unable to promote #{trec}." if trec.is_a?(RDL::Type::FiniteHashType) && !trec.promote!
       return trec.canonical
       #return RDL::Globals.parser.scan_str "#T Hash<k, v>"
     else
-      return RDL::Globals.parser.scan_str "#T Hash<a, b>"
+      if trec.is_a?(RDL::Type::GenericType)
+        return RDL::Globals.parser.scan_str "#T Hash<a, b>"
+      else
+        return targs[0]
+      end
     end
   #else
    # RDL::Globals.types[:hash]
@@ -532,4 +536,5 @@ RDL.type :Hash, :to_a, '() -> Array<Array<k or v>>'
 RDL.type :Hash, :to_hash, '() -> Hash<k,v>'
 RDL.type :Hash, :values, '() -> Array<v>'
 RDL.type :Hash, :values_at, '(*k) -> Array<v>', effect: [:+, :+]
+RDL.type :Hash, :with_indifferent_access, '() -> self'
 

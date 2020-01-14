@@ -75,7 +75,6 @@ module RDL::Typecheck
       ## Try each rule. Return first non-nil result.
       ## If no non-nil results, return original solution.
       ## TODO: check constraints.
-
       RDL::Heuristic.rules.each { |name, rule|
         #puts "Trying rule `#{name}` for variable #{var}."
         typ = rule.call(var)
@@ -86,13 +85,15 @@ module RDL::Typecheck
             typ = typ.canonical
             var.add_and_propagate_upper_bound(typ, nil, new_cons)
             var.add_and_propagate_lower_bound(typ, nil, new_cons)
-
-            new_cons.each_key { |var_type|
-              new_cons[var_type].each { |u_or_l, bound, _|
-                puts "Here 1 with #{u_or_l} bound #{bound} of kind #{bound.class} on #{var_type}"
+=begin
+            new_cons.each { |var, bounds|
+              bounds.each { |u_or_l, t, _|
+                puts "1. Added #{u_or_l} bound constraint #{t} of kind #{t.class} to variable #{var}"
+                puts "It has upper bounds: "
+                var.ubounds.each { |t, _| puts t }
               }
-            }            
-
+            }
+=end            
             @new_constraints = true if !new_cons.empty?
             return typ
             #sol = typ
@@ -114,16 +115,14 @@ module RDL::Typecheck
       sol = sol.canonical
       var.add_and_propagate_upper_bound(sol, nil, new_cons)
       var.add_and_propagate_lower_bound(sol, nil, new_cons)
-      @new_constraints = true if !new_cons.empty?
-
-      new_cons.each_key { |var_type|
-        new_cons[var_type].each { |u_or_l, bound, _|
-          puts "Here 2 with #{u_or_l} bound #{bound} of kind #{bound.class} on #{var_type}"
-          puts "It has name #{bound.name}" if bound.is_a?(RDL::Type::NominalType)
-          puts "#{var_type} already has bounds:"
-          var_type.ubounds.each { |t, _| puts "#{t} of kind #{t.class} and name #{t.name if t.is_a?(RDL::Type::NominalType)}" }
+=begin
+      new_cons.each { |var, bounds|
+        bounds.each { |u_or_l, t, _|
+          puts "2. Added #{u_or_l} bound constraint #{t} to variable #{var}"
         }
       }
+=end
+      @new_constraints = true if !new_cons.empty?
 
       if sol.is_a?(RDL::Type::GenericType)
         new_params = sol.params.map { |p| if p.is_a?(RDL::Type::VarType) && !p.to_infer then p else extract_var_sol(p, category) end }
@@ -139,6 +138,7 @@ module RDL::Typecheck
       ## no new constraints in this case so we'll leave it as is
       sol = var
     end
+
     return sol
   end
 
@@ -174,39 +174,28 @@ module RDL::Typecheck
         extract_var_sol(a, :arg)
       end
     }
-
     ## BLOCK SOLUTION
     if tmeth.block && !tmeth.block.ubounds.empty?
       non_vartype_ubounds = tmeth.block.ubounds.map { |t, ast| t.canonical }.reject { |t| t.is_a?(RDL::Type::VarType) }
       non_vartype_ubounds.reject! { |t| t.is_a?(RDL::Type::StructuralType) && (t.methods.size == 1) && t.methods.has_key?(:to_proc) }
-
-      if non_vartype_ubounds.size == 0
+      if non_vartype_ubounds.size == 0        
         block_sol = tmeth.block
       elsif non_vartype_ubounds.size > 1
         block_sols = []
-        RDL::Type::IntersectionType.new(*non_vartype_ubounds).canonical.types.each { |m|
+        inter = RDL::Type::IntersectionType.new(*non_vartype_ubounds).canonical
+        typs = inter.is_a?(RDL::Type::IntersectionType) ? inter.types : [inter]
+        typs.each { |m|
           raise "Expected block type to be a MethodType, got #{m}." unless m.is_a?(RDL::Type::MethodType)
           block_sols << RDL::Type::MethodType.new(*extract_meth_sol(m))
         }
-        block_sol = RDL::Type::IntersectionType.new(*block_sols).canonical                  
+        block_sol = RDL::Type::IntersectionType.new(*block_sols).canonical
       else
         block_sol = RDL::Type::MethodType.new(*extract_meth_sol(non_vartype_ubounds[0]))
       end
-=begin      
-      block_sol = non_vartype_ubounds.size > 1 ? RDL::Type::IntersectionType.new(*non_vartype_ubounds).canonical : non_vartype_ubounds[0] ## doing this once and calling canonical to remove any supertypes that would be eliminated anyway
-      block_sols = []
-      puts "HERE 1 WITH #{block_sol.class}"
-      block_sol.types.each { |m|
-        puts "here with #{m}"
-        raise "Expected block type to be a MethodType, got #{m}." unless m.is_a?(RDL::Type::MethodType)
-        block_sols << RDL::Type::MethodType.new(*extract_meth_sol(m))
-      }
-      block_sol = RDL::Type::IntersectionType.new(*block_sols).canonical
-      puts "HERE 2"
-=end
     else
       block_sol = nil
     end
+
     ## RET SOLUTION
     if tmeth.ret.to_s == "self"
       ret_sol = tmeth.ret
@@ -226,14 +215,15 @@ module RDL::Typecheck
       typ_sols = {}
       puts "\n\nRunning solution extraction..."
       RDL::Globals.constrained_types.each { |klass, name|
+        puts "HERE WORKING ON #{klass}##{name}"
         RDL::Type::VarType.no_print_XXX!
         typ = RDL::Globals.info.get(klass, name, :type)
         if typ.is_a?(Array)
           raise "Expected just one method type for #{klass}#{name}." unless typ.size == 1
           tmeth = typ[0]
           
-
           arg_sols, block_sol, ret_sol = extract_meth_sol(tmeth)
+
           block_string = block_sol ? " { #{block_sol} }" : nil
           puts "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
 

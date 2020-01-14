@@ -17,3 +17,4 @@ elsif Rails.env.production?
 else
   raise RuntimeError, "Don't know what to do in Rails environment #{Rails.env}"
 end
+
