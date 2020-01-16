@@ -324,7 +324,7 @@ module RDL::Annotate
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
-  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil, effect: nil)
+  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil, effect: nil, read: [], write: [])
     return if version && !(Gem::Requirement.new(version).satisfied_by? Gem.ruby_version)
     klass, meth, type = begin
                           RDL::Wrap.process_type_args(self, *args)
