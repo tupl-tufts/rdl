@@ -36,17 +36,24 @@ module ClassIndexer
 
       if @current_class == "main"
         @current_class = class_name
+        entered_class = class_name
       else
         @current_class << "::" + class_name
+        entered_class = "::" + class_name
       end
 
       node.children.each { |c| process(c) }
 
+      @current_class.sub!(entered_class, "")
+      reset_class if @current_class.empty?
+
+=begin
       if @current_class.include?("::")
         @current_class.sub!("::" + class_name, "")
       else
         reset_class
       end
+=end
     end
 
     def on_module(node)
@@ -54,18 +61,24 @@ module ClassIndexer
 
       if @current_class == "main"
         @current_class = module_name
+        entered_class = module_name
       else
         #@current_class.prepend(module_name + "::")
         @current_class << "::" + module_name
+        entered_class = "::" + module_name
       end
 
       node.children.each { |c| process(c) }
 
+      @current_class.sub!(entered_class, "")
+      reset_class if @current_class.empty?
+=begin      
       if @current_class.include?("::")
         @current_class.sub!("::"+module_name, "")
       else
         reset_class
       end
+=end
     end
 
     def on_sclass(node)

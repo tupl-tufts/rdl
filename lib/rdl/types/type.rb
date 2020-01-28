@@ -74,12 +74,9 @@ module RDL::Type
       right = right.type if right.is_a? NonNullType
       left = left.canonical
       right = right.canonical
-      #puts "ABOUT TO TRY #{left} <= #{right}"
 
       return true if left.equal?(right)
 
-      #left = left.nominal if left.is_a?(RDL::Type::SingletonType) && left.val.is_a?(Integer) && RDL::Config.instance.number_mode
-      #right = right.nominal if right.is_a?(RDL::Type::SingletonType) && right.val.is_a?(Integer) && RDL::Config.instance.number_mode
 
       # top and bottom
       return true if left.is_a? BotType
@@ -120,7 +117,6 @@ module RDL::Type
 
       ## choice types
       if left.is_a?(ChoiceType) && right.is_a?(ChoiceType)
-        #puts "HERE 1 TRYING #{left} <= #{right}"
         ## ChoiceTypes can't contain VarTypes to be inferred within them, so no need to worry about constraints here.
         if left.connecteds.include?(right)
           ## if left and right are connected, left <= right whenever each individual left choice is <= the corresponding right choice
@@ -152,7 +148,6 @@ module RDL::Type
           end
         end
       elsif left.is_a?(ChoiceType) || right.is_a?(ChoiceType)
-        #puts "HERE 2 TRYING #{left} <= #{right}"
         if left.is_a?(ChoiceType)
           main_ct = left
           lct = true
@@ -170,15 +165,6 @@ module RDL::Type
             new_dcs.each { |t1, t2|
               ub_var_choices[t1][num] = RDL::Type::UnionType.new(ub_var_choices[t1][num], t2).canonical if t1.is_a?(VarType)
               lb_var_choices[t2][num] = RDL::Type::UnionType.new(lb_var_choices[t2][num], t1).canonical if t2.is_a?(VarType)
-=begin              
-              if t1.is_a?(VarType)
-                raise "Not currently supported, for var types: #{t1} and #{t2}." if t2.is_a?(VarType)
-                ub_var_choices[t1][num] = RDL::Type::UnionType.new(ub_var_choices[t1][num], t2).canonical       
-              else
-                raise "Expected VarType, got #{t2}" unless t2.is_a?(VarType)
-                lb_var_choices[t2][num] = RDL::Type::UnionType.new(lb_var_choices[t2][num], t1).canonical
-              end
-=end
             }
           else
             to_remove << num
@@ -216,40 +202,6 @@ module RDL::Type
         return true
       end
 
-
-=begin          
-          to_remove << num unless Type.leq(t, right, inst, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)#t <= right
-          ## TODO: actually use deferred_constraints or new_cons here
-        }
-        if to_remove.size == left.choices.size
-          ## none of the choices match, so left is not a subtype of right
-          return false
-        else
-          to_remove.each { |num| left.remove!(num) }
-          return true
-        end
-        #to_remove.each { |num| left.remove!(num) }
-        #return !left.choices.empty?
-=end
-
-=begin
-      elsif right.is_a?(ChoiceType)
-        puts "HERE 3 TRYING #{left} <= #{right}"
-        # VarTypes would have been handled by now
-        to_remove = []
-        right.choices.each { |num, t|
-          to_remove << num unless Type.leq(left, t, inst, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)#left <= t
-        }
-        if to_remove.size == right.choices.size
-          return false
-        else
-          to_remove.each { |num| right.remove!(num) }
-          return true
-        end
-        #to_remove.each { |num| right.remove!(num) }
-        #return !right.choices.empty?
-      end
-=end
       # union
       return left.types.all? { |t| leq(t, right, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) } if left.is_a?(UnionType)
       if right.instance_of?(UnionType)
@@ -324,7 +276,6 @@ module RDL::Type
         right.methods.each_pair { |m, t|
           return false unless lklass.method_defined?(m) || RDL::Typecheck.lookup({}, klass_lookup, m, nil, make_unknown: false)#RDL::Globals.info.get(lklass, m, :type) ## Added the second condition because Rails lazily defines some methods.
           types, _ = RDL::Typecheck.lookup({}, lklass.to_s, m, nil, make_unknown: false)#RDL::Globals.info.get(lklass, m, :type)
-
           if RDL::Config.instance.use_comp_types
             types = RDL::Typecheck.filter_comp_types(types, true)
           else
@@ -352,15 +303,6 @@ module RDL::Type
                   new_dcs.each { |t1, t2|
                     ub_var_choices[t1][choice_num] = RDL::Type::UnionType.new(ub_var_choices[t1][choice_num], t2).canonical if t1.is_a?(VarType)
                     lb_var_choices[t2][choice_num] = RDL::Type::UnionType.new(lb_var_choices[t2][choice_num], t1).canonical if t2.is_a?(VarType)
-=begin                      
-                    if t1.is_a?(VarType)
-                      raise "Not currently supported, for var types: #{t1} and #{t2}." if t2.is_a?(VarType) ## This shouldn't happen, because there shouldn't be intersection types with VarTypes in them.
-                        ub_var_choices[t1][choice_num] = RDL::Type::UnionType.new(ub_var_choices[t1][choice_num], t2).canonical
-                    else
-                      raise "Expected VarType, got #{t2}" unless t2.is_a?(VarType)
-                      lb_var_choices[t2][choice_num] = RDL::Type::UnionType.new(lb_var_choices[t2][choice_num], t1).canonical                      
-                    end
-=end
                   }
                 else
                   new_dcs.each { |t1, t2| RDL::Type::Type.leq(t1, t2, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) }
@@ -398,63 +340,6 @@ module RDL::Type
       end
               
 
-=begin            
-            (raise errs[0] if !errs.empty? ; return false ) unless types.any? { |tlm| ## raising err[0] if it exist, but really could be any error we raise
-              blk_typ = tlm.block.is_a?(RDL::Type::MethodType) ? tlm.block.args + [tlm.block.ret] : [tlm.block]
-              if (tlm.args + blk_typ + [tlm.ret]).any? { |t| t.is_a? ComputedType }
-                ## In this case, need to actually evaluate the ComputedType.
-                ## Going to do this using the receiver `left` and the args from `t`
-                ## If subtyping holds for this, then we know `left` does indeed have a method of the relevant type.
-                tlm = RDL::Typecheck.compute_types(tlm, lklass, left, t.args)
-              end
-              begin
-                attempted_cons = {}
-                ret = leq(tlm.instantiate(base_inst), t, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: attempted_cons, removed_choices: removed_choices) p
-                # inst above is nil because the method types inside the class and
-                # inside the structural type have an implicit quantifier on them. So
-                # even if we're allowed to instantiate type variables we can't do that
-                # inside those types
-                new_cons.merge(attempted_cons) { |key, orig_val, new_val| orig_val | new_val }
-                ret
-              rescue RDL::Typecheck::StaticTypeError => err ## could be raised when propagating constraints
-                RDL::Typecheck.undo_constraints(attempted_cons)
-                errs << err
-                false
-              end
-            }
-          end          
-        }
-        return true
-      end
-
-      
-      if (left.is_a?(SingletonType) && left.val.class == Class) && right.is_a?(StructuralType)
-        lklass = left.val
-        right.methods.each_pair { |m, t|
-          return false unless lklass.methods.include?(m) || RDL::Typecheck.lookup({}, "[s]"+lklass.to_s, m, nil, make_unknown: false)
-          types, _ = RDL::Typecheck.lookup({}, "[s]"+lklass.to_s, m, nil, make_unknown: false)
-          if types
-            errs = []
-            return false unless types.any? { |tlm|
-              blk_typ = tlm.block.is_a?(RDL::Type::MethodType) ? tlm.block.args + [tlm.block.ret] : [tlm.block]
-
-              tlm = RDL::Typecheck.compute_types(tlm, lklass, left, t.args) if (tlm.args + blk_typ + [tlm.ret]).any? { |t| t.is_a? ComputedType }
-                begin
-                  attempted_cons = {}
-                  ret = leq(tlm, t, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: attempted_cons, removed_choices: removed_choices)
-                  new_cons.merge(attempted_cons) { |key, orig_val, new_val| orig_val | new_val }
-                  ret
-                rescue RDL::Typecheck::StaticTypeError => err ## could be raised when propagating constraints
-                  RDL::Typecheck.undo_constraints(attempted_cons)
-                  errs << err
-                  false                  
-                end
-            }
-          end
-        }
-        return true
-      end
-=end
       # singleton
       return left.val == right.val if left.is_a?(SingletonType) && right.is_a?(SingletonType)
       return true if left.is_a?(SingletonType) && left.val.nil? # right cannot be a SingletonType due to above conditional
@@ -523,15 +408,6 @@ module RDL::Type
                   new_dcs.each { |t1, t2|
                     ub_var_choices[t1][choice_num] = RDL::Type::UnionType.new(ub_var_choices[t1][choice_num], t2).canonical if t1.is_a?(VarType)
                     lb_var_choices[t2][choice_num] = RDL::Type::UnionType.new(lb_var_choices[t2][choice_num], t1).canonical if t2.is_a?(VarType)         
-=begin
-                    if t1.is_a?(VarType)
-                      raise "Not currently supported, for var types: #{t1} and #{t2}." if t2.is_a?(VarType) ## This shouldn't happen, because there shouldn't be intersection types with VarTypes in them.
-                        ub_var_choices[t1][choice_num] = RDL::Type::UnionType.new(ub_var_choices[t1][choice_num], t2).canonical
-                    else
-                      raise "Expected VarType, got #{t2}" unless t2.is_a?(VarType)
-                      lb_var_choices[t2][choice_num] = RDL::Type::UnionType.new(lb_var_choices[t2][choice_num], t1).canonical                      
-                    end
-=end
                   }
                 else
                   new_dcs.each { |t1, t2| RDL::Type::Type.leq(t1, t2, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) }
@@ -568,40 +444,24 @@ module RDL::Type
       end
 
 
-=begin      
-            errs = []
-            return false unless types.any? { |tlm|
-              blk_typ = tlm.block.is_a?(RDL::Type::MethodType) ? tlm.block.args + [tlm.block.ret] : [tlm.block]
-              tlm = RDL::Typecheck.compute_types(tlm, klass, left, t.args) if (tlm.args + blk_typ + [tlm.ret]).any? { |t| t.is_a? ComputedType }
-              begin
-                attempted_cons = {}
-                ret = leq(tlm.instantiate(base_inst.merge({ self: left})), t, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: attempted_cons, removed_choices: removed_choices)
-                new_cons.merge(attempted_cons) { |key, orig_val, new_val| orig_val | new_val }
-                ret
-              rescue RDL::Typecheck::StaticTypeError =>  err
-                RDL::Typecheck.undo_constraints(attempted_cons)
-                errs << err
-                false                  
-              end
-            }
-          end
-        }
-        return true
-      end
-=end
-
       # Note we do not allow raw subtyping leq(GenericType, NominalType, ...)
 
-      # method
+      # method      
       if left.is_a?(MethodType) && right.is_a?(MethodType)
         inst = {} if not inst
         if left.args.last.is_a?(VarargType)
-          return false unless right.args.size >= left.args.size
-          new_args = right.args[(left.args.size - 1) ..-1]          
-          if left.args.size == 1
-            left = RDL::Type::MethodType.new(new_args, left.block, left.ret)
+          #return false unless right.args.size >= left.args.size
+          if right.args.size >= left.args.size
+            new_args = right.args[(left.args.size - 1) ..-1]          
+            if left.args.size == 1
+              left = RDL::Type::MethodType.new(new_args, left.block, left.ret)
+            else
+              left = RDL::Type::MethodType.new(left.args[0..(left.args.size-2)]+new_args, left.block, left.ret)
+            end
+          elsif right.args.size == left.args.size
+            left = RDL::Type::MethodType.new(left.args[0..left.args.size-2] + [left.args[-1].type], left.block, left.ret)
           else
-            left = RDL::Type::MethodType.new(left.args[0..(left.args.size-2)]+new_args, left.block, left.ret)
+            left = RDL::Type::MethodType.new(left.args[0..left.args.size-2], left.block, left.ret)
           end
         end
 
@@ -626,7 +486,16 @@ module RDL::Type
 
       end
       return true if left.is_a?(MethodType) && right.is_a?(NominalType) && right.name == 'Proc'
-      return true if left.is_a?(MethodType) && right.is_a?(StructuralType) && (right.methods.size == 1) && right.methods.has_key?(:to_proc)
+
+      if left.is_a?(MethodType) && right.is_a?(StructuralType)
+        return true if (right.methods.size == 1) && right.methods.has_key?(:to_proc)
+        right.methods.each_pair { |m, t|
+          if m == :call
+            return false unless left.args.size == t.args.size
+          end
+        }
+        return true
+      end
       
       # structural
       if left.is_a?(StructuralType) && right.is_a?(StructuralType)

@@ -9,7 +9,12 @@ class RDL::Heuristic
   end
 
   def self.matching_classes(meth_names)
+    meth_names.delete(:initialize)
+    meth_names.delete(:new)
     matching_classes = ObjectSpace.each_object(Class).select { |c|
+      class_methods = c.instance_methods | RDL::Globals.info.get_methods_from_class(c.to_s)
+      (meth_names - class_methods).empty? } ## will only be empty if meth_names is a subset of c.instance_methods
+    matching_classes += ObjectSpace.each_object(Module).select { |c|
       class_methods = c.instance_methods | RDL::Globals.info.get_methods_from_class(c.to_s)
       (meth_names - class_methods).empty? } ## will only be empty if meth_names is a subset of c.instance_methods
   end
@@ -26,8 +31,7 @@ class RDL::Heuristic
     matching_classes.reject! { |c| c.to_s.start_with?("#<Class") || /[^:]*::[a-z]/.match?(c.to_s) || c.to_s.include?("ARGF") } ## weird few constants where :: is followed by a lowecase letter... it's not a class and I can't find anything written about it.
     ## TODO: special handling for arrays/hashes/generics?
     ## TODO: special handling for Rails models? see Bree's `active_record_match?` method
-    #raise "No matching classes found for structural types #{struct_types}." if matching_classes.empty?
-    raise "No matching classes found for structural types with methods #{meth_names}." if matching_classes.empty?
+    #raise "No matching classes found for structural types with methods #{meth_names}." if matching_classes.empty?
     return if matching_classes.size > 10 ## in this case, just keep the struct types
     nom_sing_types = matching_classes.map { |c| if c.singleton_class? then RDL::Type::SingletonType.new(RDL::Util.singleton_class_to_class(c)) else RDL::Type::NominalType.new(c) end }
     union = RDL::Type::UnionType.new(*nom_sing_types).canonical

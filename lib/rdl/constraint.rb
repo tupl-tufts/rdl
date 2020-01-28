@@ -177,7 +177,7 @@ module RDL::Typecheck
     ## BLOCK SOLUTION
     if tmeth.block && !tmeth.block.ubounds.empty?
       non_vartype_ubounds = tmeth.block.ubounds.map { |t, ast| t.canonical }.reject { |t| t.is_a?(RDL::Type::VarType) }
-      non_vartype_ubounds.reject! { |t| t.is_a?(RDL::Type::StructuralType) && (t.methods.size == 1) && t.methods.has_key?(:to_proc) }
+      non_vartype_ubounds.reject! { |t| t.is_a?(RDL::Type::StructuralType) }#&& (t.methods.size == 1) && (t.methods.has_key?(:to_proc) || t.methods.has_key?(:call)) }
       if non_vartype_ubounds.size == 0        
         block_sol = tmeth.block
       elsif non_vartype_ubounds.size > 1
@@ -215,7 +215,6 @@ module RDL::Typecheck
       typ_sols = {}
       puts "\n\nRunning solution extraction..."
       RDL::Globals.constrained_types.each { |klass, name|
-        puts "HERE WORKING ON #{klass}##{name}"
         RDL::Type::VarType.no_print_XXX!
         typ = RDL::Globals.info.get(klass, name, :type)
         if typ.is_a?(Array)

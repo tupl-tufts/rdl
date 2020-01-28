@@ -755,7 +755,7 @@ module RDL::Typecheck
             envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], rhs.pop, left)
           }
           splat = lhs[splat_ind]
-          envi, _ = tc_vasgn(scope, envi, splat.children[0].type, splat.children[0].children[0], RDL::Type::TupleType.new(*rhs), splat)
+          envi, _ = tc_vasgn(scope, envi, splat.children[0].type, splat.children[0].children[0], RDL::Type::TupleType.new(*rhs), splat) if splat.children.any?
           [envi, tright, effi]
         else
           error :masgn_num, [rhs.length, lhs.length], e unless lhs.length == rhs.length
@@ -786,16 +786,35 @@ module RDL::Typecheck
         [env, tright, effi]
       elsif tright.is_a?(RDL::Type::VarType)
         splat_ind = lhs.index { |lhs_elt| lhs_elt.type == :splat }
-        raise "not yet implemented" if splat_ind
-        new_tuple = []
-        count = 0
-        lhs.length.times { new_tuple << RDL::Type::VarType.new(cls: @cur_meth[0], meth: @cur_meth[1], category: :tuple_element, name: "tuple_element_#{count}") }
-        lhs.zip(new_tuple).each { |left, right|
-          envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], right, left)
-        }
-        tuple_type = RDL::Type::TupleType.new(*new_tuple)
-        #RDL::Type::Type.leq(tright, tuple_type, ast: e) # don't think this is necessary
-        [envi, tright, effi]
+        #raise "not yet implemented" if splat_ind
+        if splat_ind
+          count = 0
+          if splat_ind > 0
+            lhs[0..splat_ind-1].each { |left|
+              # before splat
+              envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], RDL::Type::VarType.new(cls: @cur_meth[0], meth: @cur_meth[1], category: :tuple_element, name: "tuple_element_#{count}"), left)
+              count += 1
+            }
+          end
+          lhs[splat_ind+1..-1].reverse_each { |left|
+          # after splat
+            envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], RDL::Type::VarType.new(cls: @cur_meth[0], meth: @cur_meth[1], category: :tuple_element, name: "tuple_element_#{count}"), left)
+            count += 1
+          }
+          splat = lhs[splat_ind]
+          envi, _ = tc_vasgn(scope, envi, splat.children[0].type, splat.children[0].children[0], RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::VarType.new(cls: @cur_meth[0], meth: @cur_meth[1], category: :tuple_element, name: "array_param_#{count}")), splat) if splat.children.any? ## could be empty splat
+          [envi, tright, effi]
+        else
+          new_tuple = []
+          count = 0
+          lhs.length.times { new_tuple << RDL::Type::VarType.new(cls: @cur_meth[0], meth: @cur_meth[1], category: :tuple_element, name: "tuple_element_#{count}") }
+          lhs.zip(new_tuple).each { |left, right|
+            envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], right, left)
+          }
+          tuple_type = RDL::Type::TupleType.new(*new_tuple)
+          #RDL::Type::Type.leq(tright, tuple_type, ast: e) # don't think this is necessary
+          [envi, tright, effi]
+        end
       else
         error :masgn_bad_rhs, [tright], e.children[1]
       end
@@ -893,6 +912,8 @@ module RDL::Typecheck
       if e.children[0].nil? && e.children[1] == :ENV
         ## ENV
         c = RDL::Type::GenericType.new(RDL::Globals.types[:hash], RDL::Globals.types[:string], RDL::Globals.types[:string])
+      elsif e.children[0].nil? && e.children[1] == :ARGV
+        c = RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Globals.types[:string])
       else
         c = to_type(find_constant(env, e))
       end
@@ -942,7 +963,7 @@ module RDL::Typecheck
             raise RuntimeError, "impossible to pass block arg and literal block" if scope[:block]
             envi, ti = tc(sscope, envi, ei.children[0])
             # convert using to_proc if necessary
-            if (e.children[1] == :map) || e.children[1] == :sum
+            if (e.children[1] == :map) || e.children[1] == :sum || e.children[1] == :keep_if
               ## block_pass calling map is a weird case:
               ## it takes a symbol representing method being called,
               ## where receiver is Array elements.
@@ -1333,7 +1354,7 @@ RUBY
             effi = effect_union(eff_new, effi)
             if ti.is_a? RDL::Type::TupleType
               tactuals.concat ti.params
-            elsif ti.is_a?(RDL::Type::GenericType) && ti.base == $__rdl_array_type
+            elsif ti.is_a?(RDL::Type::GenericType) && ti.base == RDL::Globals.types[:array]
               tactuals << RDL::Type::VarargType.new(ti.params[0]) # Turn Array<t> into *t
             else
               error :cant_splat, [ti], ei.children[0]
@@ -1618,7 +1639,6 @@ RUBY
   # [+ op_asgn +] is a bool telling us that we are type checking the mutation method for an op_asgn node. used for ast rewriting.
   def self.tc_send(scope, env, trecvs, meth, tactuals, block, e, op_asgn=false)
     scope[:exn] = Env.join(e, scope[:exn], env) if scope.has_key? :exn # assume this call might raise an exception
-
     # convert trecvs to array containing all receiver types
     trecvs = trecvs.canonical
     trecvs = if trecvs.is_a? RDL::Type::UnionType then union = true; trecvs.types else union = false; [trecvs] end
@@ -1674,12 +1694,12 @@ RUBY
   # Returns array of possible return types, or throws exception if there are none
   def self.tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union)
     raise "Type checking not currently supported for method #{meth}." if [:define_method, :module_exec].include?(meth)
-
+=begin
     puts "----------------------"
     puts "Type checking method call to #{meth} for receiver #{trecv} and tactuals of size #{tactuals.size}:"
     tactuals.each { |t| puts t }
     puts "----------------------"
-
+=end
     if (trecv == RDL::Globals.types[:array])
       trecv = RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Globals.types[:bot])
     elsif (trecv == RDL::Globals.types[:hash])
@@ -1928,13 +1948,6 @@ RUBY
           #apply_deferred_constraints(deferred_constraints, e) unless deferred_constraints.empty?
           if tmeth_inst
             begin
-=begin              
-              if (meth == :define_method) && trecv.is_a?(RDL::Type::SingletonType)
-                new_env = env.bind(:self, RDL::Type::NominalType.new(trecv.val), force: true) ## define_method defines a new *instance* method... self in block is nominal, not singleton
-              else
-                new_env = env
-              end
-=end
               effblock = tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
             rescue BlockTypeError => err
               block_mismatch = true
@@ -2188,12 +2201,14 @@ RUBY
         t = t.type
         if actual == tactuals.size
           states << [formal+1, actual, inst, deferred_constraints] # skip over optinal formal
-        elsif RDL::Type::Type.leq(tactuals[actual], t, inst, false, deferred_constraints) #&& (not (tactuals[actual].is_a?(RDL::Type::VarargType)))
+        elsif (not tactuals[actual].is_a?(RDL::Type::VarargType)) && RDL::Type::Type.leq(tactuals[actual], t, inst, false, deferred_constraints) #&& (not (tactuals[actual].is_a?(RDL::Type::VarargType)))
           states << [formal+1, actual+1, inst, deferred_constraints] # match
           #states << [formal+1, actual, inst, deferred_constraints] unless tactuals[actual].is_a?(RDL::Type::VarType) && tformals[formal+1].is_a?(RDL::Type::FiniteHashType)# skip
         ## I added the `unless` guard above because of cases like `redirect_to @list, action: 'something'`.
         ## The clear intention of the programmer is for @list to match a non-FHT formal arg, so don't
         ## want to match it with the subsequent FHT.
+        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(RDL::Type::GenericType.new(RDL::Globals.types[:array], tactuals[actual].type), t, inst, false, deferred_constraints)
+          states << [formal+1, actual+1, inst, deferred_constraints] # match
         else
           states << [formal+1, actual, inst, deferred_constraints] # types don't match; must skip this formal
         end 
@@ -2462,7 +2477,7 @@ RUBY
       when :block
       ## all method types will be given a variable type for blocks anyway, so no need to add a new param here
       when :keyrest
-        raise "Not currently supported"
+        raise "Not currently supported, for method #{meth} of class #{klass}"
       else
         raise "Unexpected parameter type #{param[0]}."
       end
@@ -2534,6 +2549,7 @@ RUBY
   def self.find_constant(env, e)
     # https://cirw.in/blog/constant-lookup.html
     # First look in Module.nesting for a lexically scoped variable
+    const_string = e.loc.expression.source
     raise "Expected @cur_meth." unless @cur_meth
     if (RDL::Util.has_singleton_marker(@cur_meth[0]))
       klass = RDL::Util.to_class(RDL::Util.remove_singleton_marker(@cur_meth[0]))
@@ -2559,68 +2575,9 @@ RUBY
     else
       method_binding = klass.method(meth_name).to_proc.binding
     end
-    const_string = e.loc.expression.source
     return method_binding.send(:eval, const_string)
   end
 end
-=begin
-    if e.children[0] && e.children[0].type == :cbase
-      c = get_leaves(e).inject(Object) { |m, c2| m.const_get(c2) }
-      return c
-    end    
-    if @cur_meth
-      if (RDL::Util.has_singleton_marker(@cur_meth[0]))
-        klass = RDL::Util.to_class(RDL::Util.remove_singleton_marker(@cur_meth[0]))
-        mod_inst = false
-      else
-        klass = RDL::Util.to_class(@cur_meth[0])
-        if klass.instance_of?(Module)
-          mod_inst = true
-        else
-          mod_inst = false
-          klass = klass.send :allocate
-        end
-      end
-      if RDL::Wrap.wrapped?(@cur_meth[0], @cur_meth[1])
-        meth_name = RDL::Wrap.wrapped_name(@cur_meth[0], @cur_meth[1])
-      else
-        meth_name = @cur_meth[1]
-      end
-      if mod_inst ## TODO: Is there a better way to do this? Module method bindings are made at runtime, so not sure.
-        nesting = klass.module_eval('Module.nesting')
-      else
-        method = klass.method(meth_name)
-        nesting = method.to_proc.binding.eval('Module.nesting')
-      end
-      nesting.each do |ic|
-        c = get_leaves(e).inject(ic) {|m, c2| m && m.const_defined?(c2, false) && m.const_get(c2, false)}
-        # My first time using ruby's stupid return-from-block correctly
-        return c if c
-      end
-    end
-
-    # Check the ancestors
-    if e.children[0].nil?
-      case env[:self]
-      when RDL::Type::SingletonType
-        ic = env[:self].val
-      when RDL::Type::NominalType
-        ic = env[:self].klass
-      else
-        raise Exception, "unsupported env[self]=#{env[:self]}"
-      end
-      c = get_leaves(e).inject(ic) {|m, c2| m.const_get(c2)}
-    elsif e.children[0].type == :lvar
-      raise "const lvar not implemented yet" # TODO!
-    elsif e.children[0].type == :const
-      child = find_constant(env, e.children[0])
-      c = get_leaves(e).inject(child) {|m, c2| m.const_get(c2)}
-    else
-      raise "const other not implemented yet"
-    end
-  end
-end
-=end
 
 # Use parser's Diagnostic to output RDL typechecker error messages
 class Diagnostic < Parser::Diagnostic
