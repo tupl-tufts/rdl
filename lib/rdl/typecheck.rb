@@ -272,6 +272,45 @@ module RDL::Typecheck
     RDL::Globals.info.set(klass, meth, :typechecked, true)
   end
 
+  def self.syn_effect_leq(e1, e2)
+    # TODO: unhandled right now: Singleton classes and self
+    case e1.size
+    when 0
+      case e2.size
+      when 0
+        true
+      when 1, 2
+        false
+      else
+        raise RuntimeError, "unexpected effect format"
+      end
+    when 1
+      case e2.size
+      when 0
+        true
+      when 1
+        e1.first == e2.first
+      when 2
+        false
+      else
+        raise RuntimeError, "unexpected effect format"
+      end
+    when 2
+      case e2.size
+      when 0
+        true
+      when 1
+        true
+      when 2
+        e1 == e2
+      else
+        raise RuntimeError, "unexpected effect format"
+      end
+    else
+      raise RuntimeError, "unexpected effect format"
+    end
+  end
+
   def self.effect_leq(e1, e2)
     raise "Unexpected effect #{e1} or #{e2}" unless (e1+e2).all? { |e| [:+, :-, :~].include?(e) }
     p1, t1 = e1
