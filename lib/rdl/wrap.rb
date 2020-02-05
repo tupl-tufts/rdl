@@ -352,8 +352,6 @@ module RDL::Annotate
 #        end
       RDL::Globals.info.add(klass, meth, :type, type)
       RDL::Globals.info.add(klass, meth, :effect, effect)
-      read.each { |r| RDL::Globals.info.add(klass, meth, :read, r) }
-      write.each { |w| RDL::Globals.info.add(klass, meth, :write, w) }
       unless RDL::Globals.info.set(klass, meth, :typecheck, typecheck)
         raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
       end
