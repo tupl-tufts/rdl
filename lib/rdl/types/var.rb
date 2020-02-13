@@ -61,7 +61,7 @@ module RDL::Type
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:upper, typ, ast]] : [[:upper, typ, ast]]
       end
       @lbounds.each { |lower_t, a|
-        if lower_t.is_a?(VarType)
+        if lower_t.is_a?(VarType) && lower_t.to_infer
           lower_t.add_and_propagate_upper_bound(typ, ast, new_cons) unless lower_t.ubounds.any? { |t, _| t == typ }
         else
           if typ.is_a?(VarType) && !typ.lbounds.any? { |t, _| t == lower_t }
@@ -79,7 +79,6 @@ module RDL::Type
 
     ## Similar to above.
     def add_and_propagate_lower_bound(typ, ast, new_cons = {})
-      raise if typ.to_s == "v"
       return if self.equal?(typ)
       if !@lbounds.any? { |t, a| t == typ }
         @lbounds << [typ, ast]
@@ -102,7 +101,7 @@ module RDL::Type
     end
 
     def add_ubound(typ, ast, new_cons = {}, propagate: false)
-      raise "About to add upper bound #{self} <= #{typ}" if typ.is_a?(VarType) && !typ.to_infer
+      #raise "About to add upper bound #{self} <= #{typ}" if typ.is_a?(VarType) && !typ.to_infer
       if propagate
         add_and_propagate_upper_bound(typ, ast, new_cons)
       elsif !@ubounds.any? { |t, a| t == typ }
@@ -112,7 +111,7 @@ module RDL::Type
     end
 
     def add_lbound(typ, ast, new_cons = {}, propagate: false)
-      raise "About to add lower bound #{typ} <= #{self}" if typ.is_a?(VarType) && !typ.to_infer
+      #raise "About to add lower bound #{typ} <= #{self}" if typ.is_a?(VarType) && !typ.to_infer
       if propagate
         add_and_propagate_lower_bound(typ, ast, new_cons)
       elsif !@lbounds.any? { |t, a| t == typ }

@@ -468,7 +468,7 @@ module RDL::Typecheck
           env = env.merge(Env.new(arg.children[0] => targ))
           tpos += 1 unless (targ.optional? || targ.vararg?) && !(index == args.children.size - 1)
         else
-          error :type_arg_kind_mismatch, [kind, 'optional', 'required'], arg, block: (kind == 'block') if (targ.optional? && !kind == 'block') ## block arg type can be optional while actual arg is required
+          error :type_arg_kind_mismatch, [kind, 'optional', 'required'], arg, block: (kind == 'block') if (targ.optional? && !(kind == 'block')) ## block arg type can be optional while actual arg is required
           error :type_arg_kind_mismatch, [kind, 'vararg', 'required'], arg, block: (kind == 'block') if targ.vararg?
           targs[arg.children[0]] = targ
           env = env.merge(Env.new(arg.children[0] => targ))
@@ -1454,11 +1454,10 @@ RUBY
         type = RDL::Globals.info.get(klass, name, :type)
       elsif RDL::Config.instance.assume_dyn_type
         type = RDL::Globals.types[:dyn]
-      elsif RDL::Globals.to_infer.values.any? { |set| set.include?([klass, name]) }
+      elsif RDL::Config.instance.use_unknown_types || RDL::Globals.to_infer.values.any? { |set| set.include?([klass, name]) }
         type = make_unknown_var_type(klass, name, :var)
       else
-        type = make_unknown_var_type(klass, name, :var)
-        #error :untyped_var, [kind_text, name, klass], e
+        error :untyped_var, [kind_text, name, klass], e
       end
       [env, type.canonical]
     else
@@ -1494,11 +1493,10 @@ RUBY
         tleft = RDL::Globals.info.get(klass, name, :type)
       elsif RDL::Config.instance.assume_dyn_type
         tleft = RDL::Globals.types[:dyn]
-      elsif RDL::Globals.to_infer.values.any? { |set| set.include?([klass, name]) }
+      elsif RDL::Config.instance.use_unknown_types || RDL::Globals.to_infer.values.any? { |set| set.include?([klass, name]) }
         tleft = make_unknown_var_type(klass, name, :var)
       else
-        tleft = make_unknown_var_type(klass, name, :var)
-        #error :untyped_var, [kind_text, name, klass], e
+        error :untyped_var, [kind_text, name, klass], e
       end
       error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless RDL::Type::Type.leq(tright, tleft, inst={}, true, ast: e)
       tright.instantiate(inst)
@@ -1712,7 +1710,7 @@ RUBY
     case trecv
     when RDL::Type::SingletonType
       if trecv.val.is_a? Class or trecv.val.is_a? Module
-        if (meth == :new) && trecv.val.method(:new).owner == Class then ## second condition makes sure :new isn't overriden
+        if (meth == :new) && trecv.val.methods.include?(:new) && trecv.val.method(:new).owner == Class then ## last condition makes sure :new isn't overriden
           meth_lookup = :initialize
           init = true
           trecv_lookup = trecv.val.to_s
@@ -2370,7 +2368,7 @@ RUBY
   # if included, those methods are added to instance_methods
   # if extended, those methods are added to singleton_methods
   # (except Kernel is special...)
-  def self.lookup(scope, klass, name, e, make_unknown: true)
+  def self.lookup(scope, klass, name, e, make_unknown: RDL::Config.instance.use_unknown_types)
     if scope[:context_types]
       # return array of all matching types from context_types, if any
       ts = []
@@ -2387,7 +2385,7 @@ RUBY
     return [t, e] if t # simplest case, no need to walk inheritance hierarchy
     return [[make_unknown_method_type(klass, name)]] if RDL::Globals.to_infer.values.any? { |set| set.include?([klass, name]) }
     klass_name = RDL::Util.has_singleton_marker(klass) ? RDL::Util.remove_singleton_marker(klass) : klass
-    return [[make_unknown_method_type(klass, name)]] if (name == :initialize) && (RDL::Util.to_class(klass_name).instance_method(:initialize).owner == RDL::Util.to_class(klass_name)) # don't want to walk up hierarchy in initialize case where it is specifically defined for this class
+    return [[make_unknown_method_type(klass, name)]] if make_unknown && (name == :initialize) && (RDL::Util.to_class(klass_name).instance_method(:initialize).owner == RDL::Util.to_class(klass_name)) # don't want to walk up hierarchy in initialize case where it is specifically defined for this class
     the_klass = RDL::Util.to_class(klass)
     is_singleton = RDL::Util.has_singleton_marker(klass)
     included = RDL::Util.to_class(klass.gsub("[s]", "")).included_modules

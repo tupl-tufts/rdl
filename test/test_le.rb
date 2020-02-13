@@ -303,7 +303,6 @@ class TestLe < Minitest::Test
   def test_leq_inst
     RDL.type_params :Array, [:t], :all?
     RDL.type_params :Hash, [:k, :v], :all?
-
     # when return of do_leq is false, ignore resulting inst, since that's very implementation dependent
     assert_equal [true, {t: @ta}], do_leq(tt("t"), @ta, true)
     assert_equal false, do_leq(tt("t"), @ta, false)[0]
@@ -324,7 +323,6 @@ class TestLe < Minitest::Test
     assert_equal [true, {t: RDL::Globals.types[:integer], u: RDL::Globals.types[:string]}], do_leq(tt("Hash<t,u>"), tt("Hash<Integer,String>"), true)
     assert_equal [true, {t: RDL::Globals.types[:integer]}], do_leq(tt("Hash<t,t>"), tt("Hash<Integer,Integer>"), true)
     assert_equal false, do_leq(tt("Hash<t,t>"), tt("Hash<Integer,String>"), true)[0]
-    assert_equal false, do_leq(tt("[m:()->t]"), tt("[m:()->Integer]"), true)[0] # no inst inside structural types
   end
 
   def do_leq(tleft, tright, ileft)

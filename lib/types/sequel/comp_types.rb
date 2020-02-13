@@ -175,7 +175,7 @@ class Table
         qual_table_schema = get_schema(RDL::Globals.seq_db_schema[qual_table].elts)
         raise RDL::Typecheck::StaticTypeError, "No column #{qual_column} in table #{qual_table}." if qual_table_schema[qual_column].nil?
       else
-        raise "Unexpected column #{rec_join_column} to join on"
+        raise "Unexpected column #{rec_join_column} of class #{rec_join_column.class} to join on"
       end
       case targ1
       when RDL::Type::SingletonType

@@ -828,6 +828,7 @@ module RDL
 
   def self.do_infer(sym)
     return unless RDL::Globals.to_infer[sym]
+    RDL::Config.instance.use_unknown_types = true
     $stn = 0
     num_casts = 0
     time = Time.now
@@ -1096,11 +1097,11 @@ class Module
   }
 end
 
-#class Class
-#  def ===(x)
-#    if x.method(:is_a?).owner == SimpleDelegator then super(x.__getobj__) else super(x) end
-#  end
-#end
+class Class
+  def ===(x)
+    if x.method(:is_a?).owner == SimpleDelegator then super(x.__getobj__) else super(x) end
+  end
+end
 
 class SimpleDelegator
   ## pass methods through to wrapped object

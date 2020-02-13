@@ -8,7 +8,7 @@ class RDL::Config
   attr_reader :report # writer is custom defined
   attr_accessor :weak_update_promote, :widen_bound, :promote_widen, :use_comp_types, :check_comp_types
   attr_accessor :type_defaults, :infer_defaults, :pre_defaults, :post_defaults, :rerun_comp_types, :assume_dyn_type
-  attr_accessor :practical_infer, :use_precise_string, :number_mode
+  attr_accessor :practical_infer, :use_precise_string, :number_mode, :use_unknown_types
 
   def initialize
     @nowrap = Set.new # Set of symbols
@@ -31,6 +31,7 @@ class RDL::Config
     @practical_infer = true
     @use_precise_string = false
     @number_mode = false
+    @use_unknown_types = false
   end
 
   def report=(val)

@@ -531,7 +531,7 @@ class TestTypecheck < Minitest::Test
     assert do_tc("@foo", env: @env) <= RDL::Globals.types[:integer]
     assert do_tc("@@foo", env: @env) <= RDL::Globals.types[:integer]
     assert do_tc("$test_ivar_ivasgn_global") <= RDL::Globals.types[:integer]
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@bar", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { x = do_tc("@bar", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@bar", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@@bar", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("$_test_ivar_ivasgn_global_2") }
@@ -793,9 +793,9 @@ class TestTypecheck < Minitest::Test
       type :_send_union1, "(Integer) -> Float"
       type :_send_union1, "(String) -> Rational"
     }
-    assert do_tc("(if _any_object then Integer.new else String.new end) * 2", env: @env) <= RDL::Type::UnionType.new(@tfs, RDL::Globals.types[:integer])
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(if _any_object then Object.new else Integer.new end) + 2", env: @env) }
-    assert do_tc("if _any_object then x = Integer.new else x = String.new end; _send_union1(x)", env: @env) <= tt("Float or Rational")
+    assert do_tc("(if _any_object then 6 else String.new end) * 2", env: @env) <= RDL::Type::UnionType.new(@tfs, RDL::Globals.types[:integer])
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(if _any_object then Object.new else 5 end) + 2", env: @env) }
+    assert do_tc("if _any_object then x = 5 else x = String.new end; _send_union1(x)", env: @env) <= tt("Float or Rational")
   end
 
   def test_send_splat
@@ -953,7 +953,7 @@ class TestTypecheck < Minitest::Test
   # end
 
   def test_new
-    assert do_tc("B.new", env: @env) <= RDL::Type::NominalType.new(TestTypecheck::B)
+    assert do_tc("TestTypecheck::B.new", env: @env) <= RDL::Type::NominalType.new(TestTypecheck::B)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("B.new(3)", env: @env) }
   end
 
@@ -1068,7 +1068,7 @@ class TestTypecheck < Minitest::Test
 
   def test_for
     assert do_tc("for i in 1..5 do end; i") <= RDL::Globals.types[:integer]
-    assert do_tc("for i in [1,2,3,4,5] do end; i") <= tt("1 or 2 or 3 or 4 or 5")
+    assert do_tc("for i in [1,2,3,4,5] do end; i") <= RDL::Globals.types[:integer]
     ## TODO: figure out why above fails to terminate
     assert do_tc("for i in 1..5 do break end", env: @env) <= tt("Range<Integer>")
     assert do_tc("for i in 1..5 do next end", env: @env) <= tt("Range<Integer>")
@@ -1212,12 +1212,12 @@ class TestTypecheck < Minitest::Test
     RDL.type :Array, :initialize, '() -> self', wrap: false
     RDL.type :Array, :initialize, '(Integer) -> self', wrap: false
     RDL.type :Array, :initialize, '(Integer, t) -> self<t>', wrap: false
-    assert_raises(RDL::Typecheck::StaticTypeError) {
+    assert (
       self.class.class_eval {
         type "(Integer, Integer) -> Array<Integer>", typecheck: :now
         def def_inst_fail(x, y) a = Array.new(x,y); a; end
       }
-    }
+    )
     assert (
       self.class.class_eval {
         type "(Integer, Integer) -> Array<Integer>", typecheck: :now

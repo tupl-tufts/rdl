@@ -58,14 +58,20 @@ RDL.type Hash, 'self.output_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Sy
 
 
 def Hash.to_type(t)
-  case t
-  when RDL::Type::Type
+  if t.is_a?(RDL::Type::Type)
     t
-  when Array
+  elsif t.is_a? Array
     RDL::Type::TupleType.new(*(t.map { |i| to_type(i) }))
-  else
-    ## symbols, ints, nil, ...
+  elsif t.is_a? Numeric
+    if RDL::Config.instance.number_mode
+      RDL::Type::NominalType.new(Integer)
+    else
+      RDL::Type::SingletonType.new(t)
+    end
+  elsif t.is_a?(Symbol) || t.is_a?(TrueClass) || t.is_a?(FalseClass) || t.is_a?(Module)
     RDL::Type::SingletonType.new(t)
+  else
+    RDL::Type::NominalType.new(t.class)
   end
 end
 RDL.type Hash, 'self.to_type', "(%any) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
@@ -261,6 +267,7 @@ RDL.type :Hash, :fetch, '(``any_or_k(trec)``) -> ``output_type(trec, targs, :fet
 RDL.type :Hash, :fetch, '(``any_or_k(trec)``, ``targs[1] ? targs[1] : RDL::Globals.types[:top]``) -> ``RDL::Type::UnionType.new(targs[1] ? targs[1] : RDL::Globals.types[:top], output_type(trec, targs, :fetch, :promoted_val, "v", nil_default: true))``'
 RDL.type :Hash, :fetch, '(``any_or_k(trec)``) { (``any_or_k(trec)``) -> u } -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("#T u"), output_type(trec, targs, :fetch, :promoted_val, "v", nil_default: true))``'
 RDL.type :Hash, :fetch, '(``any_or_k(trec)``) { () -> u } -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("#T u"), output_type(trec, targs, :fetch, :promoted_val, "v", nil_default: true))``'
+RDL.type :Hash, :first, '() -> ``output_type(trec, targs, :first, :default_or_promoted_val, "v", nil_default: true)``', effect: [:+, :+]
 RDL.type :Hash, :member?, '(%any) -> ``output_type(trec, targs, :member?, "%bool")``'
 RDL.type :Hash, :has_key?, '(%any) -> ``output_type(trec, targs, :has_key?, "%bool")``', effect: [:+, :+]
 RDL.type :Hash, :key?, '(%any) -> ``output_type(trec, targs, :key?, "%bool")``'
@@ -298,7 +305,7 @@ def Hash.merge_input(trec, targs, mutate=false)
   case targs[0]
   when RDL::Type::FiniteHashType
     return targs[0]
-  else #when RDL::Type::GenericType
+  when RDL::Type::GenericType, RDL::Type::VarType
     if mutate
       raise "Unable to promote #{trec}." if trec.is_a?(RDL::Type::FiniteHashType) && !trec.promote!
       return trec.canonical
@@ -310,8 +317,8 @@ def Hash.merge_input(trec, targs, mutate=false)
         return targs[0]
       end
     end
-  #else
-   # RDL::Globals.types[:hash]
+  else
+    RDL::Globals.types[:hash]
   end
 end
 RDL.type Hash, 'self.merge_input', "(RDL::Type::Type, Array<RDL::Type::Type>, ?%bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]

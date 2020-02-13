@@ -74,9 +74,7 @@ module RDL::Type
       right = right.type if right.is_a? NonNullType
       left = left.canonical
       right = right.canonical
-
       return true if left.equal?(right)
-
 
       # top and bottom
       return true if left.is_a? BotType
