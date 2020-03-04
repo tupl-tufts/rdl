@@ -218,6 +218,8 @@ class TestTypecheck < Minitest::Test
   # returns the type of the expression
   def do_tc(expr, scope: Hash.new, env: RDL::Typecheck::Env.new)
     ast = Parser::CurrentRuby.parse expr
+    scope[:klass] ||= "TestTypecheck"
+    scope[:meth] ||= :do_tc
     _, t = RDL::Typecheck.tc scope, env, ast
     return t
   end

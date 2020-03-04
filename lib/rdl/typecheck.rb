@@ -221,7 +221,6 @@ module RDL::Typecheck
     puts "*************** Infering method #{meth} from class #{klass} ***************"
     RDL::Config.instance.use_comp_types = true
     RDL::Config.instance.number_mode = true
-    @cur_meth = [klass, meth]
     @var_cache = {}
     ast = get_ast(klass, meth)
     types = RDL::Globals.info.get(klass, meth, :type)
@@ -267,7 +266,7 @@ module RDL::Typecheck
 
     _, targs = args_hash({}, Env.new(inst), meth_type, args, ast, 'method')
     targs[:self] = self_type
-    scope = { task: :infer, tret: meth_type.ret, tblock: meth_type.block, captured: Hash.new, context_types: context_types }
+    scope = { task: :infer, klass: klass, meth: meth, tret: meth_type.ret, tblock: meth_type.block, captured: Hash.new, context_types: context_types }
 
     begin
       old_captured = scope[:captured].dup
@@ -296,7 +295,6 @@ module RDL::Typecheck
   end
 
   def self.typecheck(klass, meth, ast=nil, types = nil, effects = nil)
-    @cur_meth = [klass, meth]
     ast = get_ast(klass, meth) unless ast
     types = RDL::Globals.info.get(klass, meth, :type) unless types
     effects = RDL::Globals.info.get(klass, meth, :effect) unless effects
@@ -333,7 +331,7 @@ module RDL::Typecheck
       type = type.instantiate inst
       _, targs = args_hash({}, Env.new(:self => self_type), type, args, ast, 'method')
       targs[:self] = self_type
-      scope = { task: :check, tret: type.ret, tblock: type.block, captured: Hash.new, context_types: context_types, eff: effect }
+      scope = { task: :check, klass: klass, meth: meth, tret: type.ret, tblock: type.block, captured: Hash.new, context_types: context_types, eff: effect }
       begin
         old_captured = scope[:captured].dup
         if body.nil?
@@ -724,7 +722,7 @@ module RDL::Typecheck
       if e.type == :lvar then eff = [:+, :+] else eff = [:-, :+] end
       tc_var(scope, env, e.type, e.children[0], e) + [eff]
     when :lvasgn, :ivasgn, :cvasgn, :gvasgn
-      if e.type == :lvasgn || @cur_meth[1] == :initialize then eff = [:+, :+] else eff = [:-, :+] end
+      if e.type == :lvasgn || scope[:meth] == :initialize then eff = [:+, :+] else eff = [:-, :+] end
       x = e.children[0]
       # if local var, lhs is bound to nil before assignment is executed! only matters in type checking for locals
       env = env.bind(x, RDL::Globals.types[:nil]) if ((e.type == :lvasgn) && (not (env.has_key? x)))
@@ -734,7 +732,7 @@ module RDL::Typecheck
       # (masgn (mlhs (Xvasgn var-name) ... (Xvasgn var-name)) rhs)
       effi = [:+, :+]
       e.children[0].children.each { |asgn|
-        effi = effect_union(effi, [:-, :+]) if asgn.type != :lvasgn && @cur_meth != :initialize
+        effi = effect_union(effi, [:-, :+]) if asgn.type != :lvasgn && scope[:meth] != :initialize
         next unless asgn.type == :lvasgn
         x = e.children[0]
         env = env.bind(x, RDL::Globals.types[:nil]) if (not (env.has_key? x)) # see lvasgn
@@ -798,22 +796,22 @@ module RDL::Typecheck
           if splat_ind > 0
             lhs[0..splat_ind-1].each { |left|
               # before splat
-              envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], RDL::Type::VarType.new(cls: @cur_meth[0], meth: @cur_meth[1], category: :tuple_element, name: "tuple_element_#{count}"), left)
+              envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], RDL::Type::VarType.new(cls: scope[:klass], meth: scope[:meth], category: :tuple_element, name: "tuple_element_#{count}"), left)
               count += 1
             }
           end
           lhs[splat_ind+1..-1].reverse_each { |left|
           # after splat
-            envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], RDL::Type::VarType.new(cls: @cur_meth[0], meth: @cur_meth[1], category: :tuple_element, name: "tuple_element_#{count}"), left)
+            envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], RDL::Type::VarType.new(cls: scope[:klass], meth: scope[:meth], category: :tuple_element, name: "tuple_element_#{count}"), left)
             count += 1
           }
           splat = lhs[splat_ind]
-          envi, _ = tc_vasgn(scope, envi, splat.children[0].type, splat.children[0].children[0], RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::VarType.new(cls: @cur_meth[0], meth: @cur_meth[1], category: :tuple_element, name: "array_param_#{count}")), splat) if splat.children.any? ## could be empty splat
+          envi, _ = tc_vasgn(scope, envi, splat.children[0].type, splat.children[0].children[0], RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::VarType.new(cls: scope[:klass], meth: scope[:meth], category: :tuple_element, name: "array_param_#{count}")), splat) if splat.children.any? ## could be empty splat
           [envi, tright, effi]
         else
           new_tuple = []
           count = 0
-          lhs.length.times { new_tuple << RDL::Type::VarType.new(cls: @cur_meth[0], meth: @cur_meth[1], category: :tuple_element, name: "tuple_element_#{count}") }
+          lhs.length.times { new_tuple << RDL::Type::VarType.new(cls: scope[:klass], meth: scope[:meth], category: :tuple_element, name: "tuple_element_#{count}") }
           lhs.zip(new_tuple).each { |left, right|
             envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], right, left)
           }
@@ -921,7 +919,7 @@ module RDL::Typecheck
       elsif e.children[0].nil? && e.children[1] == :ARGV
         c = RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Globals.types[:string])
       else
-        c = to_type(find_constant(env, e))
+        c = to_type(find_constant(env, scope, e))
       end
       [env, c, [:+, :+]]
     when :defined?
@@ -1015,7 +1013,7 @@ module RDL::Typecheck
       eff = [:+, :+]
       e.children[0..-1].each { |ei| envi, ti, effi = tc(scope, envi, ei); tactuals << ti ; eff = effect_union(effi, eff)}
       if scope[:tblock].is_a?(RDL::Type::VarType)
-        block_ret_type = RDL::Type::VarType.new(cls: @cur_meth[0], meth: @cur_meth[1], category: :block_ret, name: "block_return")
+        block_ret_type = RDL::Type::VarType.new(cls: scope[:klass], meth: scope[:meth], category: :block_ret, name: "block_return")
         block_type = RDL::Type::MethodType.new(tactuals, nil, block_ret_type)
         RDL::Type::Type.leq(scope[:tblock], block_type, ast: e)
         return [envi, block_ret_type, eff]
@@ -1380,8 +1378,8 @@ RUBY
           end
         }
 
-        trecv = get_super_owner(envi[:self], @cur_meth[1])
-        tres, effres = tc_send(sscope, envi, trecv, @cur_meth[1], tactuals, block, e)
+        trecv = get_super_owner(envi[:self], scope[:meth])
+        tres, effres = tc_send(sscope, envi, trecv, scope[:meth], tactuals, block, e)
         [envi, tres.canonical, effect_union(effi, effres)]
       }
     when :zsuper
@@ -1392,8 +1390,8 @@ RUBY
         raise Exception, 'super method not supported'
       end
 =end
-      klass = RDL::Util.to_class @cur_meth[0]
-      mname = @cur_meth[1]
+      klass = RDL::Util.to_class scope[:klass]
+      mname = scope[:meth]
       sklass = get_super_owner_from_class klass, mname
       sklass_str = RDL::Util.to_class_str sklass
       stype = lookup(scope, sklass_str, mname, e)[0]#RDL::Globals.info.get_with_aliases(sklass_str, mname, :type)
@@ -1403,8 +1401,8 @@ RUBY
       tactuals = stype[0].args
 
       scope_merge(scope, block: nil, break: env, next: env) { |sscope|
-        trecv = get_super_owner(envi[:self], @cur_meth[1])
-        tres, effres = tc_send(sscope, envi, trecv, @cur_meth[1], tactuals, block, e)
+        trecv = get_super_owner(envi[:self], scope[:meth])
+        tres, effres = tc_send(sscope, envi, trecv, scope[:meth], tactuals, block, e)
         [envi, tres.canonical, effres]
       }
     else
@@ -2550,16 +2548,16 @@ RUBY
   end
 
 
-  def self.find_constant(env, e)
+  def self.find_constant(env, scope, e)
     # https://cirw.in/blog/constant-lookup.html
     # First look in Module.nesting for a lexically scoped variable
     const_string = e.loc.expression.source
-    raise "Expected @cur_meth." unless @cur_meth
-    if (RDL::Util.has_singleton_marker(@cur_meth[0]))
-      klass = RDL::Util.to_class(RDL::Util.remove_singleton_marker(@cur_meth[0]))
+    raise "Expected class and method in `scope`." unless scope[:klass] && scope[:meth]
+    if (RDL::Util.has_singleton_marker(scope[:klass]))
+      klass = RDL::Util.to_class(RDL::Util.remove_singleton_marker(scope[:klass]))
       mod_inst = false
     else
-      klass = RDL::Util.to_class(@cur_meth[0])
+      klass = RDL::Util.to_class(scope[:klass])
       if klass.instance_of?(Module)
         mod_inst = true
       else
@@ -2567,10 +2565,10 @@ RUBY
         klass = klass.send :allocate
       end
     end
-    if RDL::Wrap.wrapped?(@cur_meth[0], @cur_meth[1])
-      meth_name = RDL::Wrap.wrapped_name(@cur_meth[0], @cur_meth[1])
+    if RDL::Wrap.wrapped?(scope[:klass], scope[:meth])
+      meth_name = RDL::Wrap.wrapped_name(scope[:klass], scope[:meth])
     else
-      meth_name = @cur_meth[1]
+      meth_name = scope[:meth]
     end
     if mod_inst
       method = klass.instance_method(meth_name)
