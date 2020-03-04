@@ -3,7 +3,7 @@ $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
 require 'types/core'
 
-class TestTypecheck < Minitest::Test
+class TestInfer < Minitest::Test
   extend RDL::Annotate
 
   def setup
