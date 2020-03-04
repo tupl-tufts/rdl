@@ -698,7 +698,7 @@ module RDL::Typecheck
         fh = tlefts.map { |t| t.val }.zip(trights).to_h
         if scope[:task] == :infer && RDL::Config.instance.infer_empties && fh.empty?
           [envi, RDL::Type::GenericType.new(RDL::Globals.types[:hash], RDL::Type::VarType.new(cls: scope[:klass], meth: scope[:meth], category: :hash_param_key, name: "hash_param_key_#{e.loc}"),
-                                            RDL::Type::VarType.new(cls: scope[:klass], meth: scope[:meth], category: :hash_param_val, name: "hash_param_val_#{e.loc}"))]
+                                            RDL::Type::VarType.new(cls: scope[:klass], meth: scope[:meth], category: :hash_param_val, name: "hash_param_val_#{e.loc}")), effi]
         else
           [envi, RDL::Type::FiniteHashType.new(fh, nil), effi]
         end
