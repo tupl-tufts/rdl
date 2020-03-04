@@ -4,13 +4,13 @@ RDL.type_params :Hash, [:k, :v], :all?
 
 def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_default: false, use_sing_val: true)
   case trec
-  when RDL::Type::FiniteHashType    
+  when RDL::Type::FiniteHashType
     if targs.empty? || targs.all? { |t| t.is_a?(RDL::Type::SingletonType) }
       vals = RDL.type_cast((if use_sing_val then targs.map { |t| RDL.type_cast(t, "RDL::Type::SingletonType").val } else targs end), "Array<%any>", force: true)
       res = RDL.type_cast(trec.elts.send(meth_name, *vals), "Object", force: true)
       if nil_default && res.nil?
         if default1 == :promoted_val
-          ret = trec.promote.params[1]
+          # ret = trec.promote.params[1]
           return trec.promote.params[1]
         elsif default1 == :promoted_key
           return trec.promote.params[0]
@@ -215,7 +215,7 @@ RDL.type Hash, :initialize, "() { (Hash<a, b>, x) -> y } -> ``RDL::Type::Generic
 
 RDL.type :Hash, :store, '(``any_or_k(trec)``, ``any_or_v(trec)``) -> ``assign_output(trec, targs)``'
 RDL.type :Hash, :assoc, '(``any_or_k(trec)``) -> ``RDL::Type::TupleType.new(targs[0], output_type(trec, targs, :[], :promoted_val, "v", nil_default: true))``'
-RDL.type :Hash, :clear, '() -> self'  
+RDL.type :Hash, :clear, '() -> self'
 RDL.type :Hash, :compare_by_identity, '() -> self'
 RDL.type :Hash, :compare_by_identity?,  '() -> %bool'
 RDL.type :Hash, :default, '() -> ``promoted_or_v(trec)``'
@@ -285,7 +285,7 @@ def Hash.invert_output(trec)
     hash = Hash[hash.map { |k, v| if !RDL.type_cast(v, "Object", force: true).is_a?(RDL::Type::Type) then [k, RDL::Type::SingletonType.new(v)] else [k, v] end }]
     RDL::Type::FiniteHashType.new(RDL.type_cast(hash, "Hash<%any, RDL::Type::Type>", force: true), nil)
   else
-    RDL::Type::GenericType.new(RDL::Globals.types[:hash], trec.params[1], trec.params[0]) 
+    RDL::Type::GenericType.new(RDL::Globals.types[:hash], trec.params[1], trec.params[0])
     #RDL::Globals.parser.scan_str "#T Hash<v, k>"
   end
 end
@@ -371,7 +371,7 @@ def Hash.merge_output(trec, targs, mutate=false)
       value_union = RDL::Type::UnionType.new(promoted.params[1], arg0.params[1]).canonical
       if mutate
         raise "Unable to promote tuple #{trec} to Hash." unless trec.promote!(arg0.params[0], arg0.params[1])
-        return trec        
+        return trec
       else
         return RDL::Type::GenericType.new(arg0.base, key_union, value_union)
       end
@@ -545,4 +545,3 @@ RDL.type :Hash, :to_hash, '() -> Hash<k,v>'
 RDL.type :Hash, :values, '() -> Array<v>'
 RDL.type :Hash, :values_at, '(*k) -> Array<v>', effect: [:+, :+]
 RDL.type :Hash, :with_indifferent_access, '() -> self'
-
