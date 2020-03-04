@@ -817,7 +817,7 @@ module RDL::Typecheck
           lhs.zip(new_tuple).each { |left, right|
             envi, _ = tc_vasgn(scope, envi, left.type, left.children[0], right, left)
           }
-          tuple_type = RDL::Type::TupleType.new(*new_tuple)
+          #tuple_type = RDL::Type::TupleType.new(*new_tuple)
           #RDL::Type::Type.leq(tright, tuple_type, ast: e) # don't think this is necessary
           [envi, tright, effi]
         end
@@ -1202,7 +1202,7 @@ RUBY
       case tcollect
       when RDL::Type::NominalType
         self_klass = tcollect.klass
-        teaches, eeaches = lookup(scope, tcollect.name, :each, e.children[1])
+        teaches, _ = lookup(scope, tcollect.name, :each, e.children[1])
         teaches = filter_comp_types(teaches, RDL::Config.instance.use_comp_types)
       when RDL::Type::GenericType, RDL::Type::TupleType, RDL::Type::FiniteHashType, RDL::Type::PreciseStringType
         unless tcollect.is_a? RDL::Type::GenericType
@@ -1210,7 +1210,7 @@ RUBY
           tcollect = tcollect.canonical
         end
         self_klass = tcollect.base.klass
-        teaches, eeaches = lookup(scope, tcollect.base.name, :each, e.children[1])
+        teaches, _ = lookup(scope, tcollect.base.name, :each, e.children[1])
         teaches = filter_comp_types(teaches, RDL::Config.instance.use_comp_types)
         inst = tcollect.to_inst.merge(self: tcollect)
         teaches = teaches.map { |typ|
@@ -1659,7 +1659,7 @@ RUBY
             t = t.canonical
             tarms = t.is_a?(RDL::Type::UnionType) ? t.types : [t]
             tarms.each { |t|
-              ts, es = tc_send_one_recv(scope, env, t, meth, tactuals, block, e, op_asgn, union)
+              ts, _ = tc_send_one_recv(scope, env, t, meth, tactuals, block, e, op_asgn, union)
               choice_hash[num] = RDL::Type::UnionType.new(*ts).canonical
             }
           rescue StaticTypeError => err
@@ -1953,7 +1953,7 @@ RUBY
           if tmeth_inst
             begin
               effblock = tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
-            rescue BlockTypeError => err
+            rescue BlockTypeError => _
               block_mismatch = true
             end
             if es

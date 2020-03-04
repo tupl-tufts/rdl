@@ -837,7 +837,6 @@ module RDL
       num_casts += RDL::Typecheck.get_num_casts
     }
     RDL::Globals.to_infer[sym] = Set.new
-    nil
     RDL::Typecheck.resolve_constraints
     RDL::Typecheck.extract_solutions
     time = Time.now - time
