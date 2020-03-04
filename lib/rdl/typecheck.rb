@@ -894,13 +894,13 @@ module RDL::Typecheck
                       else # e.type == :or_asgn
                         if tleft.val then [envleft, tleft] else [envright, tright] end
                       end
-                   else
-                     if trecv.is_a?(RDL::Type::VarType)
-                     ## we get no new information from including VarType in union of return type. In fact, we can lose info due to promotion. So, leave it out.
-                       [envright, tright]
-                     else
-                       [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright).canonical]
-                     end
+                    else
+                      if trecv.is_a?(RDL::Type::VarType)
+                        ## we get no new information from including VarType in union of return type. In fact, we can lose info due to promotion. So, leave it out.
+                        [envright, tright]
+                      else
+                        [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright).canonical]
+                      end
                     end)
       if e.children[0].type == :send
         mutation_meth = (meth.to_s + '=').to_sym
@@ -2704,7 +2704,7 @@ module Parser
           raise IndexError, "The range #{range} is outside the bounds of the source of size #{@source_buffer.source.size}"
         end
         dummy_range = Parser::Source::Range.new(@source_buffer, range.begin_pos - offset, range.end_pos - offset)
-        action = TreeRewriter::Action.new(dummy_range, @enforcer, attributes)
+        action = TreeRewriter::Action.new(dummy_range, @enforcer, **attributes)
         @action_root = @action_root.combine(action)
         self
       end
