@@ -149,7 +149,7 @@ class TestTypecheck < Minitest::Test
     RDL.readd_comp_types
     RDL.type_params :Hash, [:k, :v], :all? unless RDL::Globals.type_params["Hash"]
     RDL.type_params :Array, [:t], :all? unless RDL::Globals.type_params["Array"]
-    RDL.rdl_alias :Array, :size, :length 
+    RDL.rdl_alias :Array, :size, :length
     RDL.type_params 'RDL::Type::SingletonType', [:t], :satisfies? unless RDL::Globals.type_params["RDL::Type::SingletonType"]
 =begin
     RDL.type_params :Array, [:t], :all?
@@ -531,7 +531,7 @@ class TestTypecheck < Minitest::Test
     assert do_tc("@foo", env: @env) <= RDL::Globals.types[:integer]
     assert do_tc("@@foo", env: @env) <= RDL::Globals.types[:integer]
     assert do_tc("$test_ivar_ivasgn_global") <= RDL::Globals.types[:integer]
-    assert_raises(RDL::Typecheck::StaticTypeError) { x = do_tc("@bar", env: @env) }
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@bar", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@bar", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("@@bar", env: @env) }
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("$_test_ivar_ivasgn_global_2") }
@@ -774,7 +774,7 @@ class TestTypecheck < Minitest::Test
       type :_send_method_generic4, '(t) { (t) -> t } -> t'
       type :_send_method_generic5, '() { (u) -> u } -> u'
       type :_send_method_generic6, '() { (Integer) -> u } -> u'
-    }    
+    }
     assert do_tc('_send_method_generic1 3', env: @env) <= @t3
     assert do_tc('_send_method_generic1 "foo"', env: @env) <= RDL::Globals.types[:string]
     assert do_tc('_send_method_generic2 3, "foo"', env: @env) <= tt("3 or String")
@@ -1975,7 +1975,7 @@ class TestTypecheck < Minitest::Test
     end
   end
 
-  
+
   def test_sing_method_inheritence
     RDL.type SingletonInheritA, 'self.foo', '(Integer) -> Integer'
     self.class.class_eval do
@@ -2036,7 +2036,7 @@ class TestTypecheck < Minitest::Test
           return RDL::Globals.types[:integer]
         else
           raise RDL::Typecheck::StaticTypeError, "Unexpected input type."
-        end    
+        end
       end
 
       type '(Integer, String) -> Integer', typecheck: :now

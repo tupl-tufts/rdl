@@ -120,7 +120,6 @@ module RDL::Type
 	  bind.local_variable_set(t.name.to_sym,args[actual])
           preds.push(t)
           t = t.type.instantiate(inst)
-          the_actual = nil
           if actual == args.size
             next unless t.instance_of? FiniteHashType
             if t.member?({}, vars_wild: true) # try matching against the empty hash
@@ -133,7 +132,6 @@ module RDL::Type
         else
           t = NominalType.new 'Proc' if t.instance_of? MethodType
           t = t.instantiate(inst)
-          the_actual = nil
           if actual == args.size
             next unless t.instance_of? FiniteHashType
             if t.member?({}, vars_wild: true) # try matching against the empty hash
