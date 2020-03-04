@@ -655,7 +655,7 @@ module RDL::Typecheck
       if is_array
         [envi, RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::UnionType.new(*tis).canonical), effi]
       elsif scope[:task] == :infer && RDL::Config.instance.infer_empties && tis.empty?
-        [envi, RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::VarType.new("array_param_" + e.loc.to_s)), effi]
+        [envi, RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::VarType.new(cls: scope[:klass], meth: scope[:meth], category: :array_param, name: "array_param_#{e.loc}")), effi]
       else
         [envi, RDL::Type::TupleType.new(*tis), effi]
       end
@@ -697,7 +697,8 @@ module RDL::Typecheck
         # keys are all symbols
         fh = tlefts.map { |t| t.val }.zip(trights).to_h
         if scope[:task] == :infer && RDL::Config.instance.infer_empties && fh.empty?
-          [envi, RDL::Type::GenericType.new(RDL::Globals.types[:hash], RDL::Type::VarType.new("hash_param_key_" + e.loc.to_s), RDL::Type::VarType.new("hash_param_val_" + e.loc.to_s)), effi]
+          [envi, RDL::Type::GenericType.new(RDL::Globals.types[:hash], RDL::Type::VarType.new(cls: scope[:klass], meth: scope[:meth], category: :hash_param_key, name: "hash_param_key_#{e.loc}"),
+                                            RDL::Type::VarType.new(cls: scope[:klass], meth: scope[:meth], category: :hash_param_val, name: "hash_param_val_#{e.loc}"))]
         else
           [envi, RDL::Type::FiniteHashType.new(fh, nil), effi]
         end
