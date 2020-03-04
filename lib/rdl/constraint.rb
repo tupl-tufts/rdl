@@ -15,9 +15,9 @@ module RDL::Typecheck
       else
         var_types = [typ]
       end
-      
+
       var_types.each { |var_type|
-        if var_type.var_type? || var_type.optional_var_type? || var_type.vararg_var_type?       
+        if var_type.var_type? || var_type.optional_var_type? || var_type.vararg_var_type?
           var_type = var_type.type if var_type.optional_var_type? || var_type.vararg_var_type?
           var_type.lbounds.each { |lower_t, ast|
             var_type.add_and_propagate_lower_bound(lower_t, ast)
@@ -33,7 +33,7 @@ module RDL::Typecheck
             }
             vt.ubounds.each { |upper_t, ast|
               vt.add_and_propagate_upper_bound(upper_t, ast)
-            }            
+            }
           }
         else
           raise "Got unexpected type #{var_type}."
@@ -71,7 +71,7 @@ module RDL::Typecheck
     else
       raise "Unexpected VarType category #{category}."
     end
-    if  sol.is_a?(RDL::Type::UnionType) || (sol == RDL::Globals.types[:bot]) || (sol == RDL::Globals.types[:top]) || (sol == RDL::Globals.types[:nil]) || sol.is_a?(RDL::Type::StructuralType) || sol.is_a?(RDL::Type::IntersectionType) || (sol == RDL::Globals.types[:object]) 
+    if  sol.is_a?(RDL::Type::UnionType) || (sol == RDL::Globals.types[:bot]) || (sol == RDL::Globals.types[:top]) || (sol == RDL::Globals.types[:nil]) || sol.is_a?(RDL::Type::StructuralType) || sol.is_a?(RDL::Type::IntersectionType) || (sol == RDL::Globals.types[:object])
       ## Try each rule. Return first non-nil result.
       ## If no non-nil results, return original solution.
       ## TODO: check constraints.
@@ -93,7 +93,7 @@ module RDL::Typecheck
                 var.ubounds.each { |t, _| puts t }
               }
             }
-=end            
+=end
             @new_constraints = true if !new_cons.empty?
             return typ
             #sol = typ
@@ -107,7 +107,7 @@ module RDL::Typecheck
       }
     end
     ## out here, none of the heuristics applied.
-    ## Try to use `sol` as solution -- there is a chance it will 
+    ## Try to use `sol` as solution -- there is a chance it will
     begin
       new_cons = {}
       sol = var if sol == RDL::Globals.types[:bot] # just use var itself when result of solution extraction was %bot.
@@ -178,7 +178,7 @@ module RDL::Typecheck
     if tmeth.block && !tmeth.block.ubounds.empty?
       non_vartype_ubounds = tmeth.block.ubounds.map { |t, ast| t.canonical }.reject { |t| t.is_a?(RDL::Type::VarType) }
       non_vartype_ubounds.reject! { |t| t.is_a?(RDL::Type::StructuralType) }#&& (t.methods.size == 1) && (t.methods.has_key?(:to_proc) || t.methods.has_key?(:call)) }
-      if non_vartype_ubounds.size == 0        
+      if non_vartype_ubounds.size == 0
         block_sol = tmeth.block
       elsif non_vartype_ubounds.size > 1
         block_sols = []
@@ -205,7 +205,7 @@ module RDL::Typecheck
 
     return [arg_sols, block_sol, ret_sol]
   end
-  
+
   def self.extract_solutions
     ## Go through once to come up with solution for all var types.
     #until !@new_constraints
@@ -220,7 +220,7 @@ module RDL::Typecheck
         if typ.is_a?(Array)
           raise "Expected just one method type for #{klass}#{name}." unless typ.size == 1
           tmeth = typ[0]
-          
+
           arg_sols, block_sol, ret_sol = extract_meth_sol(tmeth)
 
           block_string = block_sol ? " { #{block_sol} }" : nil
@@ -250,13 +250,13 @@ module RDL::Typecheck
 
     #return unless $orig_types
 
-    complete_types = []
-    incomplete_types = []
+    # complete_types = []
+    # incomplete_types = []
     
     CSV.open("infer_data.csv", "wb") { |csv|
       csv << ["Class", "Method", "Inferred Type", "Original Type", "Source Code", "Comments"]
     }
-    
+
     correct_types = 0
     total_potential = 0
     meth_types = 0
@@ -299,7 +299,7 @@ module RDL::Typecheck
           total_potential += 1
           var_types += 1
         end
-          
+
       end
 
       if !meth.to_s.include?("@") && !meth.to_s.include?("$")#orig_typ.is_a?(RDL::Type::MethodType)
@@ -332,6 +332,6 @@ module RDL::Typecheck
     puts "Total # individual types: #{total_potential}"
   end
 
-  
-  
+
+
 end

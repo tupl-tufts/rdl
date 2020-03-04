@@ -203,7 +203,7 @@ RDL::Config.instance.profile_stats
     param_types = params.keep_if { |p| p.size == 2 }.to_h
     param_names = []
     params.each_with_index { |param, i|
-      kind, name = param
+      _, name = param
       ## TODO: Differentiate based on kind here?
       ## TODO: Anything with block here?
       param_names << name if name
@@ -329,8 +329,8 @@ RDL::Config.instance.profile_stats
     }
 
     RDL::Config.instance.get_types.each { |klass, meth|
-      the_klass = RDL::Util.to_class(klass)
-      sklass = RDL::Util.add_singleton_marker(klass.to_s)
+      # the_klass = RDL::Util.to_class(klass)
+      # sklass = RDL::Util.add_singleton_marker(klass.to_s)
       wrapped_name = RDL::Wrap.wrapped_name(klass, meth)
       begin
         the_meth = RDL::Util.to_class(klass).instance_method(wrapped_name)

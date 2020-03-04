@@ -31,11 +31,11 @@ class RDL::Util
   end
 
   def self.has_singleton_marker(klass)
-    return (klass =~ /^#{SINGLETON_MARKER_REGEXP}/)
+    return (klass.to_s =~ /^#{SINGLETON_MARKER_REGEXP}/)
   end
 
   def self.remove_singleton_marker(klass)
-    if klass =~ /^#{SINGLETON_MARKER_REGEXP}(.*)/
+    if klass.to_s =~ /^#{SINGLETON_MARKER_REGEXP}(.*)/
       return $1
     else
       return nil

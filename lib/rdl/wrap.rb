@@ -29,7 +29,7 @@ class RDL::Wrap
     RDL::Globals.wrap_switch.off {
       klass_str = klass_str.to_s
       klass = RDL::Util.to_class klass_str
-      the_meth = klass.instance_method(meth)
+      # the_meth = klass.instance_method(meth)
       return if wrapped? klass, meth
       return if RDL::Config.instance.nowrap.member? klass_str.to_sym
       raise ArgumentError, "Attempt to wrap #{RDL::Util.pp_klass_method(klass, meth)}" if klass.to_s =~ /^RDL::/
@@ -237,7 +237,7 @@ RUBY
       RDL::Type::NominalType.new(val.class)
     end
   end
-  
+
   # called by Object#method_added (sing=false) and Object#singleton_method_added (sing=true)
   def self.do_method_added(the_self, sing, klass, meth)
       if sing
@@ -303,7 +303,7 @@ RUBY
     if RDL::Globals.to_typecheck[:now].member? [klass, meth]
       RDL::Globals.to_typecheck[:now].delete [klass, meth]
       RDL::Typecheck.typecheck(klass, meth)
-    end    
+    end
 
     if RDL::Config.instance.guess_types.include?(the_self.to_s.to_sym) && !RDL::Globals.info.has?(klass, meth, :type)
       # Added a method with no type annotation from a class we want to guess types for
@@ -448,7 +448,7 @@ module RDL::Annotate
   def orig_var_type(klass=self, var, type)
     raise RuntimeError, "Variable cannot begin with capital" if var.to_s =~ /^[A-Z]/
     return if var.to_s =~ /^[a-z]/ # local variables handled specially, inside type checker
-    klass = RDL::Util::GLOBAL_NAME if var.to_s =~ /^\$/    
+    klass = RDL::Util::GLOBAL_NAME if var.to_s =~ /^\$/
     unless RDL::Globals.info.set(klass, var, :orig_type, RDL::Globals.parser.scan_str("#T #{type}"))
       raise RuntimeError, "Type already declared for #{var}"
     end
@@ -497,7 +497,7 @@ module RDL::Annotate
       RDL::Globals.to_infer[time].add([klass, meth])
     else
       RDL::Globals.deferred << [klass, :infer, time, { }]
-      
+
     end
     nil
   end
@@ -588,7 +588,7 @@ module RDL::Annotate
       puts "ABOUT TO EVALUATE #{meth_string}"
       RDL.class_eval meth_string
     end
-  end    
+  end
 
   def no_infer_meth(klass, meth)
     RDL::Globals.no_infer_meths << [klass.to_s, meth.to_s]
@@ -597,7 +597,7 @@ module RDL::Annotate
   def no_infer_file(path)
     RDL::Globals.no_infer_files << Pathname.new(path).expand_path.to_s
   end
-  
+
   # [+ klass +] is the class containing the variable; self if omitted; ignored for local and global variables
   # [+ var +] is a symbol or string containing the name of the variable
   # [+ typ +] is a string containing the type
@@ -622,7 +622,7 @@ module RDL::Annotate
     ## solution extract for. VarTypes in methods get added to this list after calling RDL.do_infer.
     ## Not sure when/where to add variable VarTypes so I'm doing it here.
     RDL::Globals.constrained_types << [klass, var]
-    nil    
+    nil
   end
 
   # In the following three methods
@@ -837,7 +837,6 @@ module RDL
       num_casts += RDL::Typecheck.get_num_casts
     }
     RDL::Globals.to_infer[sym] = Set.new
-    nil
     RDL::Typecheck.resolve_constraints
     RDL::Typecheck.extract_solutions
     time = Time.now - time
@@ -960,7 +959,7 @@ module RDL
           end
           eval tmp_eval
           ast = Parser::CurrentRuby.parse tmp_meth
-          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type], [[:-, :+]]) 
+          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type], [[:-, :+]])
           count += 1
         end
       }
@@ -1079,14 +1078,14 @@ class Object
     sklass = RDL::Util.add_singleton_marker(klass)
     RDL::Wrap.do_method_added(self, true, sklass, meth)
     nil
-  end  
+  end
 end
 
 class Module
   define_method :singleton_method_added, Object.instance_method(:singleton_method_added)
 
-  RDL::Util.silent_warnings { 
-  
+  RDL::Util.silent_warnings {
+
   def method_added(meth)
     klass = self.to_s
     klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
@@ -1135,4 +1134,3 @@ class SimpleDelegator
   end
 
 end
-
