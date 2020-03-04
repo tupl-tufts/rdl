@@ -8,7 +8,7 @@ class RDL::Config
   attr_reader :report # writer is custom defined
   attr_accessor :weak_update_promote, :widen_bound, :promote_widen, :use_comp_types, :check_comp_types
   attr_accessor :type_defaults, :infer_defaults, :pre_defaults, :post_defaults, :rerun_comp_types, :assume_dyn_type
-  attr_accessor :practical_infer, :use_precise_string, :number_mode, :use_unknown_types
+  attr_accessor :use_precise_string, :number_mode, :use_unknown_types, :infer_empties
 
   def initialize
     @nowrap = Set.new # Set of symbols
@@ -28,10 +28,10 @@ class RDL::Config
     @use_comp_types = true
     @check_comp_types = false ## this for dynamically checking that the result of a computed type still holds
     @rerun_comp_types = false ## this is for dynamically checking that a type computation still evaluates to the same thing as it did at type checking time
-    @practical_infer = true
     @use_precise_string = false
     @number_mode = false
     @use_unknown_types = false
+    @infer_empties = true ## if [] and {} should be typed as Array<var> and Hash<var, var>
   end
 
   def report=(val)
@@ -237,7 +237,7 @@ RDL::Config.instance.profile_stats
     CSV.open("#{File.basename(Dir.getwd)}_observed_types.csv", "a+") { |csv|
       csv << [klass.to_s, meth.to_s, param_names.join(", "), printed_args, otret.to_s, the_meth.source, the_meth.comment]
     }
-    
+
   end
 
 
@@ -281,7 +281,7 @@ RDL::Config.instance.profile_stats
     otypes.each { |ot|
       ot[:args].each_with_index { |t, i|
         otargs[i] = RDL::Globals.types[:bot] if otargs[i].nil?
-        begin 
+        begin
           otargs[i] = RDL::Type::UnionType.new(otargs[i], t).canonical
         rescue NameError; end
       }
@@ -327,12 +327,12 @@ RDL::Config.instance.profile_stats
     CSV.open("#{File.basename(Dir.getwd)}_observed_types.csv", "wb") { |csv|
       csv << ["Class", "Method", "Parameter Names", "Observed Arg Types", "Observed Return Type", "Source Code", "Comments"]
     }
-    
+
     RDL::Config.instance.get_types.each { |klass, meth|
       the_klass = RDL::Util.to_class(klass)
       sklass = RDL::Util.add_singleton_marker(klass.to_s)
       wrapped_name = RDL::Wrap.wrapped_name(klass, meth)
-      begin 
+      begin
         the_meth = RDL::Util.to_class(klass).instance_method(wrapped_name)
         do_get_meth_type(klass, meth, the_meth)
       rescue NameError; end

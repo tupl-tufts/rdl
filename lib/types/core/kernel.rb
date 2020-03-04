@@ -1,7 +1,7 @@
 RDL.nowrap :Kernel
 
-# RDL.type :Kernel, 'self.Array', '([to_ary: () -> Array<t>]) -> Array<t>'
-# RDL.type :Kernel, 'self.Array', '([to_a: () -> Array<t>]) -> Array<t>'
+RDL.type :Kernel, 'self.Array', '([to_ary: () -> Array<t>]) -> Array<t>'
+RDL.type :Kernel, 'self.Array', '([to_a: () -> Array<t>]) -> Array<t>'
 RDL.type :Kernel, 'self.===', "(%any) -> %bool"
 RDL.type :Kernel, 'self.Complex', '(Numeric x, Numeric y) -> Complex'
 RDL.type :Kernel, 'self.Complex', '(String x) -> Complex'
