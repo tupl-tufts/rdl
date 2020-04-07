@@ -252,7 +252,7 @@ module RDL::Typecheck
 
     # complete_types = []
     # incomplete_types = []
-    
+
     CSV.open("infer_data.csv", "wb") { |csv|
       csv << ["Class", "Method", "Inferred Type", "Original Type", "Source Code", "Comments"]
     }
@@ -306,12 +306,12 @@ module RDL::Typecheck
         CSV.open("infer_data.csv", "a+") { |csv|
           ast = RDL::Typecheck.get_ast(klass, meth)
           code = ast.loc.expression.source
-          if RDL::Util.has_singleton_marker(klass)
-            comment = RDL::Util.to_class(RDL::Util.remove_singleton_marker(klass)).method(meth).comment
-          else
-            comment = RDL::Util.to_class(klass).instance_method(meth).comment
-          end
-          csv << [klass, meth, typ, orig_typ, code, comment]
+          # if RDL::Util.has_singleton_marker(klass)
+          #   comment = RDL::Util.to_class(RDL::Util.remove_singleton_marker(klass)).method(meth).comment
+          # else
+          #   comment = RDL::Util.to_class(klass).instance_method(meth).comment
+          # end
+          csv << [klass, meth, typ, orig_typ, code] # , comment
           #if typ.include?("XXX")
           #  incomplete_types << [klass, meth, typ, orig_typ, code, comment]
           #else
