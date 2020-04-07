@@ -71,13 +71,13 @@ module RDL::Globals
   @dep_types = []
 
   ## Hash mapping node object IDs (integers) to a list [tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old], where: tmeth is a MethodType that is fully evaluated (i.e., no ComputedTypes) *and instantiated*, tmeth_old is the unevaluated method type (i.e., with ComputedTypes), tmeth_res is the result of evaluating tmeth_old *but not instantiating it*, self_klass is the class where the MethodType is defined, trecv_old was the receiver type used to evaluate tmeth_old, and targs_old is an Array of the argument types used to evaluate tmeth_old.
-  @comp_type_map = {}
+  @comp_type_map = Hash.new
 
   # Map from ActiveRecord table names (symbols) to their schema types, which should be a Table type
-  @ar_db_schema = {}
+  @ar_db_schema = Hash.new
 
   # Map from Sequel table names (symbols) to their schema types, which should be a Table type
-  @seq_db_schema = {}
+  @seq_db_schema = Hash.new
 
   # Array<[String, String]>, where each first string is a class name and each second one is a method name.
   # klass/method pairs here should not be inferred.
@@ -182,10 +182,17 @@ module RDL
       @to_wrap = Set.new
       @to_typecheck = Hash.new
       @to_typecheck[:now] = Set.new
+      @to_infer = Hash.new
+      @to_infer[:now] = Set.new
+      @constrained_types = []
       @to_do_at = Hash.new
+      @deferred = []
+      # @dep_types = []
+#      @comp_type_map = Hash.new
       @ar_db_schema = Hash.new
       @seq_db_schema = Hash.new
-      @deferred = []
+      @no_infer_meths = []
+      @no_infer_files = []
 
       @parser = RDL::Type::Parser.new
 
