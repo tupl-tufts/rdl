@@ -61,6 +61,9 @@ module RDL::Type
         return left.name == right.name
       end
 
+      # optional
+      return leq(left, right.type, inst, ileft) if right.is_a? OptionalType
+
       # union
       return left.types.all? { |t| leq(t, right, inst, ileft) } if left.is_a?(UnionType)
       if right.instance_of?(UnionType)
