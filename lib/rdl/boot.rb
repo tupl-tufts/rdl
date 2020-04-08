@@ -85,6 +85,10 @@ module RDL::Globals
 
   # Array<String> of absolute file paths for files that should not be inferred.
   @no_infer_files = []
+
+  # If non-nil, should be a symbol. Added, untyped methods will be tagged
+  # with that symbol
+  @infer_added = nil
 end
 
 class << RDL::Globals # add accessors and readers for module variables
@@ -104,6 +108,7 @@ class << RDL::Globals # add accessors and readers for module variables
   attr_accessor :seq_db_schema
   attr_accessor :no_infer_meths
   attr_accessor :no_infer_files
+  attr_accessor :infer_added
 end
 
 # Create switches to control whether wrapping happens and whether
@@ -193,6 +198,7 @@ module RDL
       @seq_db_schema = Hash.new
       @no_infer_meths = []
       @no_infer_files = []
+      @infer_added = nil
 
       @parser = RDL::Type::Parser.new
 

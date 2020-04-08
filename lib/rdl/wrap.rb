@@ -240,13 +240,14 @@ RUBY
 
   # called by Object#method_added (sing=false) and Object#singleton_method_added (sing=true)
   def self.do_method_added(the_self, sing, klass, meth)
-      if sing
-        loc = the_self.singleton_method(meth).source_location
-      else
-        loc = the_self.instance_method(meth).source_location
-      end
-      RDL::Globals.info.set(klass, meth, :source_location, loc)
+    if sing
+      loc = the_self.singleton_method(meth).source_location
+    else
+      loc = the_self.instance_method(meth).source_location
+    end
+    RDL::Globals.info.set(klass, meth, :source_location, loc)
     # Apply any deferred contracts and reset list
+
     if RDL::Globals.deferred.size > 0
       if sing
         loc = the_self.singleton_method(meth).source_location
@@ -277,14 +278,20 @@ RUBY
           RDL::Globals.to_typecheck[h[:typecheck]].add([klass, meth])
         end
         if kind == :infer
-          if contract == :now
+          if tag == :now
             RDL::Typecheck.infer(klass, meth)
           else
-            RDL::Globals.to_infer[contract] = Set.new unless RDL::Globals.to_infer[contract]
-            RDL::Globals.to_infer[contract].add([klass, meth])
+            RDL::Globals.to_infer[tag] = Set.new unless RDL::Globals.to_infer[tag]
+            RDL::Globals.to_infer[tag].add([klass, meth])
           end
         end
       }
+    elsif RDL::Globals.infer_added &&
+      !(RDL::Globals.info.has_any?(klass, meth, [:typecheck, :infer]))
+      # Tag this method to be added to to-be-inferred set if it doesn't already have a type
+      tag = RDL::Globals.infer_added
+      RDL::Globals.to_infer[tag] = Set.new unless RDL::Globals.to_infer[tag]
+      RDL::Globals.to_infer[tag].add([klass, meth])
     end
 
     # Wrap method if there was a prior contract for it.
@@ -809,6 +816,14 @@ module RDL
   def self.at(sym, &blk)
     RDL::Globals.to_do_at[sym] = [] unless RDL::Globals.to_do_at[sym]
     RDL::Globals.to_do_at[sym] << blk
+  end
+
+  # Mark all untyped methods added in the passed block as being inferred
+  def self.infer_added(tag)
+    tmp = RDL::Globals.infer_added
+    RDL::Globals.infer_added = tag
+    yield
+    RDL::Globals.infer_added = tmp
   end
 
   # Invokes all callbacks from rdl_at(sym), in unspecified order.
