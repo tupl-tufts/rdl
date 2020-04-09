@@ -288,10 +288,15 @@ RUBY
       }
     elsif RDL::Globals.infer_added &&
       !(RDL::Globals.info.has_any?(klass, meth, [:typecheck, :infer]))
-      # Tag this method to be added to to-be-inferred set if it doesn't already have a type
-      tag = RDL::Globals.infer_added
-      RDL::Globals.to_infer[tag] = Set.new unless RDL::Globals.to_infer[tag]
-      RDL::Globals.to_infer[tag].add([klass, meth])
+      # Tag this method to be added to to-be-inferred set if it doesn't already have a type, and as
+      # long as it isn't marked as being skipped
+      unless ((RDL::Util.has_singleton_marker(klass) &&
+               RDL::Globals.no_infer_meths.include?([RDL::Util.remove_singleton_marker(klass).to_s, "self."+meth.to_s])) ||
+              (RDL::Globals.no_infer_meths.include?([klass.to_s, meth.to_s])))
+        tag = RDL::Globals.infer_added
+        RDL::Globals.to_infer[tag] = Set.new unless RDL::Globals.to_infer[tag]
+        RDL::Globals.to_infer[tag].add([klass, meth])
+      end
     end
 
     # Wrap method if there was a prior contract for it.
