@@ -213,7 +213,6 @@ module RDL::Typecheck
       RDL::Globals.parser_cache[file] = [digest, cache]
     end
     ast = RDL::Globals.parser_cache[file][1][:line_defs][line]
-    raise RuntimeError, "Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}" if ast.nil?
     return ast
   end
 
@@ -223,6 +222,10 @@ module RDL::Typecheck
     RDL::Config.instance.number_mode = true
     @var_cache = {}
     ast = get_ast(klass, meth)
+    if ast.nil?
+      puts "Warning: Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}; skipping method"
+      return
+    end
     types = RDL::Globals.info.get(klass, meth, :type)
     if types == [] or types.nil?
       ## in this case, have to create new arg/ret VarTypes for this method
@@ -296,6 +299,7 @@ module RDL::Typecheck
 
   def self.typecheck(klass, meth, ast=nil, types = nil, effects = nil)
     ast = get_ast(klass, meth) unless ast
+    raise RuntimeError, "Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}" if ast.nil?
     types = RDL::Globals.info.get(klass, meth, :type) unless types
     effects = RDL::Globals.info.get(klass, meth, :effect) unless effects
     if effects.empty? || effects[0] == nil
