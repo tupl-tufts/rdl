@@ -936,7 +936,7 @@ module RDL::Typecheck
       # children [2..] = actual args
       return tc_var_type(scope, env, e) + [[:+, :+]] if (e.children[0].nil? || is_RDL(e.children[0])) && e.children[1] == :var_type
       return tc_type_cast(scope, env, e) + [[:+, :+]] if is_RDL(e.children[0]) && e.children[1] == :type_cast && scope[:block].nil? ## TODO: could be more precise with effects here, punting for now
-      return tc_note_type(scope, env, e) + [[:+, :+]] if is_RDL(e.children[0]) && e.children[1] == :rdl_note_type
+      return tc_note_type(scope, env, e) + [[:+, :+]] if is_RDL(e.children[0]) && e.children[1] == :note_type
       return tc_instantiate!(scope, env, e) + [[:+, :+]] if is_RDL(e.children[0]) && e.children[1] == :instantiate!
       envi = env
       tactuals = []
@@ -1572,9 +1572,9 @@ RUBY
   end
 
   def self.tc_note_type(scope, env, e)
-    error :note_type_format, [], e unless e.children.length == 4 && scope[:block].nil?
-    env, typ = tc(scope, env, e.children[3])
-    note :note_type, [typ], e.children[3]
+    error :note_type_format, [], e unless e.children.length == 3 && scope[:block].nil?
+    env, typ = tc(scope, env, e.children[2])
+    note :note_type, [typ], e.children[2]
     [env, typ]
   end
 
@@ -2622,6 +2622,7 @@ class Diagnostic < Parser::Diagnostic
     block_type_error: "argument type error for block\n%s",
     type_cast_format: "type_cast must be called as `type_cast obj, type-string' or `type_cast obj, type-string, force: expr'",
     instantiate_format: "instantiate! must be called as `instantiate! type*' or `instantiate! type*, check: bool' where type is a string, symbol, or class for static type checking.",
+    note_type_format: "note_type must be called as `note_type e`",
     var_type_format: "var_type must be called as `var_type :var-name, type-string'",
     puts_type_format: "puts_type must be called as `puts_type e'",
     generic_error: "%s",
