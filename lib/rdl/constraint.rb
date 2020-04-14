@@ -160,7 +160,7 @@ module RDL::Typecheck
     ## ARG SOLUTIONS
     arg_sols = tmeth.args.map { |a|
       if a.optional_var_type?
-        RDL::Type::OptionalType.new(extract_var_sol(a.type, :arg))
+        soln = RDL::Type::OptionalType.new(extract_var_sol(a.type, :arg))
       elsif a.fht_var_type?
         hash_sol = a.elts.transform_values { |v|
           if v.is_a?(RDL::Type::OptionalType)
@@ -169,10 +169,13 @@ module RDL::Typecheck
             extract_var_sol(v, :arg)
           end
         }
-        RDL::Type::FiniteHashType.new(hash_sol, nil)
+        soln = RDL::Type::FiniteHashType.new(hash_sol, nil)
       else
-        extract_var_sol(a, :arg)
+        soln = extract_var_sol(a, :arg)
       end
+
+      a.solution = soln
+      soln
     }
     ## BLOCK SOLUTION
     if tmeth.block && !tmeth.block.ubounds.empty?
@@ -252,7 +255,7 @@ module RDL::Typecheck
 
     # complete_types = []
     # incomplete_types = []
-    
+
     CSV.open("infer_data.csv", "wb") { |csv|
       csv << ["Class", "Method", "Inferred Type", "Original Type", "Source Code", "Comments"]
     }

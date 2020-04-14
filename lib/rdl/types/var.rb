@@ -2,7 +2,7 @@ module RDL::Type
   class VarType < Type
     attr_reader :name, :cls, :meth, :category, :to_infer
     attr_accessor :lbounds, :ubounds, :solution
-    
+
     @@cache = {}
     @@print_XXX = false
 
@@ -31,7 +31,7 @@ module RDL::Type
 
     def initialize(name_or_hash)
       if name_or_hash.is_a?(Symbol) || name_or_hash.is_a?(String)
-        raise "weird" if name_or_hash.to_s == "expression"              
+        raise "weird" if name_or_hash.to_s == "expression"
         @name = name_or_hash
         @to_infer = false
       elsif name_or_hash.is_a?(Hash)
@@ -39,7 +39,7 @@ module RDL::Type
         @lbounds = []
         @ubounds = []
         @solution = nil
-        
+
         @cls = name_or_hash[:cls]
         @name = name_or_hash[:name] ## might be nil if category is :ret
         @meth = name_or_hash[:meth] ## might be nil if ccategory is :var
@@ -121,22 +121,22 @@ module RDL::Type
     end
 
     def to_s # :nodoc:
-      if @to_infer
-        if @solution
-          return @solution.to_s
-        else
-          return "XXX" if @@print_XXX
-          return "{ #{@cls}##{@meth} #{@category}: #{@name} }"
-        end
-      else
-        return @name.to_s
-      end
+      # if @to_infer
+      #   if @solution
+      #     return @solution.to_s
+      #   else
+      #     return "XXX" if @@print_XXX
+      #     return "{ #{@cls}##{@meth} #{@category}: #{@name} }"
+      #   end
+      # else
+        @name.to_s
+      # end
     end
 
     def base_name
       return nil unless @name
       ## if var represents returned value, then method name is closest thing we have to variable's name.
-      if @category == :ret then @meth.to_s else @name.to_s.delete("@") end 
+      if @category == :ret then @meth.to_s else @name.to_s.delete("@") end
     end
 
     def ==(other)

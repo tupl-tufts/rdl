@@ -1,0 +1,26 @@
+* Notes
+
+
+The tests are structured something like this:
+#+begin_src ruby
+  assert some_type <= tt('[ +: (Number) -> ret ]')
+#+end_src
+
+The problem is that, while RDL reports this as the string representation of the
+generated type, it's actually incorrect.
+
+Parsed from the string above in ~tt~, we get:
+
+#+begin_src ruby
+  <RDL::Type::NominalType:0x0000000003ab6050 @name="Number">
+#+end_src
+
+vs the inferred
+#+begin_src ruby
+  <RDL::Type::NominalType:0x00000000031beda8 @name="Integer">
+#+end_src
+
+I would have expected this to help, but it seems perhaps not:
+#+begin_src ruby
+  RDL::Config.instance.number_mode = true  # treat all numeric classes the same
+#+end_src

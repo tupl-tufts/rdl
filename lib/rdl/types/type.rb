@@ -35,7 +35,7 @@ module RDL::Type
     def vararg_var_type?
       is_a?(VarargType) && @type.var_type?
     end
-    
+
     def fht_var_type?
       is_a?(FiniteHashType) && @elts.keys.all? { |k| k.is_a?(Symbol) } && @elts.values.all? { |v| v.optional_var_type? || v.var_type? }
     end
@@ -101,7 +101,7 @@ module RDL::Type
         if deferred_constraints.nil?
           left.add_ubound(right, ast, new_cons, propagate: propagate) unless (left.ubounds.any? { |t, loc| t == right || t.hash == right.hash } || left.equal?(right))
         else
-          deferred_constraints << [left, right] 
+          deferred_constraints << [left, right]
         end
         return true
       elsif right.is_a?(VarType) && right.to_infer
@@ -109,7 +109,7 @@ module RDL::Type
           right.add_lbound(left, ast, new_cons, propagate: propagate) unless (right.lbounds.any? { |t, loc| t == left || t.hash == left.hash } || right.equal?(left))
         else
           deferred_constraints << [left, right]
-        end          
+        end
         return true
       end
 
@@ -211,7 +211,7 @@ module RDL::Type
             inst.update(new_inst) unless inst.nil?
             return true
           else
-            ## if a particular arm doesn't apply, undo the 
+            ## if a particular arm doesn't apply, undo the
             #removed_choices.each { |
           end
         }
@@ -225,8 +225,8 @@ module RDL::Type
 
       # nominal
       return left.klass.ancestors.member?(right.klass) if left.is_a?(NominalType) && right.is_a?(NominalType)
-      if (left.is_a?(NominalType) || left.is_a?(TupleType) || left.is_a?(FiniteHashType) || left.is_a?(TopType) || left.is_a?(PreciseStringType) || (left.is_a?(SingletonType) && !left.val.nil?)) && right.is_a?(StructuralType)     
-        
+      if (left.is_a?(NominalType) || left.is_a?(TupleType) || left.is_a?(FiniteHashType) || left.is_a?(TopType) || left.is_a?(PreciseStringType) || (left.is_a?(SingletonType) && !left.val.nil?)) && right.is_a?(StructuralType)
+
         case left
         when TupleType
           lklass = Array
@@ -270,7 +270,7 @@ module RDL::Type
           end
         end
         klass_lookup = lklass.to_s unless klass_lookup
-        
+
         right.methods.each_pair { |m, t|
           return false unless lklass.method_defined?(m) || RDL::Typecheck.lookup({}, klass_lookup, m, nil, make_unknown: false)#RDL::Globals.info.get(lklass, m, :type) ## Added the second condition because Rails lazily defines some methods.
           types, _ = RDL::Typecheck.lookup({}, lklass.to_s, m, nil, make_unknown: false)#RDL::Globals.info.get(lklass, m, :type)
@@ -279,7 +279,7 @@ module RDL::Type
           else
             types = RDL::Typecheck.filter_comp_types(types, false)
           end
-          
+
           ret = types.nil? #false
           if types
             choice_num = 0
@@ -295,7 +295,7 @@ module RDL::Type
                 tlm = RDL::Typecheck.compute_types(tlm, lklass, left, t.args)
               end
               new_dcs = []
-              if leq(tlm.instantiate(base_inst), t, nil, ileft, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) 
+              if leq(tlm.instantiate(base_inst), t, nil, ileft, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                 ret = true
                 if types.size > 1 && !new_dcs.empty? ## method has intersection type, and vartype constraints were created
                   new_dcs.each { |t1, t2|
@@ -304,7 +304,7 @@ module RDL::Type
                   }
                 else
                   new_dcs.each { |t1, t2| RDL::Type::Type.leq(t1, t2, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) }
-                end                                  
+                end
               end
             }
 
@@ -336,7 +336,7 @@ module RDL::Type
         }
         return true
       end
-              
+
 
       # singleton
       return left.val == right.val if left.is_a?(SingletonType) && right.is_a?(SingletonType)
@@ -388,8 +388,8 @@ module RDL::Type
             types = RDL::Typecheck.filter_comp_types(types, true)
           else
             types = RDL::Typecheck.filter_comp_types(types, false)
-          end          
-          
+          end
+
           ret = types.nil?
           if types
             choice_num = 0
@@ -400,16 +400,16 @@ module RDL::Type
               blk_typ = tlm.block.is_a?(RDL::Type::MethodType) ? tlm.block.args + [tlm.block.ret] : [tlm.block]
               tlm = RDL::Typecheck.compute_types(tlm, klass, left, t.args) if (tlm.args + blk_typ + [tlm.ret]).any? { |t| t.is_a? ComputedType }
               new_dcs = []
-              if leq(tlm.instantiate(base_inst.merge({ self: left})), t, nil, ileft, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) 
+              if leq(tlm.instantiate(base_inst.merge({ self: left})), t, nil, ileft, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                 ret = true
                 if types.size > 1 && !new_dcs.empty? ## method has intersection type, and vartype constraints were
                   new_dcs.each { |t1, t2|
                     ub_var_choices[t1][choice_num] = RDL::Type::UnionType.new(ub_var_choices[t1][choice_num], t2).canonical if t1.is_a?(VarType)
-                    lb_var_choices[t2][choice_num] = RDL::Type::UnionType.new(lb_var_choices[t2][choice_num], t1).canonical if t2.is_a?(VarType)         
+                    lb_var_choices[t2][choice_num] = RDL::Type::UnionType.new(lb_var_choices[t2][choice_num], t1).canonical if t2.is_a?(VarType)
                   }
                 else
                   new_dcs.each { |t1, t2| RDL::Type::Type.leq(t1, t2, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) }
-                end                                  
+                end
               end
             }
             if !((lb_var_choices.empty?) && (ub_var_choices.empty?))
@@ -444,13 +444,13 @@ module RDL::Type
 
       # Note we do not allow raw subtyping leq(GenericType, NominalType, ...)
 
-      # method      
+      # method
       if left.is_a?(MethodType) && right.is_a?(MethodType)
         inst = {} if not inst
         if left.args.last.is_a?(VarargType)
           #return false unless right.args.size >= left.args.size
           if right.args.size >= left.args.size
-            new_args = right.args[(left.args.size - 1) ..-1]          
+            new_args = right.args[(left.args.size - 1) ..-1]
             if left.args.size == 1
               left = RDL::Type::MethodType.new(new_args, left.block, left.ret)
             else
@@ -472,7 +472,20 @@ module RDL::Type
           end
         end
         return false unless left.args.size == right.args.size
-        return false unless left.args.zip(right.args).all? { |tl, tr| leq(tr.instantiate(inst), tl.instantiate(inst), inst, !ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) } # contravariance
+        return false unless left.args.zip(right.args).all? { |tl, tr|
+          leq(
+            tr.instantiate(inst),
+            tl.instantiate(inst),
+            inst,
+            !ileft,
+            deferred_constraints,
+            no_constraint: no_constraint,
+            ast: ast,
+            propagate: propagate,
+            new_cons: new_cons,
+            removed_choices: removed_choices
+          )
+        } # contravariance
         #return false unless left.args.zip(right.args).all? { |tl, tr| leq(tr.instantiate(inst), tl.instantiate(inst), inst, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons) } # contravariance
 
         if left.block && right.block
@@ -494,7 +507,7 @@ module RDL::Type
         }
         return true
       end
-      
+
       # structural
       if left.is_a?(StructuralType) && right.is_a?(StructuralType)
         # allow width subtyping - methods of right have to be in left, but not vice-versa
@@ -557,7 +570,7 @@ module RDL::Type
       end
 
       ## precise string
-      
+
       if left.is_a?(PreciseStringType)
         if right.is_a?(PreciseStringType)
           return false if left.vals.size != right.vals.size
