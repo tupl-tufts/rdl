@@ -53,6 +53,8 @@ class TestInfer < Minitest::Test
     error_str += 'Expected '.green + b.to_s + "\n"
     error_str += 'Got      '.red + a.to_s
 
+    binding.pry unless a === b
+
     assert a == b, error_str
   end
 
