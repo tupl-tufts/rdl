@@ -7,6 +7,12 @@ $LOAD_PATH << File.dirname(__FILE__) + '/../lib'
 require 'rdl'
 require 'types/core'
 
+# module Kernel
+#   def _descc
+#     ObjectSpace.each_object(Class).select { |klass| klass < self }
+#   end
+# end
+
 class TestInfer < Minitest::Test
   extend RDL::Annotate
 
@@ -54,11 +60,8 @@ class TestInfer < Minitest::Test
   end
 
   def test_return_two
-    solution = infer_method_type :return_two
-    binding.pry
-
-    # TODO: How can we get solution to be an actual type in the first place?
-    assert tm(solution) <= tm('() -> Number')
+    typ = infer_method_type :return_two
+    assert_equal typ.solution, tm('() -> Integer')
   end
 
   # ----------------------------------------------------------------------------
@@ -67,12 +70,13 @@ class TestInfer < Minitest::Test
     val + 2
   end
 
+  # TODO: Why does running more than one of these tests crash?
   def test_simple
     # expected_results = { ["TestInfer", :simple] => '([ +: (Number) -> XXX ]) -> XXX' }
-    type = infer_method_type :simple
+    typ = infer_method_type :simple
 
-    assert type.args.length == 1
-    assert type.args[0].solution <= tt('[ +: (Integer) -> ret ]')
+    assert typ.args.length == 1
+    assert typ.args[0].solution <= tt('[ +: (Integer) -> ret ]')
   end
 end
 

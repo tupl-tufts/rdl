@@ -24,3 +24,9 @@ I would have expected this to help, but it seems perhaps not:
 #+begin_src ruby
   RDL::Config.instance.number_mode = true  # treat all numeric classes the same
 #+end_src
+
+
+** TODO RDL::Type::MethodType needs a solution field
+
+** TODO Should RDL::Type::Type have the solution field?
+Can every type have a solution?

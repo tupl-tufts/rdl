@@ -177,6 +177,7 @@ module RDL::Typecheck
       a.solution = soln
       soln
     }
+
     ## BLOCK SOLUTION
     if tmeth.block && !tmeth.block.ubounds.empty?
       non_vartype_ubounds = tmeth.block.ubounds.map { |t, ast| t.canonical }.reject { |t| t.is_a?(RDL::Type::VarType) }
@@ -195,6 +196,8 @@ module RDL::Typecheck
       else
         block_sol = RDL::Type::MethodType.new(*extract_meth_sol(non_vartype_ubounds[0]))
       end
+
+      tmeth.block.solution = block_sol
     else
       block_sol = nil
     end
@@ -205,6 +208,8 @@ module RDL::Typecheck
     else
       ret_sol = tmeth.ret.is_a?(RDL::Type::VarType) ?  extract_var_sol(tmeth.ret, :ret) : tmeth.ret
     end
+
+    tmeth.ret.solution = ret_sol
 
     return [arg_sols, block_sol, ret_sol]
   end
