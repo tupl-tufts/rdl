@@ -828,7 +828,7 @@ module RDL
     nil
   end
 
-  def self.do_infer(sym)
+  def self.do_infer(sym, render_report: true)
     return unless RDL::Globals.to_infer[sym]
 
     RDL::Config.instance.use_unknown_types = true
@@ -842,7 +842,7 @@ module RDL
     RDL::Globals.to_infer[sym] = Set.new
     RDL::Typecheck.resolve_constraints
 
-    solutions = RDL::Typecheck.extract_solutions
+    solutions = RDL::Typecheck.extract_solutions render_report
 
     time = Time.now - time
     puts "Total time taken: #{time}."

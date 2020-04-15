@@ -183,6 +183,9 @@ module RDL
       @to_typecheck = Hash.new
       @to_typecheck[:now] = Set.new
       @to_do_at = Hash.new
+      @to_infer = Hash.new
+      @to_infer[:now] = Set.new
+      @constrained_types = []
       @ar_db_schema = Hash.new
       @seq_db_schema = Hash.new
       @deferred = []
