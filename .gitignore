@@ -1,48 +1,43 @@
-{\rtf1\ansi\ansicpg1252\cocoartf1265\cocoasubrtf210
-{\fonttbl\f0\fnil\fcharset0 Consolas;}
-{\colortbl;\red255\green255\blue255;\red38\green38\blue38;}
-\margl1440\margr1440\vieww10800\viewh8400\viewkind0
-\deftab720
-\pard\pardeftab720
+###################
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
 
-\f0\fs24 \cf2 # Compiled source #\
-###################\
-*.com\
-*.class\
-*.dll\
-*.exe\
-*.o\
-*.so\
-\'a0\
-# Packages #\
-############\
-# it's better to unpack these files and commit the raw source\
-# git has its own built in compression methods\
-*.7z\
-*.dmg\
-*.gz\
-*.iso\
-*.jar\
-*.rar\
-*.tar\
-*.zip\
-*.gem\
-\'a0\
-# Logs and databases #\
-######################\
-*.log\
-*.sql\
-*.sqlite\
-\'a0\
-# OS generated files #\
-######################\
-.DS_Store\
-.DS_Store?\
-._*\
-.Spotlight-V100\
-.Trashes\
-ehthumbs.db\
-Thumbs.db}
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+*.gem
+
+# Logs and databases #
+######################
+*.log
+*.sql
+*.sqlite
+
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+### Ruby
+*.gem
 
 ### RDL
 *.csv
