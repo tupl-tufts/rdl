@@ -1,4 +1,3 @@
-require 'pry'
 require 'minitest/autorun'
 $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'

@@ -275,7 +275,7 @@ module RDL::Typecheck
       else
         targs_dup = Hash[targs.map { |k, t| [k, t.copy] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
         @num_casts = 0
-        _, body_type = tc(scope, Env.new(targs_dup.merge(scope[:captured])), body) ## TODO: need separate argument indicating we're performing inference? or is this exactly the same as type checking...
+        envvv, body_type = tc(scope, Env.new(targs_dup.merge(scope[:captured])), body) ## TODO: need separate argument indicating we're performing inference? or is this exactly the same as type checking...
       end
       old_captured, scope[:captured] = widen_scopes(old_captured, scope[:captured])
     end until old_captured == scope[:captured]

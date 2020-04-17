@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require 'pry'
 require 'colorize'
 require 'coderay'
 
@@ -46,8 +45,6 @@ class TestInfer < Minitest::Test
     error_str += 'Expected '.green + expected_type.to_s + "\n"
     error_str += 'Got      '.red + typ.solution.to_s
 
-    binding.pry unless expected_type == typ.solution
-
     assert expected_type == typ.solution, error_str
   end
 
@@ -59,10 +56,10 @@ class TestInfer < Minitest::Test
 
   # ----------------------------------------------------------------------------
 
-  def return_two
-    2
-  end
-  should_have_type :return_two, '() -> Integer'
+  # def return_two
+  #   2
+  # end
+  # should_have_type :return_two, '() -> Integer'
 
   def simple(val)
     val + 2

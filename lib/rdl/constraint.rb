@@ -277,7 +277,6 @@ module RDL::Typecheck
           if RDL::Util.has_singleton_marker(klass)
             comment = RDL::Util.to_class(RDL::Util.remove_singleton_marker(klass)).method(meth).comment
           else
-            binding.pry
             comment = RDL::Util.to_class(klass).instance_method(meth).comment
           end
           csv << [klass, meth, typ, orig_typ, code, comment]
