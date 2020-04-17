@@ -280,8 +280,7 @@ module RDL::Typecheck
           # else
           #   comment = RDL::Util.to_class(klass).instance_method(meth).comment
           # end
-
-          csv << [klass, meth, typ, orig_typ, code] #, comment]
+          csv << [klass, meth, typ, orig_typ, code] #, comment
           # if typ.include?("XXX")
           #  incomplete_types << [klass, meth, typ, orig_typ, code, comment]
           # else
