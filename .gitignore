@@ -36,6 +36,9 @@
 ehthumbs.db
 Thumbs.db
 
+### Editors
+.#*
+
 ### Ruby
 *.gem
 

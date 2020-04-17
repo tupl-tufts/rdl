@@ -56,10 +56,10 @@ class TestInfer < Minitest::Test
 
   # ----------------------------------------------------------------------------
 
-  # def return_two
-  #   2
-  # end
-  # should_have_type :return_two, '() -> Integer'
+  def return_two
+    2
+  end
+  should_have_type :return_two, '() -> Integer'
 
   def simple(val)
     val + 2

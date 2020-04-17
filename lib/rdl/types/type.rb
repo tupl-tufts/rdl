@@ -5,6 +5,7 @@ module RDL::Type
   class TypeError < StandardError; end
 
   class Type
+    attr_accessor :solution
 
     @@contract_cache = {}
 
@@ -48,11 +49,6 @@ module RDL::Type
     def canonical; return self; end
     def optional?; return false; end
     def vararg?; return false; end
-
-    # TODO: Should this just return self? Is that a valid solution in
-    #       non-overridden cases? Or should this be an explicit implementation
-    #       in each type for which that may apply?
-    def solution; raise "solution not yet implemented for #{self.class}"; end
 
     # [+ other +] is a Type
     # [+ inst +] is a Hash<Symbol, Type> representing an instantiation

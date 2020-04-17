@@ -121,16 +121,13 @@ module RDL::Type
     end
 
     def to_s # :nodoc:
-      # if @to_infer
-      #   if @solution
-      #     return @solution.to_s
-      #   else
-      #     return "XXX" if @@print_XXX
-      #     return "{ #{@cls}##{@meth} #{@category}: #{@name} }"
-      #   end
-      # else
+      if @to_infer && !@solution
+        return 'XXX' if @@print_XXX
+
+        "{ #{@cls}##{@meth} #{@category}: #{@name} }"
+      else
         @name.to_s
-      # end
+      end
     end
 
     def base_name

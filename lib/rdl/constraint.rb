@@ -1,4 +1,5 @@
 require 'csv'
+require 'method_source'
 
 module RDL::Typecheck
 
@@ -218,8 +219,8 @@ module RDL::Typecheck
   def self.make_extraction_report(typ_sols)
     #return unless $orig_types
 
-    # complete_types = []
-    # incomplete_types = []
+    complete_types = []
+    incomplete_types = []
 
     CSV.open("infer_data.csv", "wb") { |csv|
       csv << ["Class", "Method", "Inferred Type", "Original Type", "Source Code", "Comments"]
@@ -279,20 +280,21 @@ module RDL::Typecheck
           else
             comment = RDL::Util.to_class(klass).instance_method(meth).comment
           end
+
           csv << [klass, meth, typ, orig_typ, code, comment]
-          #if typ.include?("XXX")
-          #  incomplete_types << [klass, meth, typ, orig_typ, code, comment]
-          #else
-          #  complete_types << [klass, meth, typ, orig_typ, code, comment]
-          #end
+          if typ.include?("XXX")
+           incomplete_types << [klass, meth, typ, orig_typ, code, comment]
+          else
+           complete_types << [klass, meth, typ, orig_typ, code, comment]
+          end
         }
       end
     }
-    #CSV.open("infer_data.csv", "a+") { |csv|
-      #complete_types.each { |row| csv << row }
-      #csv << ["X", "X", "X", "X", "X", "X"]
-      #incomplete_types.each { |row| csv << row }
-    #}
+    CSV.open("infer_data.csv", "a+") { |csv|
+      complete_types.each { |row| csv << row }
+      csv << ["X", "X", "X", "X", "X", "X"]
+      incomplete_types.each { |row| csv << row }
+    }
 
     puts "Total correct (that could be automatically inferred): #{correct_types}"
     puts "Total # method types: #{meth_types}"
