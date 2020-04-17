@@ -862,14 +862,12 @@ module RDL
     RDL::Globals.to_infer[sym] = Set.new
     RDL::Typecheck.resolve_constraints
 
-    solutions = RDL::Typecheck.extract_solutions render_report
+    RDL::Typecheck.extract_solutions render_report
 
     time = Time.now - time
     puts "Total time taken: #{time}."
     puts "Total number of type casts used: #{num_casts}."
     puts "Total amount of time spent on stn: #{$stn}."
-
-    return solutions
   end
 
   def self.load_sequel_schema(db)
