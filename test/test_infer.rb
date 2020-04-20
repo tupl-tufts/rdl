@@ -16,11 +16,11 @@ class TestInfer < Minitest::Test
     RDL.reset
     RDL::Config.instance.number_mode = true # treat all numeric classes the same
     RDL.readd_comp_types
-    RDL.type_params :Hash, [:k, :v], :all? unless RDL::Globals.type_params["Hash"]
-    RDL.type_params :Array, [:t], :all? unless RDL::Globals.type_params["Array"]
+    RDL.type_params :Hash, [:k, :v], :all? unless RDL::Globals.type_params['Hash']
+    RDL.type_params :Array, [:t], :all? unless RDL::Globals.type_params['Array']
     RDL.rdl_alias :Array, :size, :length
-    RDL.type_params 'RDL::Type::SingletonType', [:t], :satisfies? unless RDL::Globals.type_params["RDL::Type::SingletonType"]
-    RDL.type_params(:Range, [:t], nil, variance: [:+]) { |t| t.member?(self.begin) && t.member?(self.end) } unless RDL::Globals.type_params["Range"]
+    RDL.type_params 'RDL::Type::SingletonType', [:t], :satisfies? unless RDL::Globals.type_params['RDL::Type::SingletonType']
+    RDL.type_params(:Range, [:t], nil, variance: [:+]) { |t| t.member?(self.begin) && t.member?(self.end) } unless RDL::Globals.type_params['Range']
     RDL.type :Range, :each, '() { (t) -> %any } -> self'
     RDL.type :Range, :each, '() -> Enumerator<t>'
     RDL.type :Integer, :to_s, '() -> String', wrap: false
@@ -58,12 +58,14 @@ class TestInfer < Minitest::Test
   def assert_type_equal(meth, expected_type, depends_on: [])
     typ = infer_method_type meth, depends_on: depends_on
 
-    ast  = RDL::Typecheck.get_ast(self.class, meth)
-    code = CodeRay.scan(ast.loc.expression.source, :ruby).term
+    if expected_type != typ.solution
+      ast  = RDL::Typecheck.get_ast(self.class, meth)
+      code = CodeRay.scan(ast.loc.expression.source, :ruby).term
 
-    error_str  = 'Given'.yellow + ":\n  #{code}\n\n"
-    error_str += 'Expected '.green + expected_type.to_s + "\n"
-    error_str += 'Got      '.red + typ.solution.to_s
+      error_str  = 'Given'.yellow + ":\n  #{code}\n\n"
+      error_str += 'Expected '.green + expected_type.to_s + "\n"
+      error_str += 'Got      '.red + typ.solution.to_s
+    end
 
     assert expected_type == typ.solution, error_str
   end
@@ -112,22 +114,22 @@ class TestInfer < Minitest::Test
   should_have_type :return_hash_val, '(val) -> { a: Integer, b: String, c: val }'
 
   def concatenate
-    "Hello" + " World!"
+    'Hello' + ' World!'
   end
   should_have_type :concatenate, '() -> String'
 
   def concatenate_1(val)
-    "Hello, " + val
+    'Hello, ' + val
   end
   should_have_type :concatenate_1, '(String) -> String'
 
   def repeat
-    "a" * 5
+    'a' * 5
   end
   should_have_type :repeat, '() -> String'
 
   def repeat_n(n)
-    "a" * n
+    'a' * n
   end
   should_have_type :repeat_n, '(Numeric) -> String'
 
