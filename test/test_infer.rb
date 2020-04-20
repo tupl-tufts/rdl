@@ -61,8 +61,63 @@ class TestInfer < Minitest::Test
   end
   should_have_type :return_two, '() -> Integer'
 
-  def simple(val)
+  def return_two_plus_two
+    2 + 2
+  end
+  should_have_type :return_two_plus_two, '() -> Integer'
+
+  def plus_two(val)
     val + 2
   end
-  should_have_type :simple, '([ +: (Number) -> %dyn ]) -> %dyn'
+  should_have_type :plus_two, '([ +: (Number) -> ret ]) -> ret'
+
+  def print_it(val)
+    puts val
+  end
+  should_have_type :print_it, '(%dyn) -> nil'
+
+  def return_hash
+    { a: 1, b: 2, c: 3 }
+  end
+  should_have_type :return_hash, '() -> { a: Integer, b: Integer, c: Integer }'
+
+  def return_hash_1
+    { a: 1, b: 'b', c: :c }
+  end
+  should_have_type :return_hash_1, '() -> { a: Integer, b: String, c: :c }'
+
+  def return_hash_dyn(val)
+    { a: 1, b: 'b', c: val }
+  end
+  should_have_type :return_hash_dyn, '(val) -> { a: Integer, b: String, c: val }'
+
+  def concatenate
+    "Hello" + " World!"
+  end
+  should_have_type :concatenate, '() -> String'
+
+  def concatenate_1(val)
+    "Hello, " + val
+  end
+  should_have_type :concatenate_1, '(val) -> ret'
+
+  def repeat
+    "a" * 5
+  end
+  should_have_type :repeat, "() -> String"
+
+  def repeat_n(n)
+    "a" * n
+  end
+  should_have_type :repeat_n, "(Integer) -> String"
+
+  def note(reason, args, ast)
+    Diagnostic.new :note, reason, args, ast.loc.expression
+  end
+  should_have_type :note, '(reason, args, Parser::AST::Node or Parser::Source::Comment) -> Diagnostic'
+
+  def print_note(reason, args, ast)
+    puts note(reason, args, ast).render
+  end
+  should_have_type :print_note, '(reason, args, Parser::AST::Node or Parser::Source::Comment) -> nil'
 end
