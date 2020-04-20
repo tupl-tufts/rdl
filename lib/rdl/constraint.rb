@@ -1,5 +1,4 @@
 require 'csv'
-#require 'method_source'
 
 module RDL::Typecheck
 

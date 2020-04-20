@@ -2,6 +2,7 @@ require 'delegate'
 require 'digest'
 require 'set'
 require 'parser/current'
+#require 'method_source'
 
 
 module RDL
@@ -191,9 +192,6 @@ module RDL
       @to_infer[:now] = Set.new
       @constrained_types = []
       @to_do_at = Hash.new
-      @to_infer = Hash.new
-      @to_infer[:now] = Set.new
-      @constrained_types = []
       @deferred = []
       # @dep_types = []
       # @comp_type_map = Hash.new
