@@ -563,7 +563,7 @@ module RDL::Typecheck
         # binding.pry
         # puts "Error in typecheck for #{e}: #{exn}"
         puts ">> ERROR <<"
-        RDL::Globals.types[:dyn]
+        [env, RDL::Globals.types[:dyn]]
       end
     else
       self._tc(scope, env, e)
