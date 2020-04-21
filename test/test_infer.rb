@@ -57,6 +57,7 @@ class TestInfer < Minitest::Test
 
   def assert_type_equal(meth, expected_type, depends_on: [])
     typ = infer_method_type meth, depends_on: depends_on
+    RDL::Type::VarType.no_print_XXX!
 
     if expected_type != typ.solution
       ast  = RDL::Typecheck.get_ast(self.class, meth)
@@ -91,7 +92,7 @@ class TestInfer < Minitest::Test
   def plus_two(val)
     val + 2
   end
-  should_have_type :plus_two, '([ +: (Number) -> ret ]) -> ret'
+  should_have_type :plus_two, '([ +: (Number) -> aaa ]) -> aaa'
 
   def print_it(val)
     puts val
