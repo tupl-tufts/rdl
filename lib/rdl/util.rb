@@ -1,3 +1,5 @@
+require 'stringio'
+
 class RDL::Util
 
   SINGLETON_MARKER = "[s]"

@@ -9,6 +9,7 @@ class RDL::Config
   attr_accessor :weak_update_promote, :widen_bound, :promote_widen, :use_comp_types, :check_comp_types
   attr_accessor :type_defaults, :infer_defaults, :pre_defaults, :post_defaults, :rerun_comp_types, :assume_dyn_type
   attr_accessor :use_precise_string, :number_mode, :use_unknown_types, :infer_empties
+  attr_accessor :convert_type_errors_to_dyn_type
 
   def initialize
     @nowrap = Set.new # Set of symbols
@@ -32,6 +33,7 @@ class RDL::Config
     @number_mode = false
     @use_unknown_types = false
     @infer_empties = true ## if [] and {} should be typed as Array<var> and Hash<var, var>
+    @convert_type_errors_to_dyn_type = false
   end
 
   def report=(val)
