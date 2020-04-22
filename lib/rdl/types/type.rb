@@ -5,8 +5,6 @@ module RDL::Type
   class TypeError < StandardError; end
 
   class Type
-    attr_accessor :solution
-
     @@contract_cache = {}
 
     def to_contract
