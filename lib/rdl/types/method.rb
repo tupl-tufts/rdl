@@ -54,6 +54,16 @@ module RDL::Type
       super()
     end
 
+    # The solution to a method type is a method type made up of the solutions of
+    # its parts.
+    def solution
+      arg_sols  = @args.map(&:solution)
+      block_sol = @block.solution
+      ret_sol   = @ret.solution
+
+      self.class.new arg_sols, block_sol, ret_sol
+    end
+
     # TODO: Check blk
     # Very similar to Typecheck.check_arg_types
     def pre_cond?(blk, slf, inst, bind, *args)

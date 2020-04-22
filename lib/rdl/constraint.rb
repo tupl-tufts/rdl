@@ -160,7 +160,7 @@ module RDL::Typecheck
     ## ARG SOLUTIONS
     arg_sols = tmeth.args.map { |a|
       if a.optional_var_type?
-        RDL::Type::OptionalType.new(extract_var_sol(a.type, :arg))
+        soln = RDL::Type::OptionalType.new(extract_var_sol(a.type, :arg))
       elsif a.fht_var_type?
         hash_sol = a.elts.transform_values { |v|
           if v.is_a?(RDL::Type::OptionalType)
@@ -169,11 +169,15 @@ module RDL::Typecheck
             extract_var_sol(v, :arg)
           end
         }
-        RDL::Type::FiniteHashType.new(hash_sol, nil)
+        soln = RDL::Type::FiniteHashType.new(hash_sol, nil)
       else
-        extract_var_sol(a, :arg)
+        soln = extract_var_sol(a, :arg)
       end
+
+      a.solution = soln
+      soln
     }
+
     ## BLOCK SOLUTION
     if tmeth.block && !tmeth.block.ubounds.empty?
       non_vartype_ubounds = tmeth.block.ubounds.map { |t, ast| t.canonical }.reject { |t| t.is_a?(RDL::Type::VarType) }
@@ -192,6 +196,8 @@ module RDL::Typecheck
       else
         block_sol = RDL::Type::MethodType.new(*extract_meth_sol(non_vartype_ubounds[0]))
       end
+
+      tmeth.block.solution = block_sol
     else
       block_sol = nil
     end
@@ -203,51 +209,13 @@ module RDL::Typecheck
       ret_sol = tmeth.ret.is_a?(RDL::Type::VarType) ?  extract_var_sol(tmeth.ret, :ret) : tmeth.ret
     end
 
+    tmeth.ret.solution = ret_sol
+
     return [arg_sols, block_sol, ret_sol]
   end
 
-  def self.extract_solutions
-    ## Go through once to come up with solution for all var types.
-    #until !@new_constraints
-    typ_sols = {}
-    loop do
-      @new_constraints = false
-      typ_sols = {}
-      puts "\n\nRunning solution extraction..."
-      RDL::Globals.constrained_types.each { |klass, name|
-        RDL::Type::VarType.no_print_XXX!
-        typ = RDL::Globals.info.get(klass, name, :type)
-        if typ.is_a?(Array)
-          raise "Expected just one method type for #{klass}#{name}." unless typ.size == 1
-          tmeth = typ[0]
 
-          arg_sols, block_sol, ret_sol = extract_meth_sol(tmeth)
-
-          block_string = block_sol ? " { #{block_sol} }" : nil
-          puts "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
-
-          RDL::Type::VarType.print_XXX!
-          block_string = block_sol ? " { #{block_sol} }" : nil
-          typ_sols[[klass.to_s, name.to_sym]] = "(#{arg_sols.join(', ')})#{block_string} -> #{ret_sol}"
-        elsif name.to_s == "splat_param"
-        else
-          ## Instance/Class (also some times splat parameter) variables:
-          ## There is no clear answer as to what to do in this case.
-          ## Just need to pick something in between bounds (inclusive).
-          ## For now, plan is to just use lower bound when it's not empty/%bot,
-          ## otherwise use upper bound.
-          ## Can improve later if desired.
-          var_sol = extract_var_sol(typ, :var)
-          #typ.solution = var_sol
-          puts "Extracted solution for #{klass} variable #{name} is #{var_sol}."
-
-          RDL::Type::VarType.print_XXX!
-          typ_sols[[klass.to_s, name.to_sym]] = var_sol.to_s
-        end
-      }
-      break if !@new_constraints
-    end
-
+  def self.make_extraction_report(typ_sols)
     #return unless $orig_types
 
     # complete_types = []
@@ -311,25 +279,70 @@ module RDL::Typecheck
           # else
           #   comment = RDL::Util.to_class(klass).instance_method(meth).comment
           # end
-          csv << [klass, meth, typ, orig_typ, code] # , comment
-          #if typ.include?("XXX")
+          csv << [klass, meth, typ, orig_typ, code] #, comment
+          # if typ.include?("XXX")
           #  incomplete_types << [klass, meth, typ, orig_typ, code, comment]
-          #else
+          # else
           #  complete_types << [klass, meth, typ, orig_typ, code, comment]
-          #end
+          # end
         }
       end
     }
-    #CSV.open("infer_data.csv", "a+") { |csv|
-      #complete_types.each { |row| csv << row }
-      #csv << ["X", "X", "X", "X", "X", "X"]
-      #incomplete_types.each { |row| csv << row }
-    #}
+    # CSV.open("infer_data.csv", "a+") { |csv|
+    #   complete_types.each { |row| csv << row }
+    #   csv << ["X", "X", "X", "X", "X", "X"]
+    #   incomplete_types.each { |row| csv << row }
+    # }
 
     puts "Total correct (that could be automatically inferred): #{correct_types}"
     puts "Total # method types: #{meth_types}"
     puts "Total # variable types: #{var_types}"
     puts "Total # individual types: #{total_potential}"
+  end
+
+  def self.extract_solutions(render_report = true)
+    ## Go through once to come up with solution for all var types.
+    #until !@new_constraints
+    typ_sols = {}
+    loop do
+      @new_constraints = false
+      typ_sols = {}
+      puts "\n\nRunning solution extraction..."
+      RDL::Globals.constrained_types.each { |klass, name|
+        RDL::Type::VarType.no_print_XXX!
+        typ = RDL::Globals.info.get(klass, name, :type)
+        if typ.is_a?(Array)
+          raise "Expected just one method type for #{klass}#{name}." unless typ.size == 1
+          tmeth = typ[0]
+
+          arg_sols, block_sol, ret_sol = extract_meth_sol(tmeth)
+
+          block_string = block_sol ? " { #{block_sol} }" : nil
+          puts "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
+
+          RDL::Type::VarType.print_XXX!
+          block_string = block_sol ? " { #{block_sol} }" : nil
+          typ_sols[[klass.to_s, name.to_sym]] = "(#{arg_sols.join(', ')})#{block_string} -> #{ret_sol}"
+        elsif name.to_s == "splat_param"
+        else
+          ## Instance/Class (also some times splat parameter) variables:
+          ## There is no clear answer as to what to do in this case.
+          ## Just need to pick something in between bounds (inclusive).
+          ## For now, plan is to just use lower bound when it's not empty/%bot,
+          ## otherwise use upper bound.
+          ## Can improve later if desired.
+          var_sol = extract_var_sol(typ, :var)
+          #typ.solution = var_sol
+          puts "Extracted solution for #{klass} variable #{name} is #{var_sol}."
+
+          RDL::Type::VarType.print_XXX!
+          typ_sols[[klass.to_s, name.to_sym]] = var_sol.to_s
+        end
+      }
+      break if !@new_constraints
+    end
+
+    make_extraction_report(typ_sols) if render_report
   end
 
 

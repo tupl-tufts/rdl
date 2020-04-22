@@ -2,6 +2,7 @@ require 'delegate'
 require 'digest'
 require 'set'
 require 'parser/current'
+#require 'method_source'
 
 
 module RDL
@@ -193,7 +194,7 @@ module RDL
       @to_do_at = Hash.new
       @deferred = []
       # @dep_types = []
-#      @comp_type_map = Hash.new
+      # @comp_type_map = Hash.new
       @ar_db_schema = Hash.new
       @seq_db_schema = Hash.new
       @no_infer_meths = []

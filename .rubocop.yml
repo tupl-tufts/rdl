@@ -1,0 +1,5 @@
+Metrics/MethodLength:
+  Max: 30
+
+Lint/BooleanSymbol:
+  Enabled: false

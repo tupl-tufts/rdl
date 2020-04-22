@@ -21,4 +21,6 @@ EOF
   s.add_runtime_dependency 'parser', '~>2.3', '>= 2.3.1.4'
   s.add_runtime_dependency 'sql-parser', '~>0.0.2'
   s.add_runtime_dependency 'method_source'
+  s.add_development_dependency 'colorize', '~>0.8', '>= 0.8.1'
+  s.add_development_dependency 'coderay', '~>1.2', '>= 1.1.2'
 end

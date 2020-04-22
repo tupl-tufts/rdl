@@ -254,7 +254,9 @@ RUBY
       else
         loc = the_self.instance_method(meth).source_location
       end
+
       RDL::Globals.info.set(klass, meth, :source_location, loc)
+
       a = RDL::Globals.deferred
       RDL::Globals.deferred = [] # Reset before doing more work to avoid infinite recursion
       a.each { |prev_klass, kind, contract, h|
@@ -846,8 +848,9 @@ module RDL
     nil
   end
 
-  def self.do_infer(sym)
+  def self.do_infer(sym, render_report: true)
     return unless RDL::Globals.to_infer[sym]
+
     RDL::Config.instance.use_unknown_types = true
     $stn = 0
     num_casts = 0
@@ -858,7 +861,9 @@ module RDL
     }
     RDL::Globals.to_infer[sym] = Set.new
     RDL::Typecheck.resolve_constraints
-    RDL::Typecheck.extract_solutions
+
+    RDL::Typecheck.extract_solutions render_report
+
     time = Time.now - time
     puts "Total time taken: #{time}."
     puts "Total number of type casts used: #{num_casts}."
