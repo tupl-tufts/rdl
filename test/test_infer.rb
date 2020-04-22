@@ -8,6 +8,60 @@ $LOAD_PATH << File.dirname(__FILE__) + '/../lib'
 require 'rdl'
 require 'types/core'
 
+class CompareTypeVariables
+  def initialize
+    @var_lookup = {}
+  end
+
+  def compare_methods(expected, given)
+    expected.args.length == given.args.length &&
+      expected.args.zip(given.args).all? { |a| compare(a[0], a[1]) } &&
+      compare(expected.block, given.block) &&
+      compare(expected.ret, given.ret)
+  end
+
+  def compare_structural(expected, given)
+    expected.methods.keys == given.methods.keys &&
+      expected.methods.values.zip(given.methods.values).all? { |a| compare(a[0], a[1]) }
+  end
+
+  def compare_hash(expected, given)
+    expected.elts.keys == given.elts.keys &&
+      expected.elts.values.zip(given.elts.values).all? { |a| compare(a[0], a[1]) }
+  end
+
+  def compare_vartype(expected, given)
+    name_sym = expected.name.to_sym
+    return @var_lookup[name_sym] == given if @var_lookup.key? name_sym
+
+    @var_lookup[name_sym] = given
+    true
+  end
+
+  def compare(expected, given)
+    if expected.class == given.class
+
+      case expected
+      when RDL::Type::MethodType
+        return compare_methods(expected, given)
+
+      when RDL::Type::StructuralType
+        return compare_structural(expected, given)
+
+      when RDL::Type::FiniteHashType
+        return compare_hash(expected, given)
+
+      when RDL::Type::VarType
+        return compare_vartype(expected, given)
+      end
+
+      return expected == given
+    end
+
+    false
+  end
+end
+
 # Testing Inference (constraint.rb)
 class TestInfer < Minitest::Test
   extend RDL::Annotate
@@ -68,7 +122,9 @@ class TestInfer < Minitest::Test
       error_str += 'Got      '.red + typ.solution.to_s
     end
 
-    assert expected_type == typ.solution, error_str
+    comp = CompareTypeVariables.new
+
+    assert comp.compare(expected_type, typ.solution), error_str
   end
 
   def self.should_have_type(meth, typ, depends_on: [])
@@ -92,7 +148,7 @@ class TestInfer < Minitest::Test
   def plus_two(val)
     val + 2
   end
-  should_have_type :plus_two, '([ +: (Number) -> aaa ]) -> aaa'
+  should_have_type :plus_two, '([ +: (Integer) -> a ]) -> b'
 
   def print_it(val)
     puts val
@@ -112,7 +168,7 @@ class TestInfer < Minitest::Test
   def return_hash_val(val)
     { a: 1, b: 'b', c: val }
   end
-  should_have_type :return_hash_val, '(val) -> { a: Integer, b: String, c: val }'
+  should_have_type :return_hash_val, '(a) -> { a: Integer, b: String, c: a }'
 
   def concatenate
     'Hello' + ' World!'
@@ -137,11 +193,11 @@ class TestInfer < Minitest::Test
   def note(reason, args, ast)
     Diagnostic.new :note, reason, args, ast.loc.expression
   end
-  should_have_type :note, '(reason, args, Parser::AST::Node or Parser::Source::Comment) -> Diagnostic'
+  should_have_type :note, '(a, b, Parser::AST::Node or Parser::Source::Comment) -> Diagnostic'
 
   def print_note(reason, args, ast)
     puts note(reason, args, ast).render
   end
-  should_have_type :print_note, '(reason, args, Parser::AST::Node or Parser::Source::Comment) -> nil',
+  should_have_type :print_note, '(a, b, Parser::AST::Node or Parser::Source::Comment) -> nil',
                    depends_on: [:note]
 end
