@@ -4,54 +4,38 @@ class RDL::Config
   include Singleton
 
   attr_accessor :nowrap
-  attr_accessor :gather_stats
-  attr_reader :report # writer is custom defined
+  attr_accessor :gather_stats, :at_exit_installed
+  attr_accessor :report, :get_types, :guess_types
   attr_accessor :weak_update_promote, :widen_bound, :promote_widen, :use_comp_types, :check_comp_types
   attr_accessor :type_defaults, :infer_defaults, :pre_defaults, :post_defaults, :rerun_comp_types, :assume_dyn_type
   attr_accessor :use_precise_string, :number_mode, :use_unknown_types, :infer_empties
 
   def initialize
-    @nowrap = Set.new # Set of symbols
-    @gather_stats = false
-    @report = false # if this is enabled by default, modify @at_exit_installed
-    @guess_types = [] # same as above
-    @get_types = [] # Array<Array<[String, Symbol>>: list of class/method name pairs to collect type data for
-    @at_exit_installed = false
-    @weak_update_promote = false
-    @promote_widen = false
-    @type_defaults = { wrap: true, typecheck: false}
-    @infer_defaults = { time: nil }
-    @pre_defaults = { wrap: true }
-    @post_defaults = { wrap: true }
-    @assume_dyn_type = false
-    @widen_bound = 5
-    @use_comp_types = true
-    @check_comp_types = false ## this for dynamically checking that the result of a computed type still holds
-    @rerun_comp_types = false ## this is for dynamically checking that a type computation still evaluates to the same thing as it did at type checking time
-    @use_precise_string = false
-    @number_mode = false
-    @use_unknown_types = false
-    @infer_empties = true ## if [] and {} should be typed as Array<var> and Hash<var, var>
+    RDL::Config.reset(self)
   end
 
-  def report=(val)
-    install_at_exit
-    @report = val
-  end
-
-  def guess_types
-    install_at_exit
-    return @guess_types
-  end
-
-  def guess_types=(val)
-    install_at_exit
-    @guess_types = val
-  end
-
-  def get_types
-    install_at_exit
-    return @get_types
+  def self.reset(c=RDL::Config.instance)
+    c.nowrap = Set.new # Set of symbols
+    c.gather_stats = false
+    c.report = false # if this is enabled by default, modify @at_exit_installed
+    c.guess_types = [] # same as above
+    c.get_types = [] # Array<Array<[String, Symbol>>: list of class/method name pairs to collect type data for
+    c.at_exit_installed = false
+    c.weak_update_promote = false
+    c.promote_widen = false
+    c.type_defaults = { wrap: true, typecheck: false}
+    c.infer_defaults = { time: nil }
+    c.pre_defaults = { wrap: true }
+    c.post_defaults = { wrap: true }
+    c.assume_dyn_type = false
+    c.widen_bound = 5
+    c.use_comp_types = true
+    c.check_comp_types = false ## this for dynamically checking that the result of a computed type still holds
+    c.rerun_comp_types = false ## this is for dynamically checking that a type computation still evaluates to the same thing as it did at type checking time
+    c.use_precise_string = false
+    c.number_mode = false
+    c.use_unknown_types = false
+    c.infer_empties = true ## if [] and {} should be typed as Array<var> and Hash<var, var>
   end
 
   def add_nowrap(*klasses)
