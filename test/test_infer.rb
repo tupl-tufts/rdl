@@ -148,7 +148,7 @@ class TestInfer < Minitest::Test
   def plus_two(val)
     val + 2
   end
-  should_have_type :plus_two, '([ +: (Integer) -> a ]) -> b'
+  should_have_type :plus_two, '([ +: (Number) -> a ]) -> b'
 
   def print_it(val)
     puts val
