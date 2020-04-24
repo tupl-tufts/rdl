@@ -3,9 +3,9 @@ require 'csv'
 module RDL::Typecheck
 
   def self.resolve_constraints
-    puts "Starting constraint resolution..."
+    puts "Starting constraint resolution..." if RDL::Config.instance.infer_verbose
     RDL::Globals.constrained_types.each { |klass, name|
-      puts "Resolving constraints from #{klass} and #{name}"
+      puts "Resolving constraints from #{klass} and #{name}" if RDL::Config.instance.infer_verbose
       typ = RDL::Globals.info.get(klass, name, :type)
       ## If typ is an Array, then it's an array of method types
       ## but for inference, we only use a single method type.
@@ -307,7 +307,7 @@ module RDL::Typecheck
     loop do
       @new_constraints = false
       typ_sols = {}
-      puts "\n\nRunning solution extraction..."
+      puts "\n\nRunning solution extraction..." if RDL::Config.instance.infer_verbose
       RDL::Globals.constrained_types.each { |klass, name|
         RDL::Type::VarType.no_print_XXX!
         typ = RDL::Globals.info.get(klass, name, :type)
@@ -318,7 +318,7 @@ module RDL::Typecheck
           arg_sols, block_sol, ret_sol = extract_meth_sol(tmeth)
 
           block_string = block_sol ? " { #{block_sol} }" : nil
-          puts "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
+          puts "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}" if RDL::Config.instance.infer_verbose
 
           RDL::Type::VarType.print_XXX!
           block_string = block_sol ? " { #{block_sol} }" : nil
@@ -333,7 +333,7 @@ module RDL::Typecheck
           ## Can improve later if desired.
           var_sol = extract_var_sol(typ, :var)
           #typ.solution = var_sol
-          puts "Extracted solution for #{klass} variable #{name} is #{var_sol}."
+          puts "Extracted solution for #{klass} variable #{name} is #{var_sol}." if RDL::Config.instance.infer_verbose
 
           RDL::Type::VarType.print_XXX!
           typ_sols[[klass.to_s, name.to_sym]] = var_sol.to_s

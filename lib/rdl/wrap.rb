@@ -865,9 +865,11 @@ module RDL
     RDL::Typecheck.extract_solutions render_report
 
     time = Time.now - time
-    puts "Total time taken: #{time}."
-    puts "Total number of type casts used: #{num_casts}."
-    puts "Total amount of time spent on stn: #{$stn}."
+    if RDL::Config.instance.infer_verbose
+      puts "Total time taken: #{time}."
+      puts "Total number of type casts used: #{num_casts}."
+      puts "Total amount of time spent on stn: #{$stn}."
+    end
   end
 
   def self.load_sequel_schema(db)
