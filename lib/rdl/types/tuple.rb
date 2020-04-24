@@ -36,12 +36,16 @@ module RDL::Type
 
     alias eql? ==
 
-    def match(other)
-      return @array.match(other) if @array
+    def match(other, type_var_table = {})
+      return @array.match(other, type_var_table) if @array
+
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
-      return (other.instance_of? TupleType) && (@params.length == other.params.length) && (@params.zip(other.params).all? { |t,o| t.match(o) })
+
+      (other.instance_of? TupleType) &&
+        (@params.length == other.params.length) &&
+        (@params.zip(other.params).all? { |t, o| t.match(o, type_var_table) })
     end
 
     def promote(t=nil)
@@ -95,7 +99,7 @@ module RDL::Type
     end
 
     def copy
-      return TupleType.new(*@params.map { |t| t.copy })      
+      return TupleType.new(*@params.map { |t| t.copy })
     end
 
     def hash

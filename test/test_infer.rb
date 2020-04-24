@@ -8,67 +8,17 @@ $LOAD_PATH << File.dirname(__FILE__) + '/../lib'
 require 'rdl'
 require 'types/core'
 
-class CompareTypeVariables
-  def initialize
-    @var_lookup = {}
-  end
-
-  def compare_methods(expected, given)
-    expected.args.length == given.args.length &&
-      expected.args.zip(given.args).all? { |a| compare(a[0], a[1]) } &&
-      compare(expected.block, given.block) &&
-      compare(expected.ret, given.ret)
-  end
-
-  def compare_structural(expected, given)
-    expected.methods.keys == given.methods.keys &&
-      expected.methods.values.zip(given.methods.values).all? { |a| compare(a[0], a[1]) }
-  end
-
-  def compare_hash(expected, given)
-    expected.elts.keys == given.elts.keys &&
-      expected.elts.values.zip(given.elts.values).all? { |a| compare(a[0], a[1]) }
-  end
-
-  def compare_vartype(expected, given)
-    name_sym = expected.name.to_sym
-    return @var_lookup[name_sym] == given if @var_lookup.key? name_sym
-
-    @var_lookup[name_sym] = given
-    true
-  end
-
-  def compare(expected, given)
-    if expected.class == given.class
-
-      case expected
-      when RDL::Type::MethodType
-        return compare_methods(expected, given)
-
-      when RDL::Type::StructuralType
-        return compare_structural(expected, given)
-
-      when RDL::Type::FiniteHashType
-        return compare_hash(expected, given)
-
-      when RDL::Type::VarType
-        return compare_vartype(expected, given)
-      end
-
-      return expected == given
-    end
-
-    false
-  end
-end
-
 # Testing Inference (constraint.rb)
 class TestInfer < Minitest::Test
   extend RDL::Annotate
 
   def setup
     RDL.reset
-    RDL::Config.instance.number_mode = true # treat all numeric classes the same
+    RDL::Config.instance.number_mode = true
+
+    # TODO: this will go away after config/reset
+    RDL::Config.instance.use_precise_string = false
+
     RDL.readd_comp_types
     RDL.type_params :Hash, [:k, :v], :all? unless RDL::Globals.type_params['Hash']
     RDL.type_params :Array, [:t], :all? unless RDL::Globals.type_params['Array']
@@ -91,6 +41,12 @@ class TestInfer < Minitest::Test
     # puts "Start #{@NAME}"
   end
 
+  # TODO: this will go away after config/reset
+  def teardown
+    RDL::Config.instance.number_mode = false
+    RDL::Config.instance.use_unknown_types = false # set in do_infer
+  end
+
   # convert a string to a method type
   def tm(typ)
     RDL::Globals.parser.scan_str('#Q ' + typ)
@@ -100,7 +56,6 @@ class TestInfer < Minitest::Test
     depends_on.each { |m| RDL.infer self.class, m, time: :test }
 
     RDL.infer self.class, method, time: :test
-
     RDL.do_infer :test, render_report: false
 
     types = RDL::Globals.info.get 'TestInfer', method, :type
@@ -122,9 +77,7 @@ class TestInfer < Minitest::Test
       error_str += 'Got      '.red + typ.solution.to_s
     end
 
-    comp = CompareTypeVariables.new
-
-    assert comp.compare(expected_type, typ.solution), error_str
+    assert expected_type.match(typ.solution), error_str
   end
 
   def self.should_have_type(meth, typ, depends_on: [])
@@ -148,7 +101,7 @@ class TestInfer < Minitest::Test
   def plus_two(val)
     val + 2
   end
-  should_have_type :plus_two, '([ +: (Number) -> a ]) -> b'
+  should_have_type :plus_two, '([ +: (Integer) -> a ]) -> b'
 
   def print_it(val)
     puts val

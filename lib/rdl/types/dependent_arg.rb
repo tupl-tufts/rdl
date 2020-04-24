@@ -28,8 +28,8 @@ module RDL::Type
     alias eql? ==
 
     # match on the base type, ignoring refinement
-    def match(other)
-      return @type.match(other)
+    def match(other, type_var_table = {})
+      return @type.match(other, type_var_table)
     end
 
     def hash # :nodoc:

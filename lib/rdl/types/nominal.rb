@@ -29,7 +29,7 @@ module RDL::Type
 
     alias eql? ==
 
-    def match(other)
+    def match(other, _type_var_table = {})
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
@@ -82,7 +82,7 @@ module RDL::Type
     def copy
       return self
     end
-    
+
     @@cache.merge!({"NilClass" => SingletonType.new(nil),
                     "TrueClass" => SingletonType.new(true),
                     "FalseClass" => SingletonType.new(false),
