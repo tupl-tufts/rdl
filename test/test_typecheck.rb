@@ -148,12 +148,6 @@ class TestTypecheck < Minitest::Test
     RDL.type TestTypecheck, :_any_object, '() -> Object', wrap: false # a method that could return true or false
     RDL.readd_comp_types
 
-    # RDL.type_params :Hash, [:k, :v], :all? unless RDL::Globals.type_params["Hash"]
-
-    # RDL.type_params :Array, [:t], :all? unless RDL::Globals.type_params["Array"]
-    # RDL.type :Array, :length, '() -> Integer', wrap: false
-    # RDL.rdl_alias :Array, :size, :length
-
     RDL.type_params 'RDL::Type::SingletonType', [:t], :satisfies? unless RDL::Globals.type_params["RDL::Type::SingletonType"]
 
     RDL.nowrap :Array
@@ -178,6 +172,7 @@ class TestTypecheck < Minitest::Test
     RDL.type :Hash, :[], '(k) -> v', wrap: false
     RDL.type :Hash, :[]=, '(k, v) -> v', wrap: false
 
+    RDL.nowrap :Range
     RDL.type_params(:Range, [:t], nil, variance: [:+]) { |t| t.member?(self.begin) && t.member?(self.end) } unless RDL::Globals.type_params["Range"]
     RDL.type :Range, :each, '() { (t) -> %any } -> self'
     RDL.type :Range, :each, '() -> Enumerator<t>'
