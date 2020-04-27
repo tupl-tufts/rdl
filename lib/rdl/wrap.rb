@@ -242,10 +242,14 @@ RUBY
   def self.do_method_added(the_self, sing, klass, meth)
     if sing
       loc = the_self.singleton_method(meth).source_location
+      orig_name = the_self.singleton_method(meth).original_name
     else
       loc = the_self.instance_method(meth).source_location
+      orig_name = the_self.instance_method(meth).original_name
     end
     RDL::Globals.info.set(klass, meth, :source_location, loc)
+    RDL::Globals.info.set(klass, meth, :alias, orig_name)
+
     # Apply any deferred contracts and reset list
 
     if RDL::Globals.deferred.size > 0
@@ -855,10 +859,21 @@ module RDL
     $stn = 0
     num_casts = 0
     time = Time.now
+
     RDL::Globals.to_infer[sym].each { |klass, meth|
-      RDL::Typecheck.infer klass, meth
-      num_casts += RDL::Typecheck.get_num_casts
+      begin
+        RDL::Typecheck.infer klass, meth
+        num_casts += RDL::Typecheck.get_num_casts
+      rescue => e
+        if RDL::Config.instance.convert_type_errors_to_dyn_type
+          puts "[do_infer] Error: #{e}; recording %dyn" if RDL::Config.instance.convert_to_dyn_verbose
+          RDL::Globals.info.set(klass, meth, :type, RDL::Globals.types[:dyn])
+        else
+          raise e
+        end
+      end
     }
+
     RDL::Globals.to_infer[sym] = Set.new
     RDL::Typecheck.resolve_constraints
 

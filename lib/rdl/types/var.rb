@@ -122,7 +122,7 @@ module RDL::Type
 
     def to_s # :nodoc:
       if @to_infer
-        return 'XXX' if @@print_XXX
+        # return 'XXX' if @@print_XXX
 
         "{ #{@cls}##{@meth} #{@category}: #{@name} }"
       else

@@ -4,7 +4,7 @@ class RDL::Heuristic
 
   def self.add(name, &blk)
     raise RuntimeError, "Expected heuristic name to be Symbol, given #{name}." unless name.is_a? Symbol
-    raise RuntimeError, "Expected block to be provided for heuristic." if blk.nil?    
+    raise RuntimeError, "Expected block to be provided for heuristic." if blk.nil?
     @rules[name] = blk
   end
 
@@ -37,20 +37,20 @@ class RDL::Heuristic
     union = RDL::Type::UnionType.new(*nom_sing_types).canonical
     #struct_types.each { |st| var_type.ubounds.delete_if { |s, loc| s.equal?(st) } } ## remove struct types from upper bounds
 
-    
+
     return union
     ## used to add and propagate here. Now that this is a heuristic, this should be done after running the rule.
     #var_type.add_and_propagate_upper_bound(union, nil)
   end
 
-  
+
 end
 
 class << RDL::Heuristic
   attr_reader :rules
 end
 
-class String  
+class String
   def is_rails_model?
     return false unless defined? Rails
     ActiveRecord::Base.descendants.map { |d| d.to_s }.include? self
@@ -70,7 +70,7 @@ class String
   def model_set_type
     RDL::Globals.parser.scan_str "#T Array<#{singularize.camelize}> or ActiveRecord_Relation<#{singularize.camelize}>"
   end
-  
+
 end
 
 if defined? Rails
