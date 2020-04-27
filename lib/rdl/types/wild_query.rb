@@ -29,7 +29,7 @@ module RDL::Type
       return self == other
     end
 
-    def match(other, _type_var_table = {})
+    def match(other, type_var_table = {})
       return true
     end
   end
