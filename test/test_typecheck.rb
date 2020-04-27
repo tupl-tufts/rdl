@@ -1,7 +1,6 @@
 require 'minitest/autorun'
 $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
-require 'types/core'
 
 class N1
   class N2
@@ -1231,16 +1230,6 @@ class TestTypecheck < Minitest::Test
         def def_inst_pass(x, y) a = Array.new(x,y); RDL.instantiate!(a, "Integer"); a; end
       }
     )
-
-    # below works with computational types
-    #assert_raises(RDL::Typecheck::StaticTypeError) {
-    assert (
-      self.class.class_eval {
-        type "(Integer) -> Integer", typecheck: :now
-        def def_inst_hash_fail(x) hash = {}; hash["test"] = x; hash["test"]; end
-      }
-    )
-#     }
 
 =begin
    # below works with computational types

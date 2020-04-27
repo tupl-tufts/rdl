@@ -17,11 +17,18 @@ class TestHashTypes < Minitest::Test
   def test_hash_methods
     self.class.class_eval {
 
+      type '(Integer) -> Integer', typecheck: :now
+      def def_inst_hash_fail(x)
+        hash = {}
+        hash["test"] = x
+        hash["test"]
+      end
+
       type '({bar: Integer, baz: String}) -> String', typecheck: :now
       def access_test1(x)
         x[:baz]
       end
-      
+
       type '({bar: Integer, baz: String}) -> {bar: Integer, baz: String}', typecheck: :now
       def access_test2(x)
         x[:baz]
