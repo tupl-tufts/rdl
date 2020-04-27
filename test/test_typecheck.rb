@@ -9,7 +9,7 @@ class N1
     def self.foo
       :sym
     end
-   type 'self.foo', '() -> :sym'
+    type 'self.foo', '() -> :sym'
 
     def self.foo2
       :sym2

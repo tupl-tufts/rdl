@@ -217,7 +217,7 @@ module RDL::Typecheck
   end
 
   def self.infer(klass, meth)
-    puts "*************** Infering method #{meth} from class #{klass} ***************"
+    puts "*************** Infering method #{meth} from class #{klass} ***************" if RDL::Config.instance.infer_verbose
     RDL::Config.instance.use_comp_types = true
     RDL::Config.instance.number_mode = true
     @var_cache = {}
@@ -284,7 +284,7 @@ module RDL::Typecheck
     end until old_captured == scope[:captured]
 
     #body_type = self_type if meth == :initialize
-    body_type = RDL::Globals.parser.scan_str "#T self" if meth == :initialize
+    body_type = RDL::Globals.parser.scan_str "#T self" if meth == :initialize # JF: Why not inst.self?
     if body_type.is_a?(RDL::Type::UnionType)
       body_type.types.each { |t| RDL::Type::Type.leq(t, ret_vartype, ast: ast) }
     else
@@ -294,7 +294,7 @@ module RDL::Typecheck
     RDL::Globals.info.set(klass, meth, :typechecked, true)
 
     RDL::Globals.constrained_types << [klass, meth]
-    puts "Done with constraint generation."
+    puts "Done with constraint generation." if RDL::Config.instance.infer_verbose
   end
 
   def self.typecheck(klass, meth, ast=nil, types = nil, effects = nil)
@@ -1697,7 +1697,6 @@ RUBY
         ts, es = tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union)
       end
 
-
       if es.nil? || (es.all? { |effect| effect.nil? }) ## could be multiple, because every time e is called, nil is added to effects
         ## should probably change default effect to be [:-, :-], but for now I want it like this,
         ## so I can easily see when a method has been used and its effect set to the default.
@@ -1787,7 +1786,16 @@ RUBY
       ts = ts.map { |t| t.instantiate(inst) }
     when RDL::Type::NominalType
       ts, es = lookup(scope, trecv.name, meth, e)
-      error :no_instance_method_type, [trecv.name, meth], e unless ts
+      unless ts
+        klass = RDL::Util.to_class(scope[:klass])
+        if klass.class == Module
+          # defer type checking until module is included
+
+
+
+        end
+        error :no_instance_method_type, [trecv.name, meth], e unless ts
+      end
       inst = {self: trecv}
       self_klass = RDL::Util.to_class(trecv.name)
     when RDL::Type::GenericType
@@ -1896,9 +1904,6 @@ RUBY
       else
         meth_type = RDL::Type::MethodType.new(tactuals, nil, ret_type)
       end
-
-
-
 
       RDL::Type::Type.leq(trecv, RDL::Type::StructuralType.new({ meth => meth_type }), ast: e)
       #tmeth_inter = [meth_type]
@@ -2087,7 +2092,6 @@ RUBY
       trets = [new_ret]
       apply_deferred_constraints(new_dcs, e) if !new_dcs.empty?
     end
-
 
     if trets.empty? # no possible matching call
       msg = <<RUBY
