@@ -145,7 +145,6 @@ class TestTypecheck < Minitest::Test
   def setup
     RDL.reset
     RDL.type TestTypecheck, :_any_object, '() -> Object', wrap: false # a method that could return true or false
-    RDL.readd_comp_types
 
     RDL.type_params 'RDL::Type::SingletonType', [:t], :satisfies? unless RDL::Globals.type_params["RDL::Type::SingletonType"]
 
