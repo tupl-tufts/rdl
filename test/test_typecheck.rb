@@ -147,11 +147,16 @@ class TestTypecheck < Minitest::Test
     RDL.reset
     RDL.type TestTypecheck, :_any_object, '() -> Object', wrap: false # a method that could return true or false
     RDL.readd_comp_types
-    RDL.type_params :Hash, [:k, :v], :all? unless RDL::Globals.type_params["Hash"]
-    RDL.type_params :Array, [:t], :all? unless RDL::Globals.type_params["Array"]
-    RDL.rdl_alias :Array, :size, :length
+
+    # RDL.type_params :Hash, [:k, :v], :all? unless RDL::Globals.type_params["Hash"]
+
+    # RDL.type_params :Array, [:t], :all? unless RDL::Globals.type_params["Array"]
+    # RDL.type :Array, :length, '() -> Integer', wrap: false
+    # RDL.rdl_alias :Array, :size, :length
+
     RDL.type_params 'RDL::Type::SingletonType', [:t], :satisfies? unless RDL::Globals.type_params["RDL::Type::SingletonType"]
-=begin
+
+    RDL.nowrap :Array
     RDL.type_params :Array, [:t], :all?
     RDL.type :Array, :[]=, '(Integer, t) -> t', wrap: false
     RDL.type :Array, :[]=, '(Integer, Integer, t) -> t', wrap: false
@@ -164,23 +169,27 @@ class TestTypecheck < Minitest::Test
     RDL.type :Array, :index, '() -> Enumerator<t>', wrap: false
     RDL.type :Array, :map, '() {(t) -> u} -> Array<u>', wrap: false
     RDL.type :Array, :map, '() -> Enumerator<t>', wrap: false
+    RDL.type :Array, :length, '() -> ``output_type(trec, targs, :length, "Integer")``'
+    RDL.rdl_alias :Array, :size, :length
+
+    RDL.nowrap :Hash
     RDL.type_params :Hash, [:k, :v], :all?
     RDL.type :Hash, :length, '() -> Integer', wrap: false
-    RDL.rdl_alias :Array, :size, :length
     RDL.type :Hash, :[], '(k) -> v', wrap: false
     RDL.type :Hash, :[]=, '(k, v) -> v', wrap: false
-=end
+
     RDL.type_params(:Range, [:t], nil, variance: [:+]) { |t| t.member?(self.begin) && t.member?(self.end) } unless RDL::Globals.type_params["Range"]
     RDL.type :Range, :each, '() { (t) -> %any } -> self'
     RDL.type :Range, :each, '() -> Enumerator<t>'
-=begin
+
+    RDL.nowrap :Integer
+    RDL.type :Integer, :>=, '(Integer) -> %bool', wrap: false
     RDL.type :Integer, :<, '(Integer) -> %bool', wrap: false
     RDL.type :Integer, :>, '(Integer) -> %bool', wrap: false
-    RDL.type :Integer, :>=, '(Integer) -> %bool', wrap: false
     RDL.type :Integer, :+, '(Integer) -> Integer', wrap: false
     RDL.type :Integer, :&, '(Integer) -> Integer', wrap: false
     RDL.type :Integer, :*, '(Integer) -> Integer', wrap: false
-=end
+
     RDL.type :Integer, :to_s, '() -> String', wrap: false
     RDL.type :Kernel, 'self.puts', '(*[to_s : () -> String]) -> nil', wrap: false
     RDL.type :Kernel, :raise, '() -> %bot', wrap: false
@@ -194,6 +203,7 @@ class TestTypecheck < Minitest::Test
 #    RDL.type :String, :===, '(%any) -> %bool', wrap: false
 #    RDL.type :String, :length, '() -> Integer', wrap: false
     RDL.type :NilClass, :&, '(%any obj) -> false', wrap: false
+
     @t3 = RDL::Type::SingletonType.new 3
     @t4 = RDL::Type::SingletonType.new 4
     @t5 = RDL::Type::SingletonType.new 5
