@@ -193,10 +193,10 @@ class TestTypecheck < Minitest::Test
     RDL.type :Kernel, :raise, '(Exception, ?String, ?Array<String>) -> %bot', wrap: false
     RDL.type :Object, :===, '(%any other) -> %bool', wrap: false
     RDL.type :Object, :clone, '() -> self', wrap: false
-#    RDL.type :String, :*, '(Integer) -> String', wrap: false
-#    RDL.type :String, :+, '(String) -> String', wrap: false
+    RDL.type :String, :*, '(Integer) -> String', wrap: false
+    RDL.type :String, :+, '(String) -> String', wrap: false
 #    RDL.type :String, :===, '(%any) -> %bool', wrap: false
-#    RDL.type :String, :length, '() -> Integer', wrap: false
+    RDL.type :String, :length, '() -> Integer', wrap: false
     RDL.type :NilClass, :&, '(%any obj) -> false', wrap: false
 
     @t3 = RDL::Type::SingletonType.new 3
