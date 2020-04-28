@@ -27,12 +27,14 @@ module RDL::Type
 
     alias eql? ==
 
-    def match(other)
+    def match(other, type_var_table = {})
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return false unless other.instance_of? GenericType
-      return @params.length == other.params.length && @params.zip(other.params).all? { |t,o| t.match(o) }
+
+      return @params.length == other.params.length &&
+        @params.zip(other.params).all? { |t,o| t.match(o, type_var_table) }
     end
 
     def <=(other)

@@ -338,16 +338,17 @@ RUBY
     alias eql? ==
 
     # other may not be a query
-    def match(other)
+    def match(other, type_var_table = {})
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return false unless other.instance_of? MethodType
-      return false unless @ret.match(other.ret)
+      return false unless @ret.match(other.ret, type_var_table)
+
       if @block == nil
         return false unless other.block == nil
       else
         return false if other.block == nil
-        return false unless @block.match(other.block)
+        return false unless @block.match(other.block, type_var_table)
       end
       # Check arg matches; logic is similar to pre_cond
       states = [[0,0]] # [position in self, position in other]
@@ -369,7 +370,7 @@ RUBY
           s_arg_t = s_arg_t.type if s_arg_t.instance_of? AnnotatedArgType
           o_arg_t = other.args[o_arg]
           o_arg_t = o_arg_t.type if o_arg_t.instance_of? AnnotatedArgType
-          next unless s_arg_t.match(o_arg_t)
+          next unless s_arg_t.match(o_arg_t, type_var_table)
           states << [s_arg+1, o_arg+1]
         end
       end

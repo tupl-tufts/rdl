@@ -30,11 +30,12 @@ module RDL::Type
 
     alias eql? ==
 
-    def match(other)
+    def match(other, type_var_table = {})
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
-      return (other.instance_of? OptionalType) && (@type.match(other.type))
+
+      return (other.instance_of? OptionalType) && (@type.match(other.type, type_var_table))
     end
 
     # Note: no member?, because these can only appear in MethodType, where they're handled specially
