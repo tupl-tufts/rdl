@@ -185,6 +185,7 @@ module RDL::Type
             }
 
             lb_var_choices.each { |vartype, choice_hash|
+              puts "[type.rb] #{vartype}"
               if choice_hash.values.uniq.size == 1
                 RDL::Type::Type.leq(choice_hash.values[0], vartype, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
               else

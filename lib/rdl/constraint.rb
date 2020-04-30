@@ -1,3 +1,4 @@
+# coding: utf-8
 require 'csv'
 
 module RDL::Typecheck
@@ -20,6 +21,7 @@ module RDL::Typecheck
         if var_type.var_type? || var_type.optional_var_type? || var_type.vararg_var_type?
           var_type = var_type.type if var_type.optional_var_type? || var_type.vararg_var_type?
           var_type.lbounds.each { |lower_t, ast|
+            puts "[add_and_propagate] #{lower_t} ≼ #{var_type}"
             var_type.add_and_propagate_lower_bound(lower_t, ast)
           }
           var_type.ubounds.each { |upper_t, ast|
@@ -99,8 +101,9 @@ module RDL::Typecheck
             #sol = typ
           end
         rescue RDL::Typecheck::StaticTypeError => e
-          puts "Attempted to apply rule #{name} to var #{var}, but go the following error: "
+          puts "[HEURISTIC] ERROR: Attempted to apply rule #{name} to var #{var}, but got the following error: "
           puts e
+          puts "----"
           undo_constraints(new_cons)
           ## no new constraints in this case so we'll leave it as is
         end
@@ -303,43 +306,54 @@ module RDL::Typecheck
   def self.extract_solutions(render_report = true)
     ## Go through once to come up with solution for all var types.
     #until !@new_constraints
+    puts "-----------------------"
+    puts "BEGIN EXTRACT SOLUTIONS"
+    puts "-----------------------"
     typ_sols = {}
     loop do
       @new_constraints = false
       typ_sols = {}
       puts "\n\nRunning solution extraction..." if RDL::Config.instance.infer_verbose
       RDL::Globals.constrained_types.each { |klass, name|
-        RDL::Type::VarType.no_print_XXX!
-        typ = RDL::Globals.info.get(klass, name, :type)
-        if typ.is_a?(Array)
-          raise "Expected just one method type for #{klass}#{name}." unless typ.size == 1
-          tmeth = typ[0]
+        begin
+          puts "EXTRACTING #{RDL::Util.pp_klass_meth(klass, name)}"
+          RDL::Type::VarType.no_print_XXX!
+          typ = RDL::Globals.info.get(klass, name, :type)
+          if typ.is_a?(Array)
+            raise "Expected just one method type for #{klass}#{name}." unless typ.size == 1
+            tmeth = typ[0]
 
-          arg_sols, block_sol, ret_sol = extract_meth_sol(tmeth)
+            arg_sols, block_sol, ret_sol = extract_meth_sol(tmeth)
 
-          block_string = block_sol ? " { #{block_sol} }" : nil
-          puts "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}" if RDL::Config.instance.infer_verbose
+            block_string = block_sol ? " { #{block_sol} }" : nil
+            puts "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}" if RDL::Config.instance.infer_verbose
 
-          RDL::Type::VarType.print_XXX!
-          block_string = block_sol ? " { #{block_sol} }" : nil
-          typ_sols[[klass.to_s, name.to_sym]] = "(#{arg_sols.join(', ')})#{block_string} -> #{ret_sol}"
-        elsif name.to_s == "splat_param"
-        else
-          ## Instance/Class (also some times splat parameter) variables:
-          ## There is no clear answer as to what to do in this case.
-          ## Just need to pick something in between bounds (inclusive).
-          ## For now, plan is to just use lower bound when it's not empty/%bot,
-          ## otherwise use upper bound.
-          ## Can improve later if desired.
-          var_sol = extract_var_sol(typ, :var)
-          #typ.solution = var_sol
-          puts "Extracted solution for #{klass} variable #{name} is #{var_sol}." if RDL::Config.instance.infer_verbose
+            RDL::Type::VarType.print_XXX!
+            block_string = block_sol ? " { #{block_sol} }" : nil
+            typ_sols[[klass.to_s, name.to_sym]] = "(#{arg_sols.join(', ')})#{block_string} -> #{ret_sol}"
+          elsif name.to_s == "splat_param"
+          else
+            ## Instance/Class (also some times splat parameter) variables:
+            ## There is no clear answer as to what to do in this case.
+            ## Just need to pick something in between bounds (inclusive).
+            ## For now, plan is to just use lower bound when it's not empty/%bot,
+            ## otherwise use upper bound.
+            ## Can improve later if desired.
+            var_sol = extract_var_sol(typ, :var)
+            #typ.solution = var_sol
+            puts "Extracted solution for #{klass} variable #{name} is #{var_sol}." if RDL::Config.instance.infer_verbose
 
-          RDL::Type::VarType.print_XXX!
-          typ_sols[[klass.to_s, name.to_sym]] = var_sol.to_s
+            RDL::Type::VarType.print_XXX!
+            typ_sols[[klass.to_s, name.to_sym]] = var_sol.to_s
+          end
+        rescue => e
+          raise e unless RDL::Config.instance.convert_type_errors_to_dyn_type
+
+          puts "[EXTRACT] Error while exctracting solution for #{RDL::Util.pp_klass_method(klass, name)}: #{e}; continuing...\n----"
+          typ_sols[[klass.to_s, name.to_sym]] = "-- Extraction Error --"
         end
       }
-      break if !@new_constraints
+    break if !@new_constraints
     end
 
     make_extraction_report(typ_sols) if render_report

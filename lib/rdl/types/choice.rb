@@ -4,7 +4,7 @@ module RDL::Type
     class << self
       alias :__new__ :new
     end
-    
+
     ## variational typing!
     attr_accessor :choices, :connecteds
     attr_accessor :ubounds # upper bounds this ChoiceType has been compared with using <=
@@ -37,7 +37,7 @@ module RDL::Type
     def <=(other)
       return Type.leq(self, other)
     end
-    
+
     def to_s
       typs = []
       @choices.each { |choice, typ|
@@ -52,7 +52,7 @@ module RDL::Type
     end
 
     alias eql? ==
-    
+
     def remove!(choice, removed_hash: {})
       raise "Expected integer, got #{choice}." unless choice.is_a? Integer
       removed = @choices.delete(choice)
@@ -121,5 +121,5 @@ module RDL::Type
       @hash
     end
 
-  end  
+  end
 end

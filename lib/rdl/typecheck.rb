@@ -231,6 +231,14 @@ module RDL::Typecheck
   end
 
   def self.infer(klass, meth)
+    _infer(klass, meth)
+  rescue => exn
+    raise exn unless RDL::Config.instance.convert_type_errors_to_dyn_type
+    puts "[INFER] Error: #{exn}; skipping inference for #{RDL::Util.pp_klass_method(klass, meth)}\n----"
+    # RDL::Globals.info.set(klass, meth, :type, [RDL::Globals.types[:dyn]])
+  end
+
+  def self._infer(klass, meth)
     puts "*************** Infering #{RDL::Util.pp_klass_method(klass, meth)} ***************" if RDL::Config.instance.infer_verbose
     RDL::Config.instance.use_comp_types = true
     RDL::Config.instance.number_mode = true
@@ -239,11 +247,11 @@ module RDL::Typecheck
     if ast.nil?
       warning_text = "Warning: Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)};"
 
-      if RDL::Config.instance.convert_type_errors_to_dyn_type
-        puts "#{warning_text} recording %dyn" if RDL::Config.instance.convert_to_dyn_verbose
-        RDL::Globals.info.set(klass, meth, :type, RDL::Globals.types[:dyn])
-        return
-      end
+      # if RDL::Config.instance.convert_type_errors_to_dyn_type
+      #   puts "#{warning_text} recording %dyn" if RDL::Config.instance.convert_to_dyn_verbose
+      #   RDL::Globals.info.set(klass, meth, :type, [RDL::Globals.types[:dyn]])
+      #   return
+      # end
 
       puts "#{warning_text} skipping method"
       return
@@ -275,25 +283,6 @@ module RDL::Typecheck
     else
       raise RuntimeError, "Unexpected ast type #{ast.type}"
     end
-
-
-    alias_meth = RDL::Globals.info.get(klass, meth, :alias)
-
-    # TODO: I think we need to sort the aliases to the very end of a class? Or
-    # perhaps the info table should dynamically look these up...
-    if alias_meth
-      @num_casts = 0
-
-      RDL::Globals.info.set(klass, meth, :typechecked, true)
-      RDL::Globals.constrained_types << [klass, meth]
-
-      orig_type = RDL::Globals.info.get(klass, alias_meth, :type)
-      RDL::Globals.info.set(klass, meth, :type, orig_type)
-
-      # puts "Note: aliasing #{meth} to #{alias_meth}"
-      return
-    end
-
 
     raise RuntimeError, "Method #{name} defined where method #{meth} expected" if name.to_sym != meth
     context_types = RDL::Globals.info.get(klass, meth, :context_types)
@@ -598,17 +587,12 @@ module RDL::Typecheck
   end
 
   def self.tc(scope, env, e)
-    if RDL::Config.instance.convert_type_errors_to_dyn_type
-      begin
-        self._tc(scope, env, e)
-      rescue => exn
-        # puts "Error in typecheck for #{e}: #{exn}"
-        puts "[TC] Error: #{e}; returning %dyn"
-        [env, RDL::Globals.types[:dyn]]
-      end
-    else
-      self._tc(scope, env, e)
-    end
+    _tc(scope, env, e)
+  rescue => exn
+    raise exn unless RDL::Config.instance.convert_type_errors_to_dyn_type
+    # puts "Error in typecheck for #{e}: #{exn}"
+    puts "[TC]    Error: #{exn}; returning %dyn\n----"
+    [env, RDL::Globals.types[:dyn]]
   end
 
   # The actual type checking logic.
@@ -2533,7 +2517,7 @@ RUBY
     arg_types = []
     keyword_args = {}
     params.each { |param|
-      var_name = param[1] || Gensym.new(klass_obj.__binding__).generate
+      var_name = param[1]
 
       case param[0]
       when :req

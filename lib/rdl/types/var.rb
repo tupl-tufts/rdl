@@ -1,3 +1,4 @@
+# coding: utf-8
 module RDL::Type
   class VarType < Type
     attr_reader :name, :cls, :meth, :category, :to_infer
@@ -80,17 +81,21 @@ module RDL::Type
     ## Similar to above.
     def add_and_propagate_lower_bound(typ, ast, new_cons = {})
       return if self.equal?(typ)
+      puts "[aaplb] entry: #{typ} ≼ #{self}"
       if !@lbounds.any? { |t, a| t == typ }
+        puts "[aaplb] @lbounds.any"
         @lbounds << [typ, ast]
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:lower, typ, ast]] : [[:lower, typ, ast]]
       end
       @ubounds.each { |upper_t, a|
+        puts "[aaplb] ubounds.each #{upper_t}"
         if upper_t.is_a?(VarType)
           upper_t.add_and_propagate_lower_bound(typ, ast, new_cons) unless upper_t.lbounds.any? { |t, _| t == typ }
         else
           if typ.is_a?(VarType) && !typ.ubounds.any? { |t, _| t == upper_t }
             new_cons[typ] = new_cons[typ] ? new_cons[typ] | [[:upper, upper_t, ast]] : [[:upper, upper_t, ast]]
           end
+          puts "[aaplb] about to check #{typ} <= #{upper_t}"
           unless RDL::Type::Type.leq(typ, upper_t, {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons)
             d1 = ast.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [typ.to_s], ast.loc.expression).render.join("\n")
             d2 = a.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [upper_t.to_s], a.loc.expression).render.join("\n")
@@ -112,7 +117,9 @@ module RDL::Type
 
     def add_lbound(typ, ast, new_cons = {}, propagate: false)
       #raise "About to add lower bound #{typ} <= #{self}" if typ.is_a?(VarType) && !typ.to_infer
+      # raise "ChoiceType!!!!" if typ.is_a? ChoiceType
       if propagate
+        puts "[var.rb] add_lbound(#{typ})"
         add_and_propagate_lower_bound(typ, ast, new_cons)
       elsif !@lbounds.any? { |t, a| t == typ }
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:lower, typ, ast]] : [[:lower, typ, ast]]
