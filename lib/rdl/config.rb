@@ -38,7 +38,7 @@ class RDL::Config
     c.use_unknown_types = false
     c.infer_empties = true ## if [] and {} should be typed as Array<var> and Hash<var, var>
     c.infer_verbose = false
-    c.convert_type_errors_to_dyn_type = true
+    c.convert_type_errors_to_dyn_type = false
     c.convert_to_dyn_verbose = false
   end
 
