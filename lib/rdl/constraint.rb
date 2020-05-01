@@ -6,7 +6,13 @@ module RDL::Typecheck
   def self.resolve_constraints
     puts "Starting constraint resolution..." if RDL::Config.instance.infer_verbose
     RDL::Globals.constrained_types.each { |klass, name|
-      puts "Resolving constraints from #{klass} and #{name}" if RDL::Config.instance.infer_verbose
+      if klass == "[s]JSON" && name == :[]
+        $imminent_failure = true
+        # binding.pry
+        system("clear")
+      end
+
+      puts 'Resolving'.colorize(:green) + " constraints from #{RDL::Util.pp_klass_method(klass, name)}" if RDL::Config.instance.infer_verbose
       typ = RDL::Globals.info.get(klass, name, :type)
       ## If typ is an Array, then it's an array of method types
       ## but for inference, we only use a single method type.

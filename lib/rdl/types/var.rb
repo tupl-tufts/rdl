@@ -81,26 +81,30 @@ module RDL::Type
     ## Similar to above.
     def add_and_propagate_lower_bound(typ, ast, new_cons = {})
       return if self.equal?(typ)
-      puts "[aaplb] entry: #{typ} ≼ #{self}"
+      puts "[aaplb #{caller.length}]".colorize(:yellow) + " #{typ} ≼ #{self}"
       if !@lbounds.any? { |t, a| t == typ }
-        puts "[aaplb] @lbounds.any"
+        puts "\t[aaplb #{caller.length}]".colorize(:yellow) + " @lbounds.any"
         @lbounds << [typ, ast]
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:lower, typ, ast]] : [[:lower, typ, ast]]
       end
+      puts "[aaplb #{caller.length}]".colorize(:yellow) + " ubounds.each"
       @ubounds.each { |upper_t, a|
-        puts "[aaplb] ubounds.each #{upper_t}"
+        puts "\t[aaplb #{caller.length}]".colorize(:yellow) + " ubound: #{upper_t}"
         if upper_t.is_a?(VarType)
           upper_t.add_and_propagate_lower_bound(typ, ast, new_cons) unless upper_t.lbounds.any? { |t, _| t == typ }
         else
           if typ.is_a?(VarType) && !typ.ubounds.any? { |t, _| t == upper_t }
             new_cons[typ] = new_cons[typ] ? new_cons[typ] | [[:upper, upper_t, ast]] : [[:upper, upper_t, ast]]
           end
-          puts "[aaplb] about to check #{typ} <= #{upper_t}"
+          puts "\t[aaplb #{caller.length}]".colorize(:yellow) + " about to check #{typ} <= #{upper_t} with".colorize(:green)
+          new_cons.each { |k, v| v.each { |v| puts "\t\t*".colorize(:yellow) + " #{k} <= #{v[1] || v}" } }
+
           unless RDL::Type::Type.leq(typ, upper_t, {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons)
             d1 = ast.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [typ.to_s], ast.loc.expression).render.join("\n")
             d2 = a.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [upper_t.to_s], a.loc.expression).render.join("\n")
             raise RDL::Typecheck::StaticTypeError, ("Inconsistent type constraint #{typ} <= #{upper_t} generated during inference.\n #{d1}\n #{d2}")
           end
+          puts "\t[aaplb #{caller.length}]".colorize(:yellow) + " Checked #{typ} <= #{upper_t}".colorize(:green)
         end
       }
     end
@@ -118,8 +122,8 @@ module RDL::Type
     def add_lbound(typ, ast, new_cons = {}, propagate: false)
       #raise "About to add lower bound #{typ} <= #{self}" if typ.is_a?(VarType) && !typ.to_infer
       # raise "ChoiceType!!!!" if typ.is_a? ChoiceType
+      puts "[add_lbound #{caller.length}]".colorize(:yellow) + " #{self}.add_lbound(#{typ}); " + 'propagate'.colorize(:yellow) + " = #{propagate}"
       if propagate
-        puts "[var.rb] add_lbound(#{typ})"
         add_and_propagate_lower_bound(typ, ast, new_cons)
       elsif !@lbounds.any? { |t, a| t == typ }
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:lower, typ, ast]] : [[:lower, typ, ast]]

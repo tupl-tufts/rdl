@@ -3,7 +3,7 @@ require 'digest'
 require 'set'
 require 'parser/current'
 #require 'method_source'
-
+require 'colorize'
 
 module RDL
 end

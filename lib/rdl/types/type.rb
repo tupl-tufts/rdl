@@ -104,10 +104,19 @@ module RDL::Type
         end
         return true
       elsif right.is_a?(VarType) && right.to_infer
+
+        hash_bot_bot = RDL::Globals.parser.scan_str "#T Hash<%bot,%bot>"
+        # binding.pry if left.match(hash_bot_bot)
+
+        puts "[leq #{caller.length}]".colorize(:yellow) + "#{right}.is_a VarType"
+        puts "\t#{left} <= #{right}"
         if deferred_constraints.nil?
+          puts "\tno deferred_constraints"
           right.add_lbound(left, ast, new_cons, propagate: propagate) unless (right.lbounds.any? { |t, loc| t == left || t.hash == left.hash } || right.equal?(left))
         else
+          puts "\tdeferred_constraints:"
           deferred_constraints << [left, right]
+          deferred_constraints.each { |k, v| if v.is_a?(Array) then v.each { |v| puts "\t\t*".colorize(:yellow) + " #{k} <= #{v[1] || v}" } else puts "\t\t*".colorize(:yellow) + " #{k} <= #{v}" end }
         end
         return true
       end
@@ -185,7 +194,7 @@ module RDL::Type
             }
 
             lb_var_choices.each { |vartype, choice_hash|
-              puts "[type.rb] #{vartype}"
+              puts "[type.rb; lb_var_choices] #{vartype}"
               if choice_hash.values.uniq.size == 1
                 RDL::Type::Type.leq(choice_hash.values[0], vartype, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
               else
