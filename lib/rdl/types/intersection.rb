@@ -87,7 +87,7 @@ module RDL::Type
           new_types << @types[i] unless @types[i].is_a? VarType
         end
       end
-      RDL::Type::IntersectionType.new(*new_types).canonical              
+      RDL::Type::IntersectionType.new(*new_types).canonical
     end
 
     def to_s  # :nodoc:
@@ -103,13 +103,14 @@ module RDL::Type
 
     alias eql? ==
 
-    def match(other)
+    def match(other, type_var_table = {})
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return false unless other.instance_of? IntersectionType
       return false if @types.length != other.types.length
-      @types.all? { |t| other.types.any? { |ot| t.match(ot) } }
+
+      @types.all? { |t| other.types.any? { |ot| t.match(ot, type_var_table) } }
     end
 
     def member?(obj, *args)

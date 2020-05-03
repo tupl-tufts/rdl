@@ -149,11 +149,22 @@ module RDL::Type
       return Type.leq(self, other)
     end
 
-    def match(other)
+    def match(other, type_var_table = {})
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
+
       return true if other.instance_of? WildQuery
-      return self == other
+      return false unless other.instance_of? VarType
+
+      name_sym = name.to_sym
+
+      # If we've seen this type variable before, look up what it was originally
+      # referencing and test that for equality with the current `other` type
+      return type_var_table[name_sym] == other if type_var_table.key? name_sym
+
+      # Otherwise, store the other type and return true.
+      type_var_table[name_sym] = other
+      true
     end
 
     def hash # :nodoc:

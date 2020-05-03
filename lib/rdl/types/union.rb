@@ -103,15 +103,15 @@ module RDL::Type
 
     alias eql? ==
 
-    def match(other)
+    def match(other, type_var_table = {})
       canonicalize!
-      return @canonical.match(other) if @canonical
+      return @canonical.match(other, type_var_table) if @canonical
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return false unless other.instance_of? UnionType
       return false if @types.length != other.types.length
-      @types.all? { |t| other.types.any? { |ot| t.match(ot) } }
+      @types.all? { |t| other.types.any? { |ot| t.match(ot, type_var_table) } }
     end
 
     def <=(other)
