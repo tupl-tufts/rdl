@@ -22,7 +22,8 @@ class TestInfer < Minitest::Test
     RDL.readd_comp_types
     RDL.type_params :Hash, [:k, :v], :all? unless RDL::Globals.type_params['Hash']
     RDL.type_params :Array, [:t], :all? unless RDL::Globals.type_params['Array']
-    RDL.rdl_alias :Array, :size, :length
+    # RDL.rdl_alias :Array, :size, :length
+    RDL.nowrap :Range
     RDL.type_params 'RDL::Type::SingletonType', [:t], :satisfies? unless RDL::Globals.type_params['RDL::Type::SingletonType']
     RDL.type_params(:Range, [:t], nil, variance: [:+]) { |t| t.member?(self.begin) && t.member?(self.end) } unless RDL::Globals.type_params['Range']
     RDL.type :Range, :each, '() { (t) -> %any } -> self'

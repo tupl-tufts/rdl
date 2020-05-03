@@ -181,6 +181,7 @@ end
 module RDL
   def self.reset
     RDL::Globals.module_eval {
+      RDL::Config.reset
       @info = RDL::Info.new
       @wrapped_calls = Hash.new 0
       @type_params = Hash.new
