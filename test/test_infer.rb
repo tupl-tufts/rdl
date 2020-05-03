@@ -14,11 +14,16 @@ class TestInfer < Minitest::Test
 
   def setup
     RDL.reset
-    RDL::Config.instance.number_mode = true # treat all numeric classes the same
+    RDL::Config.instance.number_mode = true
+
+    # TODO: this will go away after config/reset
+    RDL::Config.instance.use_precise_string = false
+
     RDL.readd_comp_types
     RDL.type_params :Hash, [:k, :v], :all? unless RDL::Globals.type_params['Hash']
     RDL.type_params :Array, [:t], :all? unless RDL::Globals.type_params['Array']
-    RDL.rdl_alias :Array, :size, :length
+    # RDL.rdl_alias :Array, :size, :length
+    RDL.nowrap :Range
     RDL.type_params 'RDL::Type::SingletonType', [:t], :satisfies? unless RDL::Globals.type_params['RDL::Type::SingletonType']
     RDL.type_params(:Range, [:t], nil, variance: [:+]) { |t| t.member?(self.begin) && t.member?(self.end) } unless RDL::Globals.type_params['Range']
     RDL.type :Range, :each, '() { (t) -> %any } -> self'
@@ -37,6 +42,12 @@ class TestInfer < Minitest::Test
     # puts "Start #{@NAME}"
   end
 
+  # TODO: this will go away after config/reset
+  def teardown
+    RDL::Config.instance.number_mode = false
+    RDL::Config.instance.use_unknown_types = false # set in do_infer
+  end
+
   # convert a string to a method type
   def tm(typ)
     RDL::Globals.parser.scan_str('#Q ' + typ)
@@ -46,7 +57,6 @@ class TestInfer < Minitest::Test
     depends_on.each { |m| RDL.infer self.class, m, time: :test }
 
     RDL.infer self.class, method, time: :test
-
     RDL.do_infer :test, render_report: false
 
     types = RDL::Globals.info.get 'TestInfer', method, :type
@@ -68,7 +78,7 @@ class TestInfer < Minitest::Test
       error_str += 'Got      '.red + typ.solution.to_s
     end
 
-    assert expected_type == typ.solution, error_str
+    assert expected_type.match(typ.solution), error_str
   end
 
   def self.should_have_type(meth, typ, depends_on: [])
@@ -92,7 +102,7 @@ class TestInfer < Minitest::Test
   def plus_two(val)
     val + 2
   end
-  should_have_type :plus_two, '([ +: (Number) -> aaa ]) -> aaa'
+  should_have_type :plus_two, '([ +: (Integer) -> a ]) -> b'
 
   def print_it(val)
     puts val
@@ -112,7 +122,7 @@ class TestInfer < Minitest::Test
   def return_hash_val(val)
     { a: 1, b: 'b', c: val }
   end
-  should_have_type :return_hash_val, '(val) -> { a: Integer, b: String, c: val }'
+  should_have_type :return_hash_val, '(a) -> { a: Integer, b: String, c: a }'
 
   def concatenate
     'Hello' + ' World!'
@@ -137,11 +147,11 @@ class TestInfer < Minitest::Test
   def note(reason, args, ast)
     Diagnostic.new :note, reason, args, ast.loc.expression
   end
-  should_have_type :note, '(reason, args, Parser::AST::Node or Parser::Source::Comment) -> Diagnostic'
+  should_have_type :note, '(a, b, Parser::AST::Node or Parser::Source::Comment) -> Diagnostic'
 
   def print_note(reason, args, ast)
     puts note(reason, args, ast).render
   end
-  should_have_type :print_note, '(reason, args, Parser::AST::Node or Parser::Source::Comment) -> nil',
+  should_have_type :print_note, '(a, b, Parser::AST::Node or Parser::Source::Comment) -> nil',
                    depends_on: [:note]
 end
