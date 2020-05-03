@@ -1120,6 +1120,16 @@ class Module
     nil
   end
 
+  def included(other)
+    RDL::Globals.module_mixees[self] = [] unless RDL::Globals.module_mixees[self]
+    RDL::Globals.module_mixees[self] << [other, :include]
+  end
+
+  def extended(other)
+    RDL::Globals.module_mixees[self] = [] unless RDL::Globals.module_mixees[self]
+    RDL::Globals.module_mixees[self] << [other, :extend]
+  end
+
   }
 end
 
