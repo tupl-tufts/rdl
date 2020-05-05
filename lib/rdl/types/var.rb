@@ -1,4 +1,3 @@
-# coding: utf-8
 module RDL::Type
   class VarType < Type
     attr_reader :name, :cls, :meth, :category, :to_infer
@@ -80,7 +79,7 @@ module RDL::Type
     ## Similar to above.
     def add_and_propagate_lower_bound(typ, ast, new_cons = {})
       return if self.equal?(typ)
-      RDL::Util.log :typecheck, :trace,  "#{typ} ≼ #{self}"
+      RDL::Util.log :typecheck, :trace,  "#{typ} <= #{self}"
 
       if !@lbounds.any? { |t, a| t == typ }
         RDL::Util.log :typecheck, :trace,  '@lbounds.any'
