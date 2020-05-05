@@ -93,8 +93,8 @@ class RDL::Util
     levels.find_index(a) <= levels.find_index(b)
   end
 
-  def self.log(area, level, message)
-    return unless log_level_leq(RDL::Config.instance.log_levels[area], level)
+  def self.log_str(area, level, message)
+    tracing = RDL::Config.instance.log_levels[area] == :trace
 
     place = caller.find { |s| s.include?('lib/rdl') && !s.include?('block') && !s.include?('in `log') }
     place = place.match(/.*\/(.*?\.rb:[0-9]+)/)[1]
@@ -102,13 +102,32 @@ class RDL::Util
     lc = log_level_colors(level)
 
     depth_string = ''
-    depth_string = " #{caller.length - 1}" if level == :trace
+    depth_string = " #{caller.length - 1}" if tracing
     leader = '[' + place.to_s.colorize(lc) + "#{depth_string}]"
 
     spacers = ''
-    spacers = ' ' * ((caller.length - 1) / 2) if level == :trace
+    spacers = ' ' * ((caller.length - 1) / 2) if tracing
 
-    puts spacers + leader + ' ' + message
+    spacers + leader + ' ' + message
+  end
+
+  def self.log_header(area, level, header)
+    return unless log_level_leq(RDL::Config.instance.log_levels[area], level)
+
+    stars = '***************'
+
+    if RDL::Config.instance.log_levels[area] == :trace
+      puts "#{log_str(area, level, header)} " + stars
+    else
+      puts stars + " #{log_str(area, level, header)} " + stars
+    end
+
+  end
+
+  def self.log(area, level, message)
+    return unless log_level_leq(RDL::Config.instance.log_levels[area], level)
+
+    puts log_str(area, level, message)
   end
 
   def self.method_defined?(klass, method)
