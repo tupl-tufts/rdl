@@ -220,7 +220,7 @@ module RDL::Typecheck
         cache = {ast: file_ast, line_defs: mapper.line_defs}
         RDL::Globals.parser_cache[file] = [digest, cache]
       rescue => e
-        puts "Error: Failed to parse #{file}; #{e}"
+        RDL::Util.log :typecheck, :error, "Failed to parse #{file}; #{e}"
         return nil if RDL::Config.instance.convert_type_errors_to_dyn_type
 
         raise e
@@ -234,7 +234,7 @@ module RDL::Typecheck
     _infer(klass, meth)
   rescue => exn
     raise exn unless RDL::Config.instance.convert_type_errors_to_dyn_type
-    puts "[INFER] Error: #{exn}; skipping inference for #{RDL::Util.pp_klass_method(klass, meth)}\n----"
+    RDL::Util.log :inference, "#{exn}; skipping inference for #{RDL::Util.pp_klass_method(klass, meth)}"
     # RDL::Globals.info.set(klass, meth, :type, [RDL::Globals.types[:dyn]])
   end
 
@@ -245,7 +245,7 @@ module RDL::Typecheck
     @var_cache = {}
     ast = get_ast(klass, meth)
     if ast.nil?
-      warning_text = "Warning: Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)};"
+      RDL::Util.log :inference, :warning, "Warning: Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}; skipping method"
 
       # if RDL::Config.instance.convert_type_errors_to_dyn_type
       #   puts "#{warning_text} recording %dyn" if RDL::Config.instance.convert_to_dyn_verbose
@@ -253,7 +253,6 @@ module RDL::Typecheck
       #   return
       # end
 
-      puts "#{warning_text} skipping method"
       return
     end
     types = RDL::Globals.info.get(klass, meth, :type)
@@ -591,7 +590,15 @@ module RDL::Typecheck
   rescue => exn
     raise exn unless RDL::Config.instance.convert_type_errors_to_dyn_type
     # puts "Error in typecheck for #{e}: #{exn}"
-    puts "[TC]    Error: #{exn}; returning %dyn\n----"
+
+    if RDL::Config.instance.convert_to_dyn_verbose == :trace
+      msg = "#{exn}; returning %dyn"
+    else
+      msg = "returning %dyn"
+    end
+
+    RDL::Util.log :typecheck, :debug_error, msg
+
     [env, RDL::Globals.types[:dyn]]
   end
 

@@ -1,4 +1,3 @@
-# coding: utf-8
 require 'csv'
 
 module RDL::Typecheck
@@ -6,12 +5,6 @@ module RDL::Typecheck
   def self.resolve_constraints
     puts "Starting constraint resolution..." if RDL::Config.instance.infer_verbose
     RDL::Globals.constrained_types.each { |klass, name|
-      if klass == "[s]JSON" && name == :[]
-        $imminent_failure = true
-        # binding.pry
-        system("clear")
-      end
-
       puts 'Resolving'.colorize(:green) + " constraints from #{RDL::Util.pp_klass_method(klass, name)}" if RDL::Config.instance.infer_verbose
       typ = RDL::Globals.info.get(klass, name, :type)
       ## If typ is an Array, then it's an array of method types
@@ -27,7 +20,7 @@ module RDL::Typecheck
         if var_type.var_type? || var_type.optional_var_type? || var_type.vararg_var_type?
           var_type = var_type.type if var_type.optional_var_type? || var_type.vararg_var_type?
           var_type.lbounds.each { |lower_t, ast|
-            puts "[add_and_propagate] #{lower_t} ≼ #{var_type}"
+            RDL::Util.log :typecheck, :trace, "#{lower_t} <= #{var_type}"
             var_type.add_and_propagate_lower_bound(lower_t, ast)
           }
           var_type.ubounds.each { |upper_t, ast|
@@ -107,9 +100,7 @@ module RDL::Typecheck
             #sol = typ
           end
         rescue RDL::Typecheck::StaticTypeError => e
-          puts "[HEURISTIC] ERROR: Attempted to apply rule #{name} to var #{var}, but got the following error: "
-          puts e
-          puts "----"
+          RDL::Util.log :typecheck, :error, "Attempted to apply heuristic rule #{name} to var #{var}, but got the following error: #{e}"
           undo_constraints(new_cons)
           ## no new constraints in this case so we'll leave it as is
         end
@@ -355,7 +346,7 @@ module RDL::Typecheck
         rescue => e
           raise e unless RDL::Config.instance.convert_type_errors_to_dyn_type
 
-          puts "[EXTRACT] Error while exctracting solution for #{RDL::Util.pp_klass_method(klass, name)}: #{e}; continuing...\n----"
+          RDL::Util.log :inference, :debug, "Error while exctracting solution for #{RDL::Util.pp_klass_method(klass, name)}: #{e}; continuing..."
           typ_sols[[klass.to_s, name.to_sym]] = "-- Extraction Error --"
         end
       }

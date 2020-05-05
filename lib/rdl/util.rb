@@ -44,6 +44,23 @@ class RDL::Util
     end
   end
 
+  def self.each_leq_constraints(cons)
+    cons.each_pair do |k, vs|
+      vs.each do |v|
+        if v[0] == :lower
+          yield v[1], k
+        else
+          yield k, v[1]
+        end
+      end
+    end
+    nil
+  end
+
+  def self.puts_constraints(cons)
+    each_leq_constraints(cons) { |a, b| puts "#{a} <= #{b}" }
+  end
+
   def self.add_singleton_marker(klass)
     return SINGLETON_MARKER + klass
   end
@@ -57,6 +74,42 @@ class RDL::Util
   #     return "#{klass}##{meth}"
   #   end
   # end
+
+  def self.log_level_colors(a)
+    colors = {
+      trace: :yellow,
+      debug: :green,
+      debug_error: :red,
+      info: :light_green,
+      warning: :light_yellow,
+      error: :light_red
+    }
+    colors[a]
+  end
+
+  def self.log_level_leq(a, b)
+    levels = [:trace, :debug, :debug_error, :info, :warning, :error]
+
+    levels.find_index(a) <= levels.find_index(b)
+  end
+
+  def self.log(area, level, message)
+    return unless log_level_leq(RDL::Config.instance.log_levels[area], level)
+
+    place = caller.find { |s| s.include?('lib/rdl') && !s.include?('block') && !s.include?('in `log') }
+    place = place.match(/.*\/(.*?\.rb:[0-9]+)/)[1]
+
+    lc = log_level_colors(level)
+
+    depth_string = ''
+    depth_string = " #{caller.length - 1}" if level == :trace
+    leader = '[' + place.to_s.colorize(lc) + "#{depth_string}]"
+
+    spacers = ''
+    spacers = ' ' * ((caller.length - 1) / 2) if level == :trace
+
+    puts spacers + leader + ' ' + message
+  end
 
   def self.method_defined?(klass, method)
     begin
