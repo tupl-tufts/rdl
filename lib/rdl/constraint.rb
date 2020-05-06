@@ -41,7 +41,7 @@ module RDL::Typecheck
             raise "Got unexpected type #{var_type}."
           end
         rescue => e
-          raise e unless RDL::Config.instance.convert_type_errors_to_dyn_type
+          raise e unless RDL::Config.instance.continue_on_errors
 
           RDL::Logging.log :inference, :debug_error, "Caught error when resolving constraints for #{var_type}; skipping..."
         end
@@ -264,9 +264,9 @@ module RDL::Typecheck
           total_potential += 1
         end
       else
-        puts "Difference encountered for #{klass}##{meth}."
-        puts "Inferred: #{typ}"
-        puts "Original: #{orig_typ}"
+        RDL::Logging.log :inference, :debug, "Difference encountered for #{klass}##{meth}."
+        RDL::Logging.log :inference, :debug, "Inferred: #{typ}"
+        RDL::Logging.log :inference, :debug, "Original: #{orig_typ}"
         if orig_typ.is_a?(RDL::Type::MethodType)
           total_potential += orig_typ.args.size + 1 ## 1 for ret
           total_potential += orig_typ.block.args.size + 1 if !orig_typ.block.nil?
@@ -302,18 +302,17 @@ module RDL::Typecheck
     #   incomplete_types.each { |row| csv << row }
     # }
 
-    puts "Total correct (that could be automatically inferred): #{correct_types}"
-    puts "Total # method types: #{meth_types}"
-    puts "Total # variable types: #{var_types}"
-    puts "Total # individual types: #{total_potential}"
+    RDL::Logging.log :inference, :info, "Total correct (that could be automatically inferred): #{correct_types}"
+    RDL::Logging.log :inference, :info, "Total # method types: #{meth_types}"
+    RDL::Logging.log :inference, :info, "Total # variable types: #{var_types}"
+    RDL::Logging.log :inference, :info, "Total # individual types: #{total_potential}"
   end
 
   def self.extract_solutions(render_report = true)
     ## Go through once to come up with solution for all var types.
     #until !@new_constraints
-    puts "-----------------------"
-    puts "BEGIN EXTRACT SOLUTIONS"
-    puts "-----------------------"
+    RDL::Logging.log_header :inference, :info, "Begin Extract Solutions"
+
     typ_sols = {}
     loop do
       @new_constraints = false
@@ -355,7 +354,7 @@ module RDL::Typecheck
             typ_sols[[klass.to_s, name.to_sym]] = var_sol.to_s
           end
         rescue => e
-          raise e unless RDL::Config.instance.convert_type_errors_to_dyn_type
+          raise e unless RDL::Config.instance.continue_on_errors
 
           RDL::Logging.log :inference, :debug_error, "Error while exctracting solution for #{RDL::Util.pp_klass_method(klass, name)}: #{e}; continuing..."
           typ_sols[[klass.to_s, name.to_sym]] = "-- Extraction Error --"

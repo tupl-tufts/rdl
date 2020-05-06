@@ -190,7 +190,7 @@ module RDL::Typecheck
     file, line = RDL::Globals.info.get(klass, meth, :source_location)
 
     if file.nil?
-      return nil if RDL::Config.instance.convert_type_errors_to_dyn_type
+      return nil if RDL::Config.instance.continue_on_errors
 
       raise RuntimeError, "No file for #{RDL::Util.pp_klass_method(klass, meth)}" if file.nil?
     end
@@ -221,7 +221,7 @@ module RDL::Typecheck
         RDL::Globals.parser_cache[file] = [digest, cache]
       rescue => e
         RDL::Logging.log :typecheck, :error, "Failed to parse #{file}; #{e}"
-        return nil if RDL::Config.instance.convert_type_errors_to_dyn_type
+        return nil if RDL::Config.instance.continue_on_errors
 
         raise e
       end
@@ -233,8 +233,9 @@ module RDL::Typecheck
   def self.infer(klass, meth)
     _infer(klass, meth)
   rescue => exn
-    raise exn unless RDL::Config.instance.convert_type_errors_to_dyn_type
-    RDL::Logging.log :inference, "#{exn}; skipping inference for #{RDL::Util.pp_klass_method(klass, meth)}"
+    raise exn unless RDL::Config.instance.continue_on_errors
+    RDL::Logging.log :inference, :warning, "Error; Skipping inference for #{RDL::Util.pp_klass_method(klass, meth)}"
+    RDL::Logging.log :inference, :debug, "... got exception: #{exn}"
     # RDL::Globals.info.set(klass, meth, :type, [RDL::Globals.types[:dyn]])
   end
 
@@ -248,7 +249,7 @@ module RDL::Typecheck
     if ast.nil?
       RDL::Logging.log :inference, :warning, "Warning: Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}; skipping method"
 
-      # if RDL::Config.instance.convert_type_errors_to_dyn_type
+      # if RDL::Config.instance.continue_on_errors
       #   puts "#{warning_text} recording %dyn" if RDL::Config.instance.convert_to_dyn_verbose
       #   RDL::Globals.info.set(klass, meth, :type, [RDL::Globals.types[:dyn]])
       #   return
@@ -589,7 +590,7 @@ module RDL::Typecheck
   def self.tc(scope, env, e)
     _tc(scope, env, e)
   rescue => exn
-    raise exn unless RDL::Config.instance.convert_type_errors_to_dyn_type
+    raise exn unless RDL::Config.instance.continue_on_errors
     # puts "Error in typecheck for #{e}: #{exn}"
 
     if RDL::Config.instance.convert_to_dyn_verbose == :trace

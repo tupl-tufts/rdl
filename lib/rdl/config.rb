@@ -9,7 +9,8 @@ class RDL::Config
   attr_accessor :weak_update_promote, :widen_bound, :promote_widen, :use_comp_types, :check_comp_types
   attr_accessor :type_defaults, :infer_defaults, :pre_defaults, :post_defaults, :rerun_comp_types, :assume_dyn_type
   attr_accessor :use_precise_string, :number_mode, :use_unknown_types, :infer_empties
-  attr_accessor :convert_type_errors_to_dyn_type, :log_levels
+  attr_accessor :continue_on_errors
+  attr_accessor :log_levels, :disable_log_colors
 
   def initialize
     RDL::Config.reset(self)
@@ -37,10 +38,11 @@ class RDL::Config
     c.number_mode = false
     c.use_unknown_types = false
     c.infer_empties = true ## if [] and {} should be typed as Array<var> and Hash<var, var>
-    c.convert_type_errors_to_dyn_type = false
+    c.continue_on_errors = false
+    c.disable_log_colors = false
     c.log_levels = {
-      typecheck: :warn,
-      inference: :warn
+      typecheck: :warning,
+      inference: :warning
     }
   end
 
