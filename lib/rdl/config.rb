@@ -41,8 +41,8 @@ class RDL::Config
     c.continue_on_errors = false
     c.disable_log_colors = false
     c.log_levels = {
-      typecheck: :warning,
-      inference: :warning
+      typecheck: :info,
+      inference: :info
     }
   end
 

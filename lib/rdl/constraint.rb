@@ -3,9 +3,9 @@ require 'csv'
 module RDL::Typecheck
 
   def self.resolve_constraints
-    RDL::Logging.log :inference, :info, "Starting constraint resolution..."
+    RDL::Logging.log_header :inference, :info, "Starting constraint resolution..."
     RDL::Globals.constrained_types.each { |klass, name|
-      RDL::Logging.log :inference, :info, "Resolving constraints from #{RDL::Util.pp_klass_method(klass, name)}"
+      RDL::Logging.log :inference, :debug, "Resolving constraints from #{RDL::Util.pp_klass_method(klass, name)}"
       typ = RDL::Globals.info.get(klass, name, :type)
       ## If typ is an Array, then it's an array of method types
       ## but for inference, we only use a single method type.
@@ -302,6 +302,7 @@ module RDL::Typecheck
     #   incomplete_types.each { |row| csv << row }
     # }
 
+    RDL::Logging.log_header :inference, :info, "Extraction Complete"
     RDL::Logging.log :inference, :info, "Total correct (that could be automatically inferred): #{correct_types}"
     RDL::Logging.log :inference, :info, "Total # method types: #{meth_types}"
     RDL::Logging.log :inference, :info, "Total # variable types: #{var_types}"
@@ -318,11 +319,11 @@ module RDL::Typecheck
       @new_constraints = false
       typ_sols = {}
 
-      RDL::Logging.log :inference, :info, "\n\nRunning solution extraction..."
+      RDL::Logging.log :inference, :info, "Running solution extraction..."
 
       RDL::Globals.constrained_types.each { |klass, name|
         begin
-          RDL::Logging.log :inference, :info, "Extracting #{RDL::Util.pp_klass_method(klass, name)}"
+          RDL::Logging.log :inference, :debug, "Extracting #{RDL::Util.pp_klass_method(klass, name)}"
 
           RDL::Type::VarType.no_print_XXX!
           typ = RDL::Globals.info.get(klass, name, :type)

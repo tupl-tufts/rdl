@@ -32,9 +32,12 @@ class RDL::Logging
     file_line = file_line.colorize(:light_black) unless no_color
     message = message.colorize(message_color) if message_color && !no_color
 
+    level_str = ''
+    level_str = "#{level.to_s.upcase} " if no_color
+
     depth_string = ''
     depth_string = " #{caller.length - 1}" if tracing
-    leader = file_line + ' [' + meth + "#{depth_string}]"
+    leader = level_str + file_line + ' [' + meth + "#{depth_string}]"
 
     spacers = ''
     spacers = ' ' * ((caller.length - 1) / 2) if tracing

@@ -240,7 +240,7 @@ module RDL::Typecheck
   end
 
   def self._infer(klass, meth)
-    RDL::Logging.log_header :inference, :info, "Infering #{RDL::Util.pp_klass_method(klass, meth)}"
+    RDL::Logging.log_header :inference, :debug, "Infering #{RDL::Util.pp_klass_method(klass, meth)}"
 
     RDL::Config.instance.use_comp_types = true
     RDL::Config.instance.number_mode = true
@@ -326,7 +326,7 @@ module RDL::Typecheck
     RDL::Globals.info.set(klass, meth, :typechecked, true)
 
     RDL::Globals.constrained_types << [klass, meth]
-    RDL::Logging.log :inference, :info, "Done with constraint generation."
+    RDL::Logging.log :inference, :debug, "Done with constraint generation."
   end
 
   def self.typecheck(klass, meth, ast=nil, types = nil, effects = nil)
