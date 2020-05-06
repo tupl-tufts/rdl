@@ -105,8 +105,6 @@ module RDL::Type
         return true
       elsif right.is_a?(VarType) && right.to_infer
 
-        hash_bot_bot = RDL::Globals.parser.scan_str "#T Hash<%bot,%bot>"
-
         RDL::Logging.log :typecheck, :trace, "#{right}.is_a VarType"
         RDL::Logging.log :typecheck, :trace, "\t#{left} <= #{right}"
         if deferred_constraints.nil?
