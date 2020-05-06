@@ -15,13 +15,13 @@ class RDL::Logging
 
   def self.log_level_leq(a, b)
     levels = [:trace, :debug, :debug_error, :info, :warning, :error, :critical]
-    a = levels.find_index(a)
-    b = levels.find_index(b)
+    a_idx = levels.find_index(a)
+    b_idx = levels.find_index(b)
 
-    raise "#{a} is not a valid log level; valid levels are #{levels}" unless a
-    raise "#{b} is not a valid log level; valid levels are #{levels}" unless b
+    raise "#{a} is not a valid log level; valid levels are #{levels}" unless a_idx
+    raise "#{b} is not a valid log level; valid levels are #{levels}" unless b_idx
 
-    a <= b
+    a_idx <= b_idx
   end
 
   def self.log_str(area, level, message, message_color: nil)
