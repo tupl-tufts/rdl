@@ -25,7 +25,7 @@ class RDL::Config
     c.at_exit_installed = false
     c.weak_update_promote = false
     c.promote_widen = false
-    c.type_defaults = { wrap: true, typecheck: false}
+    c.type_defaults = { wrap: true, typecheck: false }
     c.infer_defaults = { time: nil }
     c.pre_defaults = { wrap: true }
     c.post_defaults = { wrap: true }

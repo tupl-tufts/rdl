@@ -7,15 +7,21 @@ class RDL::Logging
       debug_error: :red,
       info: :light_green,
       warning: :light_yellow,
-      error: :light_red
+      error: :light_red,
+      critical: { color: :light_red, mode: :bold }
     }
     colors[a]
   end
 
   def self.log_level_leq(a, b)
-    levels = [:trace, :debug, :debug_error, :info, :warning, :error]
+    levels = [:trace, :debug, :debug_error, :info, :warning, :error, :critical]
+    a = levels.find_index(a)
+    b = levels.find_index(b)
 
-    levels.find_index(a) <= levels.find_index(b)
+    raise "#{a} is not a valid log level; valid levels are #{levels}" unless a
+    raise "#{b} is not a valid log level; valid levels are #{levels}" unless b
+
+    a <= b
   end
 
   def self.log_str(area, level, message, message_color: nil)

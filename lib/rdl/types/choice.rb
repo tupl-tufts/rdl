@@ -25,6 +25,10 @@ module RDL::Type
       @lbounds = []
       @activated = nil
       @hash = 101 + @choices.hash
+
+      if choices.values.any? { |t| t.is_a? ChoiceType }
+        RDL::Logging.log :inference, :critical, "WARNING: Generating a ChoiceType with nested ChoiceTypes."
+      end
     end
 
     def add_connecteds(*connecteds)
