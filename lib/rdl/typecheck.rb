@@ -591,15 +591,8 @@ module RDL::Typecheck
     _tc(scope, env, e)
   rescue => exn
     raise exn unless RDL::Config.instance.continue_on_errors
-    # puts "Error in typecheck for #{e}: #{exn}"
 
-    if RDL::Config.instance.convert_to_dyn_verbose == :trace
-      msg = "#{exn}; returning %dyn"
-    else
-      msg = "returning %dyn"
-    end
-
-    RDL::Logging.log :typecheck, :debug_error, msg
+    RDL::Logging.log :typecheck, :debug_error, "#{exn}; returning %dyn"
 
     [env, RDL::Globals.types[:dyn]]
   end
