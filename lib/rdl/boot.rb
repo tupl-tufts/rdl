@@ -9,6 +9,7 @@ module RDL
 end
 
 require 'rdl/config.rb'
+require 'rdl/logging.rb'
 def RDL.config
   yield(RDL::Config.instance)
 end

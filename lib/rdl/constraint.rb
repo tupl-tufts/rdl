@@ -3,9 +3,9 @@ require 'csv'
 module RDL::Typecheck
 
   def self.resolve_constraints
-    RDL::Util.log :inference, :info, "Starting constraint resolution..."
+    RDL::Logging.log :inference, :info, "Starting constraint resolution..."
     RDL::Globals.constrained_types.each { |klass, name|
-      RDL::Util.log :inference, :info, "Resolving constraints from #{RDL::Util.pp_klass_method(klass, name)}"
+      RDL::Logging.log :inference, :info, "Resolving constraints from #{RDL::Util.pp_klass_method(klass, name)}"
       typ = RDL::Globals.info.get(klass, name, :type)
       ## If typ is an Array, then it's an array of method types
       ## but for inference, we only use a single method type.
@@ -21,7 +21,7 @@ module RDL::Typecheck
           if var_type.var_type? || var_type.optional_var_type? || var_type.vararg_var_type?
             var_type = var_type.type if var_type.optional_var_type? || var_type.vararg_var_type?
             var_type.lbounds.each { |lower_t, ast|
-              RDL::Util.log :typecheck, :trace, "#{lower_t} <= #{var_type}"
+              RDL::Logging.log :typecheck, :trace, "#{lower_t} <= #{var_type}"
               var_type.add_and_propagate_lower_bound(lower_t, ast)
             }
             var_type.ubounds.each { |upper_t, ast|
@@ -43,7 +43,7 @@ module RDL::Typecheck
         rescue => e
           raise e unless RDL::Config.instance.convert_type_errors_to_dyn_type
 
-          RDL::Util.log :inference, :debug_error, "Caught error when resolving constraints for #{var_type}; skipping..."
+          RDL::Logging.log :inference, :debug_error, "Caught error when resolving constraints for #{var_type}; skipping..."
         end
       }
     }
@@ -106,8 +106,8 @@ module RDL::Typecheck
             #sol = typ
           end
         rescue RDL::Typecheck::StaticTypeError => e
-          RDL::Util.log :typecheck, :debug_error, "Attempted to apply heuristic rule #{name} to var #{var}"
-          RDL::Util.log :typecheck, :trace, "... but got the following error: #{e}"
+          RDL::Logging.log :typecheck, :debug_error, "Attempted to apply heuristic rule #{name} to var #{var}"
+          RDL::Logging.log :typecheck, :trace, "... but got the following error: #{e}"
           undo_constraints(new_cons)
           ## no new constraints in this case so we'll leave it as is
         end
@@ -139,8 +139,8 @@ module RDL::Typecheck
         sol = RDL::Type::TupleType.new(*new_params)
       end
     rescue RDL::Typecheck::StaticTypeError => e
-      RDL::Util.log :typecheck, :debug_error, "Attempted to apply solution #{sol} for var #{var}"
-      RDL::Util.log :typecheck, :trace, "... but got the following error: #{e}"
+      RDL::Logging.log :typecheck, :debug_error, "Attempted to apply solution #{sol} for var #{var}"
+      RDL::Logging.log :typecheck, :trace, "... but got the following error: #{e}"
 
       undo_constraints(new_cons)
       ## no new constraints in this case so we'll leave it as is
@@ -319,11 +319,11 @@ module RDL::Typecheck
       @new_constraints = false
       typ_sols = {}
 
-      RDL::Util.log :inference, :info, "\n\nRunning solution extraction..."
+      RDL::Logging.log :inference, :info, "\n\nRunning solution extraction..."
 
       RDL::Globals.constrained_types.each { |klass, name|
         begin
-          RDL::Util.log :inference, :info, "Extracting #{RDL::Util.pp_klass_method(klass, name)}"
+          RDL::Logging.log :inference, :info, "Extracting #{RDL::Util.pp_klass_method(klass, name)}"
 
           RDL::Type::VarType.no_print_XXX!
           typ = RDL::Globals.info.get(klass, name, :type)
@@ -334,7 +334,7 @@ module RDL::Typecheck
             arg_sols, block_sol, ret_sol = extract_meth_sol(tmeth)
 
             block_string = block_sol ? " { #{block_sol} }" : nil
-            RDL::Util.log :inference, :trace, "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
+            RDL::Logging.log :inference, :trace, "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
 
             RDL::Type::VarType.print_XXX!
             block_string = block_sol ? " { #{block_sol} }" : nil
@@ -349,7 +349,7 @@ module RDL::Typecheck
             ## Can improve later if desired.
             var_sol = extract_var_sol(typ, :var)
             #typ.solution = var_sol
-            RDL::Util.log :inference, :trace, "Extracted solution for #{klass} variable #{name} is #{var_sol}."
+            RDL::Logging.log :inference, :trace, "Extracted solution for #{klass} variable #{name} is #{var_sol}."
 
             RDL::Type::VarType.print_XXX!
             typ_sols[[klass.to_s, name.to_sym]] = var_sol.to_s
@@ -357,7 +357,7 @@ module RDL::Typecheck
         rescue => e
           raise e unless RDL::Config.instance.convert_type_errors_to_dyn_type
 
-          RDL::Util.log :inference, :debug_error, "Error while exctracting solution for #{RDL::Util.pp_klass_method(klass, name)}: #{e}; continuing..."
+          RDL::Logging.log :inference, :debug_error, "Error while exctracting solution for #{RDL::Util.pp_klass_method(klass, name)}: #{e}; continuing..."
           typ_sols[[klass.to_s, name.to_sym]] = "-- Extraction Error --"
         end
       }

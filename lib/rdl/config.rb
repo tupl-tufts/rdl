@@ -39,8 +39,8 @@ class RDL::Config
     c.infer_empties = true ## if [] and {} should be typed as Array<var> and Hash<var, var>
     c.convert_type_errors_to_dyn_type = false
     c.log_levels = {
-      typecheck: :error,
-      inference: :error
+      typecheck: :warn,
+      inference: :warn
     }
   end
 

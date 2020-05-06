@@ -220,7 +220,7 @@ module RDL::Typecheck
         cache = {ast: file_ast, line_defs: mapper.line_defs}
         RDL::Globals.parser_cache[file] = [digest, cache]
       rescue => e
-        RDL::Util.log :typecheck, :error, "Failed to parse #{file}; #{e}"
+        RDL::Logging.log :typecheck, :error, "Failed to parse #{file}; #{e}"
         return nil if RDL::Config.instance.convert_type_errors_to_dyn_type
 
         raise e
@@ -234,19 +234,19 @@ module RDL::Typecheck
     _infer(klass, meth)
   rescue => exn
     raise exn unless RDL::Config.instance.convert_type_errors_to_dyn_type
-    RDL::Util.log :inference, "#{exn}; skipping inference for #{RDL::Util.pp_klass_method(klass, meth)}"
+    RDL::Logging.log :inference, "#{exn}; skipping inference for #{RDL::Util.pp_klass_method(klass, meth)}"
     # RDL::Globals.info.set(klass, meth, :type, [RDL::Globals.types[:dyn]])
   end
 
   def self._infer(klass, meth)
-    RDL::Util.log_header :inference, :info, "Infering #{RDL::Util.pp_klass_method(klass, meth)}"
+    RDL::Logging.log_header :inference, :info, "Infering #{RDL::Util.pp_klass_method(klass, meth)}"
 
     RDL::Config.instance.use_comp_types = true
     RDL::Config.instance.number_mode = true
     @var_cache = {}
     ast = get_ast(klass, meth)
     if ast.nil?
-      RDL::Util.log :inference, :warning, "Warning: Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}; skipping method"
+      RDL::Logging.log :inference, :warning, "Warning: Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}; skipping method"
 
       # if RDL::Config.instance.convert_type_errors_to_dyn_type
       #   puts "#{warning_text} recording %dyn" if RDL::Config.instance.convert_to_dyn_verbose
@@ -325,7 +325,7 @@ module RDL::Typecheck
     RDL::Globals.info.set(klass, meth, :typechecked, true)
 
     RDL::Globals.constrained_types << [klass, meth]
-    RDL::Util.log :inference, :info, "Done with constraint generation."
+    RDL::Logging.log :inference, :info, "Done with constraint generation."
   end
 
   def self.typecheck(klass, meth, ast=nil, types = nil, effects = nil)
@@ -598,7 +598,7 @@ module RDL::Typecheck
       msg = "returning %dyn"
     end
 
-    RDL::Util.log :typecheck, :debug_error, msg
+    RDL::Logging.log :typecheck, :debug_error, msg
 
     [env, RDL::Globals.types[:dyn]]
   end

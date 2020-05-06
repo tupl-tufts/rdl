@@ -108,15 +108,15 @@ module RDL::Type
         hash_bot_bot = RDL::Globals.parser.scan_str "#T Hash<%bot,%bot>"
         # binding.pry if left.match(hash_bot_bot)
 
-        RDL::Util.log :typecheck, :trace, "#{right}.is_a VarType"
-        RDL::Util.log :typecheck, :trace, "\t#{left} <= #{right}"
+        RDL::Logging.log :typecheck, :trace, "#{right}.is_a VarType"
+        RDL::Logging.log :typecheck, :trace, "\t#{left} <= #{right}"
         if deferred_constraints.nil?
-          RDL::Util.log :typecheck, :trace, 'no deferred_constraints'
+          RDL::Logging.log :typecheck, :trace, 'no deferred_constraints'
           right.add_lbound(left, ast, new_cons, propagate: propagate) unless (right.lbounds.any? { |t, loc| t == left || t.hash == left.hash } || right.equal?(left))
         else
-          RDL::Util.log :typecheck, :trace, 'deferred_constraints:'
+          RDL::Logging.log :typecheck, :trace, 'deferred_constraints:'
           deferred_constraints << [left, right]
-          deferred_constraints.each { |k, v| if v.is_a?(Array) then v.each { |v| RDL::Util.log(:typecheck, :trace, "#{k} <= #{v[1] || v}") } else RDL::Util.log(:typecheck, :trace, "#{k} <= #{v}") end }
+          deferred_constraints.each { |k, v| if v.is_a?(Array) then v.each { |v| RDL::Logging.log(:typecheck, :trace, "#{k} <= #{v[1] || v}") } else RDL::Logging.log(:typecheck, :trace, "#{k} <= #{v}") end }
         end
         return true
       end
@@ -194,7 +194,7 @@ module RDL::Type
             }
 
             lb_var_choices.each { |vartype, choice_hash|
-              RDL::Util.log :typecheck, :trace, vartype.to_s
+              RDL::Logging.log :typecheck, :trace, vartype.to_s
               if choice_hash.values.uniq.size == 1
                 RDL::Type::Type.leq(choice_hash.values[0], vartype, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
               else

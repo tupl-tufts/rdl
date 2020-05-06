@@ -79,32 +79,32 @@ module RDL::Type
     ## Similar to above.
     def add_and_propagate_lower_bound(typ, ast, new_cons = {})
       return if self.equal?(typ)
-      RDL::Util.log :typecheck, :trace,  "#{typ} <= #{self}"
+      RDL::Logging.log :typecheck, :trace,  "#{typ} <= #{self}"
 
       if !@lbounds.any? { |t, a| t == typ }
-        RDL::Util.log :typecheck, :trace,  '@lbounds.any'
+        RDL::Logging.log :typecheck, :trace,  '@lbounds.any'
         @lbounds << [typ, ast]
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:lower, typ, ast]] : [[:lower, typ, ast]]
       end
-      RDL::Util.log :typecheck, :trace, 'ubounds.each'
+      RDL::Logging.log :typecheck, :trace, 'ubounds.each'
       @ubounds.each { |upper_t, a|
-        RDL::Util.log :typecheck, :trace, "ubound: #{upper_t}"
+        RDL::Logging.log :typecheck, :trace, "ubound: #{upper_t}"
         if upper_t.is_a?(VarType)
           upper_t.add_and_propagate_lower_bound(typ, ast, new_cons) unless upper_t.lbounds.any? { |t, _| t == typ }
         else
           if typ.is_a?(VarType) && !typ.ubounds.any? { |t, _| t == upper_t }
             new_cons[typ] = new_cons[typ] ? new_cons[typ] | [[:upper, upper_t, ast]] : [[:upper, upper_t, ast]]
           end
-          RDL::Util.log :typecheck, :trace, "about to check #{typ} <= #{upper_t} with".colorize(:green)
+          RDL::Logging.log :typecheck, :trace, "about to check #{typ} <= #{upper_t} with".colorize(:green)
 
-          RDL::Util.each_leq_constraints(new_cons) { |a, b| RDL::Util.log(:typecheck, :trace, "#{a} <= #{b}") }
+          RDL::Util.each_leq_constraints(new_cons) { |a, b| RDL::Logging.log(:typecheck, :trace, "#{a} <= #{b}") }
 
           unless RDL::Type::Type.leq(typ, upper_t, {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons)
             d1 = ast.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [typ.to_s], ast.loc.expression).render.join("\n")
             d2 = a.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [upper_t.to_s], a.loc.expression).render.join("\n")
             raise RDL::Typecheck::StaticTypeError, ("Inconsistent type constraint #{typ} <= #{upper_t} generated during inference.\n #{d1}\n #{d2}")
           end
-          RDL::Util.log :typecheck, :trace, "Checked #{typ} <= #{upper_t}".colorize(:green)
+          RDL::Logging.log :typecheck, :trace, "Checked #{typ} <= #{upper_t}".colorize(:green)
         end
       }
     end
@@ -122,7 +122,7 @@ module RDL::Type
     def add_lbound(typ, ast, new_cons = {}, propagate: false)
       #raise "About to add lower bound #{typ} <= #{self}" if typ.is_a?(VarType) && !typ.to_infer
       # raise "ChoiceType!!!!" if typ.is_a? ChoiceType
-      RDL::Util.log :typecheck, :trace, "#{self}.add_lbound(#{typ}); " + 'propagate'.colorize(:yellow) + " = #{propagate}"
+      RDL::Logging.log :typecheck, :trace, "#{self}.add_lbound(#{typ}); " + 'propagate'.colorize(:yellow) + " = #{propagate}"
       if propagate
         add_and_propagate_lower_bound(typ, ast, new_cons)
       elsif !@lbounds.any? { |t, a| t == typ }
