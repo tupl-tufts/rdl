@@ -44,6 +44,23 @@ class RDL::Util
     end
   end
 
+  def self.each_leq_constraints(cons)
+    cons.each_pair do |k, vs|
+      vs.each do |v|
+        if v[0] == :lower
+          yield v[1], k
+        else
+          yield k, v[1]
+        end
+      end
+    end
+    nil
+  end
+
+  def self.puts_constraints(cons)
+    each_leq_constraints(cons) { |a, b| puts "#{a} <= #{b}" }
+  end
+
   def self.add_singleton_marker(klass)
     return SINGLETON_MARKER + klass
   end

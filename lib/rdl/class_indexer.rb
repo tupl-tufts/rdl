@@ -22,7 +22,7 @@ module ClassIndexer
         raise "unexpected const ast #{ast}"
       end
     end
-    
+
     def reset_class
       @current_class = "main"
     end
@@ -72,7 +72,7 @@ module ClassIndexer
 
       @current_class.sub!(entered_class, "")
       reset_class if @current_class.empty?
-=begin      
+=begin
       if @current_class.include?("::")
         @current_class.sub!("::"+module_name, "")
       else
