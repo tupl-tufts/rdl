@@ -197,6 +197,9 @@ class TestTypecheck < Minitest::Test
     RDL.type :String, :length, '() -> Integer', wrap: false
     RDL.type :NilClass, :&, '(%any obj) -> false', wrap: false
 
+    RDL.nowrap :Regexp
+    RDL.type :Regexp, :=~, '(String str) -> Integer or nil', wrap: false # Can't wrap this or it will mess with $1, $2, etc
+
     @t3 = RDL::Type::SingletonType.new 3
     @t4 = RDL::Type::SingletonType.new 4
     @t5 = RDL::Type::SingletonType.new 5
@@ -1994,6 +1997,10 @@ class TestTypecheck < Minitest::Test
       end
     }
   end
+  
+  def test_match_with_lvasgn
+    assert do_tc("/foo/ =~ 'foo'") <= RDL::Globals.types[:any]
+  end
 
   def test_raise_typechecks
     self.class.class_eval "module RaiseTypechecks; end"
@@ -2109,6 +2116,5 @@ class TestTypecheck < Minitest::Test
         end
       end
     }
-
   end
 end
