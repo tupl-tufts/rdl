@@ -1997,9 +1997,10 @@ class TestTypecheck < Minitest::Test
       end
     }
   end
-  
+
   def test_match_with_lvasgn
-    assert do_tc("/foo/ =~ 'foo'") <= RDL::Globals.types[:any]
+    assert do_tc("/foo/ =~ 'foo'") <= RDL::Globals.types[:integer]
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("/foo/ =~ 32") }
   end
 
   def test_raise_typechecks

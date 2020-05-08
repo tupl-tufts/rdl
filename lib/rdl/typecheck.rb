@@ -958,6 +958,15 @@ module RDL::Typecheck
       else
         tc_vasgn(scope, envi, e.children[0].type, x, trhs, e) + [effi]
       end
+    when :match_with_lvasgn # /regexp/ =~ rhs
+      env1, t1, eff1 = tc(scope, env, e.children[0]) # the regexp
+      env2, t2, eff2 = tc(scope, env, e.children[1]) # the rhs
+      ts, es = tc_send(scope, env2, RDL::Globals.types[:regexp], :=~, [t2], nil, e)
+      [env2, ts, es]
+      # (regexp
+      #   (str "foo")
+      #   (regopt))
+      # (str "foo"))
     when :nth_ref, :back_ref
       [env, RDL::Globals.types[:string], [:+, :+]]
     when :const
