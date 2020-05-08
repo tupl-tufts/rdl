@@ -12,6 +12,7 @@ module RDL::Type
     attr_accessor :ubounds  # upper bounds this tuple has been compared with using <=
     attr_accessor :lbounds  # lower bounds...
     attr_accessor :default # For hashes created with Hash.new, gives the default type to return for non-existent keys
+    attr_accessor :solution # to store the solution from inference
 
     # [+ elts +] is a map from keys to types
     def initialize(elts, rest, default: nil)

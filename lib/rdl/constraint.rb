@@ -3,9 +3,9 @@ require 'csv'
 module RDL::Typecheck
 
   def self.resolve_constraints
-    puts "Starting constraint resolution..." if RDL::Config.instance.infer_verbose
+    RDL::Logging.log_header :inference, :info, "Starting constraint resolution..."
     RDL::Globals.constrained_types.each { |klass, name|
-      puts "Resolving constraints from #{klass} and #{name}" if RDL::Config.instance.infer_verbose
+      RDL::Logging.log :inference, :debug, "Resolving constraints from #{RDL::Util.pp_klass_method(klass, name)}"
       typ = RDL::Globals.info.get(klass, name, :type)
       ## If typ is an Array, then it's an array of method types
       ## but for inference, we only use a single method type.
@@ -17,26 +17,33 @@ module RDL::Typecheck
       end
 
       var_types.each { |var_type|
-        if var_type.var_type? || var_type.optional_var_type? || var_type.vararg_var_type?
-          var_type = var_type.type if var_type.optional_var_type? || var_type.vararg_var_type?
-          var_type.lbounds.each { |lower_t, ast|
-            var_type.add_and_propagate_lower_bound(lower_t, ast)
-          }
-          var_type.ubounds.each { |upper_t, ast|
-            var_type.add_and_propagate_upper_bound(upper_t, ast)
-          }
-        elsif var_type.fht_var_type?
-          var_type.elts.values.each { |v|
-            vt = v.optional_var_type? || v.vararg_var_type? ? v.type : v
-            vt.lbounds.each { |lower_t, ast|
-              vt.add_and_propagate_lower_bound(lower_t, ast)
+        begin
+          if var_type.var_type? || var_type.optional_var_type? || var_type.vararg_var_type?
+            var_type = var_type.type if var_type.optional_var_type? || var_type.vararg_var_type?
+            var_type.lbounds.each { |lower_t, ast|
+              RDL::Logging.log :typecheck, :trace, "#{lower_t} <= #{var_type}"
+              var_type.add_and_propagate_lower_bound(lower_t, ast)
             }
-            vt.ubounds.each { |upper_t, ast|
-              vt.add_and_propagate_upper_bound(upper_t, ast)
+            var_type.ubounds.each { |upper_t, ast|
+              var_type.add_and_propagate_upper_bound(upper_t, ast)
             }
-          }
-        else
-          raise "Got unexpected type #{var_type}."
+          elsif var_type.fht_var_type?
+            var_type.elts.values.each { |v|
+              vt = v.optional_var_type? || v.vararg_var_type? ? v.type : v
+              vt.lbounds.each { |lower_t, ast|
+                vt.add_and_propagate_lower_bound(lower_t, ast)
+              }
+              vt.ubounds.each { |upper_t, ast|
+                vt.add_and_propagate_upper_bound(upper_t, ast)
+              }
+            }
+          else
+            raise "Got unexpected type #{var_type}."
+          end
+        rescue => e
+          raise e unless RDL::Config.instance.continue_on_errors
+
+          RDL::Logging.log :inference, :debug_error, "Caught error when resolving constraints for #{var_type}; skipping..."
         end
       }
     }
@@ -99,8 +106,8 @@ module RDL::Typecheck
             #sol = typ
           end
         rescue RDL::Typecheck::StaticTypeError => e
-          puts "Attempted to apply rule #{name} to var #{var}, but go the following error: "
-          puts e
+          RDL::Logging.log :typecheck, :debug_error, "Attempted to apply heuristic rule #{name} to var #{var}"
+          RDL::Logging.log :typecheck, :trace, "... but got the following error: #{e}"
           undo_constraints(new_cons)
           ## no new constraints in this case so we'll leave it as is
         end
@@ -132,8 +139,9 @@ module RDL::Typecheck
         sol = RDL::Type::TupleType.new(*new_params)
       end
     rescue RDL::Typecheck::StaticTypeError => e
-      puts "Attempted to apply solution #{sol} for var #{var} but got the following error: "
-      puts e
+      RDL::Logging.log :typecheck, :debug_error, "Attempted to apply solution #{sol} for var #{var}"
+      RDL::Logging.log :typecheck, :trace, "... but got the following error: #{e}"
+
       undo_constraints(new_cons)
       ## no new constraints in this case so we'll leave it as is
       sol = var
@@ -256,9 +264,9 @@ module RDL::Typecheck
           total_potential += 1
         end
       else
-        puts "Difference encountered for #{klass}##{meth}."
-        puts "Inferred: #{typ}"
-        puts "Original: #{orig_typ}"
+        RDL::Logging.log :inference, :debug, "Difference encountered for #{klass}##{meth}."
+        RDL::Logging.log :inference, :debug, "Inferred: #{typ}"
+        RDL::Logging.log :inference, :debug, "Original: #{orig_typ}"
         if orig_typ.is_a?(RDL::Type::MethodType)
           total_potential += orig_typ.args.size + 1 ## 1 for ret
           total_potential += orig_typ.block.args.size + 1 if !orig_typ.block.nil?
@@ -294,52 +302,66 @@ module RDL::Typecheck
     #   incomplete_types.each { |row| csv << row }
     # }
 
-    puts "Total correct (that could be automatically inferred): #{correct_types}"
-    puts "Total # method types: #{meth_types}"
-    puts "Total # variable types: #{var_types}"
-    puts "Total # individual types: #{total_potential}"
+    RDL::Logging.log_header :inference, :info, "Extraction Complete"
+    RDL::Logging.log :inference, :info, "Total correct (that could be automatically inferred): #{correct_types}"
+    RDL::Logging.log :inference, :info, "Total # method types: #{meth_types}"
+    RDL::Logging.log :inference, :info, "Total # variable types: #{var_types}"
+    RDL::Logging.log :inference, :info, "Total # individual types: #{total_potential}"
   end
 
   def self.extract_solutions(render_report = true)
     ## Go through once to come up with solution for all var types.
     #until !@new_constraints
+    RDL::Logging.log_header :inference, :info, "Begin Extract Solutions"
+
     typ_sols = {}
     loop do
       @new_constraints = false
       typ_sols = {}
-      puts "\n\nRunning solution extraction..." if RDL::Config.instance.infer_verbose
+
+      RDL::Logging.log :inference, :info, "Running solution extraction..."
+
       RDL::Globals.constrained_types.each { |klass, name|
-        RDL::Type::VarType.no_print_XXX!
-        typ = RDL::Globals.info.get(klass, name, :type)
-        if typ.is_a?(Array)
-          raise "Expected just one method type for #{klass}#{name}." unless typ.size == 1
-          tmeth = typ[0]
+        begin
+          RDL::Logging.log :inference, :debug, "Extracting #{RDL::Util.pp_klass_method(klass, name)}"
 
-          arg_sols, block_sol, ret_sol = extract_meth_sol(tmeth)
+          RDL::Type::VarType.no_print_XXX!
+          typ = RDL::Globals.info.get(klass, name, :type)
+          if typ.is_a?(Array)
+            raise "Expected just one method type for #{klass}#{name}." unless typ.size == 1
+            tmeth = typ[0]
 
-          block_string = block_sol ? " { #{block_sol} }" : nil
-          puts "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}" if RDL::Config.instance.infer_verbose
+            arg_sols, block_sol, ret_sol = extract_meth_sol(tmeth)
 
-          RDL::Type::VarType.print_XXX!
-          block_string = block_sol ? " { #{block_sol} }" : nil
-          typ_sols[[klass.to_s, name.to_sym]] = "(#{arg_sols.join(', ')})#{block_string} -> #{ret_sol}"
-        elsif name.to_s == "splat_param"
-        else
-          ## Instance/Class (also some times splat parameter) variables:
-          ## There is no clear answer as to what to do in this case.
-          ## Just need to pick something in between bounds (inclusive).
-          ## For now, plan is to just use lower bound when it's not empty/%bot,
-          ## otherwise use upper bound.
-          ## Can improve later if desired.
-          var_sol = extract_var_sol(typ, :var)
-          #typ.solution = var_sol
-          puts "Extracted solution for #{klass} variable #{name} is #{var_sol}." if RDL::Config.instance.infer_verbose
+            block_string = block_sol ? " { #{block_sol} }" : nil
+            RDL::Logging.log :inference, :trace, "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
 
-          RDL::Type::VarType.print_XXX!
-          typ_sols[[klass.to_s, name.to_sym]] = var_sol.to_s
+            RDL::Type::VarType.print_XXX!
+            block_string = block_sol ? " { #{block_sol} }" : nil
+            typ_sols[[klass.to_s, name.to_sym]] = "(#{arg_sols.join(', ')})#{block_string} -> #{ret_sol}"
+          elsif name.to_s == "splat_param"
+          else
+            ## Instance/Class (also some times splat parameter) variables:
+            ## There is no clear answer as to what to do in this case.
+            ## Just need to pick something in between bounds (inclusive).
+            ## For now, plan is to just use lower bound when it's not empty/%bot,
+            ## otherwise use upper bound.
+            ## Can improve later if desired.
+            var_sol = extract_var_sol(typ, :var)
+            #typ.solution = var_sol
+            RDL::Logging.log :inference, :trace, "Extracted solution for #{klass} variable #{name} is #{var_sol}."
+
+            RDL::Type::VarType.print_XXX!
+            typ_sols[[klass.to_s, name.to_sym]] = var_sol.to_s
+          end
+        rescue => e
+          raise e unless RDL::Config.instance.continue_on_errors
+
+          RDL::Logging.log :inference, :debug_error, "Error while exctracting solution for #{RDL::Util.pp_klass_method(klass, name)}: #{e}; continuing..."
+          typ_sols[[klass.to_s, name.to_sym]] = "-- Extraction Error --"
         end
       }
-      break if !@new_constraints
+    break if !@new_constraints
     end
 
     make_extraction_report(typ_sols) if render_report

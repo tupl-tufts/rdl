@@ -421,7 +421,6 @@ def Hash.to_a_output_type(trec)
 end
 
 
-RDL.type :Hash, :to_hash, '() -> self'
 #RDL.type :Hash, :values, '() -> ``output_type(trec, targs, :values, "Array<v>")``'
 RDL.type :Hash, :values, '() -> ``values_output(trec)``'
 def Hash.values_output(trec)
@@ -541,7 +540,8 @@ RDL.type :Hash, :select!, '() {(k,v) -> %bool} -> Hash<k,v>'
 RDL.type :Hash, :shift, '() -> Array<k or v>'
 # RDL.type :Hash, :to_a, '() -> Array<Tuple<k,v>>'
 RDL.type :Hash, :to_a, '() -> Array<Array<k or v>>'
-RDL.type :Hash, :to_hash, '() -> Hash<k,v>'
+RDL.type :Hash, :to_hash, '() -> self'
+RDL.type :Hash, :to_h, '() -> self'
 RDL.type :Hash, :values, '() -> Array<v>'
 RDL.type :Hash, :values_at, '(*k) -> Array<v>', effect: [:+, :+]
 RDL.type :Hash, :with_indifferent_access, '() -> self'

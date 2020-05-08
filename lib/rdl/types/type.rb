@@ -104,10 +104,16 @@ module RDL::Type
         end
         return true
       elsif right.is_a?(VarType) && right.to_infer
+
+        RDL::Logging.log :typecheck, :trace, "#{right}.is_a VarType"
+        RDL::Logging.log :typecheck, :trace, "\t#{left} <= #{right}"
         if deferred_constraints.nil?
+          RDL::Logging.log :typecheck, :trace, 'no deferred_constraints'
           right.add_lbound(left, ast, new_cons, propagate: propagate) unless (right.lbounds.any? { |t, loc| t == left || t.hash == left.hash } || right.equal?(left))
         else
+          RDL::Logging.log :typecheck, :trace, 'deferred_constraints:'
           deferred_constraints << [left, right]
+          deferred_constraints.each { |k, v| if v.is_a?(Array) then v.each { |v| RDL::Logging.log(:typecheck, :trace, "#{k} <= #{v[1] || v}") } else RDL::Logging.log(:typecheck, :trace, "#{k} <= #{v}") end }
         end
         return true
       end
@@ -185,6 +191,7 @@ module RDL::Type
             }
 
             lb_var_choices.each { |vartype, choice_hash|
+              RDL::Logging.log :typecheck, :trace, vartype.to_s
               if choice_hash.values.uniq.size == 1
                 RDL::Type::Type.leq(choice_hash.values[0], vartype, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
               else

@@ -4,7 +4,7 @@ module RDL::Type
     class << self
       alias :__new__ :new
     end
-    
+
     ## variational typing!
     attr_accessor :choices, :connecteds
     attr_accessor :ubounds # upper bounds this ChoiceType has been compared with using <=
@@ -25,6 +25,10 @@ module RDL::Type
       @lbounds = []
       @activated = nil
       @hash = 101 + @choices.hash
+
+      if choices.values.any? { |t| t.is_a? ChoiceType }
+        RDL::Logging.log :inference, :critical, "WARNING: Generating a ChoiceType with nested ChoiceTypes."
+      end
     end
 
     def add_connecteds(*connecteds)
@@ -37,7 +41,7 @@ module RDL::Type
     def <=(other)
       return Type.leq(self, other)
     end
-    
+
     def to_s
       typs = []
       @choices.each { |choice, typ|
@@ -52,7 +56,7 @@ module RDL::Type
     end
 
     alias eql? ==
-    
+
     def remove!(choice, removed_hash: {})
       raise "Expected integer, got #{choice}." unless choice.is_a? Integer
       removed = @choices.delete(choice)
@@ -121,5 +125,5 @@ module RDL::Type
       @hash
     end
 
-  end  
+  end
 end

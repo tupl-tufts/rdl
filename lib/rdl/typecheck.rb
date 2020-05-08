@@ -188,7 +188,13 @@ module RDL::Typecheck
 
   def self.get_ast(klass, meth)
     file, line = RDL::Globals.info.get(klass, meth, :source_location)
-    raise RuntimeError, "No file for #{RDL::Util.pp_klass_method(klass, meth)}" if file.nil?
+
+    if file.nil?
+      return nil if RDL::Config.instance.continue_on_errors
+
+      raise RuntimeError, "No file for #{RDL::Util.pp_klass_method(klass, meth)}" if file.nil?
+    end
+
     raise RuntimeError, "static type checking in irb not supported" if file == "(irb)"
     if file == "(pry)"
       # no caching...
@@ -205,25 +211,50 @@ module RDL::Typecheck
     digest = Digest::MD5.file file
     cache_hit = ((RDL::Globals.parser_cache.has_key? file) &&
                  (RDL::Globals.parser_cache[file][0] == digest))
+
     unless cache_hit
-      file_ast = Parser::CurrentRuby.parse_file file
-      mapper = ASTMapper.new(file)
-      mapper.process(file_ast)
-      cache = {ast: file_ast, line_defs: mapper.line_defs}
-      RDL::Globals.parser_cache[file] = [digest, cache]
+      begin
+        file_ast = Parser::CurrentRuby.parse_file file
+        mapper = ASTMapper.new(file)
+        mapper.process(file_ast)
+        cache = {ast: file_ast, line_defs: mapper.line_defs}
+        RDL::Globals.parser_cache[file] = [digest, cache]
+      rescue => e
+        RDL::Logging.log :typecheck, :error, "Failed to parse #{file}; #{e}"
+        return nil if RDL::Config.instance.continue_on_errors
+
+        raise e
+      end
     end
     ast = RDL::Globals.parser_cache[file][1][:line_defs][line]
     return ast
   end
 
   def self.infer(klass, meth)
-    puts "*************** Infering method #{meth} from class #{klass} ***************" if RDL::Config.instance.infer_verbose
+    _infer(klass, meth)
+  rescue => exn
+    raise exn unless RDL::Config.instance.continue_on_errors
+    RDL::Logging.log :inference, :warning, "Error; Skipping inference for #{RDL::Util.pp_klass_method(klass, meth)}"
+    RDL::Logging.log :inference, :debug, "... got exception: #{exn}"
+    # RDL::Globals.info.set(klass, meth, :type, [RDL::Globals.types[:dyn]])
+  end
+
+  def self._infer(klass, meth)
+    RDL::Logging.log_header :inference, :debug, "Infering #{RDL::Util.pp_klass_method(klass, meth)}"
+
     RDL::Config.instance.use_comp_types = true
     RDL::Config.instance.number_mode = true
     @var_cache = {}
     ast = get_ast(klass, meth)
     if ast.nil?
-      puts "Warning: Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}; skipping method"
+      RDL::Logging.log :inference, :warning, "Warning: Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}; skipping method"
+
+      # if RDL::Config.instance.continue_on_errors
+      #   puts "#{warning_text} recording %dyn" if RDL::Config.instance.convert_to_dyn_verbose
+      #   RDL::Globals.info.set(klass, meth, :type, [RDL::Globals.types[:dyn]])
+      #   return
+      # end
+
       return
     end
     types = RDL::Globals.info.get(klass, meth, :type)
@@ -253,6 +284,7 @@ module RDL::Typecheck
     else
       raise RuntimeError, "Unexpected ast type #{ast.type}"
     end
+
     raise RuntimeError, "Method #{name} defined where method #{meth} expected" if name.to_sym != meth
     context_types = RDL::Globals.info.get(klass, meth, :context_types)
 
@@ -294,7 +326,7 @@ module RDL::Typecheck
     RDL::Globals.info.set(klass, meth, :typechecked, true)
 
     RDL::Globals.constrained_types << [klass, meth]
-    puts "Done with constraint generation." if RDL::Config.instance.infer_verbose
+    RDL::Logging.log :inference, :debug, "Done with constraint generation."
   end
 
   def self.typecheck(klass, meth, ast=nil, types = nil, effects = nil)
@@ -556,13 +588,23 @@ module RDL::Typecheck
     cls.superclass.instance_method(m).owner
   end
 
+  def self.tc(scope, env, e)
+    _tc(scope, env, e)
+  rescue => exn
+    raise exn unless RDL::Config.instance.continue_on_errors
+
+    RDL::Logging.log :typecheck, :debug_error, "#{exn}; returning %dyn"
+
+    [env, RDL::Globals.types[:dyn]]
+  end
+
   # The actual type checking logic.
   # [+ scope +] tracks flow-insensitive information about the current scope, excluding local variables
   # [+ env +] is the (local variable) Env
   # [+ e +] is the expression to type check
   # Returns [env', t, eff], where env' is the type environment at the end of the expression
   # and t is the type of the expression. t is always canonical.
-  def self.tc(scope, env, e)
+  def self._tc(scope, env, e)
     case e.type
     when :nil
       [env, RDL::Globals.types[:nil], [:+, :+]]
@@ -2475,21 +2517,26 @@ RUBY
 
   def self.make_unknown_method_type(klass, meth)
     raise "Tried to make unknown method type for class #{klass} method #{meth}, but no such method was found." unless (RDL::Util.to_class(klass).instance_methods + RDL::Util.to_class(klass).private_instance_methods).include?(meth)
-    params = RDL::Util.to_class(klass).instance_method(meth).parameters
+
+    klass_obj = RDL::Util.to_class(klass)
+
+    params = klass_obj.instance_method(meth).parameters
     arg_types = []
     keyword_args = {}
     params.each { |param|
+      var_name = param[1]
+
       case param[0]
       when :req
-        arg_types << RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: param[1])
+        arg_types << RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: var_name)
       when :opt
-        arg_types << RDL::Type::OptionalType.new(RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: param[1]))
+        arg_types << RDL::Type::OptionalType.new(RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: var_name))
       when :rest
-        arg_types << RDL::Type::VarargType.new(RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: param[1]))
+        arg_types << RDL::Type::VarargType.new(RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: var_name))
       when :key
-        keyword_args[param[1]] = RDL::Type::OptionalType.new(RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: param[1]))
+        keyword_args[var_name] = RDL::Type::OptionalType.new(RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: var_name))
       when :keyreq
-        keyword_args[param[1]] = RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: param[1])
+        keyword_args[var_name] = RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: var_name)
       when :block
       ## all method types will be given a variable type for blocks anyway, so no need to add a new param here
       when :keyrest

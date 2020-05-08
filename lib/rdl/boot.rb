@@ -3,12 +3,13 @@ require 'digest'
 require 'set'
 require 'parser/current'
 #require 'method_source'
-
+require 'colorize'
 
 module RDL
 end
 
 require 'rdl/config.rb'
+require 'rdl/logging.rb'
 def RDL.config
   yield(RDL::Config.instance)
 end

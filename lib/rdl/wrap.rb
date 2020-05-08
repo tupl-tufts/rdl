@@ -246,6 +246,7 @@ RUBY
       loc = the_self.instance_method(meth).source_location
     end
     RDL::Globals.info.set(klass, meth, :source_location, loc)
+
     # Apply any deferred contracts and reset list
 
     if RDL::Globals.deferred.size > 0
@@ -855,21 +856,31 @@ module RDL
     $stn = 0
     num_casts = 0
     time = Time.now
+
     RDL::Globals.to_infer[sym].each { |klass, meth|
-      RDL::Typecheck.infer klass, meth
-      num_casts += RDL::Typecheck.get_num_casts
+      begin
+        RDL::Typecheck.infer klass, meth
+        num_casts += RDL::Typecheck.get_num_casts
+      rescue Exception => e
+        if RDL::Config.instance.continue_on_errors
+          RDL::Logging.log :inference, :debug, "Error: #{e}; recording %dyn"
+          # RDL::Globals.info.set(klass, meth, :type, [RDL::Globals.types[:dyn]])
+        else
+          raise e
+        end
+      end
     }
+
     RDL::Globals.to_infer[sym] = Set.new
     RDL::Typecheck.resolve_constraints
 
     RDL::Typecheck.extract_solutions render_report
 
     time = Time.now - time
-    if RDL::Config.instance.infer_verbose
-      puts "Total time taken: #{time}."
-      puts "Total number of type casts used: #{num_casts}."
-      puts "Total amount of time spent on stn: #{$stn}."
-    end
+
+    RDL::Logging.log :inference, :info, "Total time taken: #{time}."
+    RDL::Logging.log :inference, :info, "Total number of type casts used: #{num_casts}."
+    RDL::Logging.log :inference, :info, "Total amount of time spent on stn: #{$stn}."
   end
 
   def self.load_sequel_schema(db)
