@@ -298,6 +298,7 @@ module RDL::Typecheck
   end
 
   def self.typecheck(klass, meth, ast=nil, types = nil, effects = nil)
+    # puts "Typechecking #{klass}##{meth}"
     ast = get_ast(klass, meth) unless ast
     raise RuntimeError, "Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}" if ast.nil?
     types = RDL::Globals.info.get(klass, meth, :type) unless types
@@ -1774,13 +1775,17 @@ RUBY
       unless ts
         klass = RDL::Util.to_class(scope[:klass])
         if klass.class == Module
-          # defer type checking until module is included
-
-
-
+          # Module mixin handle
+          # Here a module method is calling a non-existent method; check for it in all mixees
+          nts = RDL::Globals.module_mixees[klass].map { |k, kind| RDL::Type::NominalType.new(k) }
+          return [@types[:bot], :+] if nts.empty? # if module not mixed in, this call can't happen; so %bot plus pure
+          ut = RDL::Type::UnionType.new(*nts)
+          ts, es = tc_send(scope, env, ut, meth, tactuals, block, e, op_asgn)
+          return [[ts], [es]]
         end
-        error :no_instance_method_type, [trecv.name, meth], e unless ts
+        error :no_instance_method_type, [trecv.name, meth], e
       end
+      # error :no_instance_method_type, [trecv.name, meth], e unless ts
       inst = {self: trecv}
       self_klass = RDL::Util.to_class(trecv.name)
     when RDL::Type::GenericType

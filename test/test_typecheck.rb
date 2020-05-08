@@ -1927,6 +1927,62 @@ class TestTypecheck < Minitest::Test
     assert_nil ChildWithoutType.new.foo(1)
   end
 
+  module ModuleMixin1
+    def caller(x)
+      return in_mixee(x)
+    end
+  end
+  class ModuleMixee1a
+    include ModuleMixin1
+
+    def in_mixee(y)
+      return y
+    end
+  end
+  class ModuleMixee1b
+    include ModuleMixin1
+
+    def in_mixee(y)
+      return 3
+    end
+  end
+
+  def test_mixins_1
+    RDL.type ModuleMixin1, :caller, '(Integer) -> Integer', typecheck: :mm1
+    RDL.type ModuleMixee1a, :in_mixee, '(Integer) -> Integer', typecheck: :mm1
+    RDL.type ModuleMixee1b, :in_mixee, '(Integer) -> Integer', typecheck: :mm1
+    RDL.do_typecheck :mm1
+  end
+
+  module ModuleMixin2
+    def caller(x)
+      return in_mixee(x)
+    end
+  end
+  class ModuleMixee2a
+    include ModuleMixin2
+
+    def in_mixee(y)
+      return "foo"
+    end
+  end
+  class ModuleMixee2b
+    include ModuleMixin2
+
+    def in_mixee(y)
+      return 3
+    end
+  end
+
+  def test_mixins_2
+    RDL.type ModuleMixin2, :caller, '(Integer) -> Integer', typecheck: :mm2a
+    RDL.type ModuleMixee2a, :in_mixee, '(Integer) -> String', typecheck: :mm2b
+    RDL.type ModuleMixee2b, :in_mixee, '(Integer) -> Integer', typecheck: :mm2c
+    RDL.do_typecheck :mm2b
+    RDL.do_typecheck :mm2c
+    assert_raises(RDL::Typecheck::StaticTypeError) { RDL.do_typecheck :mm2a }
+  end
+
   def test_object_sing_method
     assert_raises(RDL::Typecheck::StaticTypeError) {
       Object.class_eval do

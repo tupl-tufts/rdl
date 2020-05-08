@@ -207,7 +207,8 @@ module RDL
       @no_infer_meths = []
       @no_infer_files = []
       @infer_added = nil
-      @module_mixees = Hash.new
+      # @module_mixees = Hash.new - resetting this breaks test cases that assume
+      # we know which modules are mixed into which other modules
 
       @parser = RDL::Type::Parser.new
 
