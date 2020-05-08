@@ -1454,7 +1454,7 @@ RUBY
         [envi, tres.canonical, effres]
       }
     else
-      raise RuntimeError, "Expression kind #{e.type} unsupported, for expression #{e}"
+      error :unsupported_expression, [e.type, e], e
     end
   end
 
@@ -2706,7 +2706,7 @@ class Diagnostic < Parser::Diagnostic
     no_type_for_symbol: "can't find type for method corresponding to `%s.to_proc'",
     no_non_dep_types: "no non-dependent types for receiver %s in call to method %s",
     empty_env: "for some reason, environment is nil when type checking assignment to variable %s.",
-
+    unsupported_expression: "Expression kind %s unsupported, for expression %s",
 
     infer_constraint_error: "%s constraint generated here."
   }
