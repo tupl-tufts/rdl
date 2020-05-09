@@ -2034,7 +2034,6 @@ class TestTypecheck < Minitest::Test
     end
   end
 
-
   def test_sing_method_inheritence
     RDL.type SingletonInheritA, 'self.foo', '(Integer) -> Integer'
     self.class.class_eval do
@@ -2045,6 +2044,14 @@ class TestTypecheck < Minitest::Test
     end
   end
 
+  def test_default_args
+    self.class.class_eval do
+      type '(?String) -> String', typecheck: :now
+      def with_default_arg(x=RUBY_VERSION)
+        x
+      end
+    end
+  end
 
   def test_comp_types
     self.class.class_eval "class CompTypes; end"

@@ -299,9 +299,10 @@ module RDL::Typecheck
 
     meth_type = meth_type.instantiate inst
 
-    _, targs = args_hash({}, Env.new(inst), meth_type, args, ast, 'method')
-    targs[:self] = self_type
     scope = { task: :infer, klass: klass, meth: meth, tret: meth_type.ret, tblock: meth_type.block, captured: Hash.new, context_types: context_types }
+    # default args seem to be evaluated in the method body, so same scope
+    _, targs = args_hash(scope, Env.new(inst), meth_type, args, ast, 'method')
+    targs[:self] = self_type
 
     begin
       old_captured = scope[:captured].dup
@@ -366,9 +367,10 @@ module RDL::Typecheck
       raise RuntimeError, "Type checking of methods with computed types is not currently supported." unless (type.args + [type.ret]).all? { |t| !t.instance_of?(RDL::Type::ComputedType) }
       inst = {self: self_type}
       type = type.instantiate inst
-      _, targs = args_hash({}, Env.new(:self => self_type), type, args, ast, 'method')
-      targs[:self] = self_type
       scope = { task: :check, klass: klass, meth: meth, tret: type.ret, tblock: type.block, captured: Hash.new, context_types: context_types, eff: effect }
+      # default args seem to be evaluated in the method body, so same scope
+      _, targs = args_hash(scope, Env.new(:self => self_type), type, args, ast, 'method')
+      targs[:self] = self_type
       begin
         old_captured = scope[:captured].dup
         if body.nil?
@@ -1828,7 +1830,8 @@ RUBY
         if klass.class == Module
           # Module mixin handle
           # Here a module method is calling a non-existent method; check for it in all mixees
-          nts = RDL::Globals.module_mixees[klass].map { |k, kind| RDL::Type::NominalType.new(k) }
+          # TODO: Handle :extend
+          nts = RDL::Globals.module_mixees[klass].map { |k, kind| if kind == :include then RDL::Type::NominalType.new(k) end }
           return [@types[:bot], :+] if nts.empty? # if module not mixed in, this call can't happen; so %bot plus pure
           ut = RDL::Type::UnionType.new(*nts)
           ts, es = tc_send(scope, env, ut, meth, tactuals, block, e, op_asgn)
@@ -2622,7 +2625,7 @@ RUBY
     # https://cirw.in/blog/constant-lookup.html
     # First look in Module.nesting for a lexically scoped variable
     const_string = e.loc.expression.source
-    raise "Expected class and method in `scope`." unless scope[:klass] && scope[:meth]
+    raise "Expected class and method in `scope` #{scope[:klass]}." unless scope[:klass] && scope[:meth]
     if (RDL::Util.has_singleton_marker(scope[:klass]))
       klass = RDL::Util.to_class(RDL::Util.remove_singleton_marker(scope[:klass]))
       mod_inst = false
@@ -2717,7 +2720,9 @@ class Diagnostic < Parser::Diagnostic
     empty_env: "for some reason, environment is nil when type checking assignment to variable %s.",
     unsupported_expression: "Expression kind %s unsupported, for expression %s",
 
-    infer_constraint_error: "%s constraint generated here."
+    infer_constraint_error: "%s constraint generated here.",
+
+    empty: "",
   }
 end
 
