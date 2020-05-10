@@ -101,13 +101,14 @@ module RDL::Typecheck
               }
             }
 =end
+            RDL::Logging.log :hueristic, :debug, "Heuristic Applied: #{name}"
             @new_constraints = true if !new_cons.empty?
             return typ
             #sol = typ
           end
         rescue RDL::Typecheck::StaticTypeError => e
-          RDL::Logging.log :typecheck, :debug_error, "Attempted to apply heuristic rule #{name} to var #{var}"
-          RDL::Logging.log :typecheck, :trace, "... but got the following error: #{e}"
+          RDL::Logging.log :heuristic, :debug_error, "Attempted to apply heuristic rule #{name} to var #{var}"
+          RDL::Logging.log :heuristic, :trace, "... but got the following error: #{e}"
           undo_constraints(new_cons)
           ## no new constraints in this case so we'll leave it as is
         end
@@ -129,6 +130,7 @@ module RDL::Typecheck
         }
       }
 =end
+      RDL::Logging.log :inference, :debug, "New Constraints branch B"
       @new_constraints = true if !new_cons.empty?
 
       if sol.is_a?(RDL::Type::GenericType)
@@ -139,8 +141,8 @@ module RDL::Typecheck
         sol = RDL::Type::TupleType.new(*new_params)
       end
     rescue RDL::Typecheck::StaticTypeError => e
-      RDL::Logging.log :typecheck, :debug_error, "Attempted to apply solution #{sol} for var #{var}"
-      RDL::Logging.log :typecheck, :trace, "... but got the following error: #{e}"
+      RDL::Logging.log :inference, :debug_error, "Attempted to apply solution #{sol} for var #{var}"
+      RDL::Logging.log :inference, :trace, "... but got the following error: #{e}"
 
       undo_constraints(new_cons)
       ## no new constraints in this case so we'll leave it as is
@@ -364,6 +366,7 @@ module RDL::Typecheck
     break if !@new_constraints
     end
 
+  ensure
     make_extraction_report(typ_sols) if render_report
   end
 

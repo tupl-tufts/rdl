@@ -52,7 +52,7 @@ class RDL::Logging
   end
 
   def self.log_header(area, level, header)
-    return unless log_level_leq(RDL::Config.instance.log_levels[area], level)
+    return unless log_level_leq(RDL::Config.instance.log_levels[area] || :info, level)
     no_color = RDL::Config.instance.disable_log_colors
     if no_color
       stars = "***************"
@@ -63,7 +63,7 @@ class RDL::Logging
   end
 
   def self.log(area, level, message)
-    return unless log_level_leq(RDL::Config.instance.log_levels[area], level)
+    return unless log_level_leq(RDL::Config.instance.log_levels[area] || :info, level)
 
     puts log_str(area, level, message, message_color: :white)
   end

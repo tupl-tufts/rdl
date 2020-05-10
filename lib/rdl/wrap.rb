@@ -295,7 +295,8 @@ RUBY
       # long as it isn't marked as being skipped
       unless ((RDL::Util.has_singleton_marker(klass) &&
                RDL::Globals.no_infer_meths.include?([RDL::Util.remove_singleton_marker(klass).to_s, "self."+meth.to_s])) ||
-              (RDL::Globals.no_infer_meths.include?([klass.to_s, meth.to_s])))
+              (RDL::Globals.no_infer_meths.include?([klass.to_s, meth.to_s])) ||
+              (RDL::Globals.infer_added_filter && !RDL::Globals.infer_added_filter.call(klass, meth, loc && loc[0])))
         tag = RDL::Globals.infer_added
         RDL::Globals.to_infer[tag] = Set.new unless RDL::Globals.to_infer[tag]
         RDL::Globals.to_infer[tag].add([klass, meth])
@@ -832,6 +833,10 @@ module RDL
     RDL::Globals.infer_added = tag
     yield
     RDL::Globals.infer_added = tmp
+  end
+
+  def self.infer_added_filter(&f)
+    RDL::Globals.infer_added_filter = f
   end
 
   # Invokes all callbacks from rdl_at(sym), in unspecified order.

@@ -42,7 +42,8 @@ class RDL::Config
     c.disable_log_colors = false
     c.log_levels = {
       typecheck: :info,
-      inference: :info
+      inference: :info,
+      heuristic: :info
     }
   end
 

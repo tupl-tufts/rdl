@@ -7,6 +7,14 @@ module RDL::Type
   class Type
     @@contract_cache = {}
 
+    def solution
+      @solution
+    end
+
+    def solution=
+        RDL::Logging :typecheck, :warning, "Solution written to #{self.class}"
+    end
+
     def to_contract
       c = @@contract_cache[self]
       return c if c

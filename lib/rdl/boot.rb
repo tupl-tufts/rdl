@@ -111,6 +111,7 @@ class << RDL::Globals # add accessors and readers for module variables
   attr_accessor :no_infer_meths
   attr_accessor :no_infer_files
   attr_accessor :infer_added
+  attr_accessor :infer_added_filter
 end
 
 # Create switches to control whether wrapping happens and whether
