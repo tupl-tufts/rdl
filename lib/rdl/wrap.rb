@@ -868,7 +868,7 @@ module RDL
         num_casts += RDL::Typecheck.get_num_casts
       rescue Exception => e
         if RDL::Config.instance.continue_on_errors
-          RDL::Logging.log :inference, :debug, "Error: #{e}; recording %dyn"
+          RDL::Logging.log :inference, :debug_error, "Error: #{e}; recording %dyn"
           # RDL::Globals.info.set(klass, meth, :type, [RDL::Globals.types[:dyn]])
         else
           raise e
