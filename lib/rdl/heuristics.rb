@@ -20,7 +20,7 @@ class RDL::Heuristic
   end
 
   def self.struct_to_nominal(var_type)
-    return unless (var_type.category == :arg) || (var_type.category == :var)#(var_type.category == :ivar) || (var_type.category == :cvar) || (var_type.category == :gvar) ## this rule only applies to args and (instance/class/global) variables
+    return unless (var_type.category == :arg) || (var_type.category == :var) ## this rule only applies to args and (instance/class/global) variables
     #return unless var_type.ubounds.all? { |t, loc| t.is_a?(RDL::Type::StructuralType) || t.is_a?(RDL::Type::VarType) } ## all upper bounds must be struct types or var types
     return unless var_type.ubounds.any? { |t, loc| t.is_a?(RDL::Type::StructuralType) } ## upper bounds must include struct type(s)
     struct_types = var_type.ubounds.select { |t, loc| t.is_a?(RDL::Type::StructuralType) }
@@ -45,6 +45,38 @@ class RDL::Heuristic
 
 
 end
+
+
+
+def self.twin_network_guess(var)
+  return unless (var_type.category == :arg) || (var_type.category == :var)  ## this rule only applies to args and (instance/class/global) variables
+  name1 = var_type.name
+  name2 = "count" ## TODO: replace this with actual names from the current program
+
+  uri = URI "http://127.0.0.1:5000/"
+  params = { in1: name1, in2: name2 }
+  uri.query = URI.encode_www_form(params)
+
+  res = Net::HTTP.get_response(uri)
+  if res.msg != "OK"
+    puts "Failed to make request to twin network server. Received response #{res.body}."
+    return nil
+  end
+
+  sim_score = res.body.to_f
+  if sim_score > 0.8
+    puts "Twin network found #{name1} and #{name2} have similarity score of #{sim_score}."
+    puts "Attempting to apply Integer as solution."
+    ## TODO: once we replace "count" above, also have to replace Integer as solution.
+    return RDL::Globals.types[:integer]
+  else
+    puts "Twin network found insufficient similarity score of #{sim_score} between #{name1} and #{name2}."
+    return nil
+  end
+end
+
+
+
 
 class << RDL::Heuristic
   attr_reader :rules
@@ -128,3 +160,6 @@ RDL::Heuristic.add(:hash_access) { |var|
 
 
 ### For rules involving :include?, :==, :!=, etc. we would need to track the exact receiver/args used in the method call, and somehow store these in the bounds created for a var type.
+
+
+RDL::Heuristic.add(:twin_network) { |var| RDL::Heuristic.twin_network_guess(var) }
