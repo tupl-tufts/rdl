@@ -270,7 +270,6 @@ RUBY
           raise RuntimeError, "Deferred #{kind} contract from class #{prev_klass} being applied in class #{tmp_klass} to #{meth}"
         end
         RDL::Globals.info.add(klass, meth, kind, contract)
-        RDL::Globals.info.add(klass, meth, :effect, h[:effect]) if h.has_key?(:effect)
         RDL::Wrap.wrap(klass, meth) if h[:wrap]
         unless !h.has_key?(:typecheck) || RDL::Globals.info.set(klass, meth, :typecheck, h[:typecheck])
           raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
@@ -398,7 +397,7 @@ module RDL::Annotate
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
-  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil, effect: nil)
+  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil)
     return if version && !(Gem::Requirement.new(version).satisfied_by? Gem.ruby_version)
     klass, meth, type = begin
                           RDL::Wrap.process_type_args(self, *args)
@@ -412,7 +411,6 @@ module RDL::Annotate
                           err.set_backtrace bt
                           raise err
                         end
-    effect[0] = :- if effect && effect[0] == :~ ## For now, treating pure-ish :~ as :-, since we realized it doesn't actually affect termination checking.
     typs = type.args + [type.ret]
     if type.block
       block_type = type.block.is_a?(RDL::Type::OptionalType) ? type.block.type : type.block
@@ -425,7 +423,6 @@ module RDL::Annotate
 #          warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
 #        end
       RDL::Globals.info.add(klass, meth, :type, type)
-      RDL::Globals.info.add(klass, meth, :effect, effect)
       unless RDL::Globals.info.set(klass, meth, :typecheck, typecheck)
         raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
       end
@@ -449,7 +446,7 @@ module RDL::Annotate
       end
     else
       RDL::Globals.deferred << [klass, :type, type, {wrap: wrap,
-                                               typecheck: typecheck, effect: effect}]
+                                               typecheck: typecheck}]
     end
     nil
   end
@@ -971,7 +968,6 @@ module RDL
   def self.check_type_code
     RDL.config { |config| config.use_comp_types = false }
     count = 1
-    #code_type = RDL::Globals.parser.scan_str "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
     RDL::Globals.dep_types.each { |klass, meth, typ|
       klass = RDL::Util.has_singleton_marker(klass) ? RDL::Util.remove_singleton_marker(klass) : klass
       arg_list = "(trec, targs"
@@ -997,7 +993,7 @@ module RDL
           end
           eval tmp_eval
           ast = Parser::CurrentRuby.parse tmp_meth
-          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type], [[:-, :+]])
+          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type])
           count += 1
         end
       }

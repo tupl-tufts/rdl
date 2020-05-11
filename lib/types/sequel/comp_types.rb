@@ -6,7 +6,7 @@ class SequelDB
   type :transaction, "() { () -> %any } -> self", wrap: false
 
 
-  type RDL::Globals, 'self.seq_db_schema', "()-> Hash<Symbol, RDL::Type::FiniteHashType>", wrap: false, effect: [:+, :+]
+  type RDL::Globals, 'self.seq_db_schema', "()-> Hash<Symbol, RDL::Type::FiniteHashType>", wrap: false
 
   def self.gen_output_type(targ)
     case targ
@@ -21,7 +21,7 @@ class SequelDB
     end
   end
 
-  RDL.type SequelDB, 'self.gen_output_type', "(RDL::Type::Type) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type SequelDB, 'self.gen_output_type', "(RDL::Type::Type) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false
 end
 
 module Sequel::Mysql2; end
@@ -36,7 +36,7 @@ class Sequel::Mysql2::Database
   type :transaction, "() { () -> %any } -> self", wrap: false
 
 
-  type RDL::Globals, 'self.seq_db_schema', "()-> Hash<Symbol, RDL::Type::FiniteHashType>", wrap: false, effect: [:+, :+]
+  type RDL::Globals, 'self.seq_db_schema', "()-> Hash<Symbol, RDL::Type::FiniteHashType>", wrap: false
 
   def self.gen_output_type(targ)
     case targ
@@ -50,7 +50,7 @@ class Sequel::Mysql2::Database
       raise "unexpected type #{targ.class}"
     end
   end
-  RDL.type Sequel::Mysql2::Database, 'self.gen_output_type', "(RDL::Type::Type) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Sequel::Mysql2::Database, 'self.gen_output_type', "(RDL::Type::Type) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false
 
 end
 
@@ -71,13 +71,13 @@ module Sequel
       raise "unexpected type"
     end
   end
-  RDL.type Sequel, 'self.gen_output_type', "(RDL::Type::Type) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Sequel, 'self.gen_output_type', "(RDL::Type::Type) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false
 
   def self.qualify_output_type(targs)
     raise "unexpected types" unless targs.all? { |a| a.is_a?(RDL::Type::SingletonType) }
     RDL::Type::GenericType.new(RDL::Type::NominalType.new(SeqQualIdent), targs[0], targs[1])
   end
-  RDL.type Sequel, 'self.qualify_output_type', "(Array<RDL::Type::Type>) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Sequel, 'self.qualify_output_type', "(Array<RDL::Type::Type>) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false
 end
 class SeqIdent
   extend RDL::Annotate
@@ -98,7 +98,7 @@ class SeqIdent
       raise "unexpected trec type"
     end
   end
-  RDL.type SeqIdent, 'self.gen_output_type', "(RDL::Type::Type, RDL::Type::Type) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type SeqIdent, 'self.gen_output_type', "(RDL::Type::Type, RDL::Type::Type) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false
 
 end
 
@@ -122,7 +122,7 @@ class Table
   def self.get_schema(hash)
     hash.select { |key, val| ![:__last_joined, :__all_joined, :__selected, :__orm].member?(key) }
   end
-  RDL.type Table, 'self.get_schema', "(Hash<%any, RDL::Type::Type>) -> Hash<%any, RDL::Type::Type>", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.get_schema', "(Hash<%any, RDL::Type::Type>) -> Hash<%any, RDL::Type::Type>", typecheck: :type_code, wrap: false
 
   def self.get_all_joined(t)
     case t
@@ -142,7 +142,7 @@ class Table
       raise "unexpected type #{t} in __all_joined clause"
     end
   end
-  RDL.type Table, 'self.get_all_joined', "(RDL::Type::Type) -> Array<Symbol>", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.get_all_joined', "(RDL::Type::Type) -> Array<Symbol>", typecheck: :type_code, wrap: false
 
   def self.join_ret_type(trec, targs)
     raise RDL::Typecheck::StaticTypeError, "Unexpected number of arguments to `join`." unless targs.size == 2
@@ -202,7 +202,7 @@ class Table
       raise RDL::Typecheck::StaticTypeError, "Unexpected receiver type in call to `join`."
     end
   end
-  RDL.type Table, 'self.join_ret_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.join_ret_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
 
   type :insert, "(``insert_arg_type(trec, targs)``) -> Integer", wrap: false
@@ -254,13 +254,13 @@ class Table
       raise "unexpected type #{trec}"
     end
   end
-  RDL.type Table, 'self.order_input', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.order_input', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
   def self.map_block_input(trec)
     schema = get_schema(RDL.type_cast(trec.params[0], "RDL::Type::FiniteHashType", force: true).elts)
     RDL::Type::FiniteHashType.new(schema, nil)
   end
-  RDL.type Table, 'self.map_block_input', "(RDL::Type::GenericType) -> RDL::Type::FiniteHashType", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.map_block_input', "(RDL::Type::GenericType) -> RDL::Type::FiniteHashType", typecheck: :type_code, wrap: false
 
   def self.all_output(trec)
     f = first_output(trec)
@@ -291,7 +291,7 @@ class Table
       return RDL::Type::GenericType.new(RDL::Globals.types[:array], f)
     end
   end
-  RDL.type Table, 'self.all_output', "(RDL::Type::Type) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.all_output', "(RDL::Type::Type) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false
 
   def self.select_map_output(trec, targs, meth)
     raise "VarargType not supported for select_map." if meth == :select_map && targs[0].is_a?(RDL::Type::VarargType)
@@ -357,7 +357,7 @@ class Table
       raise 'unexpected type #{trec}'
     end
   end
-  RDL.type Table, 'self.select_map_output', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.select_map_output', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol) -> RDL::Type::GenericType", typecheck: :type_code, wrap: false
 
   def self.get_input(trec)
     case trec
@@ -368,12 +368,12 @@ class Table
       raise 'unexpected type #{trec}'
     end
   end
-  RDL.type Table, 'self.get_input', "(RDL::Type::Type) -> RDL::Type::UnionType", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.get_input', "(RDL::Type::Type) -> RDL::Type::UnionType", typecheck: :type_code, wrap: false
 
   def self.get_output(trec, targs)
     RDL.type_cast(RDL.type_cast(trec, "RDL::Type::GenericType").params[0], "RDL::Type::FiniteHashType", force: true).elts[RDL.type_cast(targs[0], "RDL::Type::SingletonType<Symbol>", force: true).val]
   end
-  RDL.type Table, 'self.get_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.get_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
   def self.first_output(trec)
     case trec
@@ -389,7 +389,7 @@ class Table
       raise 'unexpected type #{trec}'
     end
   end
-  RDL.type Table, 'self.first_output', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.first_output', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
   def self.insert_arg_type(trec, targs, tuple=false)
     raise "Cannot insert/update for joined table." if RDL.type_cast(RDL.type_cast(trec, "RDL::Type::GenericType").params[0], "RDL::Type::FiniteHashType", force: true).elts[:__all_joined].is_a?(RDL::Type::UnionType)
@@ -399,7 +399,7 @@ class Table
       schema_arg_type(trec, targs, :insert)
     end
   end
-  RDL.type Table, 'self.insert_arg_type', "(RDL::Type::Type, Array<RDL::Type::Type>, ?%bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.insert_arg_type', "(RDL::Type::Type, Array<RDL::Type::Type>, ?%bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
   def self.import_arg_type(trec, targs)
     raise "Cannot import for joined table." if RDL.type_cast(RDL.type_cast(trec, "RDL::Type::GenericType").params[0], "RDL::Type::FiniteHashType", force: true).elts[:__all_joined].is_a?(RDL::Type::UnionType)
@@ -419,7 +419,7 @@ class Table
     end
     return targs[0]
   end
-  RDL.type Table, 'self.import_arg_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.import_arg_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
   def self.get_nominal_where_type(type)
     ## `where` can accept arrays/tuples and tables with a single column selected
@@ -449,7 +449,7 @@ class Table
     end
   end
 
-  RDL.type Table, 'self.get_nominal_where_type', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.get_nominal_where_type', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
   def self.schema_arg_type(trec, targs, meth)
     return RDL::Type::NominalType.new(Hash) if targs.size != 1
@@ -495,7 +495,7 @@ class Table
 
     end
   end
-  RDL.type Table, 'self.schema_arg_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.schema_arg_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
   ## [+ column_name +] is a symbol or SeqQualIdent Generic type of the qualified column name, e.g. :person__age
   ## [+ all_joined +] is an array of symbols of joined tables (must check if qualifying table is a member)
@@ -526,7 +526,7 @@ class Table
     end
     return qual_table_schema[qual_column]
   end
-  RDL.type Table, 'self.check_qual_column', "(Symbol or RDL::Type::GenericType, Array<Symbol>, ?RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.check_qual_column', "(Symbol or RDL::Type::GenericType, Array<Symbol>, ?RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
   def self.schema_arg_tuple_type(trec, targs, meth)
     return RDL::Type::NominalType.new(Array) if targs.size != 2
@@ -584,7 +584,7 @@ class Table
       raise 'not yet implemented'
     end
   end
-  RDL.type Table, 'self.schema_arg_tuple_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.schema_arg_tuple_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
   def self.where_arg_type(trec, targs, tuple=false)
     return targs[0] if targs[0] == RDL::Globals.types[:string]
@@ -616,7 +616,7 @@ class Table
       return ret
     end
   end
-  RDL.type Table, 'self.where_arg_type', "(RDL::Type::Type, Array<RDL::Type::Type>, ?%bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.where_arg_type', "(RDL::Type::Type, Array<RDL::Type::Type>, ?%bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
   def self.unique_ids?(ids, joined)
     j = get_all_joined(joined)
@@ -634,6 +634,6 @@ class Table
     }
     return true
   end
-  RDL.type Table, 'self.unique_ids?', "(Array<Symbol>, RDL::Type::Type) -> %bool", typecheck: :type_code, wrap: false, effect: [:+, :+]
+  RDL.type Table, 'self.unique_ids?', "(Array<Symbol>, RDL::Type::Type) -> %bool", typecheck: :type_code, wrap: false
 
 end
