@@ -285,7 +285,12 @@ module RDL::Typecheck
       raise RuntimeError, "Unexpected ast type #{ast.type}"
     end
 
-    raise RuntimeError, "Method #{name} defined where method #{meth} expected" if name.to_sym != meth
+    if name.to_sym != meth
+      RDL::Logging.log :inference, :info, "Aliasing #{meth} to #{name}"
+      RDL.alias klass, meth, name
+      return
+    end
+    error :internal, "Method #{name} defined where method #{meth} expected", ast if name.to_sym != meth
     context_types = RDL::Globals.info.get(klass, meth, :context_types)
 
     if RDL::Util.has_singleton_marker(klass)
@@ -345,7 +350,7 @@ module RDL::Typecheck
     else
       raise RuntimeError, "Unexpected ast type #{ast.type}"
     end
-    raise RuntimeError, "Method #{name} defined where method #{meth} expected" if name.to_sym != meth
+    error :internal, "Method #{name} defined where method #{meth} expected", ast if name.to_sym != meth
     context_types = RDL::Globals.info.get(klass, meth, :context_types)
     types.each { |type|
       if RDL::Util.has_singleton_marker(klass)
@@ -378,7 +383,7 @@ module RDL::Typecheck
       end until old_captured == scope[:captured]
       error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || meth == :initialize ||RDL::Type::Type.leq(body_type, type.ret, ast: ast)
     }
-    
+
     if RDL::Config.instance.check_comp_types
       new_meth = WrapCall.rewrite(ast) # rewrite ast to insert dynamic checks
       RDL::Util.silent_warnings { RDL::Util.to_class(klass).class_eval(new_meth) } # redefine method in the same class
@@ -575,7 +580,7 @@ module RDL::Typecheck
     when :complex, :rational # constants
       [env, RDL::Type::NominalType.new(e.children[0].class)]
     when :int, :float
-      if RDL::Config.instance.number_mode 
+      if RDL::Config.instance.number_mode
         [env, RDL::Type::NominalType.new(Integer)]
       else
         [env, RDL::Type::SingletonType.new(e.children[0])]
@@ -916,7 +921,7 @@ module RDL::Typecheck
       # children[1] = method name, a symbol
       # children [2..] = actual args
       return tc_var_type(scope, env, e) if (e.children[0].nil? || is_RDL(e.children[0])) && e.children[1] == :var_type
-      return tc_type_cast(scope, env, e) if is_RDL(e.children[0]) && e.children[1] == :type_cast && scope[:block].nil? 
+      return tc_type_cast(scope, env, e) if is_RDL(e.children[0]) && e.children[1] == :type_cast && scope[:block].nil?
       return tc_note_type(scope, env, e)  if is_RDL(e.children[0]) && e.children[1] == :note_type
       return tc_instantiate!(scope, env, e)  if is_RDL(e.children[0]) && e.children[1] == :instantiate!
       envi = env
@@ -2305,7 +2310,7 @@ RUBY
     end
     if scope[:context_types]
       scope[:context_types].each { |k, m, t|
-        return t if k == klass && m = name 
+        return t if k == klass && m = name
       }
     end
     t = RDL::Globals.info.get_with_aliases(klass, name, :type)
@@ -2573,6 +2578,8 @@ class Diagnostic < Parser::Diagnostic
     unsupported_expression: "Expression kind %s unsupported, for expression %s",
 
     infer_constraint_error: "%s constraint generated here.",
+
+    internal: "internal error: %s",
 
     empty: "",
   }
