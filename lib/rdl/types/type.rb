@@ -356,7 +356,9 @@ module RDL::Type
         # with wrong number of parameters but never checked against
         # instantiated instances
         raise TypeError, "No type parameters defined for #{left.base.name}" unless formals
-        return false unless left.base == right.base
+        return false unless (left.base == right.base ||
+                             (left.base.klass.ancestors.member?(right.base.klass) &&
+                              left.params.length == right.params.length))
         return variance.zip(left.params, right.params).all? { |v, tl, tr|
           case v
           when :+
