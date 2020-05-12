@@ -13,7 +13,7 @@ def Numeric.sing_or_type(trec, targs, meth, type)
     RDL::Globals.parser.scan_str "#T #{type}"
   end
 end
-RDL.type Numeric, 'self.sing_or_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, String) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Numeric, 'self.sing_or_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, String) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
 
 RDL.type :Integer, :%, '(Integer x {{ x!=0 }}) -> ``sing_or_type(trec, targs, :%, "Integer")``'
@@ -62,17 +62,17 @@ RDL.type :Integer, :/, '(BigDecimal x {{ x!=0 }}) -> ``sing_or_type(trec, targs,
 RDL.type :Integer, :/, '(Complex x {{ x!=0 }}) -> ``sing_or_type(trec, targs, :/, "Complex")``'
 RDL.pre(:Integer, :/) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end && if (x.real.is_a?(Rational) && x.imaginary.is_a?(Float)) then !x.imaginary.nan? else true end}
 
-RDL.type :Integer, :<, '(Integer) -> ``sing_or_type(trec, targs, :<, "%bool")``', effect: [:+, :+]
-RDL.type :Integer, :<, '(Float) -> ``sing_or_type(trec, targs, :<, "%bool")``', effect: [:+, :+]
-RDL.type :Integer, :<, '(Rational) -> ``sing_or_type(trec, targs, :<, "%bool")``', effect: [:+, :+]
-RDL.type :Integer, :<, '(BigDecimal) -> ``sing_or_type(trec, targs, :<, "%bool")``', effect: [:+, :+]
+RDL.type :Integer, :<, '(Integer) -> ``sing_or_type(trec, targs, :<, "%bool")``'
+RDL.type :Integer, :<, '(Float) -> ``sing_or_type(trec, targs, :<, "%bool")``'
+RDL.type :Integer, :<, '(Rational) -> ``sing_or_type(trec, targs, :<, "%bool")``'
+RDL.type :Integer, :<, '(BigDecimal) -> ``sing_or_type(trec, targs, :<, "%bool")``'
 
 RDL.type :Integer, :<<, '(Integer) -> ``sing_or_type(trec, targs, :<<, "Integer")``'
 
-RDL.type :Integer, :<=, '(Integer) -> ``sing_or_type(trec, targs, :<=, "%bool")``', effect: [:+, :+]
-RDL.type :Integer, :<=, '(Float) -> ``sing_or_type(trec, targs, :<=, "%bool")``', effect: [:+, :+]
-RDL.type :Integer, :<=, '(Rational) -> ``sing_or_type(trec, targs, :<=, "%bool")``', effect: [:+, :+]
-RDL.type :Integer, :<=, '(BigDecimal) -> ``sing_or_type(trec, targs, :<=, "%bool")``', effect: [:+, :+]
+RDL.type :Integer, :<=, '(Integer) -> ``sing_or_type(trec, targs, :<=, "%bool")``'
+RDL.type :Integer, :<=, '(Float) -> ``sing_or_type(trec, targs, :<=, "%bool")``'
+RDL.type :Integer, :<=, '(Rational) -> ``sing_or_type(trec, targs, :<=, "%bool")``'
+RDL.type :Integer, :<=, '(BigDecimal) -> ``sing_or_type(trec, targs, :<=, "%bool")``'
 
 RDL.type :Integer, :<=>, '(Integer) -> ``sing_or_type(trec, targs, :<=>, "Integer")``'
 RDL.post(:Integer, :<=>) { |r,x| r == -1 || r == 0 || r == 1 }
@@ -89,15 +89,15 @@ RDL.type :Integer, :!=, '(``targs[0]``) -> ``sing_or_type(trec, targs, :==, "%bo
 
 RDL.type :Integer, :===, '(Object) -> ``sing_or_type(trec, targs, :===, "%bool")``'
 
-RDL.type :Integer, :>, '(Integer) -> ``sing_or_type(trec, targs, :>, "%bool")``', effect: [:+, :+]
-RDL.type :Integer, :>, '(Float) -> ``sing_or_type(trec, targs, :>, "%bool")``', effect: [:+, :+]
-RDL.type :Integer, :>, '(Rational) -> ``sing_or_type(trec, targs, :>, "%bool")``', effect: [:+, :+]
-RDL.type :Integer, :>, '(BigDecimal) -> ``sing_or_type(trec, targs, :>, "%bool")``', effect: [:+, :+]
+RDL.type :Integer, :>, '(Integer) -> ``sing_or_type(trec, targs, :>, "%bool")``'
+RDL.type :Integer, :>, '(Float) -> ``sing_or_type(trec, targs, :>, "%bool")``'
+RDL.type :Integer, :>, '(Rational) -> ``sing_or_type(trec, targs, :>, "%bool")``'
+RDL.type :Integer, :>, '(BigDecimal) -> ``sing_or_type(trec, targs, :>, "%bool")``'
 
-RDL.type :Integer, :>=, '(Integer) -> ``sing_or_type(trec, targs, :>=, "%bool")``', effect: [:+, :+]
-RDL.type :Integer, :>=, '(Float) -> ``sing_or_type(trec, targs, :>=, "%bool")``', effect: [:+, :+]
-RDL.type :Integer, :>=, '(Rational) -> ``sing_or_type(trec, targs, :>=, "%bool")``', effect: [:+, :+]
-RDL.type :Integer, :>=, '(BigDecimal) -> ``sing_or_type(trec, targs, :>=, "%bool")``', effect: [:+, :+]
+RDL.type :Integer, :>=, '(Integer) -> ``sing_or_type(trec, targs, :>=, "%bool")``'
+RDL.type :Integer, :>=, '(Float) -> ``sing_or_type(trec, targs, :>=, "%bool")``'
+RDL.type :Integer, :>=, '(Rational) -> ``sing_or_type(trec, targs, :>=, "%bool")``'
+RDL.type :Integer, :>=, '(BigDecimal) -> ``sing_or_type(trec, targs, :>=, "%bool")``'
 
 RDL.type :Integer, :>>, '(Integer) -> Integer r {{ r >= 0 }}' ## TODO
 
@@ -239,11 +239,11 @@ RDL.post(:Integer, :**) { |r,x| r.real?}
 RDL.type :Integer, :**, '(Complex) -> Complex'
 RDL.pre(:Integer, :**) { |x| x!=0 && if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end}
 
-RDL.type :Integer, :+, '(Integer) -> Integer', effect: [:+, :+]
-RDL.type :Integer, :+, '(Float) -> Float', effect: [:+, :+]
-RDL.type :Integer, :+, '(Rational) -> Rational', effect: [:+, :+]
-RDL.type :Integer, :+, '(BigDecimal) -> BigDecimal', effect: [:+, :+]
-RDL.type :Integer, :+, '(Complex) -> Complex', effect: [:+, :+]
+RDL.type :Integer, :+, '(Integer) -> Integer'
+RDL.type :Integer, :+, '(Float) -> Float'
+RDL.type :Integer, :+, '(Rational) -> Rational'
+RDL.type :Integer, :+, '(BigDecimal) -> BigDecimal'
+RDL.type :Integer, :+, '(Complex) -> Complex'
 
 RDL.type :Integer, :-, '(Integer) -> Integer'
 RDL.type :Integer, :-, '(Float) -> Float'
@@ -283,9 +283,9 @@ RDL.post(:Integer, :<=>) { |r,x| r == -1 || r == 0 || r == 1 }
 RDL.type :Integer, :<=>, '(BigDecimal) -> Object'
 RDL.post(:Integer, :<=>) { |r,x| r == -1 || r == 0 || r == 1 }
 
-RDL.type :Integer, :==, '(Object) -> %bool', effect: [:+, :+]
+RDL.type :Integer, :==, '(Object) -> %bool'
 
-RDL.type :Integer, :===, '(Object) -> %bool', effect: [:+, :+]
+RDL.type :Integer, :===, '(Object) -> %bool'
 
 RDL.type :Integer, :>, '(Integer) -> %bool'
 RDL.type :Integer, :>, '(Float) -> %bool'
@@ -370,7 +370,7 @@ RDL.type :Integer, :denominator, '() -> Integer'
 RDL.post(:Integer, :denominator) { |r,x| r == 1 }
 RDL.type :Integer, :downto, '(Integer) { (Integer) -> %any } -> Integer'
 RDL.type :Integer, :downto, '(Integer limit) -> Enumerator<Integer>'
-RDL.type :Integer, :even?, '() -> %bool', effect: [:+ ,:+]
+RDL.type :Integer, :even?, '() -> %bool'
 RDL.type :Integer, :gcd, '(Integer) -> Integer'
 RDL.type :Integer, :gcdlcm, '(Integer) -> [Integer, Integer]'
 RDL.type :Integer, :floor, '() -> Integer'
@@ -380,7 +380,7 @@ RDL.type :Integer, :integer?, '() -> true'
 RDL.type :Integer, :lcm, '(Integer) -> Integer'
 RDL.type :Integer, :next, '() -> Integer'
 RDL.type :Integer, :numerator, '() -> Integer'
-RDL.type :Integer, :odd?, '() -> %bool', effect: [:+, :+]
+RDL.type :Integer, :odd?, '() -> %bool'
 RDL.type :Integer, :ord, '() -> Integer'
 RDL.type :Integer, :phase, '() -> %numeric'
 RDL.type :Integer, :pred, '() -> Integer'

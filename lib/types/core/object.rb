@@ -24,11 +24,11 @@
 
 RDL.type :Object, :!~, '(%any other) -> %bool', wrap: false
 RDL.type :Object, :<=>, '(%any other) -> Integer or nil', wrap: false
-RDL.type :Object, :===, '(%any other) -> %bool', wrap: false, effect: [:+, :+]
-RDL.type :Object, :==, '(%any other) -> %bool', wrap: false, effect: [:+, :+]
+RDL.type :Object, :===, '(%any other) -> %bool', wrap: false
+RDL.type :Object, :==, '(%any other) -> %bool', wrap: false
 RDL.type :Object, :=~, '(%any other) -> nil', wrap: false
 RDL.type :Object, :class, '() -> Class', wrap: false
-RDL.type :Object, :clone, '() -> self', wrap: false, effect: [:+, :+]
+RDL.type :Object, :clone, '() -> self', wrap: false
 # RDL.type :Object, :define_singleton_method, '(XXXX : *XXXX)') # TODO
 RDL.type :Object, :display, '(IO port) -> nil', wrap: false
 RDL.type :Object, :dup, '() -> self an_object', wrap: false
@@ -45,11 +45,11 @@ RDL.type :Object, :instance_variable_defined?, '(Symbol or String) -> %bool', wr
 RDL.type :Object, :instance_variable_get, '(Symbol or String) -> %any', wrap: false
 RDL.type :Object, :instance_variable_set, '(Symbol or String, %any) -> %any', wrap: false # returns 2nd argument
 RDL.type :Object, :instance_variables, '() -> Array<Symbol>', wrap: false
-RDL.type :Object, :is_a?, '(Class or Module) -> %bool', wrap: false, effect: [:+, :+]
+RDL.type :Object, :is_a?, '(Class or Module) -> %bool', wrap: false
 RDL.type :Object, :kind_of?, '(Class) -> %bool', wrap: false
 RDL.type :Object, :method, '(Symbol) -> Method', wrap: false
 RDL.type :Object, :methods, '(?%bool regular) -> Array<Symbol>', wrap: false
-RDL.type :Object, :nil?, '() -> %bool', wrap: false, effect: [:+, :+]
+RDL.type :Object, :nil?, '() -> %bool', wrap: false
 RDL.type :Object, :private_methods, '(?%bool all) -> Array<Symbol>', wrap: false
 RDL.type :Object, :protected_methods, '(?%bool all) -> Array<Symbol>', wrap: false
 RDL.type :Object, :public_method, '(Symbol) -> Method', wrap: false
@@ -57,7 +57,7 @@ RDL.type :Object, :public_methods, '(?%bool all) -> Array<Symbol>', wrap: false
 RDL.type :Object, :public_send, '(Symbol or String, *%any args) -> %any', wrap: false
 RDL.type :Object, :remove_instance_variable, '(Symbol) -> %any', wrap: false
 # RDL.type :Object, :respond_to?, '(Symbol or String, ?%bool include_all) -> %bool'
-RDL.type :Object, :send, '(Symbol or String, *%any) -> Object', wrap: false, effect: [:-, :+] # Can't wrap this, used outside wrap switch
+RDL.type :Object, :send, '(Symbol or String, *%any) -> Object', wrap: false
 RDL.type :Object, :singleton_class, '() -> Class', wrap: false
 RDL.type :Object, :singleton_method, '(Symbol) -> Method', wrap: false
 RDL.type :Object, :singleton_methods, '(?%bool all) -> Array<Symbol>', wrap: false
