@@ -28,7 +28,7 @@ def String.output_type(trec, targs, meth, type)
   end
 end
 
-RDL.type String, 'self.output_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, String) -> RDL::Type::Type", effect: [:+, :+]
+RDL.type String, 'self.output_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, String) -> RDL::Type::Type"
 
 def String.to_type(v)
   case v
@@ -45,7 +45,7 @@ def String.to_type(v)
   end
 end
 
-RDL.type String, 'self.to_type', "(%any) -> RDL::Type::Type", effect: [:+, :+]
+RDL.type String, 'self.to_type', "(%any) -> RDL::Type::Type"
 
 def String.any_string(a)
   case a
@@ -56,7 +56,7 @@ def String.any_string(a)
   end
 end
 
-RDL.type String, 'self.any_string', "(%any) -> RDL::Type::Type", effect: [:+, :+]
+RDL.type String, 'self.any_string', "(%any) -> RDL::Type::Type"
 
 def String.string_promote!(trec)
   case trec
@@ -68,7 +68,7 @@ def String.string_promote!(trec)
   end
 end
 
-RDL.type String, 'self.string_promote!', "(%any) -> RDL::Type::Type", effect: [:~, :+]
+RDL.type String, 'self.string_promote!', "(%any) -> RDL::Type::Type"
 
 
 RDL.type :String, :initialize, '(?String str) -> self new_str'
@@ -83,7 +83,7 @@ def String.plus_output(trec, targs)
   end
 end
 
-RDL.type String, 'self.plus_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", effect: [:+, :+]
+RDL.type String, 'self.plus_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
 
 
 RDL.type :String, :+, '(``any_string(targs[0])``) -> ``plus_output(trec, targs)``'
@@ -108,17 +108,17 @@ def String.append_output(trec, targs)
   end
 end
 
-RDL.type String, 'self.append_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", effect: [:+, :+]
+RDL.type String, 'self.append_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
 
 RDL.type :String, :<=>, '(String) -> ``output_type(trec, targs, :<=>, "Integer")``'
-RDL.type :String, :==, '(%any) -> ``output_type(trec, targs, :==, "%bool")``', effect: [:+, :+]
+RDL.type :String, :==, '(%any) -> ``output_type(trec, targs, :==, "%bool")``'
 RDL.type :String, :===, '(%any) -> ``output_type(trec, targs, :===, "%bool")``'
 RDL.type :String, :=~, '(Object) -> ``output_type(trec, targs, :=~, "Integer")``', wrap: false # Wrapping this messes up $1 etc
-RDL.type :String, :[], '(Integer, ?Integer) -> ``output_type(trec, targs, :[], "String")``', effect: [:+, :+]
-RDL.type :String, :[], '(Range<Integer> or Regexp) -> ``output_type(trec, targs, :[], "String")``', effect: [:+, :+]
-RDL.type :String, :[], '(Regexp, Integer) -> ``output_type(trec, targs, :[], "String")``', effect: [:+, :+]
-RDL.type :String, :[], '(Regexp, String) -> ``output_type(trec, targs, :[], "String")``', effect: [:+, :+]
-RDL.type :String, :[], '(String) -> ``output_type(trec, targs, :[], "String")``', effect: [:+, :+]
+RDL.type :String, :[], '(Integer, ?Integer) -> ``output_type(trec, targs, :[], "String")``'
+RDL.type :String, :[], '(Range<Integer> or Regexp) -> ``output_type(trec, targs, :[], "String")``'
+RDL.type :String, :[], '(Regexp, Integer) -> ``output_type(trec, targs, :[], "String")``'
+RDL.type :String, :[], '(Regexp, String) -> ``output_type(trec, targs, :[], "String")``'
+RDL.type :String, :[], '(String) -> ``output_type(trec, targs, :[], "String")``'
 RDL.type :String, :ascii_only?, '() -> ``output_type(trec, targs, :ascii_only?, "%bool")``'
 RDL.type :String, :b, '() -> ``output_type(trec, targs, :b, "String")``'
 RDL.type :String, :bytes, '() -> ``output_type(trec, targs, :bytes, "Array<Integer>")``' 
@@ -138,7 +138,7 @@ def String.cap_down_output(trec, meth)
   end      
 end
 
-RDL.type String, 'self.cap_down_output', "(RDL::Type::Type, Symbol) -> RDL::Type::Type", effect: [:+, :+]
+RDL.type String, 'self.cap_down_output', "(RDL::Type::Type, Symbol) -> RDL::Type::Type"
   
 RDL.type :String, :casecmp, '(String) -> ``output_type(trec, targs, :casecmp, "Integer")``'
 RDL.type :String, :center, '(Integer, ?String) -> ``output_type(trec, targs, :center, "String")``'
@@ -164,7 +164,7 @@ def String.chop_output(trec)
   end
 end
 
-RDL.type String, 'self.chop_output', "(RDL::Type::Type) -> RDL::Type::Type", effect: [:+, :+]
+RDL.type String, 'self.chop_output', "(RDL::Type::Type) -> RDL::Type::Type"
 
 RDL.type :String, :chr, '() -> ``output_type(trec, targs, :chr, "String")``'
 RDL.type :String, :clear, '() -> ``clear_output(trec)``'
@@ -180,7 +180,7 @@ def String.clear_output(trec)
   end
 end
 
-RDL.type String, 'self.clear_output', "(RDL::Type::Type) -> RDL::Type::Type", effect: [:+, :+]
+RDL.type String, 'self.clear_output', "(RDL::Type::Type) -> RDL::Type::Type"
 
 RDL.type :String, :codepoints, '() -> ``output_type(trec, targs, :codepoints, "Array<Integer>")``'
 RDL.type :String, :concat, '(Integer or Object) -> ``append_output(trec, targs)``'
@@ -221,7 +221,7 @@ RDL.type :String, :gsub!, '(Regexp or String) {() -> %any } -> ``string_promote!
 RDL.type :String, :gsub!, '(Regexp or String) -> ``string_promote!(trec); RDL::Type::NominalType.new(Enumerator)``', wrap: false
 RDL.type :String, :hash, '() -> Integer'
 RDL.type :String, :hex, '() -> ``output_type(trec, targs, :getbyte, "Integer")``'
-RDL.type :String, :include?, '(String) -> ``output_type(trec, targs, :include?, "%bool")``', effect: [:+, :+]
+RDL.type :String, :include?, '(String) -> ``output_type(trec, targs, :include?, "%bool")``'
 RDL.type :String, :index, '(Regexp or String, ?Integer) -> ``output_type(trec, targs, :index, "Integer")``'
 RDL.type :String, :replace, '(String) -> ``replace_output(trec, targs)``'
 
@@ -242,7 +242,7 @@ def String.replace_output(trec, targs)
   end
 end
 
-RDL.type String, 'self.replace_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", effect: [:+, :+]
+RDL.type String, 'self.replace_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
 
 RDL.type :String, :insert, '(Integer, String) -> String' ## TODO
 
@@ -265,7 +265,7 @@ def String.insert_output(trec, targs)
   end
 end
 
-RDL.type String, 'self.insert_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", effect: [:+, :+]
+RDL.type String, 'self.insert_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
 
 RDL.type :String, :inspect, '() -> ``output_type(trec, targs, :inspect, "String")``'
 RDL.type :String, :intern, '() -> ``output_type(trec, targs, :intern, "Symbol")``'
@@ -296,7 +296,7 @@ def String.lrstrip_output(trec, meth)
   end
 end
 
-RDL.type String, 'self.lrstrip_output', "(RDL::Type::Type, Symbol) -> RDL::Type::Type", effect: [:+, :+]
+RDL.type String, 'self.lrstrip_output', "(RDL::Type::Type, Symbol) -> RDL::Type::Type"
 
 RDL.type :String, :match, '(Regexp or String) -> MatchData'
 RDL.type :String, :match, '(Regexp or String, Integer) -> MatchData'
@@ -319,7 +319,7 @@ def String.mutate_output(trec, meth)
   end
 end
 
-RDL.type String, 'self.mutate_output', "(RDL::Type::Type, Symbol) -> RDL::Type::Type", effect: [:+, :+]
+RDL.type String, 'self.mutate_output', "(RDL::Type::Type, Symbol) -> RDL::Type::Type"
 
 
 RDL.type :String, :oct, '() -> ``output_type(trec, targs, :oct, "Integer")``'
@@ -348,11 +348,11 @@ RDL.type :String, :slice!, '(Range<Integer> or Regexp) -> ``string_promote!(trec
 RDL.type :String, :slice!, '(Regexp, Integer) -> ``string_promote!(trec)``'
 RDL.type :String, :slice!, '(Regexp, String) -> ``string_promote!(trec)``'
 RDL.type :String, :slice!, '(String) -> ``string_promote!(trec)``'
-RDL.type :String, :split, '(?(Regexp or String), ?Integer) -> ``output_type(trec, targs, :split, "Array<String>")``', effect: [:+, :+]
-RDL.type :String, :split, '(?Integer) -> ``output_type(trec, targs, :split, "Array<String>")``', effect: [:+, :+]
+RDL.type :String, :split, '(?(Regexp or String), ?Integer) -> ``output_type(trec, targs, :split, "Array<String>")``'
+RDL.type :String, :split, '(?Integer) -> ``output_type(trec, targs, :split, "Array<String>")``'
 RDL.type :String, :squeeze, '() -> ``output_type(trec, targs, :squeeze, "String")``'
 RDL.type :String, :squeeze!, '() -> ``mutate_output(trec, :squeeze!)``'
-RDL.type :String, :start_with?, '(* String) -> ``output_type(trec, targs, :start_with?, "%bool")``', effect: [:+, :+]
+RDL.type :String, :start_with?, '(* String) -> ``output_type(trec, targs, :start_with?, "%bool")``'
 RDL.type :String, :strip, '() -> ``output_type(trec, targs, :strip, "String")``'
 RDL.type :String, :strip!, '() -> ``mutate_output(trec, :strip!)``'
 RDL.type :String, :sub, '(Regexp or String, String or Hash) -> ``output_type(trec, targs, :sub, "String")``', wrap: false # Can't wrap these, since they mess with $1 etc
@@ -367,9 +367,9 @@ RDL.type :String, :to_c, '() -> Complex'
 RDL.type :String, :to_f, '() -> ``output_type(trec, targs, :to_f, "Float")``'
 RDL.type :String, :to_i, '(?Integer) -> ``output_type(trec, targs, :to_i, "Integer")``'
 RDL.type :String, :to_r, '() -> Rational'
-RDL.type :String, :to_s, '() -> self', effect: [:+, :+]
+RDL.type :String, :to_s, '() -> self'
 RDL.type :String, :to_str, '() -> self'
-RDL.type :String, :to_sym, '() -> ``output_type(trec, targs, :to_sym, "Symbol")``', effect: [:+, :+]
+RDL.type :String, :to_sym, '() -> ``output_type(trec, targs, :to_sym, "Symbol")``'
 RDL.type :String, :tr, '(String, String) -> ``output_type(trec, targs, :tr, "String")``'
 RDL.type :String, :tr!, '(String, String) -> ``string_promote!(trec)``'
 RDL.type :String, :tr_s, '(String, String) -> ``output_type(trec, targs, :tr_s, "String")``'
@@ -405,14 +405,14 @@ RDL.type :String, :*, '(Integer) -> String'
 RDL.type :String, :+, '(String) -> String'
 RDL.type :String, :<<, '(Object) -> String'
 RDL.type :String, :<=>, '(String other) -> Integer or nil ret'
-RDL.type :String, :==, '(%any) -> %bool', effect: [:+, :+]
+RDL.type :String, :==, '(%any) -> %bool'
 RDL.type :String, :===, '(%any) -> %bool'
 RDL.type :String, :=~, '(Object) -> Integer or nil', wrap: false # Wrapping this messes up $1 etc
-RDL.type :String, :[], '(Integer, ?Integer) -> String or nil', effect: [:+, :+]
-RDL.type :String, :[], '(Range<Integer> or Regexp) -> String or nil', effect: [:+, :+]
-RDL.type :String, :[], '(Regexp, Integer) -> String or nil', effect: [:+, :+]
-RDL.type :String, :[], '(Regexp, String) -> String or nil', effect: [:+, :+]
-RDL.type :String, :[], '(String) -> String or nil', effect: [:+, :+]
+RDL.type :String, :[], '(Integer, ?Integer) -> String or nil'
+RDL.type :String, :[], '(Range<Integer> or Regexp) -> String or nil'
+RDL.type :String, :[], '(Regexp, Integer) -> String or nil'
+RDL.type :String, :[], '(Regexp, String) -> String or nil'
+RDL.type :String, :[], '(String) -> String or nil'
 RDL.type :String, :ascii_only?, '() -> %bool'
 RDL.type :String, :b, '() -> String'
 RDL.type :String, :bytes, '() -> Array' # TODO: bindings to parameterized (vars)
@@ -466,7 +466,7 @@ RDL.type :String, :gsub!, '(Regexp or String) {(String) -> %any } -> String or n
 RDL.type :String, :gsub!, '(Regexp or String) -> Enumerator', wrap: false
 RDL.type :String, :hash, '() -> Integer'
 RDL.type :String, :hex, '() -> Integer'
-RDL.type :String, :include?, '(String) -> %bool', effect: [:+, :+]
+RDL.type :String, :include?, '(String) -> %bool'
 RDL.type :String, :index, '(Regexp or String, ?Integer) -> Integer or nil'
 RDL.type :String, :replace, '(String) -> String'
 RDL.type :String, :insert, '(Integer, String) -> String'
@@ -504,11 +504,11 @@ RDL.type :String, :slice!, '(Range<Integer> or Regexp) -> String or nil'
 RDL.type :String, :slice!, '(Regexp, Integer) -> String or nil'
 RDL.type :String, :slice!, '(Regexp, String) -> String or nil'
 RDL.type :String, :slice!, '(String) -> String or nil'
-RDL.type :String, :split, '(?(Regexp or String), ?Integer) -> Array<String>', effect: [:+, :+]
-RDL.type :String, :split, '(?Integer) -> Array<String>', effect: [:+, :+]
+RDL.type :String, :split, '(?(Regexp or String), ?Integer) -> Array<String>'
+RDL.type :String, :split, '(?Integer) -> Array<String>'
 RDL.type :String, :squeeze, '(?String) -> String'
 RDL.type :String, :squeeze!, '(?String) -> String'
-RDL.type :String, :start_with?, '(* String) -> %bool', effect: [:+, :+]
+RDL.type :String, :start_with?, '(* String) -> %bool'
 RDL.type :String, :strip, '() -> String'
 RDL.type :String, :strip!, '() -> String'
 RDL.type :String, :sub, '(Regexp or String, String or Hash) -> String', wrap: false # Can't wrap these, since they mess with $1 etc
@@ -523,9 +523,9 @@ RDL.type :String, :to_c, '() -> Complex'
 RDL.type :String, :to_f, '() -> Float'
 RDL.type :String, :to_i, '(?Integer) -> Integer'
 RDL.type :String, :to_r, '() -> Rational'
-RDL.type :String, :to_s, '() -> String', effect: [:+, :+]
+RDL.type :String, :to_s, '() -> String'
 RDL.type :String, :to_str, '() -> self'
-RDL.type :String, :to_sym, '() -> Symbol', effect: [:+, :+]
+RDL.type :String, :to_sym, '() -> Symbol'
 RDL.type :String, :tr, '(String, String) -> String'
 RDL.type :String, :tr!, '(String, String) -> String or nil'
 RDL.type :String, :tr_s, '(String, String) -> String'

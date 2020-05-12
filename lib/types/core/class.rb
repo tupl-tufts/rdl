@@ -13,5 +13,5 @@ RDL.type :Class, :instance_methods, '(?%bool) -> Array<Symbol>'
 RDL.type :Class, :class, '() -> Class'
 RDL.type :Class, :superclass, '() -> Class'
 RDL.type :Class, :name, '() -> String'
-RDL.type :Class, :==, '(%any) -> %bool', effect: [:+, :+]
-RDL.type :Class, :===, '(%any) -> %bool', effect: [:+, :+]
+RDL.type :Class, :==, '(%any) -> %bool'
+RDL.type :Class, :===, '(%any) -> %bool'
