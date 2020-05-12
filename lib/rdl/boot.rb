@@ -91,6 +91,11 @@ module RDL::Globals
   # If non-nil, should be a symbol. Added, untyped methods will be tagged
   # with that symbol
   @infer_added = nil
+
+  # Hash<Module module, [Class/Module class/module_name, :include or :extend]>
+  # Map from module names k to pairs [class/module v, :include/:extend] indicating the module
+  # k was included/extended in v
+  @module_mixees = Hash.new
 end
 
 class << RDL::Globals # add accessors and readers for module variables
@@ -112,6 +117,7 @@ class << RDL::Globals # add accessors and readers for module variables
   attr_accessor :no_infer_files
   attr_accessor :infer_added
   attr_accessor :infer_added_filter
+  attr_accessor :module_mixees
 end
 
 # Create switches to control whether wrapping happens and whether
@@ -203,6 +209,8 @@ module RDL
       @no_infer_meths = []
       @no_infer_files = []
       @infer_added = nil
+      # @module_mixees = Hash.new - resetting this breaks test cases that assume
+      # we know which modules are mixed into which other modules
 
       @parser = RDL::Type::Parser.new
 

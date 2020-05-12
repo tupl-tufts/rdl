@@ -18,8 +18,8 @@ class TestInfer < Minitest::Test
 
     # TODO: this will go away after config/reset
     RDL::Config.instance.use_precise_string = false
-    # RDL::Config.instance.log_levels[:inference] = :error
-    RDL::Config.instance.log_levels[:inference] = :debug
+    RDL::Config.instance.log_levels[:inference] = :error
+    # RDL::Config.instance.log_levels[:inference] = :debug
 
     RDL.readd_comp_types
     RDL.type_params :Hash, [:k, :v], :all? unless RDL::Globals.type_params['Hash']

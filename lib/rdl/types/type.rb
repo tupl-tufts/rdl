@@ -287,7 +287,7 @@ module RDL::Type
 
         right.methods.each_pair { |m, t|
           return false unless lklass.method_defined?(m) || RDL::Typecheck.lookup({}, klass_lookup, m, nil, make_unknown: false)#RDL::Globals.info.get(lklass, m, :type) ## Added the second condition because Rails lazily defines some methods.
-          types, _ = RDL::Typecheck.lookup({}, lklass.to_s, m, nil, make_unknown: false)#RDL::Globals.info.get(lklass, m, :type)
+          types = RDL::Typecheck.lookup({}, lklass.to_s, m, nil, make_unknown: false)#RDL::Globals.info.get(lklass, m, :type)
           if RDL::Config.instance.use_comp_types
             types = RDL::Typecheck.filter_comp_types(types, true)
           else
@@ -386,16 +386,16 @@ module RDL::Type
         klass = left.base.klass
         right.methods.each_pair { |meth, t|
           if (klass.to_s == "ActiveRecord_Relation") && !klass.method_defined?(meth) && defined? DBType
-            types, _ = RDL::Typecheck.lookup({}, klass.to_s, meth, {}, make_unknown: false)
+            types = RDL::Typecheck.lookup({}, klass.to_s, meth, {}, make_unknown: false)
             if !types
-              base_types, _ = RDL::Typecheck.lookup({}, "[s]"+DBType.rec_to_nominal(left).name, meth, {}, make_unknown: false)
+              base_types = RDL::Typecheck.lookup({}, "[s]"+DBType.rec_to_nominal(left).name, meth, {}, make_unknown: false)
               return false unless base_types
               types = base_types.map { |t| RDL::Type::MethodType.new(t.args, t.block, left) }
             end
             return false unless types
           else
             return false unless klass.method_defined?(meth) || RDL::Typecheck.lookup({}, klass.to_s, meth, nil, make_unknown: false)#RDL::Globals.info.get(klass, meth, :type) ## Added the second condition because Rails lazily defines some methods.
-            types, _ = RDL::Typecheck.lookup({}, klass.to_s, meth, {}, make_unknown: false)#RDL::Globals.info.get(klass, meth, :type)
+            types = RDL::Typecheck.lookup({}, klass.to_s, meth, {}, make_unknown: false)#RDL::Globals.info.get(klass, meth, :type)
           end
 
           if RDL::Config.instance.use_comp_types

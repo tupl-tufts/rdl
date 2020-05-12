@@ -103,6 +103,8 @@ module RDL::Typecheck
 =end
             RDL::Logging.log :hueristic, :debug, "Heuristic Applied: #{name}"
             @new_constraints = true if !new_cons.empty?
+            RDL::Logging.log :inference, :trace, "New Constraints branch A" if !new_cons.empty?
+
             return typ
             #sol = typ
           end
@@ -130,8 +132,8 @@ module RDL::Typecheck
         }
       }
 =end
-      RDL::Logging.log :inference, :debug, "New Constraints branch B"
       @new_constraints = true if !new_cons.empty?
+      RDL::Logging.log :inference, :trace, "New Constraints branch B" if !new_cons.empty?
 
       if sol.is_a?(RDL::Type::GenericType)
         new_params = sol.params.map { |p| if p.is_a?(RDL::Type::VarType) && !p.to_infer then p else extract_var_sol(p, category) end }
@@ -315,13 +317,15 @@ module RDL::Typecheck
     ## Go through once to come up with solution for all var types.
     #until !@new_constraints
     RDL::Logging.log_header :inference, :info, "Begin Extract Solutions"
+    counter = 0;
 
     typ_sols = {}
     loop do
+      counter += 1
       @new_constraints = false
       typ_sols = {}
 
-      RDL::Logging.log :inference, :info, "Running solution extraction..."
+      RDL::Logging.log :inference, :info, "[#{counter}] Running solution extraction..."
 
       RDL::Globals.constrained_types.each { |klass, name|
         begin

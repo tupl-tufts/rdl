@@ -1,10 +1,10 @@
-require 'pry'
-
 class RDL::Logging
   LEVELS = %i[
     trace debug debug_error info
     warning error critical
   ].freeze
+
+  @log_file = nil
 
   def self.log_level_colors(a)
     colors = {

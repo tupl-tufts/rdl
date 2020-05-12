@@ -197,6 +197,9 @@ class TestTypecheck < Minitest::Test
     RDL.type :String, :length, '() -> Integer', wrap: false
     RDL.type :NilClass, :&, '(%any obj) -> false', wrap: false
 
+    RDL.nowrap :Regexp
+    RDL.type :Regexp, :=~, '(String str) -> Integer or nil', wrap: false # Can't wrap this or it will mess with $1, $2, etc
+
     @t3 = RDL::Type::SingletonType.new 3
     @t4 = RDL::Type::SingletonType.new 4
     @t5 = RDL::Type::SingletonType.new 5
@@ -1927,6 +1930,62 @@ class TestTypecheck < Minitest::Test
     assert_nil ChildWithoutType.new.foo(1)
   end
 
+  module ModuleMixin1
+    def caller(x)
+      return in_mixee(x)
+    end
+  end
+  class ModuleMixee1a
+    include ModuleMixin1
+
+    def in_mixee(y)
+      return y
+    end
+  end
+  class ModuleMixee1b
+    include ModuleMixin1
+
+    def in_mixee(y)
+      return 3
+    end
+  end
+
+  def test_mixins_1
+    RDL.type ModuleMixin1, :caller, '(Integer) -> Integer', typecheck: :mm1
+    RDL.type ModuleMixee1a, :in_mixee, '(Integer) -> Integer', typecheck: :mm1
+    RDL.type ModuleMixee1b, :in_mixee, '(Integer) -> Integer', typecheck: :mm1
+    RDL.do_typecheck :mm1
+  end
+
+  module ModuleMixin2
+    def caller(x)
+      return in_mixee(x)
+    end
+  end
+  class ModuleMixee2a
+    include ModuleMixin2
+
+    def in_mixee(y)
+      return "foo"
+    end
+  end
+  class ModuleMixee2b
+    include ModuleMixin2
+
+    def in_mixee(y)
+      return 3
+    end
+  end
+
+  def test_mixins_2
+    RDL.type ModuleMixin2, :caller, '(Integer) -> Integer', typecheck: :mm2a
+    RDL.type ModuleMixee2a, :in_mixee, '(Integer) -> String', typecheck: :mm2b
+    RDL.type ModuleMixee2b, :in_mixee, '(Integer) -> Integer', typecheck: :mm2c
+    RDL.do_typecheck :mm2b
+    RDL.do_typecheck :mm2c
+    assert_raises(RDL::Typecheck::StaticTypeError) { RDL.do_typecheck :mm2a }
+  end
+
   def test_object_sing_method
     assert_raises(RDL::Typecheck::StaticTypeError) {
       Object.class_eval do
@@ -1937,6 +1996,11 @@ class TestTypecheck < Minitest::Test
         end
       end
     }
+  end
+
+  def test_match_with_lvasgn
+    assert do_tc("/foo/ =~ 'foo'") <= RDL::Globals.types[:integer]
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("/foo/ =~ 32") }
   end
 
   def test_raise_typechecks
@@ -1970,7 +2034,6 @@ class TestTypecheck < Minitest::Test
     end
   end
 
-
   def test_sing_method_inheritence
     RDL.type SingletonInheritA, 'self.foo', '(Integer) -> Integer'
     self.class.class_eval do
@@ -1981,6 +2044,14 @@ class TestTypecheck < Minitest::Test
     end
   end
 
+  def test_default_args
+    self.class.class_eval do
+      type '(?String) -> String', typecheck: :now
+      def with_default_arg(x=RUBY_VERSION)
+        x
+      end
+    end
+  end
 
   def test_comp_types
     self.class.class_eval "class CompTypes; end"
@@ -2053,6 +2124,5 @@ class TestTypecheck < Minitest::Test
         end
       end
     }
-
   end
 end
