@@ -245,6 +245,7 @@ RUBY
     else
       loc = the_self.instance_method(meth).source_location
     end
+    RDL::Logging.log :wrap, :trace, "Method #{klass}##{meth} added"
     RDL::Globals.info.set(klass, meth, :source_location, loc)
 
     # Apply any deferred contracts and reset list
@@ -673,25 +674,8 @@ module RDL::Annotate
     nil
   end
 
-  # Aliases contracts for meth_old and meth_new. Currently, this must
-  # be called for any aliases or they will not be wrapped with
-  # contracts. Only creates aliases in the current class.
   def rdl_alias(klass=self, new_name, old_name)
-    klass = klass.to_s
-    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-    RDL::Globals.aliases[klass] = {} unless RDL::Globals.aliases[klass]
-    if RDL::Globals.aliases[klass][new_name]
-      raise RuntimeError,
-            "Tried to alias #{new_name}, already aliased to #{RDL::Globals.aliases[klass][new_name]}"
-    end
-    RDL::Globals.aliases[klass][new_name] = old_name
-
-    if Module.const_defined?(klass) && RDL::Util.to_class(klass).method_defined?(new_name)
-      RDL::Wrap.wrap(klass, new_name)
-    else
-      RDL::Globals.to_wrap << [klass, old_name]
-    end
-    nil
+    RDL.alias klass, new_name, old_name
   end
 
   # [+ klass +] is the class whose type parameters to set; self if omitted
@@ -876,9 +860,7 @@ module RDL
     RDL::Globals.to_infer[sym] = Set.new
     RDL::Typecheck.resolve_constraints
 
-    StackProf.run(mode: :cpu, raw: true, out: 'extract-solutions.dump') do
-      RDL::Typecheck.extract_solutions render_report
-    end
+    RDL::Typecheck.extract_solutions render_report
 
     time = Time.now - time
 
@@ -1099,6 +1081,28 @@ module RDL
     obj.instance_variable_set(:@__rdl_type, nil)
     obj
   end
+
+  # Aliases contracts for meth_old and meth_new in klass. Currently, this
+  # must be called for any aliases or they will not be wrapped with
+  # contracts.
+  def self.alias(klass, new_name, old_name)
+    klass = klass.to_s
+    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
+    RDL::Globals.aliases[klass] = {} unless RDL::Globals.aliases[klass]
+    if RDL::Globals.aliases[klass][new_name]
+      raise RuntimeError,
+            "Tried to alias #{new_name}, already aliased to #{RDL::Globals.aliases[klass][new_name]}"
+    end
+    RDL::Globals.aliases[klass][new_name] = old_name
+
+    if Module.const_defined?(klass) && RDL::Util.to_class(klass).method_defined?(new_name)
+      RDL::Wrap.wrap(klass, new_name)
+    else
+      RDL::Globals.to_wrap << [klass, old_name]
+    end
+    nil
+  end
+
 
   private
   def self.add_ar_assoc(hash, aname, aklass)

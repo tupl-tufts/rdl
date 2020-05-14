@@ -1,7 +1,5 @@
 require 'csv'
 
-require 'stackprof'
-
 module RDL::Typecheck
 
   def self.resolve_constraints

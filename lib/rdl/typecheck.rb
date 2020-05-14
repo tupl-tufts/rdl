@@ -285,7 +285,12 @@ module RDL::Typecheck
       raise RuntimeError, "Unexpected ast type #{ast.type}"
     end
 
-    raise RuntimeError, "Method #{name} defined where method #{meth} expected" if name.to_sym != meth
+    if name.to_sym != meth
+      RDL::Logging.log :inference, :info, "Aliasing #{meth} to #{name}"
+      RDL.alias klass, meth, name
+      return
+    end
+    error :internal, "Method #{name} defined where method #{meth} expected", ast if name.to_sym != meth
     context_types = RDL::Globals.info.get(klass, meth, :context_types)
 
     if RDL::Util.has_singleton_marker(klass)
@@ -345,7 +350,7 @@ module RDL::Typecheck
     else
       raise RuntimeError, "Unexpected ast type #{ast.type}"
     end
-    raise RuntimeError, "Method #{name} defined where method #{meth} expected" if name.to_sym != meth
+    error :internal, "Method #{name} defined where method #{meth} expected", ast if name.to_sym != meth
     context_types = RDL::Globals.info.get(klass, meth, :context_types)
     types.each { |type|
       if RDL::Util.has_singleton_marker(klass)
@@ -2573,6 +2578,8 @@ class Diagnostic < Parser::Diagnostic
     unsupported_expression: "Expression kind %s unsupported, for expression %s",
 
     infer_constraint_error: "%s constraint generated here.",
+
+    internal: "internal error: %s",
 
     empty: "",
   }

@@ -44,13 +44,15 @@ class RDL::Config
     c.log_levels = {
       typecheck: :info,
       inference: :info,
-      heuristic: :info
+      heuristic: :info,
+      wrap: :critical
     }
     c.log_file = nil
     c.log_file_levels = {
       typecheck: :info,
       inference: :info,
-      heuristic: :info
+      heuristic: :info,
+      wrap: :critical
     }
   end
 

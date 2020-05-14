@@ -15,7 +15,7 @@ class RDL::Heuristic
     meth_names.delete(:new)
 
     return @meth_cache[meth_names] if @meth_cache.key? meth_names
-    RDL::Logging.log :heuristics, :info, "Checking matching classes for #{meth_names}"
+    RDL::Logging.log :heuristics, :debug, "Checking matching classes for #{meth_names}"
 
     matching_classes = ObjectSpace.each_object(Class).select { |c|
       class_methods = c.instance_methods | RDL::Globals.info.get_methods_from_class(c.to_s)
