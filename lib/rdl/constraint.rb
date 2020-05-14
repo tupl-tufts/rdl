@@ -1,5 +1,7 @@
 require 'csv'
 
+require 'stackprof'
+
 module RDL::Typecheck
 
   def self.resolve_constraints
@@ -82,8 +84,12 @@ module RDL::Typecheck
       ## Try each rule. Return first non-nil result.
       ## If no non-nil results, return original solution.
       ## TODO: check constraints.
+      heuristics_start_time = Time.now
+      RDL::Logging.log_header :heuristic, :debug, "Beginning Heuristics..."
+
       RDL::Heuristic.rules.each { |name, rule|
-        #puts "Trying rule `#{name}` for variable #{var}."
+        start_time = Time.now
+        RDL::Logging.log :heuristic, :debug, "Trying rule `#{name}` for variable #{var}."
         typ = rule.call(var)
         new_cons = {}
         begin
@@ -113,8 +119,14 @@ module RDL::Typecheck
           RDL::Logging.log :heuristic, :trace, "... but got the following error: #{e}"
           undo_constraints(new_cons)
           ## no new constraints in this case so we'll leave it as is
+        ensure
+          total_time = Time.now - start_time
+          RDL::Logging.log :hueristic, :debug, "Heuristic #{name} took #{total_time} to evaluate"
         end
       }
+
+      heuristics_total_time = Time.now - heuristics_start_time
+      RDL::Logging.log_header :heuristic, :debug, "Evaluated heuristics in #{heuristics_total_time}"
     end
     ## out here, none of the heuristics applied.
     ## Try to use `sol` as solution -- there is a chance it will

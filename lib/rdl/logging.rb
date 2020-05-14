@@ -4,8 +4,6 @@ class RDL::Logging
     warning error critical
   ].freeze
 
-  @log_file = nil
-
   def self.log_level_colors(a)
     colors = {
       trace: :yellow,
@@ -17,12 +15,6 @@ class RDL::Logging
       critical: { color: :light_red, mode: :bold }
     }
     colors[a]
-  end
-
-  def self.log_to_file(file, level: nil)
-    File.new file, "w"
-    @log_file = file
-    @log_file_level = level
   end
 
   def self.log_level_leq(a, b)
@@ -84,22 +76,18 @@ class RDL::Logging
       str, = log_str(false, tracing, message_level, header, message_color: { mode: :bold })
       puts "\n" + str
     end
-
-    if @log_file
-    end
   end
 
   def self.log_header_to_file(area, message_level, header)
-    return unless @log_file
-
-    log_level = @log_file_level || RDL::Config.instance.log_levels[area] || :info
+    return unless RDL::Config.instance.log_file
+    log_level = RDL::Config.instance.log_file_levels[area] || :info
 
     return unless log_level_leq(log_level, message_level)
 
     tracing = log_level == :trace
 
     no_color_str = generate_no_color_header(tracing, message_level, header)
-    File.open(@log_file, "a+") { |f| f.puts no_color_str }
+    File.open(RDL::Config.instance.log_file, "a+") { |f| f.puts no_color_str }
   end
 
   def self.log(area, message_level, message, ast: nil)
@@ -118,9 +106,8 @@ class RDL::Logging
   end
 
   def self.log_message_to_file(area, message_level, message, ast)
-    return unless @log_file
-
-    log_level = @log_file_level || RDL::Config.instance.log_levels[area] || :info
+    return unless RDL::Config.instance.log_file
+    log_level = RDL::Config.instance.log_file_levels[area] || :info
 
     return unless log_level_leq(log_level, message_level)
 
@@ -129,7 +116,7 @@ class RDL::Logging
     str, = log_str(true, tracing, message_level, message)
     ast_str = ast ? ast_render(0, ast.loc.expression) : nil
 
-    File.open(@log_file, "a+") do |f|
+    File.open(RDL::Config.instance.log_file, "a+") do |f|
       f.puts str
       f.puts ast_str if ast_str
     end

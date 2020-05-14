@@ -11,6 +11,7 @@ class RDL::Config
   attr_accessor :use_precise_string, :number_mode, :use_unknown_types, :infer_empties
   attr_accessor :continue_on_errors
   attr_accessor :log_levels, :disable_log_colors
+  attr_accessor :log_file, :log_file_levels
 
   def initialize
     RDL::Config.reset(self)
@@ -41,6 +42,12 @@ class RDL::Config
     c.continue_on_errors = false
     c.disable_log_colors = false
     c.log_levels = {
+      typecheck: :info,
+      inference: :info,
+      heuristic: :info
+    }
+    c.log_file = nil
+    c.log_file_levels = {
       typecheck: :info,
       inference: :info,
       heuristic: :info
