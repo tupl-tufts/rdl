@@ -304,7 +304,7 @@ module RDL::Typecheck
         # csv << [klass, meth, typ, orig_typ, code] #, comment
 
         report[klass] << { klass: klass, method: meth, inferred_type: typ,
-                    original_type: orig_typ, source_code: code }
+                           original_type: orig_typ, source_code: code }
 
         # if typ.include?("XXX")
         #  incomplete_types << [klass, meth, typ, orig_typ, code, comment]
@@ -357,9 +357,7 @@ module RDL::Typecheck
             block_string = block_sol ? " { #{block_sol} }" : nil
             RDL::Logging.log :inference, :trace, "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
 
-            RDL::Type::VarType.print_XXX!
-            block_string = block_sol ? " { #{block_sol} }" : nil
-            typ_sols[[klass.to_s, name.to_sym]] = "(#{arg_sols.join(', ')})#{block_string} -> #{ret_sol}"
+            typ_sols[[klass.to_s, name.to_sym]] = RDL::Type::MethodType.new arg_sols, block_sol, ret_sol
           elsif name.to_s == "splat_param"
           else
             ## Instance/Class (also some times splat parameter) variables:
@@ -372,8 +370,7 @@ module RDL::Typecheck
             #typ.solution = var_sol
             RDL::Logging.log :inference, :trace, "Extracted solution for #{klass} variable #{name} is #{var_sol}."
 
-            RDL::Type::VarType.print_XXX!
-            typ_sols[[klass.to_s, name.to_sym]] = var_sol.to_s
+            typ_sols[[klass.to_s, name.to_sym]] = var_sol
           end
         rescue => e
           raise e unless RDL::Config.instance.continue_on_errors
