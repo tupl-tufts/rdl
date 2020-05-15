@@ -860,7 +860,8 @@ module RDL
     RDL::Globals.to_infer[sym] = Set.new
     RDL::Typecheck.resolve_constraints
 
-    RDL::Typecheck.extract_solutions render_report
+    report = RDL::Typecheck.extract_solutions
+    report.to_csv('infer_data.csv') if render_report
 
     time = Time.now - time
 
