@@ -7,12 +7,13 @@ module RDL::Type
   class Type
     @@contract_cache = {}
 
-    def solution
-      @solution
+    def solution=
+      RDL::Logging.log :typecheck, :error, "Solution written to #{self.class}"
     end
 
-    def solution=
-        RDL::Logging :typecheck, :warning, "Solution written to #{self.class}"
+    def name
+      RDL::Logging.log :typecheck, :error, "Attempted to access name field for #{self.class}"
+      '_NAME_ERROR'
     end
 
     def to_contract

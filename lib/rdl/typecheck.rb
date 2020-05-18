@@ -258,6 +258,7 @@ module RDL::Typecheck
       return
     end
     types = RDL::Globals.info.get(klass, meth, :type)
+
     if types == [] or types.nil?
       ## in this case, have to create new arg/ret VarTypes for this method
       meth_type = make_unknown_method_type(klass, meth)

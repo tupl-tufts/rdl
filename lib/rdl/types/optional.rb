@@ -1,7 +1,6 @@
 module RDL::Type
   class OptionalType < Type
     attr_reader :type
-    attr_accessor :solution # to store the solution from inference
 
     def initialize(type)
       raise RuntimeError, "Attempt to create optional type with non-type" unless type.is_a? Type

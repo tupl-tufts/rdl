@@ -862,6 +862,7 @@ module RDL
 
     report = RDL::Typecheck.extract_solutions
     # report.to_csv 'infer_data.csv' if render_report
+
     report.to_sorbet 'infer_data.rbi' if render_report
 
     time = Time.now - time
