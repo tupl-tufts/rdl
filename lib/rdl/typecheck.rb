@@ -94,6 +94,10 @@ module RDL::Typecheck
       return @env == other.env
     end
 
+    def to_s
+      @env.to_a.map { |k,v| "#{k}: #{if v[:fixed] then '[fixed]' end}#{v[:type]}"}.join(", ")
+    end
+
     # merges bindings in self with bindings in other, preferring bindings in other if there is a common key
     def merge(other)
       result = Env.new
@@ -1398,7 +1402,9 @@ RUBY
     case kind
     when :lvar  # local variable
       error :undefined_local_or_method, [name], e unless env.has_key? name
-      capture(scope, name, env[name].canonical, ast: e) if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
+      if scope[:outer_env] && (scope[:outer_env].has_key? name) && (not (scope[:outer_env].fixed? name))
+        capture(scope, name, env[name].canonical, ast: e)
+      end
       if scope[:captured] && scope[:captured].has_key?(name) then
         [env, scope[:captured][name]]
       else

@@ -1049,6 +1049,8 @@ class TestTypecheck < Minitest::Test
     assert_raises(RDL::Typecheck::StaticTypeError) {
       assert do_tc("x = _any_object; case x when Y then m1(x) when Y then m2(x) end", env: @env)
     }
+    assert do_tc("x = _any_object; case x when X then m1(x) when Y then m3() { m2(x) } end", env: @env, scope: @scopec)
+    # TODO: The next test case fails because `x` is captured in both blocks, giving it type `X or Y` in the second block
     assert do_tc("x = _any_object; case x when X then m3() { m1(x) } when Y then m3() { m2(x) } end", env: @env, scope: @scopec)
   end
 
