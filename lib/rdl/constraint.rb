@@ -238,7 +238,7 @@ module RDL::Typecheck
 
 
   def self.make_extraction_report(typ_sols)
-    report = RDL::InferenceReport.new
+    report = RDL::Reporting::InferenceReport.new
     #return unless $orig_types
 
     # complete_types = []
