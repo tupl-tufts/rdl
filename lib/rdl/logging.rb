@@ -4,6 +4,14 @@ class RDL::Logging
     warning error critical
   ].freeze
 
+  class << self
+    LEVELS.each do |level|
+      define_method level do |area, message|
+        log area, level.to_sym, message
+      end
+    end
+  end
+
   def self.log_level_colors(a)
     colors = {
       trace: :yellow,

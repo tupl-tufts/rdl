@@ -55,12 +55,18 @@ module RDL::Type
     # [+ ast +] is the AST where the bound originates from, used for error messages.
     # [+ new_cons +] is a Hash<VarType, Array<[:upper or :lower, Type, AST]>>. When provided, can be used to roll back constraints in case an error pops up.
     def add_and_propagate_upper_bound(typ, ast, new_cons = {})
+
       return if self.equal?(typ)
       if !@ubounds.any? { |t, a| t == typ }
         @ubounds << [typ, ast]
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:upper, typ, ast]] : [[:upper, typ, ast]]
       end
       @lbounds.each { |lower_t, a|
+        if typ.is_a?(VarType) && !typ.lbounds
+          RDL::Logging.debug_error :inference, "Nil found in lbounds... Continuing"
+          next
+        end
+
         if lower_t.is_a?(VarType) && lower_t.to_infer
           lower_t.add_and_propagate_upper_bound(typ, ast, new_cons) unless lower_t.ubounds.any? { |t, _| t == typ }
         else
@@ -88,6 +94,16 @@ module RDL::Type
       end
       RDL::Logging.log :typecheck, :trace, 'ubounds.each'
       @ubounds.each { |upper_t, a|
+        if upper_t.is_a?(VarType) && !upper_t.lbounds
+          RDL::Logging.debug_error :inference, "Nil found in upper_t.lbounds... Continuing"
+          next
+        end
+
+        if typ.is_a?(VarType) && !typ.ubounds
+          RDL::Logging.debug_error :inference, "Nil found in ubounds... Continuing"
+          next
+        end
+
         RDL::Logging.log :typecheck, :trace, "ubound: #{upper_t}"
         if upper_t.is_a?(VarType)
           upper_t.add_and_propagate_lower_bound(typ, ast, new_cons) unless upper_t.lbounds.any? { |t, _| t == typ }

@@ -7,14 +7,14 @@ module RDL::Reporting
     include RDL::Reporting::Sorbet
 
     class Method
-      attr_accessor :klass, :method_name, :type,
-                    :source_code, :comments
+      attr_accessor :klass, :method_name, :type, :orig_type, :source_code,
+                    :comments
     end
 
     attr_reader :full_name
 
     def initialize(full_name = nil)
-      RDL::Logging.log :inference, :info, "MK #{full_name}"
+      RDL::Logging.debug :inference, "MK #{full_name}"
       @full_name = full_name
       @children = {}
       @methods = []
@@ -42,6 +42,7 @@ module RDL::Reporting
       meth.klass       = input[:klass]
       meth.method_name = input[:method_name]
       meth.type        = input[:type]
+      meth.orig_type   = input[:orig_type]
       meth.source_code = input[:source_code]
       meth.comments    = input[:comments]
 

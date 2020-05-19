@@ -1,6 +1,12 @@
 require 'csv'
 
 module RDL::Reporting::CSV
+
+  def meth_to_s(meth)
+    RDL::Type::VarType.print_XXX!
+    "(#{meth.args.join(', ')})#{meth.block} -> #{meth.ret}"
+  end
+
   def to_csv(path, open_file = nil)
     csv = open_file || CSV.open(path, 'wb')
 
@@ -10,24 +16,23 @@ module RDL::Reporting::CSV
     end
 
     @methods.each do |method|
-      class_str = @full_name || 'ERROR: UNKNOWN'
+      raise 'Error: unknown class' unless @full_name
+      class_str = @full_name
 
-      RDL::Logging.log :inference, :info, "Rendering #{class_str} / #{method.method}"
+      RDL::Logging.debug :inference, "Rendering #{RDL::Util.pp_klass_method(class_str, method.method_name)}"
 
-      if method.type.solution.is_a? RDL::Type::MethodType
+      if method.type.solution.is_a?(RDL::Type::MethodType)
         meth = method.type.solution
-
-        RDL::Type::VarType.print_XXX!
-        inf_type = "(#{meth.args.join(', ')})#{meth.block} -> #{meth.ret}"
+        inf_type = meth_to_s meth
       else
-        RDL::Logging.log :inference, :warning, "Got a non-method type in type solutions"
+        RDL::Logging.warning :inference, "Got a non-method type in type solutions: #{method.type.class}"
 
         RDL::Type::VarType.print_XXX!
-        inf_type = method.type.solution.to_s # This would be weird
+        inf_type = method.type.to_s # This would be weird
       end
 
       csv << [class_str, method.method_name, inf_type,
-              method.type.to_s, method.source_code]
+              method.orig_type, method.source_code]
     end
 
     @children.each_key do |key|

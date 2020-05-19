@@ -255,45 +255,43 @@ module RDL::Typecheck
     typ_sols.each_pair { |km, typ|
       klass, meth = km
 
-      # TODO: GH: Make this work
-      # orig_typ = RDL::Globals.info.get(klass, meth, :orig_type)
-      # if orig_typ.is_a?(Array)
-      #   raise "expected just one original type for #{klass}##{meth}" unless orig_typ.size == 1
-      #   orig_typ = orig_typ[0]
-      # end
-      # if orig_typ.nil?
-      #   #puts "Original type not found for #{klass}##{meth}."
-      #   #puts "Inferred type is: #{typ}"
-      # elsif orig_typ.to_s == typ
-      #   #puts "Type for #{klass}##{meth} was correctly inferred, as: "
-      #   #puts typ
-      #   if orig_typ.is_a?(RDL::Type::MethodType)
-      #     correct_types += orig_typ.args.size + 1 ## 1 for ret
-      #     total_potential += orig_typ.args.size + 1 ## 1 for ret
-      #     meth_types += 1
-      #     if !orig_typ.block.nil?
-      #       correct_types += orig_typ.block.args.size + 1 ## 1 for ret
-      #       total_potential += orig_typ.block.args.size + 1 ## 1 for ret
-      #     end
-      #   else
-      #     var_types += 1
-      #     correct_types += 1
-      #     total_potential += 1
-      #   end
-      # else
-      #   RDL::Logging.log :inference, :debug, "Difference encountered for #{klass}##{meth}."
-      #   RDL::Logging.log :inference, :debug, "Inferred: #{typ}"
-      #   RDL::Logging.log :inference, :debug, "Original: #{orig_typ}"
-      #   if orig_typ.is_a?(RDL::Type::MethodType)
-      #     total_potential += orig_typ.args.size + 1 ## 1 for ret
-      #     total_potential += orig_typ.block.args.size + 1 if !orig_typ.block.nil?
-      #     meth_types += 1
-      #   else
-      #     total_potential += 1
-      #     var_types += 1
-      #   end
-
-      # end
+      orig_typ = RDL::Globals.info.get(klass, meth, :orig_type)
+      if orig_typ.is_a?(Array)
+        raise "expected just one original type for #{klass}##{meth}" unless orig_typ.size == 1
+        orig_typ = orig_typ[0]
+      end
+      if orig_typ.nil?
+        #puts "Original type not found for #{klass}##{meth}."
+        #puts "Inferred type is: #{typ}"
+      elsif orig_typ.to_s == typ
+        #puts "Type for #{klass}##{meth} was correctly inferred, as: "
+        #puts typ
+        if orig_typ.is_a?(RDL::Type::MethodType)
+          correct_types += orig_typ.args.size + 1 ## 1 for ret
+          total_potential += orig_typ.args.size + 1 ## 1 for ret
+          meth_types += 1
+          if !orig_typ.block.nil?
+            correct_types += orig_typ.block.args.size + 1 ## 1 for ret
+            total_potential += orig_typ.block.args.size + 1 ## 1 for ret
+          end
+        else
+          var_types += 1
+          correct_types += 1
+          total_potential += 1
+        end
+      else
+        RDL::Logging.log :inference, :debug, "Difference encountered for #{klass}##{meth}."
+        RDL::Logging.log :inference, :debug, "Inferred: #{typ}"
+        RDL::Logging.log :inference, :debug, "Original: #{orig_typ}"
+        if orig_typ.is_a?(RDL::Type::MethodType)
+          total_potential += orig_typ.args.size + 1 ## 1 for ret
+          total_potential += orig_typ.block.args.size + 1 if !orig_typ.block.nil?
+          meth_types += 1
+        else
+          total_potential += 1
+          var_types += 1
+        end
+      end
 
       if !meth.to_s.include?("@") && !meth.to_s.include?("$")#orig_typ.is_a?(RDL::Type::MethodType)
         ast = RDL::Typecheck.get_ast(klass, meth)
@@ -305,8 +303,10 @@ module RDL::Typecheck
         # end
         # csv << [klass, meth, typ, orig_typ, code] #, comment
 
+        puts "ADDING #{RDL::Util.pp_klass_method(klass, meth)}"
+
         report[klass] << { klass: klass, method_name: meth, type: typ,
-                           source_code: code }
+                           orig_type: orig_typ, source_code: code }
 
 
         # if typ.include?("XXX")
