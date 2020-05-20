@@ -303,8 +303,6 @@ module RDL::Typecheck
         # end
         # csv << [klass, meth, typ, orig_typ, code] #, comment
 
-        puts "ADDING #{RDL::Util.pp_klass_method(klass, meth)}"
-
         report[klass] << { klass: klass, method_name: meth, type: typ,
                            orig_type: orig_typ, source_code: code }
 
