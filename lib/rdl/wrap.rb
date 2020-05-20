@@ -245,7 +245,7 @@ RUBY
     else
       loc = the_self.instance_method(meth).source_location
     end
-    RDL::Logging.log :wrap, :trace, "Method #{klass}##{meth} added"
+    RDL::Logging.log :wrap, :trace, "[#{loc && loc[0] || '??'}] Method #{klass}##{meth} added"
     RDL::Globals.info.set(klass, meth, :source_location, loc)
 
     # Apply any deferred contracts and reset list
@@ -296,10 +296,13 @@ RUBY
       unless ((RDL::Util.has_singleton_marker(klass) &&
                RDL::Globals.no_infer_meths.include?([RDL::Util.remove_singleton_marker(klass).to_s, "self."+meth.to_s])) ||
               (RDL::Globals.no_infer_meths.include?([klass.to_s, meth.to_s])) ||
-              (RDL::Globals.infer_added_filter && !RDL::Globals.infer_added_filter.call(klass, meth, loc && loc[0])))
+              (loc && RDL::Globals.infer_added_filter_dirs && !RDL::Globals.infer_added_filter_dirs.member?(loc[0])))
+        RDL::Logging.log :wrap, :trace, "... Added"
         tag = RDL::Globals.infer_added
         RDL::Globals.to_infer[tag] = Set.new unless RDL::Globals.to_infer[tag]
         RDL::Globals.to_infer[tag].add([klass, meth])
+      else
+        RDL::Logging.log :wrap, :trace, "... Rejected"
       end
     end
 
@@ -809,15 +812,28 @@ module RDL
   end
 
   # Mark all untyped methods added in the passed block as being inferred
-  def self.infer_added(tag)
+  def self.infer_added(tag, include: nil, exclude: nil)
+    dirs = RDL::Globals.infer_added_filter_dirs
     tmp = RDL::Globals.infer_added
-    RDL::Globals.infer_added = tag
-    yield
-    RDL::Globals.infer_added = tmp
-  end
 
-  def self.infer_added_filter(&f)
-    RDL::Globals.infer_added_filter = f
+    filter_list = nil
+    filter_list = FileList[include] if include
+    filter_list = (filter_list || FileList['**/*']).exclude(exclude) if exclude
+
+    RDL::Globals.infer_added = tag
+    RDL::Globals.infer_added_filter_dirs = filter_list && filter_list.map { |f| File.join(Dir.pwd, f) }
+
+    if RDL::Globals.infer_added_filter_dirs
+      RDL::Logging.log :wrap, :debug, "Got Filter..."
+      RDL::Globals.infer_added_filter_dirs.each { |d| RDL::Logging.log :wrap, :trace, "\t#{d}" }
+    else
+      RDL::Logging.log :wrap, :debug, "No filter..."
+    end
+
+    yield
+
+    RDL::Globals.infer_added = tmp
+    RDL::Globals.infer_added_filter_dirs = dirs
   end
 
   # Invokes all callbacks from rdl_at(sym), in unspecified order.
