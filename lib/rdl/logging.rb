@@ -88,6 +88,8 @@ class RDL::Logging
 
   def self.log_header_to_file(area, message_level, header)
     return unless RDL::Config.instance.log_file
+
+    header = header.to_s
     log_level = RDL::Config.instance.log_file_levels[area] || :info
 
     return unless log_level_leq(log_level, message_level)
@@ -99,6 +101,8 @@ class RDL::Logging
   end
 
   def self.log(area, message_level, message, ast: nil)
+    message = message.to_s
+
     log_message_to_file(area, message_level, message, ast)
     log_level = RDL::Config.instance.log_levels[area] || :info
 

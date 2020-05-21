@@ -1,28 +1,38 @@
 require 'parlour'
 
 module RDL::Reporting::Sorbet
+
   def to_sorbet_type(typ)
+    RDL::Logging.debug :reporting, typ
+
     case typ
     when RDL::Type::StructuralType
       RDL::Globals.types[:dyn]
 
     when RDL::Type::VarType
       return 'self' if typ.to_s == 'self'
-
       RDL::Globals.types[:dyn]
 
     when RDL::Type::BotType
       RDL::Globals.types[:dyn]
 
     when RDL::Type::UnionType
-      types = typ.canonical.types
-      types = types.map { |x| to_sorbet_type(x) }
-      RDL::Type::UnionType.new(*types)
+      type = typ.canonical
+      if type.is_a? RDL::Type::UnionType
+        types = type.types.map { |x| to_sorbet_type(x) }
+        RDL::Type::UnionType.new(*types)
+      else
+        type
+      end
 
     when RDL::Type::IntersectionType
-      types = typ.canonical.types
-      types = types.map { |x| to_sorbet_type(x) }
-      RDL::Type::IntersectionType.new(*types)
+      type = typ.canonical
+      if type.is_a? RDL::Type::IntersectionType
+        types = type.types.map { |x| to_sorbet_type(x) }
+        RDL::Type::IntersectionType.new(*types)
+      else
+        type
+      end
 
     when RDL::Type::SingletonType
       typ.nominal
@@ -45,9 +55,11 @@ module RDL::Reporting::Sorbet
     end
   end
 
-  def to_sorbet_string(typ)
+  def to_sorbet_string(typ, header, in_hash: false)
+    RDL::Logging.debug :reporting, "Processing #{header}..."
+
     unless typ
-      RDL::Logging.error :inference, "Given nil instead of RDL Type!"
+      RDL::Logging.error :reporting, "Given nil instead of RDL Type!"
       # return 'T.untyped'
       raise "Given nil instead of RDL Type!"
     end
@@ -67,47 +79,51 @@ module RDL::Reporting::Sorbet
     when RDL::Type::UnionType
       type = typ.canonical
       if type.is_a? RDL::Type::UnionType
-        types = type.types.map { |x| to_sorbet_string(x) }
+        types = type.types.map { |x| to_sorbet_string(x, header, in_hash: in_hash) }
         "T.any(#{types.join(', ')})"
       else
-        to_sorbet_string(type)
+        to_sorbet_string(type, header, in_hash: in_hash)
       end
 
     when RDL::Type::IntersectionType
       type = typ.canonical
       if type.is_a? RDL::Type::IntersectionType
-        types = type.types.map { |x| to_sorbet_string(x) }
+        types = type.types.map { |x| to_sorbet_string(x, header, in_hash: in_hash) }
         "T.all(#{types.join(', ')})"
       else
-        to_sorbet_string(type)
+        to_sorbet_string(type, header, in_hash: in_hash)
       end
 
     when RDL::Type::OptionalType
-      "T.nilable(#{to_sorbet_string(typ.type)})"
+      return "T.nilable(#{to_sorbet_string(typ.type, header, in_hash: in_hash)})" if in_hash
+      to_sorbet_string(typ.type, header, in_hash: in_hash)
 
     when RDL::Type::VarargType
-      to_sorbet_string(typ.type)
+      to_sorbet_string(typ.type, header, in_hash: in_hash)
 
     when RDL::Type::GenericType
       case typ.base.name
       when "Hash"
         k, v = typ.params
-        "T::Hash[#{to_sorbet_string(k)}, #{to_sorbet_string(v)}]"
+        "T::Hash[#{to_sorbet_string(k, header, in_hash: in_hash)}, #{to_sorbet_string(v, header, in_hash: in_hash)}]"
 
       when "Array"
         t, = typ.params
-        "T::Array[#{to_sorbet_string(t)}]"
+        "T::Array[#{to_sorbet_string(t, header, in_hash: in_hash)}]"
 
       else
         c = typ.canonical
-        b = to_sorbet_string(c.base)
-        types = c.params.map { |x| to_sorbet_string(x) }
+        b = to_sorbet_string(c.base, header, in_hash: in_hash)
+        types = c.params.map { |x| to_sorbet_string(x, header, in_hash: in_hash) }
         "#{b}[#{types.join(', ')}]"
 
       end
 
+    when RDL::Type::TupleType
+      "T::Array[#{to_sorbet_string RDL::Type::UnionType.new(*typ.params), header, in_hash: in_hash}]"
+
     else
-      RDL::Logging.warning :inference, "Unmatched class #{typ.class}"
+      RDL::Logging.warning :reporting, "Unmatched class #{typ.class}"
       'T.unknown'
 
     end
@@ -118,37 +134,45 @@ module RDL::Reporting::Sorbet
     @methods.each do |method|
       m = method.type
 
+      header = RDL::Util.pp_klass_method(full_name, method.method_name)
+
       parameters = m.args.map do |typ|
+        RDL::Type::VarType.no_print_XXX!
+
         case typ
         when RDL::Type::VarType
           raise "no solution!" unless typ.solution
-          Parlour::RbiGenerator::Parameter.new(typ.name.to_s, type: to_sorbet_string(typ.solution))
+          RDL::Logging.trace :reporting, "#{header}: #{typ.name}"
+          Parlour::RbiGenerator::Parameter.new(typ.name.to_s, type: to_sorbet_string(typ.solution, header))
 
         when RDL::Type::FiniteHashType
-          typ.elts.map do |kv|
-            Parlour::RbiGenerator::Parameter.new("#{kv[0]}:", type: to_sorbet_string(kv[1]))
+          typ.solution.elts.map do |kv|
+            RDL::Logging.trace :reporting, "#{header}: HASH #{kv[0]} : #{kv[1]}"
+            Parlour::RbiGenerator::Parameter.new("#{kv[0]}:", type: to_sorbet_string(kv[1], header, in_hash: true))
           end
 
         when RDL::Type::VarargType
-          Parlour::RbiGenerator::Parameter.new("*#{typ.type.name}", type: to_sorbet_string(typ.solution))
+          Parlour::RbiGenerator::Parameter.new("*#{typ.type.name}", type: to_sorbet_string(typ.solution, header))
 
         when RDL::Type::OptionalType
-          Parlour::RbiGenerator::Parameter.new("#{typ.type.name}?", type: to_sorbet_string(typ.solution))
+          Parlour::RbiGenerator::Parameter.new("#{typ.type.name}",
+                                               type: to_sorbet_string(typ.solution, header),
+                                               default: 'T.unsafe(nil)')
 
         else
           # Parlour::RbiGenerator::Parameter.new(typ.name.to_s, type: to_sorbet_string(typ.solution))
-          RDL::Logging.log :inference, :error, "Attempting to map #{typ} (a #{typ.class})"
+          RDL::Logging.log :reporting, :error, "Attempting to map #{typ} (a #{typ.class})"
         end
       end
 
-      block_arg = Proc.new { to_sorbet_string(m.block.solution) } if m.block.solution
+      block_arg = Proc.new { to_sorbet_string(m.block.solution, header) } if m.block.solution
 
       unless m.ret.solution.is_a?(RDL::Type::SingletonType) &&
              m.ret.solution.nominal.name == "NilClass"
-        ret_type = to_sorbet_string(m.ret.solution)
+        ret_type = to_sorbet_string(m.ret.solution, header)
       end
 
-      raise "WHAT #{m.ret.solution.class}" if ret_type == 'NilClass'
+      raise "nil ret_type: #{m.ret.solution.class}" if ret_type == 'NilClass'
 
       meth = generator.create_method(method.method_name.to_s,
                                      parameters: parameters.flatten,
@@ -184,8 +208,6 @@ module RDL::Reporting::Sorbet
 
     gen_sorbet(generator.root)
 
-    puts "OUTPUT >>>>>>>>>"
     puts generator.rbi
-    puts "<<<<<<<<<"
   end
 end
