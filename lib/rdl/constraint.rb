@@ -1,6 +1,13 @@
 require 'csv'
 
+module << RDL::Typecheck
+  ## Hash<Type, Array<Symbol>>. A Hash mapping RDL types to a list of names of variables that have that type as a solution.
+  attr_accessor :type_names_map
+end
+
 module RDL::Typecheck
+
+  @type_names_map = Hash.new []
 
   def self.resolve_constraints
     RDL::Logging.log_header :inference, :info, "Starting constraint resolution..."
@@ -102,6 +109,9 @@ module RDL::Typecheck
             }
 =end
             @new_constraints = true if !new_cons.empty?
+            if typ.is_a?(RDL::Type::NominalType) || typ.is_a?(RDL::Type::GenericType)
+              @type_names_map[typ] = @type_names_map[typ] | [var.name.to_sym]           
+            end
             return typ
             #sol = typ
           end
@@ -145,6 +155,10 @@ module RDL::Typecheck
       undo_constraints(new_cons)
       ## no new constraints in this case so we'll leave it as is
       sol = var
+    end
+
+    if typ.is_a?(RDL::Type::NominalType) || typ.is_a?(RDL::Type::GenericType)
+      @type_names_map[typ] = @type_names_map[typ] | [var.name.to_sym]           
     end
 
     return sol

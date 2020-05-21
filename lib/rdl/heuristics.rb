@@ -51,9 +51,30 @@ end
 def self.twin_network_guess(var)
   return unless (var_type.category == :arg) || (var_type.category == :var)  ## this rule only applies to args and (instance/class/global) variables
   name1 = var_type.name
-  name2 = "count" ## TODO: replace this with actual names from the current program
+  sols = []
 
+  
   uri = URI "http://127.0.0.1:5000/"
+  RDL::Typecheck.type_names_map.each { |t, names|
+    params = { words: [name1] + names }
+    uri.query = URI.encode_www_form(params)
+    res = Net::HTTP.get_response(uri)
+    puts "Failed to make request to twin network server. Received response #{res.body}." unless res.msg == "OK"
+
+    sim_score = res.body.to_f
+    if sim_score > 0.8
+      puts "Twin network found #{name1} and list #{names} have average similarity score of #{sim_score}."
+      puts "Adding #{t} as a potential solution."
+      sols << t
+    else
+      puts "Twin network found insufficient average similarity score of #{sim_score} between #{name1} and #{names}."      
+    end
+  }
+
+  ## TODO: Is creating UnionType the right way to go?
+  return RDL::Type::UnionType.new(*sols).canonical
+  
+=begin  
   params = { in1: name1, in2: name2 }
   uri.query = URI.encode_www_form(params)
 
@@ -73,6 +94,8 @@ def self.twin_network_guess(var)
     puts "Twin network found insufficient similarity score of #{sim_score} between #{name1} and #{name2}."
     return nil
   end
+=end
+  
 end
 
 
