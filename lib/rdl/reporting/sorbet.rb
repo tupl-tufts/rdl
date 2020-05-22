@@ -148,7 +148,8 @@ module RDL::Reporting::Sorbet
         when RDL::Type::FiniteHashType
           typ.solution.elts.map do |kv|
             RDL::Logging.trace :reporting, "#{header}: HASH #{kv[0]} : #{kv[1]}"
-            Parlour::RbiGenerator::Parameter.new("#{kv[0]}:", type: to_sorbet_string(kv[1], header, in_hash: true))
+            default = 'nil' if kv[1].optional?
+            Parlour::RbiGenerator::Parameter.new("#{kv[0]}:", type: to_sorbet_string(kv[1], header, in_hash: true), default: default)
           end
 
         when RDL::Type::VarargType
@@ -157,7 +158,8 @@ module RDL::Reporting::Sorbet
         when RDL::Type::OptionalType
           Parlour::RbiGenerator::Parameter.new("#{typ.type.name}",
                                                type: to_sorbet_string(typ.solution, header),
-                                               default: 'T.unsafe(nil)')
+                                               default: 'nil')
+                                               # default: 'T.unsafe(nil)')
 
         else
           # Parlour::RbiGenerator::Parameter.new(typ.name.to_s, type: to_sorbet_string(typ.solution))
