@@ -74,7 +74,12 @@ module RDL::Reporting::Sorbet
       'T.untyped'
 
     when RDL::Type::NominalType
-      typ.name
+      case typ.name
+      when "Set"
+        'T::Set[T.untyped]'
+      else
+        typ.name
+      end
 
     when RDL::Type::UnionType
       type = typ.canonical
@@ -110,6 +115,10 @@ module RDL::Reporting::Sorbet
       when "Array"
         t, = typ.params
         "T::Array[#{to_sorbet_string(t, header, in_hash: in_hash)}]"
+
+      when "Set"
+        t, = typ.params
+        "T::Set[#{to_sorbet_string(t, header, in_hash: in_hash)}]"
 
       else
         c = typ.canonical
