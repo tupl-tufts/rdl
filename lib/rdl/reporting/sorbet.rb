@@ -129,7 +129,6 @@ module RDL::Reporting::Sorbet
     end
   end
 
-  # TODO: Can we generate comments of the actual RDL types as documentation?
   def gen_sorbet(generator)
     @methods.each do |method|
       m = method.type
@@ -207,9 +206,8 @@ module RDL::Reporting::Sorbet
 
   def to_sorbet(path)
     generator = Parlour::RbiGenerator.new
-
     gen_sorbet(generator.root)
 
-    puts generator.rbi
+    IO.write(path, generator.rbi)
   end
 end
