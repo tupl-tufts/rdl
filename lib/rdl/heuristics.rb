@@ -2,6 +2,8 @@ class RDL::Heuristic
 
   @rules = {}
 
+  @meth_cache = {}
+
   def self.add(name, &blk)
     raise RuntimeError, "Expected heuristic name to be Symbol, given #{name}." unless name.is_a? Symbol
     raise RuntimeError, "Expected block to be provided for heuristic." if blk.nil?
@@ -11,12 +13,19 @@ class RDL::Heuristic
   def self.matching_classes(meth_names)
     meth_names.delete(:initialize)
     meth_names.delete(:new)
+
+    return @meth_cache[meth_names] if @meth_cache.key? meth_names
+    RDL::Logging.log :heuristics, :debug, "Checking matching classes for #{meth_names}"
+
     matching_classes = ObjectSpace.each_object(Class).select { |c|
       class_methods = c.instance_methods | RDL::Globals.info.get_methods_from_class(c.to_s)
       (meth_names - class_methods).empty? } ## will only be empty if meth_names is a subset of c.instance_methods
     matching_classes += ObjectSpace.each_object(Module).select { |c|
       class_methods = c.instance_methods | RDL::Globals.info.get_methods_from_class(c.to_s)
       (meth_names - class_methods).empty? } ## will only be empty if meth_names is a subset of c.instance_methods
+
+    @meth_cache[meth_names] = matching_classes
+    matching_classes
   end
 
   def self.struct_to_nominal(var_type)

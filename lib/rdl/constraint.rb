@@ -82,8 +82,12 @@ module RDL::Typecheck
       ## Try each rule. Return first non-nil result.
       ## If no non-nil results, return original solution.
       ## TODO: check constraints.
+      heuristics_start_time = Time.now
+      RDL::Logging.log_header :heuristic, :debug, "Beginning Heuristics..."
+
       RDL::Heuristic.rules.each { |name, rule|
-        #puts "Trying rule `#{name}` for variable #{var}."
+        start_time = Time.now
+        RDL::Logging.log :heuristic, :debug, "Trying rule `#{name}` for variable #{var}."
         typ = rule.call(var)
         new_cons = {}
         begin
@@ -101,17 +105,26 @@ module RDL::Typecheck
               }
             }
 =end
+            RDL::Logging.log :hueristic, :debug, "Heuristic Applied: #{name}"
             @new_constraints = true if !new_cons.empty?
+            RDL::Logging.log :inference, :trace, "New Constraints branch A" if !new_cons.empty?
+
             return typ
             #sol = typ
           end
         rescue RDL::Typecheck::StaticTypeError => e
-          RDL::Logging.log :typecheck, :debug_error, "Attempted to apply heuristic rule #{name} to var #{var}"
-          RDL::Logging.log :typecheck, :trace, "... but got the following error: #{e}"
+          RDL::Logging.log :heuristic, :debug_error, "Attempted to apply heuristic rule #{name} to var #{var}"
+          RDL::Logging.log :heuristic, :trace, "... but got the following error: #{e}"
           undo_constraints(new_cons)
           ## no new constraints in this case so we'll leave it as is
+        ensure
+          total_time = Time.now - start_time
+          RDL::Logging.log :hueristic, :debug, "Heuristic #{name} took #{total_time} to evaluate"
         end
       }
+
+      heuristics_total_time = Time.now - heuristics_start_time
+      RDL::Logging.log_header :heuristic, :debug, "Evaluated heuristics in #{heuristics_total_time}"
     end
     ## out here, none of the heuristics applied.
     ## Try to use `sol` as solution -- there is a chance it will
@@ -130,6 +143,7 @@ module RDL::Typecheck
       }
 =end
       @new_constraints = true if !new_cons.empty?
+      RDL::Logging.log :inference, :trace, "New Constraints branch B" if !new_cons.empty?
 
       if sol.is_a?(RDL::Type::GenericType)
         new_params = sol.params.map { |p| if p.is_a?(RDL::Type::VarType) && !p.to_infer then p else extract_var_sol(p, category) end }
@@ -139,8 +153,8 @@ module RDL::Typecheck
         sol = RDL::Type::TupleType.new(*new_params)
       end
     rescue RDL::Typecheck::StaticTypeError => e
-      RDL::Logging.log :typecheck, :debug_error, "Attempted to apply solution #{sol} for var #{var}"
-      RDL::Logging.log :typecheck, :trace, "... but got the following error: #{e}"
+      RDL::Logging.log :inference, :debug_error, "Attempted to apply solution #{sol} for var #{var}"
+      RDL::Logging.log :inference, :trace, "... but got the following error: #{e}"
 
       undo_constraints(new_cons)
       ## no new constraints in this case so we'll leave it as is
@@ -313,13 +327,15 @@ module RDL::Typecheck
     ## Go through once to come up with solution for all var types.
     #until !@new_constraints
     RDL::Logging.log_header :inference, :info, "Begin Extract Solutions"
+    counter = 0;
 
     typ_sols = {}
     loop do
+      counter += 1
       @new_constraints = false
       typ_sols = {}
 
-      RDL::Logging.log :inference, :info, "Running solution extraction..."
+      RDL::Logging.log :inference, :info, "[#{counter}] Running solution extraction..."
 
       RDL::Globals.constrained_types.each { |klass, name|
         begin
@@ -364,6 +380,7 @@ module RDL::Typecheck
     break if !@new_constraints
     end
 
+  ensure
     make_extraction_report(typ_sols) if render_report
   end
 
