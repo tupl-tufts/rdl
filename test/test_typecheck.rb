@@ -2138,4 +2138,22 @@ class TestTypecheck < Minitest::Test
       end
     }
   end
+
+  # From https://stackoverflow.com/a/22777806
+  def capture_stdout
+    stdout = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = stdout
+  end
+
+  def test_note_type
+    output = capture_stdout do
+      do_tc "RDL.note_type Hash.new"
+    end
+    output = output.lines.map(&:chomp)
+    assert_equal "(string):1:15: note: Type is `Hash'", output[0]
+  end
 end
