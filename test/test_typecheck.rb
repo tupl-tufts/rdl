@@ -774,6 +774,7 @@ class TestTypecheck < Minitest::Test
       end
     }
     assert (@tfs <= do_tc("y = _any_integer; _send_block1(42) { |x| y = ''; x }; y", env: @env))
+    do_tc("if _any_object then _send_block1(42) { |x| x } else 10 end", env: @env)
   end
 
   def test_send_method_generic

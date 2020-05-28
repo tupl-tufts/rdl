@@ -2301,13 +2301,13 @@ RUBY
       ret_env = env.merge_block_env(body_env, arg_names)
     else # must be [block-args, block-body]
       args, body = block
-      env, targs = args_hash(scope, env, tblock, args, block[1], 'block')
+      targs_env, targs = args_hash(scope, env, tblock, args, block[1], 'block')
       scope_merge(scope, outer_env: env) { |bscope|
         arg_names = args.children.map { |a| a.children[0] }
         # note: okay if outer_env shadows, since nested scope will include outer scope by next line
         targs_dup = Hash[targs.map { |k, t| [k, t.copy] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
-        env = env.merge(Env.new(targs_dup))
-        body_env, body_type = if body.nil? then [nil, RDL::Globals.types[:nil]] else tc(bscope, env.merge(Env.new(targs)), body) end
+        env_with_targs = targs_env.merge(Env.new(targs_dup))
+        body_env, body_type = if body.nil? then [nil, RDL::Globals.types[:nil]] else tc(bscope, env_with_targs, body) end
         error :bad_return_type, [body_type, tblock.ret], body, block: true unless body.nil? || RDL::Type::Type.leq(body_type, tblock.ret, inst, false, ast: body)
         ret_env = env.merge_block_env(body_env, arg_names)
         error :internal, "empty self", block[1] if ret_env.env[:self].nil?
