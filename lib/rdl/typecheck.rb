@@ -258,7 +258,7 @@ module RDL::Typecheck
     _infer(klass, meth)
   rescue => exn
     raise exn unless RDL::Config.instance.continue_on_errors
-    RDL::Logging.log :inference, :warning, "Error; Skipping inference for #{RDL::Util.pp_klass_method(klass, meth)}"
+    RDL::Logging.log :inference, :error, "Error; Skipping inference for #{RDL::Util.pp_klass_method(klass, meth)}"
     RDL::Logging.log :inference, :debug, "... got exception: #{exn}"
     # RDL::Globals.info.set(klass, meth, :type, [RDL::Globals.types[:dyn]])
   end
