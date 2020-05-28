@@ -157,8 +157,8 @@ module RDL::Typecheck
       sol = var
     end
 
-    if typ.is_a?(RDL::Type::NominalType) || typ.is_a?(RDL::Type::GenericType)
-      @type_names_map[typ] = @type_names_map[typ] | [var.name.to_sym]           
+    if sol.is_a?(RDL::Type::NominalType) || sol.is_a?(RDL::Type::GenericType)
+      @type_names_map[sol] = @type_names_map[sol] | [var.name.to_sym]           
     end
 
     return sol
