@@ -73,10 +73,11 @@ module RDL::Typecheck
     end
 
     # force should only be used with care! currently only used when type is being refined to a subtype in a lexical scope
-    def bind(var, typ, force: false)
+    def bind(var, typ, fixed: false, force: false)
       raise RuntimeError, "Can't update variable with fixed type" if !force && @env[var] && @env[var][:fixed]
+      raise RuntimeError, "Can't fix type of already-bound variable" if !force && fixed && @env[var]
       result = Env.new
-      result.env = @env.merge(var => {type: typ, fixed: false})
+      result.env = @env.merge(var => {type: typ, fixed: fixed})
       return result
     end
 
@@ -84,8 +85,8 @@ module RDL::Typecheck
       return @env.has_key?(var)
     end
 
-    def fix(var, typ)
-      raise RuntimeError, "Can't fix type of already-bound variable" if @env[var]
+    def fix(var, typ, force: false)
+      raise RuntimeError, "Can't fix type of already-bound variable" if !force && @env[var]
       result = Env.new
       result.env = @env.merge(var => {type: typ, fixed: true})
       return result
@@ -157,7 +158,7 @@ module RDL::Typecheck
             other_typ = other[var]
             neq << other_typ unless first_typ == other_typ
           }
-          RDL::Typecheck.error :inconsistent_var_type_type, [var.to_s, (first_typ + neq).map { |t| t.to_s }.join(' and ')], e unless neq.empty?
+          RDL::Typecheck.error :inconsistent_var_type_type, [var.to_s, ([first_typ] + neq).map { |t| t.to_s }.join(' and ')], e unless neq.empty?
           env.env[var] = {type: h[:type], fixed: true}
         else
           typ = RDL::Type::UnionType.new(first_typ, *rest.map { |other| ((other.has_key? var) && other[var]) || RDL::Globals.types[:nil] })
@@ -1092,13 +1093,15 @@ RUBY
         if (tguards.all? { |typ| typ.is_a?(RDL::Type::SingletonType) && (typ.val.is_a?(Class) || typ.val.nil?) }) && (e.children[0].type == :lvar)
           # Special case! We're branching on the type of the guard, which is a local variable.
           # So rebind that local variable to have the union of the guard types
+          var_name = e.children[0].children[0]
+          var_type = initial_env[var_name]
           new_typ = RDL::Type::UnionType.new(*(tguards.map { |typ| typ.val.nil? ? typ : RDL::Type::NominalType.new(typ.val) })).canonical
           # TODO adjust following for generics!
           if tcontrol.is_a? RDL::Type::GenericType
             if new_typ == tcontrol.base
               # special case: exact match of control type's base and type of guard; can use
               # geneirc type on this branch
-              initial_env = initial_env.bind(e.children[0].children[0], tcontrol, force: true)
+              initial_env = initial_env.bind(var_name, tcontrol, fixed: initial_env.fixed?(var_name), force: true)
             elsif !(tcontrol.base <= new_typ) && !(new_typ <= tcontrol.base)
               next # can't possibly match this branch
             else
@@ -1106,7 +1109,7 @@ RUBY
             end
           else
             next unless tcontrol.is_a?(RDL::Type::VarType) || (tcontrol <= new_typ || new_typ <= tcontrol) # If control can't possibly match type, skip this branch
-            initial_env = initial_env.bind(e.children[0].children[0], new_typ, force: true)
+            initial_env = initial_env.bind(var_name, new_typ, fixed: initial_env.fixed?(var_name), force: true)
             # note force is safe above because the env from this arm will be joined with the other envs
             # (where the type was not refined like this), so after the case the variable will be back to its
             # previous, unrefined type
@@ -1117,6 +1120,8 @@ RUBY
           tbody = RDL::Globals.types[:nil]
         else
           envbody, tbody = tc(scope, initial_env, wclause.children[-1]) # last wclause child is body
+          # reset type of var_name to its original type
+          envbody = envbody.bind(var_name, var_type, fixed: envbody.fixed?(var_name), force: true)
         end
 
         tbodies << tbody
@@ -1133,6 +1138,7 @@ RUBY
         #envelse = envelse.bind(e.children[0].children[0], tcontrol, force: :true) if e.children[0].type == :lvar
         envbodies << envelse
       end
+      # before join reset var to original type!
       [Env.join(e, *envbodies), RDL::Type::UnionType.new(*tbodies).canonical]
     when :while, :until
       # break: loop exit, i.e., right after loop guard; may take argument
@@ -1503,7 +1509,7 @@ RUBY
     rescue Racc::ParseError => err
       error :generic_error, [err.to_s[1..-1]], e.children[3] # remove initial newline
     end
-    [env.fix(var, typ), RDL::Globals.types[:nil]]
+    [env.bind(var, typ, fixed: true), RDL::Globals.types[:nil]]
   end
 
   def self.tc_type_cast(scope, env, e)

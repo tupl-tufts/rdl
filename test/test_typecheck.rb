@@ -1040,6 +1040,18 @@ class TestTypecheck < Minitest::Test
     assert do_tc("case when (x = 4) then x = 3 end; x", env: @env) <= @t34
     assert do_tc("x = 5; case when (x = 3) then 'foo' when (x = 4) then 'foo' end; x", env: @env) # first guard always executed! <= @t34
     assert do_tc("x = 6; case when (x = 3) then 'foo' when (x = 4) then 'foo' else x = 5 end; x", env: @env) <= @t345
+    assert self.class.class_eval {
+      type "(Object) -> Object", typecheck: :now
+      def case_arg(x)
+        case x
+        when Integer
+          1
+        when String
+          2
+        end
+        x
+      end
+    }
   end
 
   def test_when_block
