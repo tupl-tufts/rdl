@@ -214,11 +214,11 @@ module RDL::Typecheck
   def self.get_ast(klass, meth)
     file, line = RDL::Globals.info.get(klass, meth, :source_location)
 
-    if file.nil?
-      return nil if RDL::Config.instance.continue_on_errors
-
-      raise RuntimeError, "No file for #{RDL::Util.pp_klass_method(klass, meth)}" if file.nil?
-    end
+    return nil if file.nil?
+    #   return nil if RDL::Config.instance.continue_on_errors
+    #
+    #   raise RuntimeError, "No file for #{RDL::Util.pp_klass_method(klass, meth)}" if file.nil?
+    # end
 
     raise RuntimeError, "static type checking in irb not supported" if file == "(irb)"
     if file == "(pry)"
