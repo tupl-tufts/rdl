@@ -115,6 +115,7 @@ module RDL::Typecheck
     # self is the caller env; other is the env at the end of a block; arg_names are the named block params (Array<Symbol>)
     # returns a new env with everying in (body_env - arg_names) ∩ outer_env added as a weak update to self
     def merge_block_env(other, arg_names)
+      return self if other.nil?
       result = Env.new
       @env.each { |k, v|
         if (other.env.has_key? k) && (not (arg_names.include? k))
