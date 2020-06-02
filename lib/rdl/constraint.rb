@@ -228,7 +228,7 @@ module RDL::Typecheck
     if tmeth.ret.to_s == "self"
       ret_sol = tmeth.ret
     else
-      ret_sol = tmeth.ret.is_a?(RDL::Type::VarType) ?  extract_var_sol(tmeth.ret, :ret) : tmeth.ret
+      ret_sol = tmeth.ret.is_a?(RDL::Type::VarType) ? extract_var_sol(tmeth.ret, :ret) : tmeth.ret
     end
 
     tmeth.ret.solution = ret_sol
@@ -238,14 +238,15 @@ module RDL::Typecheck
 
 
   def self.make_extraction_report(typ_sols)
+    report = RDL::Reporting::InferenceReport.new
     #return unless $orig_types
 
     # complete_types = []
     # incomplete_types = []
 
-    CSV.open("infer_data.csv", "wb") { |csv|
-      csv << ["Class", "Method", "Inferred Type", "Original Type", "Source Code", "Comments"]
-    }
+    # CSV.open("infer_data.csv", "wb") { |csv|
+    #   csv << ["Class", "Method", "Inferred Type", "Original Type", "Source Code", "Comments"]
+    # }
 
     correct_types = 0
     total_potential = 0
@@ -253,6 +254,7 @@ module RDL::Typecheck
     var_types = 0
     typ_sols.each_pair { |km, typ|
       klass, meth = km
+
       orig_typ = RDL::Globals.info.get(klass, meth, :orig_type)
       if orig_typ.is_a?(Array)
         raise "expected just one original type for #{klass}##{meth}" unless orig_typ.size == 1
@@ -289,41 +291,44 @@ module RDL::Typecheck
           total_potential += 1
           var_types += 1
         end
-
       end
 
       if !meth.to_s.include?("@") && !meth.to_s.include?("$")#orig_typ.is_a?(RDL::Type::MethodType)
-        CSV.open("infer_data.csv", "a+") { |csv|
-          ast = RDL::Typecheck.get_ast(klass, meth)
-          code = ast.loc.expression.source
-          # if RDL::Util.has_singleton_marker(klass)
-          #   comment = RDL::Util.to_class(RDL::Util.remove_singleton_marker(klass)).method(meth).comment
-          # else
-          #   comment = RDL::Util.to_class(klass).instance_method(meth).comment
-          # end
-          csv << [klass, meth, typ, orig_typ, code] #, comment
-          # if typ.include?("XXX")
-          #  incomplete_types << [klass, meth, typ, orig_typ, code, comment]
-          # else
-          #  complete_types << [klass, meth, typ, orig_typ, code, comment]
-          # end
-        }
+        ast = RDL::Typecheck.get_ast(klass, meth)
+        code = ast.loc.expression.source
+        # if RDL::Util.has_singleton_marker(klass)
+        #   comment = RDL::Util.to_class(RDL::Util.remove_singleton_marker(klass)).method(meth).comment
+        # else
+        #   comment = RDL::Util.to_class(klass).instance_method(meth).comment
+        # end
+        # csv << [klass, meth, typ, orig_typ, code] #, comment
+
+        report[klass] << { klass: klass, method_name: meth, type: typ,
+                           orig_type: orig_typ, source_code: code }
+
+
+        # if typ.include?("XXX")
+        #  incomplete_types << [klass, meth, typ, orig_typ, code, comment]
+        # else
+        #  complete_types << [klass, meth, typ, orig_typ, code, comment]
+        # end
       end
     }
-    # CSV.open("infer_data.csv", "a+") { |csv|
-    #   complete_types.each { |row| csv << row }
-    #   csv << ["X", "X", "X", "X", "X", "X"]
-    #   incomplete_types.each { |row| csv << row }
-    # }
 
     RDL::Logging.log_header :inference, :info, "Extraction Complete"
     RDL::Logging.log :inference, :info, "Total correct (that could be automatically inferred): #{correct_types}"
     RDL::Logging.log :inference, :info, "Total # method types: #{meth_types}"
     RDL::Logging.log :inference, :info, "Total # variable types: #{var_types}"
     RDL::Logging.log :inference, :info, "Total # individual types: #{total_potential}"
+  rescue => e
+    RDL::Logging.log :inference, :error, "Report Generation Error"
+    RDL::Logging.log :inference, :debug_error, "... got #{e}"
+    raise e unless RDL::Config.instance.continue_on_errors
+  ensure
+    return report
   end
 
-  def self.extract_solutions(render_report = true)
+  def self.extract_solutions()
     ## Go through once to come up with solution for all var types.
     #until !@new_constraints
     RDL::Logging.log_header :inference, :info, "Begin Extract Solutions"
@@ -352,9 +357,9 @@ module RDL::Typecheck
             block_string = block_sol ? " { #{block_sol} }" : nil
             RDL::Logging.log :inference, :trace, "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
 
-            RDL::Type::VarType.print_XXX!
-            block_string = block_sol ? " { #{block_sol} }" : nil
-            typ_sols[[klass.to_s, name.to_sym]] = "(#{arg_sols.join(', ')})#{block_string} -> #{ret_sol}"
+            # meth_sol = RDL::Type::MethodType.new arg_sols, block_sol, ret_sol
+
+            typ_sols[[klass.to_s, name.to_sym]] = tmeth
           elsif name.to_s == "splat_param"
           else
             ## Instance/Class (also some times splat parameter) variables:
@@ -367,21 +372,18 @@ module RDL::Typecheck
             #typ.solution = var_sol
             RDL::Logging.log :inference, :trace, "Extracted solution for #{klass} variable #{name} is #{var_sol}."
 
-            RDL::Type::VarType.print_XXX!
-            typ_sols[[klass.to_s, name.to_sym]] = var_sol.to_s
+            typ_sols[[klass.to_s, name.to_sym]] = typ
           end
         rescue => e
-          raise e unless RDL::Config.instance.continue_on_errors
-
           RDL::Logging.log :inference, :debug_error, "Error while exctracting solution for #{RDL::Util.pp_klass_method(klass, name)}: #{e}; continuing..."
-          typ_sols[[klass.to_s, name.to_sym]] = "-- Extraction Error --"
+          raise e unless RDL::Config.instance.continue_on_errors
         end
       }
     break if !@new_constraints
     end
 
   ensure
-    make_extraction_report(typ_sols) if render_report
+    return make_extraction_report(typ_sols)
   end
 
 

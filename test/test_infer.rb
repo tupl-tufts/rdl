@@ -146,14 +146,17 @@ class TestInfer < Minitest::Test
   end
   should_have_type :repeat_n, '(Numeric) -> String'
 
+  # Note: The last type in the unions below comes from requiring `sorbet` (via
+  #       requiring `parlour`) to render RBI files. The Structural -> Nominal
+  #       heuristic picks up that this might be a valid type this case.
   def note(reason, args, ast)
     Diagnostic.new :note, reason, args, ast.loc.expression
   end
-  should_have_type :note, '(a, b, Parser::AST::Node or Parser::Source::Comment) -> Diagnostic'
+  should_have_type :note, '(a, b, Parser::AST::Node or Parser::Source::Comment or T::Private::Methods::DeclarationBlock) -> Diagnostic'
 
   def print_note(reason, args, ast)
     puts note(reason, args, ast).render
   end
-  should_have_type :print_note, '(a, b, Parser::AST::Node or Parser::Source::Comment) -> nil',
+  should_have_type :print_note, '(a, b, Parser::AST::Node or Parser::Source::Comment or T::Private::Methods::DeclarationBlock) -> nil',
                    depends_on: [:note]
 end

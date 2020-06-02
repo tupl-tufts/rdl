@@ -45,6 +45,7 @@ class RDL::Config
       typecheck: :info,
       inference: :info,
       heuristic: :info,
+      reporting: :info,
       wrap: :critical
     }
     c.log_file = nil
@@ -52,7 +53,8 @@ class RDL::Config
       typecheck: :info,
       inference: :info,
       heuristic: :info,
-      wrap: :critical
+      wrap: :critical,
+      reporting: :info
     }
   end
 
