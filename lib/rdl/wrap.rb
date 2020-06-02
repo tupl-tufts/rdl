@@ -862,7 +862,7 @@ module RDL
     RDL::Globals.to_infer[sym].each { |klass, meth|
       begin
         RDL::Typecheck.infer klass, meth
-        num_casts += RDL::Typecheck.get_num_casts
+        num_casts += RDL::Typecheck.get_num_casts if RDL::Typecheck.get_num_casts
       rescue Exception => e
         if RDL::Config.instance.continue_on_errors
           RDL::Logging.log :inference, :debug_error, "Error: #{e}; recording %dyn"

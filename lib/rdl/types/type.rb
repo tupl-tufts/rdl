@@ -7,13 +7,18 @@ module RDL::Type
   class Type
     @@contract_cache = {}
 
-    def solution=(_)
-      RDL::Logging.log :typecheck, :error, "Solution written to #{self.class}"
-    end
-
     def name
       RDL::Logging.log :typecheck, :error, "Attempted to access name field for #{self.class}"
       '_NAME_ERROR'
+    end
+
+    def solution
+      @solution
+    end
+
+    def solution=(soln)
+      @solution = soln
+      RDL::Logging.log :typecheck, :warning, "Solution written to #{self.class}"
     end
 
     def to_contract
@@ -480,8 +485,14 @@ module RDL::Type
           end
         end
 
-        if left.args.last.is_a?(OptionalType)
-            left = RDL::Type::MethodType.new(left.args.map { |t| if t.is_a?(RDL::Type::OptionalType) then t.type else t end }, left.block, left.ret)
+        last_arg = left.args.last
+        if last_arg.is_a?(OptionalType) || (last_arg.is_a?(AnnotatedArgType) && last_arg.type.is_a?(OptionalType))
+          left = RDL::Type::MethodType.new(
+            left.args.map { |t|
+              if t.is_a?(OptionalType) then t.type
+              elsif t.is_a?(AnnotatedArgType) && t.type.is_a?(OptionalType) then t.type.type
+              else t end },
+            left.block, left.ret)
           if left.args.size == right.args.size + 1
           ## A method with an optional type in the last position can be used in place
           ## of a method without the optional type. So drop it and then check subtyping.

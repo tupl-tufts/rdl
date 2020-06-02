@@ -762,6 +762,7 @@ RDL's static type checker makes some assumptions that should hold unless your Ru
 * `Class#===` is not redefined
 * `Proc#call` is not redefined
 * `Object#class` is not redefined
+* Methods that take blocks with externally visible effects do not store those blocks and then call them later
 
 (More assumptions will be added here as they are added to RDL...)
 

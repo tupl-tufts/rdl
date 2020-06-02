@@ -45,8 +45,8 @@ class RDL::Config
       typecheck: :info,
       inference: :info,
       heuristic: :info,
-      wrap: :critical,
-      reporting: :info
+      reporting: :info,
+      wrap: :critical
     }
     c.log_file = nil
     c.log_file_levels = {
