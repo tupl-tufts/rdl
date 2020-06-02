@@ -11,8 +11,9 @@ module RDL::Type
       @solution
     end
 
-    def solution=
-        RDL::Logging :typecheck, :warning, "Solution written to #{self.class}"
+    def solution=(soln)
+      @solution = soln
+      RDL::Logging.log :typecheck, :warning, "Solution written to #{self.class}"
     end
 
     def to_contract
@@ -479,7 +480,7 @@ module RDL::Type
           end
         end
 
-        last_arg = left.args.last        
+        last_arg = left.args.last
         if last_arg.is_a?(OptionalType) || (last_arg.is_a?(AnnotatedArgType) && last_arg.type.is_a?(OptionalType))
           left = RDL::Type::MethodType.new(
             left.args.map { |t|
