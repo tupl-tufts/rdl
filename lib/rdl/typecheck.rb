@@ -1,3 +1,4 @@
+# coding: utf-8
 module RDL::Typecheck
 
   class StaticTypeError < StandardError; end
@@ -1646,7 +1647,7 @@ RUBY
         elsif choice_hash.values.uniq.size == 1
           ts = [choice_hash.values[0]] ## only one type resulted, no need for ChoiceType
         else
-          env, ts = [RDL::Type::ChoiceType.new(choice_hash, [trecv] + trecv.connecteds)]
+          ts = [RDL::Type::ChoiceType.new(choice_hash, [trecv] + trecv.connecteds)]
         end
       else
         env, ts = tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union) ### XXX fix
