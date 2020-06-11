@@ -2293,6 +2293,7 @@ RUBY
     tblock = tblock.instantiate(inst)
     if block[0].is_a?(RDL::Type::MethodType) || block[0].is_a?(RDL::Type::VarType)
       error :bad_block_arg_type, [block[0], tblock], block[1], block: true unless RDL::Type::Type.leq(block[0], tblock, inst, false, ast: block[1])#block[0] <= tblock
+      ret_env = env
     elsif block[0].is_a?(RDL::Type::NominalType) && block[0].name == 'Proc'
       error :proc_block_arg_type, [tblock], block[1], block: true
     elsif tblock.is_a?(RDL::Type::VarType)
