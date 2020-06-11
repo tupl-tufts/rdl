@@ -92,7 +92,6 @@ module RDL::Typecheck
         new_cons = {}
         begin
           if typ
-            #puts "Attempting to apply heuristic solution #{typ} to #{var}"
             typ = typ.canonical
             var.add_and_propagate_upper_bound(typ, nil, new_cons)
             var.add_and_propagate_lower_bound(typ, nil, new_cons)
@@ -108,7 +107,6 @@ module RDL::Typecheck
             RDL::Logging.log :hueristic, :debug, "Heuristic Applied: #{name}"
             @new_constraints = true if !new_cons.empty?
             RDL::Logging.log :inference, :trace, "New Constraints branch A" if !new_cons.empty?
-
             return typ
             #sol = typ
           end
@@ -357,9 +355,9 @@ module RDL::Typecheck
             block_string = block_sol ? " { #{block_sol} }" : nil
             RDL::Logging.log :inference, :trace, "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
 
-            # meth_sol = RDL::Type::MethodType.new arg_sols, block_sol, ret_sol
+            meth_sol = RDL::Type::MethodType.new arg_sols, block_sol, ret_sol
 
-            typ_sols[[klass.to_s, name.to_sym]] = tmeth
+            typ_sols[[klass.to_s, name.to_sym]] = meth_sol
           elsif name.to_s == "splat_param"
           else
             ## Instance/Class (also some times splat parameter) variables:
@@ -372,7 +370,7 @@ module RDL::Typecheck
             #typ.solution = var_sol
             RDL::Logging.log :inference, :trace, "Extracted solution for #{klass} variable #{name} is #{var_sol}."
 
-            typ_sols[[klass.to_s, name.to_sym]] = typ
+            typ_sols[[klass.to_s, name.to_sym]] = var_sol
           end
         rescue => e
           RDL::Logging.log :inference, :debug_error, "Error while exctracting solution for #{RDL::Util.pp_klass_method(klass, name)}: #{e}; continuing..."
