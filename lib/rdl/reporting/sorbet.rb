@@ -45,7 +45,7 @@ module RDL::Reporting::Sorbet
 
       base_type = RDL::Globals.types[:hash]
       key_type = RDL::Globals.types[:symbol]
-      val_type = RDL::Type::UnionType.new types
+      val_type = RDL::Type::UnionType.new *types
 
       RDL::Types::GenericType.new base_type, key_type, val_type
 
