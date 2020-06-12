@@ -375,7 +375,7 @@ module RDL::Typecheck
         rescue => e
           RDL::Logging.log :inference, :debug_error, "Error while exctracting solution for #{RDL::Util.pp_klass_method(klass, name)}: #{e}; continuing..."
           raise e unless RDL::Config.instance.continue_on_errors
-        end
+         end
       }
     break if !@new_constraints
     end
