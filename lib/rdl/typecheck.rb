@@ -1006,7 +1006,7 @@ module RDL::Typecheck
         if map_case && trecv.is_a?(RDL::Type::GenericType)
           #raise "Expected GenericType, got #{trecv}." unless trecv.is_a?(RDL::Type::GenericType)
           trecv.is_a?(RDL::Type::GenericType)
-          envi, ti_map_case = tc_send(sscope, { self: trecv.params[0] }, ti_map_case, :to_proc, [], nil, e_map_case)
+          _, ti_map_case = tc_send(sscope, Env.new({ self: trecv.params[0] }), ti_map_case, :to_proc, [], nil, e_map_case)
           map_block_type = RDL::Type::MethodType.new([trecv.params[0]], nil, ti_map_case.canonical.ret)
           block = [map_block_type, e_map_case]
         end
