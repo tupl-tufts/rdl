@@ -261,7 +261,7 @@ module RDL::Typecheck
       if orig_typ.nil?
         #puts "Original type not found for #{klass}##{meth}."
         #puts "Inferred type is: #{typ}"
-      elsif orig_typ.to_s == typ
+      elsif orig_typ.to_s == typ.solution.to_s
         #puts "Type for #{klass}##{meth} was correctly inferred, as: "
         #puts typ
         if orig_typ.is_a?(RDL::Type::MethodType)
@@ -279,7 +279,7 @@ module RDL::Typecheck
         end
       else
         RDL::Logging.log :inference, :debug, "Difference encountered for #{klass}##{meth}."
-        RDL::Logging.log :inference, :debug, "Inferred: #{typ}"
+        RDL::Logging.log :inference, :debug, "Inferred: #{typ.solution}"
         RDL::Logging.log :inference, :debug, "Original: #{orig_typ}"
         if orig_typ.is_a?(RDL::Type::MethodType)
           total_potential += orig_typ.args.size + 1 ## 1 for ret
@@ -355,9 +355,9 @@ module RDL::Typecheck
             block_string = block_sol ? " { #{block_sol} }" : nil
             RDL::Logging.log :inference, :trace, "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
 
-            meth_sol = RDL::Type::MethodType.new arg_sols, block_sol, ret_sol
+            #meth_sol = RDL::Type::MethodType.new arg_sols, block_sol, ret_sol
 
-            typ_sols[[klass.to_s, name.to_sym]] = meth_sol
+            typ_sols[[klass.to_s, name.to_sym]] = tmeth
           elsif name.to_s == "splat_param"
           else
             ## Instance/Class (also some times splat parameter) variables:
@@ -367,10 +367,10 @@ module RDL::Typecheck
             ## otherwise use upper bound.
             ## Can improve later if desired.
             var_sol = extract_var_sol(typ, :var)
-            #typ.solution = var_sol
+            typ.solution = var_sol
             RDL::Logging.log :inference, :trace, "Extracted solution for #{klass} variable #{name} is #{var_sol}."
 
-            typ_sols[[klass.to_s, name.to_sym]] = var_sol
+            typ_sols[[klass.to_s, name.to_sym]] = typ
           end
         rescue => e
           RDL::Logging.log :inference, :debug_error, "Error while exctracting solution for #{RDL::Util.pp_klass_method(klass, name)}: #{e}; continuing..."
