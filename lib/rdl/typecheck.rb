@@ -1,3 +1,4 @@
+# coding: utf-8
 module RDL::Typecheck
 
   class StaticTypeError < StandardError; end
@@ -1005,7 +1006,7 @@ module RDL::Typecheck
         if map_case && trecv.is_a?(RDL::Type::GenericType)
           #raise "Expected GenericType, got #{trecv}." unless trecv.is_a?(RDL::Type::GenericType)
           trecv.is_a?(RDL::Type::GenericType)
-          envi, ti_map_case = tc_send(sscope, { self: trecv.params[0] }, ti_map_case, :to_proc, [], nil, e_map_case)
+          _, ti_map_case = tc_send(sscope, Env.new({ self: trecv.params[0] }), ti_map_case, :to_proc, [], nil, e_map_case)
           map_block_type = RDL::Type::MethodType.new([trecv.params[0]], nil, ti_map_case.canonical.ret)
           block = [map_block_type, e_map_case]
         end
@@ -1646,7 +1647,7 @@ RUBY
         elsif choice_hash.values.uniq.size == 1
           ts = [choice_hash.values[0]] ## only one type resulted, no need for ChoiceType
         else
-          env, ts = [RDL::Type::ChoiceType.new(choice_hash, [trecv] + trecv.connecteds)]
+          ts = [RDL::Type::ChoiceType.new(choice_hash, [trecv] + trecv.connecteds)]
         end
       else
         env, ts = tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union) ### XXX fix
@@ -2292,6 +2293,7 @@ RUBY
     tblock = tblock.instantiate(inst)
     if block[0].is_a?(RDL::Type::MethodType) || block[0].is_a?(RDL::Type::VarType)
       error :bad_block_arg_type, [block[0], tblock], block[1], block: true unless RDL::Type::Type.leq(block[0], tblock, inst, false, ast: block[1])#block[0] <= tblock
+      ret_env = env
     elsif block[0].is_a?(RDL::Type::NominalType) && block[0].name == 'Proc'
       error :proc_block_arg_type, [tblock], block[1], block: true
     elsif tblock.is_a?(RDL::Type::VarType)

@@ -42,7 +42,7 @@ class ActiveRecord::Base
     case targs[0]
     when RDL::Type::SingletonType
       meth_types = RDL::Typecheck.lookup({}, klass.to_s, targs[0].val, nil, make_unknown: false)#RDL::Globals.info.get(klass, targs[0].val, :type)
-      meth_types = meth_types[0] if meth_types
+      #meth_types = meth_types[0] if meth_types
       ret_type = meth_types ? RDL::Type::UnionType.new(*meth_types.map { |mt| mt.ret } ).canonical : RDL::Globals.types[:top]
     else
       return RDL::Globals.types[:top]

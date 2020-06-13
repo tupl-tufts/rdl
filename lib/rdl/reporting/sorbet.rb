@@ -39,15 +39,15 @@ module RDL::Reporting::Sorbet
 
     when RDL::Type::FiniteHashType
       c = typ.canonical
-      types = c.elts.values.map { |v| to_sorbet_type(v) }
+      types = c.elts.values.map { |v| v.is_a?(RDL::Type::OptionalType) ? to_sorbet_type(v.type) : to_sorbet_type(v) }
 
       return RDL::Globals.types[:dyn] if types.member? RDL::Globals.types[:dyn]
 
       base_type = RDL::Globals.types[:hash]
       key_type = RDL::Globals.types[:symbol]
-      val_type = RDL::Type::UnionType.new types
+      val_type = RDL::Type::UnionType.new(*types)
 
-      RDL::Types::GenericType.new base_type, key_type, val_type
+      RDL::Type::GenericType.new base_type, key_type, val_type
 
     else
       typ
