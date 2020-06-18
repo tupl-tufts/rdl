@@ -1,3 +1,5 @@
+RDL.nowrap :PrettyPrint
+
 RDL.type :PrettyPrint, 'self.format', '(?String output, ?Integer maxwidth, ?String newline) { (PrettyPrint) -> String } -> String'
 RDL.type :PrettyPrint, 'self.singleline_format', '(?String output, ?Integer maxwidth, ?String newline) { (PrettyPrint) -> String } -> PrettyPrint'
 RDL.type :PrettyPrint, :initialize, '(?String output, ?Integer maxwidth, ?String newline) { (PrettyPrint) -> String } -> PrettyPrint'
