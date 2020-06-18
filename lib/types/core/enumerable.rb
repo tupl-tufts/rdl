@@ -5,6 +5,7 @@ RDL.type_params :Enumerable, [:t], :all?
 RDL.type :Enumerable, :all?, '() -> %bool'
 RDL.type :Enumerable, :all?, '() { (t) -> %bool } -> %bool'
 RDL.type :Enumerable, :all?, '() { (k, v) -> %bool } -> %bool'
+RDL.type :Enumerable, :all?, '([ ===: (%any) -> %bool]) -> %bool'
 RDL.type :Enumerable, :any?, '() -> %bool'
 RDL.type :Enumerable, :any?, '() { (t) -> %any } -> %bool'
 # RDL.type :Enumerable, :chunk, '(XXXX : *XXXX)' # TODO
