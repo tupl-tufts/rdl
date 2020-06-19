@@ -39,6 +39,7 @@ class TestInfer < Minitest::Test
     RDL.type :Object, :===, '(%any other) -> %bool', wrap: false
     RDL.type :Object, :clone, '() -> self', wrap: false
     RDL.type :NilClass, :&, '(%any obj) -> false', wrap: false
+    RDL.type :Hash, :merge, '(Hash<a, b>) -> Hash<k or a, b or v>', wrap: false
 
     ### Uncomment below to see test names. Useful for hanging tests.
     # puts "Start #{@NAME}"
@@ -159,4 +160,14 @@ class TestInfer < Minitest::Test
   end
   should_have_type :print_note, '(a, b, Parser::AST::Node or Parser::Source::Comment or T::Private::Methods::DeclarationBlock) -> nil',
                    depends_on: [:note]
+
+  def compares_struct_with_parametric_method(options = {})
+    options.merge({ "test" => 42 })
+    42
+  end
+  should_have_type :compares_struct_with_parametric_method, "(?[ merge: (Hash<String, Integer>) -> a]) -> Integer"
+  # Not concerned with specific inferred types here.
+  # Want to test that constraint resolution does not fail when using Hash#merge's type,
+  # which includes type variables
+  
 end

@@ -315,7 +315,7 @@ module RDL::Type
                 tlm = RDL::Typecheck.compute_types(tlm, lklass, left, t.args)
               end
               new_dcs = []
-              if leq(tlm.instantiate(base_inst), t, nil, ileft, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+              if leq(tlm.instantiate(base_inst), t, nil, true, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                 ret = true
                 if types.size > 1 && !new_dcs.empty? ## method has intersection type, and vartype constraints were created
                   new_dcs.each { |t1, t2|
@@ -422,7 +422,7 @@ module RDL::Type
               blk_typ = tlm.block.is_a?(RDL::Type::MethodType) ? tlm.block.args + [tlm.block.ret] : [tlm.block]
               tlm = RDL::Typecheck.compute_types(tlm, klass, left, t.args) if (tlm.args + blk_typ + [tlm.ret]).any? { |t| t.is_a? ComputedType }
               new_dcs = []
-              if leq(tlm.instantiate(base_inst.merge({ self: left})), t, nil, ileft, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+              if leq(tlm.instantiate(base_inst.merge({ self: left})), t, nil, true, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                 ret = true
                 if types.size > 1 && !new_dcs.empty? ## method has intersection type, and vartype constraints were
                   new_dcs.each { |t1, t2|

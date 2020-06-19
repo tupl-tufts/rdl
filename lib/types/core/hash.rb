@@ -267,7 +267,7 @@ RDL.type :Hash, :fetch, '(``any_or_k(trec)``) -> ``output_type(trec, targs, :fet
 RDL.type :Hash, :fetch, '(``any_or_k(trec)``, ``targs[1] ? targs[1] : RDL::Globals.types[:top]``) -> ``RDL::Type::UnionType.new(targs[1] ? targs[1] : RDL::Globals.types[:top], output_type(trec, targs, :fetch, :promoted_val, "v", nil_default: true))``'
 RDL.type :Hash, :fetch, '(``any_or_k(trec)``) { (``any_or_k(trec)``) -> u } -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("#T u"), output_type(trec, targs, :fetch, :promoted_val, "v", nil_default: true))``'
 RDL.type :Hash, :fetch, '(``any_or_k(trec)``) { () -> u } -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("#T u"), output_type(trec, targs, :fetch, :promoted_val, "v", nil_default: true))``'
-RDL.type :Hash, :first, '() -> ``output_type(trec, targs, :first, :default_or_promoted_val, "v", nil_default: true)``'
+RDL.type :Hash, :first, '() -> ``output_type(trec, targs, :first, "[k, v]", nil_default: true)``'
 RDL.type :Hash, :member?, '(%any) -> ``output_type(trec, targs, :member?, "%bool")``'
 RDL.type :Hash, :has_key?, '(%any) -> ``output_type(trec, targs, :has_key?, "%bool")``'
 RDL.type :Hash, :key?, '(%any) -> ``output_type(trec, targs, :key?, "%bool")``'
