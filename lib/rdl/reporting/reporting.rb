@@ -6,7 +6,7 @@ module RDL::Reporting
     include RDL::Reporting::CSV
     include RDL::Reporting::Sorbet
 
-    class Method
+    class MethodInfo
       attr_accessor :klass, :method_name, :type, :orig_type, :source_code,
                     :comments
     end
@@ -37,7 +37,7 @@ module RDL::Reporting
     end
 
     def <<(input)
-      meth = Method.new
+      meth = MethodInfo.new
 
       meth.klass       = input[:klass]
       meth.method_name = input[:method_name]

@@ -120,6 +120,10 @@ module RDL::Reporting::Sorbet
         t, = typ.params
         "T::Set[#{to_sorbet_string(t, header, in_hash: in_hash)}]"
 
+      when "Enumerator"
+        t, = typ.params
+        "T::Enumerator[#{to_sorbet_string(t, header, in_hash: in_hash)}]"
+
       else
         c = typ.canonical
         b = to_sorbet_string(c.base, header, in_hash: in_hash)
@@ -133,7 +137,7 @@ module RDL::Reporting::Sorbet
 
     else
       RDL::Logging.warning :reporting, "Unmatched class #{typ.class}"
-      'T.unknown'
+      'T.untyped'
 
     end
   end
