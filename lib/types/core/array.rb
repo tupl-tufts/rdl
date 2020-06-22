@@ -281,7 +281,11 @@ def Array.each_arg(trec, num)
     end
   else
     if trec.params[0].is_a?(RDL::Type::TupleType)
-      return trec.params[0].params[num]
+      if trec.params[0].params.size > num
+        return trec.params[0].params[num]
+      else
+        return RDL::Globals.types[:bot]
+      end
     else
       return promoted_or_t(trec)
     end
