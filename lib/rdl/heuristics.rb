@@ -58,6 +58,9 @@ class RDL::Heuristic
     RDL::Logging.log :heuristic, :trace, "Found %d upper bounds of structural type" % struct_types.size
     return if struct_types.empty?
     meth_names = struct_types.map { |st| st.methods.keys }.flatten.uniq
+    meth_names.delete(:initialize)
+    meth_names.delete(:new)
+    return if meth_names.empty?
     RDL::Logging.log :heuristic, :trace, "Corresponding methods are: %s" % (meth_names*", ")
     matching_classes = matching_classes(meth_names)
     matching_classes.reject! { |c| c.to_s.start_with?("#<Class") || /[^:]*::[a-z]/.match?(c.to_s) || c.to_s.include?("ARGF") } ## weird few constants where :: is followed by a lowecase letter... it's not a class and I can't find anything written about it.
