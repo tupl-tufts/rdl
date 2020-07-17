@@ -1,7 +1,7 @@
 module RDL::Type
   class VarargType < Type
     attr_reader :type
-    attr_accessor :solution # to store the solution from inference
+    attr_accessor :solution
 
     @@cache = {}
 
@@ -24,6 +24,10 @@ module RDL::Type
       @type = type
       super()
     end
+
+    # def solution
+    #   VarargType.new @type.solution
+    # end
 
     def to_s
       if @type.instance_of? UnionType

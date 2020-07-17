@@ -15,7 +15,8 @@ module RDL::Type
     # [+args+] List of types of the arguments of the procedure (use [] for no args).
     # [+block+] The type of the block passed to this method, if it takes one.
     # [+ret+] The type that the procedure returns.
-    def initialize(args, block, ret)
+    # [+sol+] Whether or not this is being used as a type inference solution
+    def initialize(args, block, ret, sol=false)
       # First check argument types have form (any number of required
       # or optional args, at most one vararg, any number of named arguments)
       state = :required
@@ -41,10 +42,12 @@ module RDL::Type
       }
       @args = *args
 
-      if block.instance_of? OptionalType
-        raise "Block must be MethodType" unless block.type.is_a? MethodType or block.type.is_a?(VarType)
-      else
-        raise "Block must be MethodType" unless (not block) or (block.instance_of? MethodType) or block.instance_of?(VarType)
+      unless sol
+        if block.instance_of? OptionalType
+          raise "Block must be MethodType, got #{block}" unless block.type.is_a? MethodType or block.type.is_a?(VarType)
+        else
+          raise "Block must be MethodType, got #{block}" unless (not block) or (block.instance_of? MethodType) or block.instance_of?(VarType)
+        end
       end
       @block = block
 
@@ -61,7 +64,7 @@ module RDL::Type
       block_sol = @block.solution
       ret_sol   = @ret.solution
 
-      self.class.new arg_sols, block_sol, ret_sol
+      self.class.new arg_sols, block_sol, ret_sol, true
     end
 
     # TODO: Check blk

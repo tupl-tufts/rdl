@@ -4,6 +4,7 @@ require 'set'
 require 'parser/current'
 #require 'method_source'
 require 'colorize'
+require 'rake'
 
 module RDL
 end
@@ -116,6 +117,7 @@ class << RDL::Globals # add accessors and readers for module variables
   attr_accessor :no_infer_meths
   attr_accessor :no_infer_files
   attr_accessor :infer_added
+  attr_accessor :infer_added_filter_dirs
   attr_accessor :module_mixees
 end
 
@@ -174,6 +176,7 @@ require 'rdl/class_indexer.rb'
 require 'rdl/wrap.rb'
 require 'rdl/query.rb'
 require 'rdl/typecheck.rb'
+require 'rdl/reporting/reporting.rb'
 require 'rdl/constraint.rb'
 require 'rdl/heuristics.rb'
 #require_relative 'rdl/stats.rb'

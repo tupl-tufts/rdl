@@ -14,7 +14,7 @@ module RDL::Type
         if t.instance_of? UnionType
           ts.concat t.types
         else
-          raise RuntimeError, "Attempt to create union type with non-type" unless t.is_a?(Type) || t.nil?
+          raise RuntimeError, "Attempt to create union type with non-type #{t}" unless t.is_a?(Type) || t.nil?
           raise RuntimeError, "Attempt to create union with optional type" if t.is_a? OptionalType
           raise RuntimeError, "Attempt to create union with vararg type" if t.is_a? VarargType
           raise RuntimeError, "Attempt to create union with annotated type" if t.is_a? AnnotatedArgType
@@ -53,7 +53,7 @@ module RDL::Type
         end
       end
       @types.delete(nil) # eliminate any "deleted" elements
-      @types.sort! { |a, b| a.object_id <=> b.object_id } # canonicalize order
+      @types.sort! { |a, b| a.to_s <=> b.to_s } # canonicalize order
       @types.map { |t| t.canonical }
       @types.uniq!
       @canonical = @types[0] if @types.size == 1

@@ -145,6 +145,7 @@ class TestTypecheck < Minitest::Test
   def setup
     RDL.reset
     RDL.type TestTypecheck, :_any_object, '() -> Object', wrap: false # a method that could return true or false
+    RDL.type TestTypecheck, :_any_integer, '() -> Integer', wrap: false
 
     RDL.type_params 'RDL::Type::SingletonType', [:t], :satisfies? unless RDL::Globals.type_params["RDL::Type::SingletonType"]
 
@@ -772,6 +773,8 @@ class TestTypecheck < Minitest::Test
         x = 'one'; _send_block1(42) { |y| for x in 1..5 do end; y }; x
       end
     }
+    assert (@tfs <= do_tc("y = _any_integer; _send_block1(42) { |x| y = ''; x }; y", env: @env))
+    do_tc("if _any_object then _send_block1(42) { |x| x } else 10 end", env: @env)
   end
 
   def test_send_method_generic
@@ -1037,6 +1040,30 @@ class TestTypecheck < Minitest::Test
     assert do_tc("case when (x = 4) then x = 3 end; x", env: @env) <= @t34
     assert do_tc("x = 5; case when (x = 3) then 'foo' when (x = 4) then 'foo' end; x", env: @env) # first guard always executed! <= @t34
     assert do_tc("x = 6; case when (x = 3) then 'foo' when (x = 4) then 'foo' else x = 5 end; x", env: @env) <= @t345
+    assert self.class.class_eval {
+      type "(Object) -> Object", typecheck: :now
+      def case_arg(x)
+        case x
+        when Integer
+          1
+        when String
+          2
+        end
+        x
+      end
+    }
+  end
+
+  def test_when_block
+    RDL.type TestTypecheck, :m1, '(X) -> %any'
+    RDL.type TestTypecheck, :m2, '(Y) -> %any'
+    RDL.type TestTypecheck, :m3, '() { () -> %any } -> %any'
+    assert do_tc("x = _any_object; case x when X then m1(x) when Y then m2(x) end", env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      assert do_tc("x = _any_object; case x when Y then m1(x) when Y then m2(x) end", env: @env)
+    }
+    assert do_tc("x = _any_object; case x when X then m1(x) when Y then m3() { m2(x) } end", env: @env, scope: Hash.new)
+    assert do_tc("x = _any_object; case x when X then m3() { m1(x) } when Y then m3() { m2(x) } end", env: @env, scope: Hash.new)
   end
 
   def test_while_until
@@ -2124,5 +2151,23 @@ class TestTypecheck < Minitest::Test
         end
       end
     }
+  end
+
+  # From https://stackoverflow.com/a/22777806
+  def capture_stdout
+    stdout = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = stdout
+  end
+
+  def test_note_type
+    output = capture_stdout do
+      do_tc "RDL.note_type Hash.new"
+    end
+    output = output.lines.map(&:chomp)
+    assert_equal "(string):1:15: note: Type is `Hash'", output[0]
   end
 end

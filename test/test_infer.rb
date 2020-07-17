@@ -19,6 +19,7 @@ class TestInfer < Minitest::Test
     # TODO: this will go away after config/reset
     RDL::Config.instance.use_precise_string = false
     RDL::Config.instance.log_levels[:inference] = :error
+    # RDL::Config.instance.log_levels[:inference] = :debug
 
     RDL.readd_comp_types
     RDL.type_params :Hash, [:k, :v], :all? unless RDL::Globals.type_params['Hash']
@@ -38,6 +39,7 @@ class TestInfer < Minitest::Test
     RDL.type :Object, :===, '(%any other) -> %bool', wrap: false
     RDL.type :Object, :clone, '() -> self', wrap: false
     RDL.type :NilClass, :&, '(%any obj) -> false', wrap: false
+    RDL.type :Hash, :merge, '(Hash<a, b>) -> Hash<k or a, b or v>', wrap: false
 
     ### Uncomment below to see test names. Useful for hanging tests.
     # puts "Start #{@NAME}"
@@ -145,14 +147,27 @@ class TestInfer < Minitest::Test
   end
   should_have_type :repeat_n, '(Numeric) -> String'
 
+  # Note: The last type in the unions below comes from requiring `sorbet` (via
+  #       requiring `parlour`) to render RBI files. The Structural -> Nominal
+  #       heuristic picks up that this might be a valid type this case.
   def note(reason, args, ast)
     Diagnostic.new :note, reason, args, ast.loc.expression
   end
-  should_have_type :note, '(a, b, Parser::AST::Node or Parser::Source::Comment) -> Diagnostic'
+  should_have_type :note, '(a, b, Parser::AST::Node or Parser::Source::Comment or T::Private::Methods::DeclarationBlock) -> Diagnostic'
 
   def print_note(reason, args, ast)
     puts note(reason, args, ast).render
   end
-  should_have_type :print_note, '(a, b, Parser::AST::Node or Parser::Source::Comment) -> nil',
+  should_have_type :print_note, '(a, b, Parser::AST::Node or Parser::Source::Comment or T::Private::Methods::DeclarationBlock) -> nil',
                    depends_on: [:note]
+
+  def compares_struct_with_parametric_method(options = {})
+    options.merge({ "test" => 42 })
+    42
+  end
+  should_have_type :compares_struct_with_parametric_method, "(?[ merge: (Hash<String, Integer>) -> a]) -> Integer"
+  # Not concerned with specific inferred types here.
+  # Want to test that constraint resolution does not fail when using Hash#merge's type,
+  # which includes type variables
+  
 end

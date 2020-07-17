@@ -125,7 +125,7 @@ def Array.plus_input(targs)
   when RDL::Type::TupleType
     return targs[0]
   when RDL::Type::GenericType, RDL::Type::VarType
-    parse_string = defined?(Rails) && targs[0].is_a?(RDL::Type::VarType) ? "Array<u> or ActiveRecord::Relation<u>" : "Array<u>"
+    parse_string = defined?(Rails) && (targs[0].is_a?(RDL::Type::VarType) || (targs[0].is_a?(RDL::Type::GenericType) && targs[0].base.to_s == "ActiveRecord_Relation")) ? "Array<u> or ActiveRecord_Relation<u>" : "Array<u>"
     x = RDL::Globals.parser.scan_str "#T #{parse_string}"
     x
   else
@@ -281,7 +281,11 @@ def Array.each_arg(trec, num)
     end
   else
     if trec.params[0].is_a?(RDL::Type::TupleType)
-      return trec.params[0].params[num]
+      if trec.params[0].params.size > num
+        return trec.params[0].params[num]
+      else
+        return RDL::Globals.types[:bot]
+      end
     else
       return promoted_or_t(trec)
     end

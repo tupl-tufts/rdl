@@ -2,6 +2,8 @@ class RDL::Heuristic
 
   @rules = {}
 
+  @meth_cache = {}
+
   def self.add(name, &blk)
     raise RuntimeError, "Expected heuristic name to be Symbol, given #{name}." unless name.is_a? Symbol
     raise RuntimeError, "Expected block to be provided for heuristic." if blk.nil?
@@ -11,12 +13,16 @@ class RDL::Heuristic
   def self.matching_classes(meth_names)
     meth_names.delete(:initialize)
     meth_names.delete(:new)
-    matching_classes = ObjectSpace.each_object(Class).select { |c|
+
+    return @meth_cache[meth_names] if @meth_cache.key? meth_names
+    RDL::Logging.log :heuristics, :debug, "Checking matching classes for #{meth_names}"
+
+    matching_classes = ObjectSpace.each_object(Module).select { |c|
       class_methods = c.instance_methods | RDL::Globals.info.get_methods_from_class(c.to_s)
       (meth_names - class_methods).empty? } ## will only be empty if meth_names is a subset of c.instance_methods
-    matching_classes += ObjectSpace.each_object(Module).select { |c|
-      class_methods = c.instance_methods | RDL::Globals.info.get_methods_from_class(c.to_s)
-      (meth_names - class_methods).empty? } ## will only be empty if meth_names is a subset of c.instance_methods
+
+    @meth_cache[meth_names] = matching_classes
+    matching_classes
   end
 
   def self.struct_to_nominal(var_type)
@@ -32,6 +38,10 @@ class RDL::Heuristic
     ## TODO: special handling for arrays/hashes/generics?
     ## TODO: special handling for Rails models? see Bree's `active_record_match?` method
     #raise "No matching classes found for structural types with methods #{meth_names}." if matching_classes.empty?
+    RDL::Logging.log :heuristics,
+                     :debug,
+                     "Struct_to_nominal heuristsic for %s in method %s:%s yields %d matching classes with methods: %s" %
+                         [var_type.name, var_type.cls, var_type.meth, matching_classes.size, meth_names*","]
     return if matching_classes.size > 10 ## in this case, just keep the struct types
     nom_sing_types = matching_classes.map { |c| if c.singleton_class? then RDL::Type::SingletonType.new(RDL::Util.singleton_class_to_class(c)) else RDL::Type::NominalType.new(c) end }
     union = RDL::Type::UnionType.new(*nom_sing_types).canonical

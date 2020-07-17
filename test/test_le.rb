@@ -215,6 +215,15 @@ class TestLe < Minitest::Test
     assert (not (tt("{x: ?Integer}") <= tt("{x: Integer}")))
   end
 
+  def test_generic
+    RDL.type_params :Array, [:t], :all?
+    RDL.type_params :Enumerable, [:t], :all?
+
+    assert (tt("Array<Integer>") <= tt("Array<Integer>"))
+    assert (not (tt("Array<Integer>") <= tt("Array<Object>")))
+    assert (tt("Array<Integer>") <= tt("Enumerable<Integer>"))
+  end
+
   def test_method
     tss = MethodType.new([RDL::Globals.types[:string]], nil, RDL::Globals.types[:string])
     tso = MethodType.new([RDL::Globals.types[:string]], nil, RDL::Globals.types[:object])

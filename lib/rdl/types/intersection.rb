@@ -22,7 +22,7 @@ module RDL::Type
           ts << t
         end
       }
-      ts.sort! { |a,b| a.object_id <=> b.object_id }
+      ts.sort! { |a,b| a.to_s <=> b.to_s }
       ts.uniq!
 
       return RDL::Globals.types[:bot] if ts.size == 0
@@ -59,7 +59,7 @@ module RDL::Type
         end
       end
       @types.delete(nil)
-      @types.sort! { |a, b| a.object_id <=> b.object_id } # canonicalize order
+      @types.sort! { |a, b| a.to_s <=> b.to_s } # canonicalize order
       @types.uniq!
       @canonical = @types[0] if @types.size == 1
       @canonicalized = true
