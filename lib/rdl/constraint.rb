@@ -1,6 +1,6 @@
 require 'csv'
 
-module << RDL::Typecheck
+class << RDL::Typecheck
   ## Hash<Type, Array<Symbol>>. A Hash mapping RDL types to a list of names of variables that have that type as a solution.
   attr_accessor :type_names_map
 end
@@ -167,7 +167,9 @@ module RDL::Typecheck
     end
 
     if sol.is_a?(RDL::Type::NominalType) || sol.is_a?(RDL::Type::GenericType)
-      @type_names_map[sol] = @type_names_map[sol] | [var.name.to_sym]           
+      name = (var.category == :ret) ? var.meth : var.name
+      puts "About to add #{sol} => #{name}"
+      @type_names_map[sol] = @type_names_map[sol] | [name.to_s]           
     end
 
     return sol

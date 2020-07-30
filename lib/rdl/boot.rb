@@ -5,6 +5,7 @@ require 'parser/current'
 #require 'method_source'
 require 'colorize'
 require 'rake'
+require 'net/http'
 
 module RDL
 end
