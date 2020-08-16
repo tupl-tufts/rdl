@@ -53,7 +53,7 @@ module RDL::Type
         end
       end
       @types.delete(nil) # eliminate any "deleted" elements
-      @types.sort! { |a, b| a.object_id <=> b.object_id } # canonicalize order
+      @types.sort! { |a, b| a.to_s <=> b.to_s } # canonicalize order
       @types.map { |t| t.canonical }
       @types.uniq!
       @canonical = @types[0] if @types.size == 1
