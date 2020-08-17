@@ -5,11 +5,14 @@ class RDL::Heuristic
   @meth_cache = {}
 
   @meth_to_cls_map = Hash.new {|hash, m| hash[m] = Set.new}  # maps a method to a set of classes with that method
+  @str_to_cls_map = {}  # this is needed to avoid calling the hash function on classes since hash can be overridden.
+  # RDL::Util.to_class does not always work adequately for deprecetaed modules/methods, hence the need for this map.
 
   def self.init_meth_to_cls  # to be called before the first call to struct_to_nominal
     ObjectSpace.each_object(Module).each do |c|
+      @str_to_cls_map[c.to_s] = c
       class_methods = c.instance_methods | RDL::Globals.info.get_methods_from_class(c.to_s)
-      class_methods.each {|m| @meth_to_cls_map[m] = @meth_to_cls_map[m].add(c)}
+      class_methods.each {|m| @meth_to_cls_map[m] = @meth_to_cls_map[m].add(c.to_s)}
     end
   end
 
@@ -43,7 +46,7 @@ class RDL::Heuristic
       matching_classes = tmp
     end
 
-
+    matching_classes = matching_classes.map {|c| @str_to_cls_map[c]}
     RDL::Logging.log :heuristic, :trace, "Overall, found %d matching classes" % matching_classes.size
     @meth_cache[meth_names] = matching_classes
     matching_classes
