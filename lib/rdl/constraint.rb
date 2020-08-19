@@ -301,8 +301,15 @@ module RDL::Typecheck
         # end
         # csv << [klass, meth, typ, orig_typ, code] #, comment
 
-        report[klass] << { klass: klass, method_name: meth, type: typ,
-                           orig_type: orig_typ, source_code: code }
+        if RDL::Util.has_singleton_marker(klass)
+          report_klass = RDL::Util.remove_singleton_marker(klass)
+          report_meth = ("self." + meth.to_s).to_sym
+        else
+          report_klass = klass
+          report_meth = meth
+        end
+        report[report_klass] << { klass: report_klass, method_name: report_meth, type: typ,
+                                  orig_type: orig_typ, source_code: code }
 
 
         # if typ.include?("XXX")
