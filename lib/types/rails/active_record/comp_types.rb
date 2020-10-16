@@ -242,7 +242,8 @@ end
 module ActiveRecord::Delegation
   extend RDL::Annotate
 
-  type :+, '(%any) -> ``DBType.plus_output_type(trec, targs)``', wrap: false
+  #type :+, '(%any) -> ``DBType.plus_output_type(trec, targs)``', wrap: false
+  type :+, '(ActiveRecord_Relation<x>) -> ``DBType.plus_output_type(trec, targs)``', wrap: false
 
 end
 
@@ -364,7 +365,7 @@ class DBType
       case param
       when RDL::Type::GenericType
         ## should be JoinTable
-        raise "unexpected type #{trec}" unless param.base.klass == JoinTable
+        raise "1. rec_to_schema unexpected type #{trec}" unless param.base.klass == JoinTable
         base_name = RDL.type_cast(param.params[0], "RDL::Type::NominalType", force: true).klass.to_s.singularize.to_sym ### singularized symbol name of first param in JoinTable, which is base table of the joins
         type_hash = table_name_to_schema_type(base_name, check_col, takes_array, include_assocs: include_assocs).elts
         pp1 = param.params[1]
@@ -384,7 +385,7 @@ class DBType
                                           ], "Hash<Symbol, RDL::Type::FiniteHashType>", force: true)
           type_hash = type_hash.merge(joined_hash)
         else
-          raise "unexpected type #{trec}"
+          raise "2. rec_to_schema unexpected type #{trec}"
         end
         return RDL::Type::FiniteHashType.new(type_hash, nil)
       when RDL::Type::NominalType
@@ -660,7 +661,7 @@ p        else
         raise "unexpected parameter type in #{trec}"
       end
     else
-      raise "unexpected type #{trec}"
+      raise "joins_output unexpected type #{trec}"
     end
     jt = RDL::Type::GenericType.new(RDL::Type::NominalType.new(JoinTable), rec_to_nominal(trec), joined)
     ret = RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), jt)
@@ -688,7 +689,8 @@ p        else
       when RDL::Type::VarType
         return RDL::Globals.types[:array]
       else
-        raise "unexpected type #{t}"
+        #raise "plus unexpected type #{t} with #{trec} and #{targs[0]}"
+        return RDL::Globals.types[:bot]
       end
     }
     RDL::Type::GenericType.new(RDL::Type::NominalType.new(Array), RDL::Type::UnionType.new(*typs))

@@ -57,6 +57,14 @@ module RDL::Type
       var_type? || optional_var_type? || fht_var_type? || vararg_var_type?
     end
 
+    def array_type?
+      is_a?(TupleType) || (is_a?(GenericType) && ((base == RDL::Globals.types[:array]) || ((defined? ActiveRecord_Relation) && (base.klass == ActiveRecord_Relation)))) || (self == RDL::Globals.types[:array])
+    end
+
+    def hash_type?
+      is_a?(FiniteHashType) || (is_a?(GenericType) && (base == RDL::Globals.types[:hash])) || (self == RDL::Globals.types[:hash])
+    end
+        
     # default behavior, override in appropriate subclasses
     def canonical; return self; end
     def optional?; return false; end

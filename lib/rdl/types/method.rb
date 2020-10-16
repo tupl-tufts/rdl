@@ -37,7 +37,7 @@ module RDL::Type
         else
           raise "Attempt to create method type with non-type arg" unless arg.is_a? Type
 #          raise "Required arguments not allowed after varargs" if state == :vararg # actually they are allowed!
-          raise "Required arguments not allowed after named arguments" if state == :hash
+          #raise "Required arguments not allowed after named arguments" if state == :hash
         end
       }
       @args = *args

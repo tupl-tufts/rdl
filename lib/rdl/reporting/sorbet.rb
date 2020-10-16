@@ -135,6 +135,8 @@ module RDL::Reporting::Sorbet
     when RDL::Type::TupleType
       "T::Array[#{to_sorbet_string RDL::Type::UnionType.new(*typ.params), header, in_hash: in_hash}]"
 
+    when RDL::Type::TopType
+      "T.nilable(BasicObject)" 
     else
       RDL::Logging.warning :reporting, "Unmatched class #{typ.class}"
       'T.untyped'

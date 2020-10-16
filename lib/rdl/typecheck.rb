@@ -596,14 +596,26 @@ module RDL::Typecheck
     when :nil
       [env, RDL::Globals.types[:nil]]
     when :true
-      [env, RDL::Globals.types[:true]]
+      if RDL::Config.instance.bool_singletons
+        [env, RDL::Globals.types[:true]]
+      else
+        [env, RDL::Globals.types[:bool]]
+      end
     when :false
-      [env, RDL::Globals.types[:false]]
+      if RDL::Config.instance.bool_singletons
+        [env, RDL::Globals.types[:false]]
+      else
+        [env, RDL::Globals.types[:bool]]
+      end
     when :str, :string
       t = RDL::Config.instance.use_precise_string ? RDL::Type::PreciseStringType.new(e.children[0]) : RDL::Globals.types[:string]
       [env, t]
     when :complex, :rational # constants
-      [env, RDL::Type::NominalType.new(e.children[0].class)]
+      if RDL::Config.instance.number_mode
+        [env, RDL::Type::NominalType.new(Integer)]
+      else
+        [env, RDL::Type::SingletonType.new(e.children[0].class)]
+      end
     when :int, :float
       if RDL::Config.instance.number_mode
         [env, RDL::Type::NominalType.new(Integer)]
@@ -1399,7 +1411,13 @@ RUBY
     case val
     when Symbol
       if as_key then val else RDL::Type::SingletonType.new(val) end
-    when TrueClass, FalseClass, Class, Module
+    when TrueClass, FalseClass
+      if RDL::Config.instance.bool_singletons
+        RDL::Type::SingletonType.new(val)
+      else
+        RDL::Globals.types[:bool]
+      end
+    when Class, Module
       RDL::Type::SingletonType.new(val)
     when Complex, Rational, Integer, Float
       if RDL::Config.instance.number_mode# && !(val.class == Integer)
