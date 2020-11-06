@@ -32,6 +32,10 @@ module RDL::Type
     def widen
       self
     end
+
+    def copy
+      return self
+    end
     
     def <=(other)
       ## TODO

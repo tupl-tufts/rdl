@@ -1,7 +1,7 @@
 module RDL::Type
   class VarType < Type
     attr_reader :name, :cls, :meth, :category, :to_infer
-    attr_accessor :lbounds, :ubounds, :solution
+    attr_accessor :lbounds, :ubounds, :solution, :meths_using_var
 
     @@cache = {}
     @@print_XXX = false
@@ -44,6 +44,7 @@ module RDL::Type
         @name = name_or_hash[:name] ## might be nil if category is :ret
         @meth = name_or_hash[:meth] ## might be nil if ccategory is :var
         @category = name_or_hash[:category]
+        @meths_using_var = [] if @category == :var
       else
         raise "Unexpected argument #{name_or_hash} to RDL::Type::VarType.new."
       end
@@ -161,6 +162,16 @@ module RDL::Type
       return nil unless @name
       ## if var represents returned value, then method name is closest thing we have to variable's name.
       if @category == :ret then @meth.to_s else @name.to_s.delete("@") end
+    end
+
+    ## This is for global/class/instance variables.
+    ## When we observe these vars in a method, we keep track of
+    ## which class/method we saw it in.
+    def add_method_use(klass, meth)
+      raise "Expected category to be :var, got {@category}" unless @category == :var
+      klass = klass.to_s
+      meth = meth.to_s
+      @meths_using_var = @meths_using_var << [klass, meth] unless @meths_using_var.include?([klass, meth])
     end
 
     def ==(other)

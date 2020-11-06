@@ -1407,6 +1407,28 @@ RUBY
     end
   end
 
+  def self.find_ret_sites(scope, env, e)
+    case e.type
+    when :nil, :true, :false, :str, :string, :complex, :rational, :int, :float, :sym, :dstr, :xstr, :dsym, :regexp, :array, :hash, :irange, :erange, :self, :lvar, :ivar, :cvar, :gvar, :lvasgn, :ivasgn, :cvasgn, :gvasgn, :masgn, :op_asgn, :and_asgn, :or_asgn, :match_with_lvasgn, :nth_ref, :back_ref, :const, :defined?, :send, :csend, :yield, :and, :or
+      [e]
+    when :block ## TODO: check on this
+      [e]
+    when :if
+      rets = []
+      rets += find_ret_sites(scope, env, e.children[1]) if !e.children[1].nil?
+      rets += find_ret_sites(scope, env, e.children[2]) if !e.children[2].nil?
+      raise "Expected some return sites, got none, for expression #{e}." if rets.empty?
+      return rets
+    when :case
+      rets = []
+      e.children[1..-2].each { |c| rets += find_ret_sites(scope, env, c.children[-1]) }
+      rets += find_ret_sites(scope, env, e.children[-1]) if e.children[-1]
+      raise "Expected some return sites, got none, for expression #{e}." if rets.empty?
+      return rets
+      
+    end
+  end
+
   def self.to_type(val, as_key=false)
     case val
     when Symbol
@@ -1461,6 +1483,7 @@ RUBY
       else
         error :untyped_var, [kind_text, name, klass], e
       end
+      type.add_method_use(scope[:klass], scope[:meth]) if type.is_a?(RDL::Type::VarType)
       [env, type.canonical]
     else
       raise RuntimeError, "unknown kind #{kind}"
@@ -1498,6 +1521,7 @@ RUBY
       end
       error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless RDL::Type::Type.leq(tright, tleft, inst={}, true, ast: e)
       tright.instantiate(inst)
+      tleft.add_method_use(scope[:klass], scope[:meth]) if tleft.is_a?(RDL::Type::VarType)
       [env, tright.canonical]
     when :send
       meth = e.children[1] # note method name include =!
@@ -1855,7 +1879,7 @@ RUBY
         if @var_cache.has_key?(e.object_id) ## cache is based on syntactic location of method call
           ret_type = @var_cache[e.object_id]
         else
-          ret_type = RDL::Type::VarType.new(cls: trecv, meth: meth, category: :ret, name: "ret")
+          ret_type = RDL::Type::VarType.new(cls: trecv, meth: meth, category: :call_ret, name: "ret")
           @var_cache[e.object_id] = ret_type
         end
       end

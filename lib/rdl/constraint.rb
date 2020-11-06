@@ -276,9 +276,11 @@ module RDL::Typecheck
   # [+ inf_type +] is the inferred type
   # [+ orig_type +] is the original, gold standard type
   def self.compare_single_type(inf_type, orig_type)
+    inf_type = inf_type.type if inf_type.optional? || inf_type.vararg?
+    orig_type = orig_type.type if orig_type.optional? || orig_type.vararg?
     if inf_type.to_s == orig_type.to_s
       return "E"
-    elsif inf_type.is_a?(RDL::Type::NominalType) && orig_type.is_a?(RDL::Type::NominalType) && inf_type.to_s.include?("::") && inf_type.to_s.end_with?(orig_type.to_s)
+    elsif inf_type.is_a?(RDL::Type::NominalType) && orig_type.is_a?(RDL::Type::NominalType) && inf_type.to_s.end_with?("::" + orig_type.to_s) ## inf_type.to_s.include?("::")
       ## needed for diferring scopes, e.g. TZInfo::Timestamp & Timestamp
       puts "Treating #{inf_type} and #{orig_type} as equivalent due to suffix rule.".red
       return "E"      
@@ -491,8 +493,9 @@ module RDL::Typecheck
       break if !@new_constraints
     end
   rescue => e
-    puts "RECEIVED ERROR #{e}"
+    puts "RECEIVED ERROR #{e} from #{e.backtrace}" 
   ensure
+    puts "MAKING EXTRACTION REPORT"
     return make_extraction_report(typ_sols)
   end
 

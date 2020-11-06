@@ -6,6 +6,9 @@ class RDL::Heuristic
 
   @twin_cache = Hash.new { |h, k| h[k] = {} }
   @bert_cache = Hash.new { |h, k| h[k] = {} }
+  @vectorized_vars = {} ## Maps VarType object IDs to true/false, indicating whether or not they have been vectorized already
+  
+  $use_only_param_position = false ## whether or not to use just an arg's parameter position, or use all of its uses in a method, when running on BERT model
 
   def self.add(name, &blk)
     raise RuntimeError, "Expected heuristic name to be Symbol, given #{name}." unless name.is_a? Symbol
@@ -76,7 +79,7 @@ class RDL::Heuristic
         if @twin_cache[name1][name]
           sum += @twin_cache[name1][name]
         else
-          params = { words: [name1, name], method: "twin" }
+          params = { words: [name1, name], action: "twin" }
           uri.query = URI.encode_www_form(params)
           res = Net::HTTP.get_response(uri)
           raise "Failed to make request to twin network server. Received response #{res.body}." unless res.msg == "OK"
@@ -140,7 +143,6 @@ class RDL::Heuristic
 
 
   def self.twin_network_constraints(pairs_enum)
-    uri = URI "http://127.0.0.1:5000/"
     sols = {}
     pairs_enum.each { |var1, var2|
       name1 = var1.base_name
@@ -149,10 +151,7 @@ class RDL::Heuristic
       if @twin_cache[name1][name2]
         sols[[var1, var2]] = @twin_cache[name1][name2]
       else
-        params = { words: [name1, name2], method: "twin" }
-        uri.query = URI.encode_www_form(params)
-        res = Net::HTTP.get_response(uri)
-        raise "Failed to make request to twin network server. Received response #{res.body}." unless res.msg == "OK"
+        res = send_query(params)
         sols[[var1, var2]] = res.body.to_f
         @twin_cache[name1][name2] = res.body.to_f
       end
@@ -176,45 +175,85 @@ class RDL::Heuristic
     
   end
 
-  def self.bert_model_guess(var_type)
+  def self.send_query(params)
     uri = URI "http://127.0.0.1:5000/"
-    if (var_type.category == :arg)
-      sols = {}
-      
-      begin_loc1, end_loc1 = get_arg_loc(var_type) ## get start location of arg in source code
+    uri.query = URI.encode_www_form(params)
+    res = Net::HTTP.get_response(uri)
+    raise "Failed to make request to twin network server. Received response #{res.body}." unless res.msg == "OK"
+    return res
+  end
 
+  def self.vectorize_var(var_type)
+    return if @vectorized_vars[var_type.object_id] ## already vectorized and cached server side
+    puts "About to vectorize var #{var_type}"
+    if (var_type.category == :arg)
+      ast = RDL::Typecheck.get_ast(var_type.cls, var_type.meth)
+      locs = get_var_loc(ast, var_type) 
+      source = ast.loc.expression.source
+      puts "Querying for var #{var_type.base_name}"
+      puts "Sanity check: "
+      locs.each_slice(2) { |b, e| puts "    #{source[b..e]} from #{b}..#{e}" }
+      params = { source: source, action: "bert_vectorize", object_id: var_type.object_id, locs: locs, category: "arg" }
+      send_query(params)
+    elsif (var_type.category == :var)
+      var_type.meths_using_var.each { |klass, meth|
+        ast = RDL::Typecheck.get_ast(klass, meth)
+        locs = get_var_loc(ast, var_type)
+        source = ast.loc.expression.source
+        puts "Querying for var #{var_type.name} in method #{klass}##{meth}"
+        puts "Sanity check: "
+        locs.each_slice(2) { |b, e| puts "    #{source[b..e]} from #{b}..#{e}" }
+        params = { source: source, action: "bert_vectorize", object_id: var_type.object_id, locs: locs, category: "var", average: false }
+        send_query(params)
+      }
+      send_query({ action: "bert_vectorize", object_id: var_type.object_id, category: "var", average: true })
+    elsif (var_type.category == :ret)
+      ast = RDL::Typecheck.get_ast(var_type.cls, var_type.meth)
+      begin_pos = ast.loc.expression.begin_pos
+      locs = [ast.loc.name.begin_pos - begin_pos, ast.loc.name.end_pos - begin_pos-1] ## for now, let's just try using method name
+      source = ast.loc.expression.source
+      puts "Querying for return #{var_type}"
+      puts "Sanity check: #{source[locs[0]..locs[1]]}"
+      params = { source: source, action: "bert_vectorize", object_id: var_type.object_id, locs: locs, category: "ret" }
+      send_query(params)
+    else
+      puts "not implemented yet"
+    end
+    @vectorized_vars[var_type.object_id] = true
+  end
+
+  def self.bert_model_guess(var_type)
+    if (var_type.category == :arg) || (var_type.category == :var) || (var_type.category == :ret)
+      sols = {}
+
+      vectorize_var(var_type)
 
       RDL::Typecheck.type_vars_map.each { |t, vars|
         sum = 0
         count = 0
         raise "Got here for #{t}" if vars.empty?
         vars.each { |var2|
-          next if (var_type == var2) || !(var2.category == :arg)
+          next if (var_type == var2) || !(var_type.category == var2.category)#|| !((var2.category == :arg) || (var2.category == :var) || (var2.category == :ret))
+          #next if ((var_type.category == :ret) || (var2.category == :ret)) && !(var_type.category == var2.category) # only compare rets with rets
           count += 1
           if @bert_cache[var_type][var2]
             puts "Hit cache for vars #{var_type} and #{var2}, with score of #{@bert_cache[var_type][var2]}".red
             sum += @bert_cache[var_type][var2]
           else            
-            source1 = RDL::Typecheck.get_ast(var_type.cls, var_type.meth).loc.expression.source
-            source2 = RDL::Typecheck.get_ast(var2.cls, var2.meth).loc.expression.source
-            begin_loc2, end_loc2 = get_arg_loc(var2)
-            puts "Querying for vars #{var_type.base_name} and #{var2.base_name}.".red
-            puts "Sanity check: #{source1[begin_loc1..end_loc1]} and #{source2[begin_loc2..end_loc2]}"
-            params = { sources: [source1, source2], var1_locs: [begin_loc1, end_loc1], var2_locs: [begin_loc2, end_loc2], method: "bert"}
-            uri.query = URI.encode_www_form(params)
-            res = Net::HTTP.get_response(uri)
-            raise "Failed to make request to twin network server. Received response #{res.body}." unless res.msg == "OK"
+            vectorize_var(var2)
+            puts "About to ask for similarity of #{var_type} and #{var2}"
+            res = send_query({ action: "get_similarity", id1: var_type.object_id, id2: var2.object_id })
             sum += res.body.to_f
             @bert_cache[var_type][var2] = res.body.to_f
             @bert_cache[var2][var_type] = res.body.to_f
-            puts "Received similarity score of #{res.body.to_f} for vars #{var_type.cls}##{var_type.meth}##{var_type.base_name} and #{var2.cls}##{var2.meth}##{var2.base_name}".red
+            puts "Received similarity score of #{res.body.to_f} for vars #{var_type.cls}##{var_type.meth}##{var_type.name} and #{var2.cls}##{var2.meth}##{var2.name}".red
           end
         }
         sim_score = (count == 0) ? 0 : sum / count
-        puts "Received overall sim_score average of #{sim_score} for var #{var_type.cls}##{var_type.meth}##{var_type.base_name} and type #{t}".green if sim_score != 0
+        puts "Received overall sim_score average of #{sim_score} for var #{var_type.cls}##{var_type.meth}##{var_type.name} and type #{t}".green if sim_score != 0
 
 
-        if sim_score > 0.9
+        if sim_score > 0.8
           sols[sim_score] = t
         else
           #puts "Twin network found insufficient average similarity score of #{sim_score} between #{name1} and #{names}.".red
@@ -230,9 +269,9 @@ class RDL::Heuristic
     end
   end
 
-  def self.get_arg_loc(var_type)
-    ast = RDL::Typecheck.get_ast(var_type.cls, var_type.meth)
+  def self.get_var_loc(ast, var_type)
     begin_pos = ast.loc.expression.begin_pos
+    locs = []
 
     if ast.type == :def
       meth_name, args, body = *ast
@@ -242,13 +281,48 @@ class RDL::Heuristic
       raise RuntimeError, "Unexpected ast type #{ast.type}"
     end
 
-    args.children.each { |c|
-      if (c.children[0].to_s == var_type.base_name)
-        ## Found the arg corresponding to var_type
-        return [c.loc.expression.begin_pos - begin_pos, c.loc.expression.end_pos - begin_pos - 1] ## translate it so that 0 is first position
-      end
-    }
+    if (var_type.category == :arg)
+      args.children.each { |c|
+        if (c.children[0].to_s == var_type.base_name)
+          ## Found the arg corresponding to var_type
+          locs << (c.loc.expression.begin_pos - begin_pos) ## translate it so that 0 is first position
+          locs << (c.loc.expression.end_pos - begin_pos - 1)
+          return locs if $use_only_param_position
+        end
+      }
+    end
 
+    search_ast_for_var_locs(body, var_type.name, locs, begin_pos)
+
+    raise "Expected even number of locations." unless (locs.length % 2) == 0
+    raise "Did not find var #{var_type} anywhere in ast #{ast}." if locs.length == 0
+    return locs.sort ## locs will be sorted Array<Integer>, where every two ints designate the beginning/end of an occurence of the arg in var_type
+    
+  end
+
+  ## Recursively earches ast [Parser::AST::Node] for uses of local variable called var_name [String].
+  ## Adds begining/end locations to locs Array<Integer>, translating first by amount in
+  ## begin_pos [Integer].
+  def self.search_ast_for_var_locs(ast, var_name, locs, begin_pos)
+    if !ast.is_a?(Parser::AST::Node)
+      return ## reached non-node of AST, stop recursing here.
+    elsif (ast.type == :lvar) || (ast.type == :ivar) || (ast.type == :cvar) || (ast.type == :gvar)
+      if (ast.children[0].to_s == var_name.to_s)
+        locs << (ast.loc.expression.begin_pos - begin_pos)
+        locs << (ast.loc.expression.end_pos - begin_pos - 1)
+        return
+      else
+        return
+      end
+    elsif (ast.type == :lvasgn) || (ast.type == :ivasgn) || (ast.type == :cvasgn) || (ast.type == :gvasgn)
+      if (ast.children[0].to_s == var_name.to_s)
+        locs << (ast.loc.name.begin_pos - begin_pos)
+        locs << (ast.loc.name.end_pos - begin_pos - 1)
+      end
+      search_ast_for_var_locs(ast.children[1], var_name, locs, begin_pos)
+    else
+      ast.children.each { |c| search_ast_for_var_locs(c, var_name, locs, begin_pos) }
+    end
   end
 
 end

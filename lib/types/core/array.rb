@@ -20,7 +20,12 @@ def Array.output_type(trec, targs, meth_name, default1, default2=default1, use_s
   when RDL::Type::TupleType
     if targs.empty? || targs.all? { |t| t.is_a?(RDL::Type::SingletonType) }
       vals = RDL.type_cast((if use_sing_val then targs.map { |t| RDL.type_cast(t, "RDL::Type::SingletonType").val } else targs end), "Array<%any>", force: true)
-      res = RDL.type_cast(trec.params.send(meth_name, *vals), "Object", force: true)
+      begin
+        res = RDL.type_cast(trec.params.send(meth_name, *vals), "Object", force: true)
+      rescue ArgumentError => e
+        puts "GOT ERROR #{e} FOR METHOD #{meth_name} CALLED ON TREC #{trec} AND ARGS #{targs}"
+        return RDL::Globals.types[:bot]
+      end
       if !res && nil_false_default
         if default1 == :promoted_param
           trec.promote.params[0]
