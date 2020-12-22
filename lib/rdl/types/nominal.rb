@@ -10,7 +10,7 @@ module RDL::Type
 
     def self.new(name)
       name = name.to_s
-      name = "Integer" if RDL::Config.instance.number_mode && ["Float", "Rational", "Complex", "BigDecimal"].include?(name)
+      name = "Integer" if RDL::Config.instance.number_mode && ["Float", "Rational", "Complex", "BigDecimal", "Numeric"].include?(name)
       t = @@cache[name]
       return t if t
       t = self.__new__ name

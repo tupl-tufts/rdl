@@ -73,7 +73,8 @@ module RDL::Type
     end
 
     def drop_vars
-      return self if @types.all? { |t| t.is_a? VarType } ## when all are VarTypes, we have nothing concrete to reduce to, so don't want to drop vars
+      return RDL::Globals.types[:bot] if @types.all? { |t| t.is_a? VarType } ## when all are VarTypes, we have nothing concrete to reduce to, so don't want to drop vars
+      #return self if @types.all? { |t| t.is_a? VarType } ## when all are VarTypes, we have nothing concrete to reduce to, so don't want to drop vars
       new_types = []
       for i in 0..(@types.length-1)
         if @types[i].is_a?(IntersectionType)

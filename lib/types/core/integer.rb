@@ -137,7 +137,7 @@ RDL.type :Integer, :fdiv, '(BigDecimal) -> ``sing_or_type(trec, targs, :fdiv, "B
 RDL.type :Integer, :fdiv, '(Complex) -> ``sing_or_type(trec, targs, :fdiv, "Complex")``'
 RDL.pre(:Integer, :fdiv) { |x| if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end && if (x.real.is_a?(Rational) && x.imaginary.is_a?(Float)) then !x.imaginary.nan? else true end}
 
-RDL.type :Integer, :to_s, '() -> String'
+RDL.type :Integer, :to_s, '(?Integer) -> String'
 RDL.type :Integer, :inspect, '() -> String'
 
 RDL.type :Integer, :magnitude, '() -> Integer r {{ r>=0 }}' ## TODO
@@ -163,7 +163,7 @@ RDL.type :Integer, :equal?, '(Object) -> ``sing_or_type(trec, targs, :equal?, "%
 RDL.type :Integer, :eql?, '(Object) -> ``sing_or_type(trec, targs, :eql?, "%bool")``'
 RDL.type :Integer, :hash, '() -> Integer'
 RDL.type :Integer, :ceil, '() -> ``sing_or_type(trec, targs, :ceil, "Integer")``'
-RDL.type :Integer, :chr, '(Encoding) -> String'
+RDL.type :Integer, :chr, '(?Encoding) -> String'
 RDL.type :Integer, :coerce, '(%numeric) -> [%real, %real]'
 RDL.pre(:Integer, :coerce) { |x| if x.is_a?(Complex) then x.imaginary==0 else true end}
 RDL.type :Integer, :conj, '() -> ``sing_or_type(trec, targs, :conj, "Integer")``'
@@ -335,7 +335,7 @@ RDL.type :Integer, :fdiv, '(BigDecimal) -> BigDecimal'
 RDL.type :Integer, :fdiv, '(Complex) -> Complex'
 RDL.pre(:Integer, :fdiv) { |x| if (x.real.is_a?(BigDecimal)||x.imaginary.is_a?(BigDecimal)) then (if x.real.is_a?(Float) then (x.real!=Float::INFINITY && !(x.real.nan?)) elsif(x.imaginary.is_a?(Float)) then x.imaginary!=Float::INFINITY && !(x.imaginary.nan?) else true end) else true end && if (x.real.is_a?(Rational) && x.imaginary.is_a?(Float)) then !x.imaginary.nan? else true end}
 
-RDL.type :Integer, :to_s, '() -> String'
+RDL.type :Integer, :to_s, '(?Integer) -> String'
 RDL.type :Integer, :inspect, '() -> String'
 
 RDL.type :Integer, :magnitude, '() -> Integer r {{ r>=0 }}'
@@ -361,7 +361,7 @@ RDL.type :Integer, :equal?, '(Object) -> %bool'
 RDL.type :Integer, :eql?, '(Object) -> %bool'
 RDL.type :Integer, :hash, '() -> Integer'
 RDL.type :Integer, :ceil, '() -> Integer'
-RDL.type :Integer, :chr, '(Encoding) -> String'
+RDL.type :Integer, :chr, '(?Encoding) -> String'
 RDL.type :Integer, :coerce, '(%numeric) -> [%real, %real]'
 RDL.pre(:Integer, :coerce) { |x| if x.is_a?(Complex) then x.imaginary==0 else true end}
 RDL.type :Integer, :conj, '() -> Integer'
@@ -406,6 +406,6 @@ RDL.type :Integer, :to_i, '() -> Integer'
 RDL.type :Integer, :to_int, '() -> Integer'
 RDL.type :Integer, :to_r, '() -> Rational'
 RDL.type :Integer, :truncate, '() -> Integer'
-RDL.type :Integer, :upto, '(Integer) { (Integer) -> %any } -> Integer'
+RDL.type :Integer, :upto, '(Integer) { (?Integer) -> %any } -> Integer'
 RDL.type :Integer, :upto, '(Integer) -> Enumerator<Integer>'
 RDL.type :Integer, :zero?, '() -> %bool'

@@ -24,7 +24,7 @@ module RDL::Type
         arg = arg.type if arg.instance_of? RDL::Type::AnnotatedArgType
         case arg
         when OptionalType
-          raise "Optional arguments not allowed after varargs" if state == :vararg
+          #raise "Optional arguments not allowed after varargs" if state == :vararg
           #raise "Optional arguments not allowed after named arguments" if state == :hash
           state = :optional
         when VarargType

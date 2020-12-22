@@ -58,11 +58,11 @@ module RDL::Type
     end
 
     def array_type?
-      is_a?(TupleType) || (is_a?(GenericType) && ((base == RDL::Globals.types[:array]) || ((defined? ActiveRecord_Relation) && (base.klass == ActiveRecord_Relation)))) || (self == RDL::Globals.types[:array])
+      is_a?(TupleType) || (is_a?(GenericType) && ((base == RDL::Globals.types[:array]) || ((defined? ActiveRecord_Relation) && (base.klass == ActiveRecord_Relation)))) || (self == RDL::Globals.types[:array]) || (is_a?(UnionType) && types.all? { |t| t.array_type? })
     end
 
     def hash_type?
-      is_a?(FiniteHashType) || (is_a?(GenericType) && (base == RDL::Globals.types[:hash])) || (self == RDL::Globals.types[:hash])
+      is_a?(FiniteHashType) || (is_a?(GenericType) && (base == RDL::Globals.types[:hash])) || (self == RDL::Globals.types[:hash]) || (is_a?(UnionType) && types.all? { |t| t.hash_type? })
     end
         
     # default behavior, override in appropriate subclasses
@@ -95,6 +95,7 @@ module RDL::Type
       right = right.type if right.is_a? NonNullType
       left = left.canonical
       right = right.canonical
+      #puts "About to try #{left} <= #{right} with #{inst} and #{ileft}"
       return true if left.equal?(right)
 
       # top and bottom

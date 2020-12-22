@@ -674,7 +674,7 @@ p        else
     [trec, targs[0]].each { |t|
       case t
       when RDL::Type::GenericType
-        raise "Expected ActiveRecord_Relation, got #{t} for #{trec} and #{targs}." unless (t.base.name == "ActiveRecord_Relation") 
+        raise "Expected ActiveRecord_Relation or Array, got #{t} for #{trec} and #{targs}." unless (t.base.name == "ActiveRecord_Relation") or (t.base.name == "Array")
         param0 = t.params[0]
         case param0
         when RDL::Type::GenericType

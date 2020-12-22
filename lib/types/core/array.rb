@@ -297,25 +297,6 @@ def Array.each_arg(trec, num)
   end
 end
 
-def Array.each_arg2(trec)
-  case trec
-  when RDL::Type::TupleType
-    if trec.params.all? { |t| t.is_a?(RDL::Type::TupleType) }
-      second_params = RDL::Type::UnionType.new(*trec.params.map { |t| t.params[1] })
-      second_params = second_params.canonical if second_params.is_a?(RDL::Type::UnionType)
-      return second_params
-    else
-      return RDL::Type::OptionalType.new(promoted_or_t(trec))
-    end
-  else
-    if trec.params[0].is_a?(RDL::Type::TupleType)
-      return trec.params[0].params[1]
-    else
-      return RDL::Type::OptionalType.new(promoted_or_t(trec))
-    end
-  end
-end
-
 
 RDL.type :Array, :each_index, '() { (Integer) -> %any } -> self'
 RDL.type :Array, :each_index, '() -> Enumerator<Integer>'
@@ -437,6 +418,8 @@ RDL.type :Array, :rotate, '(?Integer) -> ``output_type(trec, targs, :rotate, :pr
 RDL.type :Array, :rotate!, '(?Integer) -> ``promote_tuple!(trec)``'
 RDL.type :Array, :sample, '() -> ``promoted_or_t(trec)``'
 RDL.type :Array, :sample, '(Integer) -> ``promote_tuple(trec)``'
+RDL.type :Array, :sample, '({ random: [ rand: () -> Float ] }) -> ``promote_tuple(trec)``'
+RDL.type :Array, :sample, '(Integer, { random: [ rand: () -> Float ] }) -> ``promote_tuple(trec)``'
 RDL.type :Array, :select, '() { (``promoted_or_t(trec)``) -> %bool } -> ``promote_tuple(trec)``'
 RDL.type :Array, :select, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), promoted_or_t(trec))``'
 RDL.type :Array, :select!, '() { (``promoted_or_t(trec)``) -> %bool } -> ``promote_tuple!(trec)``'
@@ -444,7 +427,9 @@ RDL.type :Array, :select!, '() -> ``RDL::Type::GenericType.new(RDL::Type::Nomina
 RDL.type :Array, :shift, '() -> ``promote_tuple!(trec); RDL::Globals.parser.scan_str "#T t"``'
 RDL.type :Array, :shift, '(Integer) -> ``promote_tuple!(trec)``'
 RDL.type :Array, :shuffle, '() -> ``promote_tuple(trec)``'
+RDL.type :Array, :shuffle, '({ random: [ rand: () -> Float ] }) -> ``promote_tuple(trec)``'
 RDL.type :Array, :shuffle!, '() -> ``promote_tuple!(trec)``'
+RDL.type :Array, :shuffle!, '({ random: [ rand: () -> Float ] }) -> ``promote_tuple!(trec)``'
 RDL.rdl_alias :Array, :size, :length
 RDL.rdl_alias :Array, :slice, :[]
 RDL.type :Array, :slice!, '(Range<Integer>) -> ``promote_tuple!(trec)``'
@@ -550,6 +535,7 @@ RDL.type :Array, :initialize, '() -> self'
 RDL.type :Array, :initialize, '(Integer) -> self'
 RDL.type :Array, :initialize, '(Integer, t) -> self<t>'
 RDL.type :Array, :initialize, '(Array<k>) -> self<k>'
+RDL.type :Array, :initialize, '(Integer) { (?Integer) -> t } -> self<t>'
 RDL.type :Array, :insert, '(Integer, *t) -> Array<t>'
 RDL.type :Array, :inspect, '() -> String'
 RDL.type :Array, :join, '(?String) -> String'

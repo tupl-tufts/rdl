@@ -874,6 +874,8 @@ module RDL
     }
 
     RDL::Globals.to_infer[sym] = Set.new
+    #RDL::Heuristic.visualize_bert(:ret)
+
     RDL::Typecheck.resolve_constraints
 
     report = RDL::Typecheck.extract_solutions

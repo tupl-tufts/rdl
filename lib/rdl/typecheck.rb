@@ -302,7 +302,7 @@ module RDL::Typecheck
       block_type = meth_type.block
       ret_vartype = meth_type.ret
 
-      raise "Expected VarTypes in MethodType to be inferred, got #{meth_type}." unless (arg_types + [block_type] + [ret_vartype]).all? { |t| !t.nil? && (t.kind_of_var_input? || (meth == :initialize)) }
+      raise "Expected VarTypes in MethodType to be inferred, got #{meth_type}." unless (arg_types + [block_type] + [ret_vartype]).all? { |t| !t.nil? && (t.kind_of_var_input? || (t.is_a?(RDL::Type::OptionalType) && t.type.is_a?(RDL::Type::GenericType) && (t.type.base == RDL::Globals.types[:hash])) || (meth == :initialize)) }
     end
 
     if ast.type == :def
@@ -530,7 +530,7 @@ module RDL::Typecheck
         targs[kw] = tkw.type
         env = env.merge(Env.new(kw => tkw.type))
       elsif arg.type == :kwrestarg
-        error :type_args_no_kws, [kind], e, block: (kind == 'block') unless targ.is_a?(RDL::Type::FiniteHashType)
+        error :type_args_no_kws, [kind], arg, block: (kind == 'block') unless targ.is_a?(RDL::Type::FiniteHashType)
         error :type_args_no_kw_rest, [kind], arg, block: (kind == 'block') if targ.rest.nil?
         targs[arg.children[0]] = RDL::Type::GenericType.new(RDL::Globals.types[:hash], RDL::Globals.types[:symbol], targ.rest)
         kw_rest_matched = true
@@ -559,7 +559,11 @@ module RDL::Typecheck
     when RDL::Type::SingletonType
       if slf.nominal.name == 'Class'
         trecv_owner = get_super_owner_from_class(slf.val.singleton_class, m)
-        RDL::Type::SingletonType.new(RDL::Util.singleton_class_to_class(trecv_owner))
+        if trecv_owner.to_s == "BasicObject"
+          RDL::Type::NominalType.new(trecv_owner)
+        else
+          RDL::Type::SingletonType.new(RDL::Util.singleton_class_to_class(trecv_owner))
+        end
       else
         raise Exception, "self is singleton class but nominal is not Class, it is #{slf.nominal.name}"
       end
@@ -1407,25 +1411,63 @@ RUBY
     end
   end
 
-  def self.find_ret_sites(scope, env, e)
+  # Returns Hash<Expression, Boolean>, 
+  # where return site expression maps to a boolean indicating whether the expression was returned
+  # with a `return` expression (true) or not (false).
+  def self.find_ret_sites(e)
     case e.type
-    when :nil, :true, :false, :str, :string, :complex, :rational, :int, :float, :sym, :dstr, :xstr, :dsym, :regexp, :array, :hash, :irange, :erange, :self, :lvar, :ivar, :cvar, :gvar, :lvasgn, :ivasgn, :cvasgn, :gvasgn, :masgn, :op_asgn, :and_asgn, :or_asgn, :match_with_lvasgn, :nth_ref, :back_ref, :const, :defined?, :send, :csend, :yield, :and, :or
-      [e]
+    when :nil, :true, :false, :str, :string, :complex, :rational, :int, :float, :sym, :dstr, :xstr, :dsym, :regexp, :array, :hash, :irange, :erange, :self, :lvar, :ivar, :cvar, :gvar, :lvasgn, :ivasgn, :cvasgn, :gvasgn, :masgn, :op_asgn, :and_asgn, :or_asgn, :match_with_lvasgn, :nth_ref, :back_ref, :const, :defined?, :send, :csend, :yield, :and, :or, :break, :redo, :next, :retry, :super, :zsuper
+      return {e => false}
     when :block ## TODO: check on this
-      [e]
+      return {e.children[0] => false }
     when :if
-      rets = []
-      rets += find_ret_sites(scope, env, e.children[1]) if !e.children[1].nil?
-      rets += find_ret_sites(scope, env, e.children[2]) if !e.children[2].nil?
+      rets = {}
+      rets = rets.merge(find_ret_sites(e.children[1])) if !e.children[1].nil?
+      rets = rets.merge(find_ret_sites(e.children[2])) if !e.children[2].nil?
       raise "Expected some return sites, got none, for expression #{e}." if rets.empty?
       return rets
     when :case
-      rets = []
-      e.children[1..-2].each { |c| rets += find_ret_sites(scope, env, c.children[-1]) }
-      rets += find_ret_sites(scope, env, e.children[-1]) if e.children[-1]
+      rets = {}
+      e.children[1..-2].each { |c| rets = rets.merge(find_ret_sites(c.children[-1])) }
+      rets = rets.merge(find_ret_sites(e.children[-1])) if e.children[-1]
       raise "Expected some return sites, got none, for expression #{e}." if rets.empty?
       return rets
-      
+    when :while, :until, :while_post, :until_post
+      if e.children[1]
+        sites = find_ret_sites(e.children[1])
+        sites.delete_if { |exp, used_ret| !used_ret }
+        if sites.empty?
+          return { e => false}
+        else
+          return sites
+        end
+      else
+        return { e => false }
+      end
+  when :nsure
+    return find_ret_sites(e.children[0])
+  when :rescue
+    rets = {}
+    e.children[1..-2].each { |resbody|
+      rets = rets.merge(find_ret_sites(resbody))
+    }
+    return rets
+  when :resbody
+    if e.children[2]
+      return find_ret_sites(e.children[2])
+    else
+      return { e => false }
+    end
+  when :return
+    { e => true }
+  when :begin, :kwbegin # sequencing
+    rets = {}
+    e.children[0..-2].each { |c| rets = rets.merge(find_ret_sites(c)) }
+    rets.delete_if { |exp, used_ret| !used_ret }
+    rets = rets.merge(find_ret_sites(e.children[-1]))
+    return rets
+  else
+    error :unsupported_expression, [e.type, e], e
     end
   end
 
@@ -1875,6 +1917,8 @@ RUBY
         ret_type = RDL::Globals.types[:string]
       elsif meth == :to_i
         ret_type = RDL::Globals.types[:integer]
+      elsif meth == :==
+        ret_type = RDL::Globals.types[:bool]
       else
         if @var_cache.has_key?(e.object_id) ## cache is based on syntactic location of method call
           ret_type = @var_cache[e.object_id]
@@ -2488,6 +2532,8 @@ RUBY
       ## all method types will be given a variable type for blocks anyway, so no need to add a new param here
       when :keyrest
         raise "Not currently supported, for method #{meth} of class #{klass}"
+        #hash_type = RDL::Type::GenericType.new(RDL::Globals.types[:hash], RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: "#{var_name}_key"), RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: "#{var_name}_param"))
+        #arg_types << RDL::Type::OptionalType.new(hash_type)
       else
         raise "Unexpected parameter type #{param[0]}."
       end
