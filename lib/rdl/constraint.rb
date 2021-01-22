@@ -1,7 +1,8 @@
 require 'csv'
 
-$use_twin_network = false
-$use_heuristics = true
+$use_twin_network = true
+$use_heuristics = false
+
 
 class << RDL::Typecheck
   ## Hash<Type, Array<Symbol>>. A Hash mapping RDL types to a list of names of variables that have that type as a solution.
@@ -13,6 +14,7 @@ module RDL::Typecheck
 
   @type_names_map = Hash.new { |h, k| h[k] = [] }#[]
   @type_vars_map = Hash.new { |h, k| h[k] = [] }#[]
+  @failed_sol_cache = Hash.new { |h, k| h[k] = [] }
 
   def self.resolve_constraints
     RDL::Logging.log_header :inference, :info, "Starting constraint resolution..."
@@ -90,7 +92,7 @@ module RDL::Typecheck
     else
       raise "Unexpected VarType category #{category}."
     end
-    if  sol.is_a?(RDL::Type::UnionType) || (sol == RDL::Globals.types[:bot]) || (sol == RDL::Globals.types[:top]) || (sol == RDL::Globals.types[:nil]) || sol.is_a?(RDL::Type::StructuralType) || sol.is_a?(RDL::Type::IntersectionType) || (sol == RDL::Globals.types[:object])
+    if  (sol.is_a?(RDL::Type::UnionType) && !(sol == RDL::Globals.types[:bool])) || (sol == RDL::Globals.types[:bot]) || (sol == RDL::Globals.types[:top]) || (sol == RDL::Globals.types[:nil]) || sol.is_a?(RDL::Type::StructuralType) || sol.is_a?(RDL::Type::IntersectionType) || (sol == RDL::Globals.types[:object])
       ## Try each rule. Return first non-nil result.
       ## If no non-nil results, return original solution.
       ## TODO: check constraints.
@@ -103,31 +105,39 @@ module RDL::Typecheck
         RDL::Logging.log :heuristic, :debug, "Trying rule `#{name}` for variable #{var}."
         typ = rule.call(var)
         if typ.is_a?(Array) && (name == :twin_network)
-          new_cons = {}
-          begin
-            typ.each { |t|
-              t = t.canonical
-              if add_sol_to_graph
-                var.add_and_propagate_upper_bound(t, nil, new_cons)
-                var.add_and_propagate_lower_bound(t, nil, new_cons)
+          typ.each { |t|
+              new_cons = {}
+              begin
+                t = t.canonical
+                next if @failed_sol_cache[var].include?(t)
+                if add_sol_to_graph
+                  var.add_and_propagate_upper_bound(t, nil, new_cons)
+                  var.add_and_propagate_lower_bound(t, nil, new_cons)
+                end
+                RDL::Logging.log :hueristic, :debug, "Heuristic Applied: #{name}"
+                puts "Successfully applied twin network! Solution #{t} for #{var}".blue
+                @new_constraints = true if !new_cons.empty?
+                RDL::Logging.log :inference, :trace, "New Constraints branch A" if !new_cons.empty?
+                raise "2. got here with #{var} and #{t}" if t.to_s == "%bot"
+                @type_vars_map[t] = @type_vars_map[t] | [var]
+                return t
+              rescue RDL::Typecheck::StaticTypeError => e
+                if (var.meth == :get_rate) || (var.meth == :add_rate)
+                  puts "Tried to apply solution #{t} to #{var}, but got error:"
+                  puts e
+                end
+                @failed_sol_cache[var] << t
+                undo_constraints(new_cons)
               end
-              RDL::Logging.log :hueristic, :debug, "Heuristic Applied: #{name}"
-              puts "Successfully applied twin network! Solution #{t} for #{var}".blue
-              @new_constraints = true if !new_cons.empty?
-              RDL::Logging.log :inference, :trace, "New Constraints branch A" if !new_cons.empty?
-              return t
             }
-          rescue RDL::Typecheck::StaticTypeError => e
-            undo_constraints(new_cons)
-          end
         elsif typ.is_a?(RDL::Type::Type)
           new_cons = {}
           begin
             typ = typ.canonical
+            next if @failed_sol_cache[var].include?(typ)
             if add_sol_to_graph
-              puts "Attempting to apply solution #{typ} for #{var}" if var.base_name == "section_id"
               var.add_and_propagate_upper_bound(typ, nil, new_cons)
-              var.add_and_propagate_lower_bound(typ, nil, new_cons)
+              var.add_and_propagate_lower_bound(typ, nil, new_cons) 
             end
 =begin
                new_cons.each { |var, bounds|
@@ -141,15 +151,14 @@ module RDL::Typecheck
             RDL::Logging.log :hueristic, :debug, "Heuristic Applied: #{name}"
             @new_constraints = true if !new_cons.empty?
             RDL::Logging.log :inference, :trace, "New Constraints branch A" if !new_cons.empty?
+            raise "3.. got here with #{var} and #{typ} for #{name}" if typ.to_s == "%bot"
+            @type_vars_map[typ] = @type_vars_map[typ] | [var]
             return typ
           #sol = typ
           rescue RDL::Typecheck::StaticTypeError => e
             RDL::Logging.log :heuristic, :debug_error, "Attempted to apply heuristic rule #{name} solution #{typ} to var #{var}"
             RDL::Logging.log :heuristic, :trace, "... but got the following error: #{e}"
-            if var.base_name == "section_id"
-              puts "Attempted to apply heuristic rule #{name} solution #{typ} to var #{var}"
-              puts "... but got the following error: #{e}"
-            end
+            @failed_sol_cache[var] << typ
             undo_constraints(new_cons)
           ## no new constraints in this case so we'll leave it as is
           ensure
@@ -171,8 +180,9 @@ module RDL::Typecheck
       sol = var if sol == RDL::Globals.types[:bot] # just use var itself when result of solution extraction was %bot.
       return sol if sol.is_a?(RDL::Type::VarType) ## don't add var type as solution
       sol = sol.canonical
-      var.add_and_propagate_upper_bound(sol, nil, new_cons)
-      var.add_and_propagate_lower_bound(sol, nil, new_cons) unless sol.is_a?(RDL::Type::StructuralType) || (sol.is_a?(RDL::Type::IntersectionType) && sol.types.any? { |t| t.is_a?(RDL::Type::StructuralType) } )
+      raise RDL::Typecheck::StaticTypeError if @failed_sol_cache.include?(sol)
+      var.add_and_propagate_upper_bound(sol, nil, new_cons) unless (sol == RDL::Globals.types[:nil])
+      var.add_and_propagate_lower_bound(sol, nil, new_cons) unless sol.is_a?(RDL::Type::StructuralType) || (sol.is_a?(RDL::Type::IntersectionType) && sol.types.any? { |t| t.is_a?(RDL::Type::StructuralType) } )# || (sol == RDL::Globals.types[:object]) || (sol == RDL::Globals.types[:top])
 =begin
       new_cons.each { |var, bounds|
         bounds.each { |u_or_l, t, _|
@@ -193,15 +203,15 @@ module RDL::Typecheck
     rescue RDL::Typecheck::StaticTypeError => e
       RDL::Logging.log :inference, :debug_error, "Attempted to apply solution #{sol} for var #{var}"
       RDL::Logging.log :inference, :trace, "... but got the following error: #{e}"
-
+      @failed_sol_cache[var] << sol
       undo_constraints(new_cons)
       ## no new constraints in this case so we'll leave it as is
       sol = var
     end
 
-    if sol.is_a?(RDL::Type::NominalType) || sol.is_a?(RDL::Type::GenericType) || sol.is_a?(RDL::Type::TupleType) || sol.is_a?(RDL::Type::FiniteHashType) || sol.is_a?(RDL::Type::UnionType)
+    if (sol.is_a?(RDL::Type::NominalType) || sol.is_a?(RDL::Type::GenericType) || sol.is_a?(RDL::Type::TupleType) || sol.is_a?(RDL::Type::FiniteHashType) || sol.is_a?(RDL::Type::UnionType)) && !(sol == RDL::Globals.types[:object])
+      raise "1. got here with #{var} and #{sol}" if sol.to_s == "%bot"
       name = var.base_name#(var.category == :ret) ? var.meth : var.name
-      #puts "About to add #{sol} => #{name}"
       @type_names_map[sol] = @type_names_map[sol] | [name.to_s]
       @type_vars_map[sol] = @type_vars_map[sol] | [var]
     end
@@ -261,7 +271,13 @@ module RDL::Typecheck
         }
         block_sol = RDL::Type::IntersectionType.new(*block_sols).canonical
       else
-        block_sol = RDL::Type::MethodType.new(*extract_meth_sol(non_vartype_ubounds[0]))
+        if non_vartype_ubounds[0].is_a?(RDL::Type::NominalType) && (non_vartype_ubounds[0].to_s == "Proc")
+          block_sol = non_vartype_ubounds[0]
+        elsif !non_vartype_ubounds[0].is_a?(RDL::Type::MethodType)
+          block_sol = tmeth.block
+        else
+          block_sol = RDL::Type::MethodType.new(*extract_meth_sol(non_vartype_ubounds[0]))
+        end
       end
 
       tmeth.block.solution = block_sol
@@ -288,6 +304,8 @@ module RDL::Typecheck
   def self.compare_single_type(inf_type, orig_type)
     inf_type = inf_type.type if inf_type.optional? || inf_type.vararg?
     orig_type = orig_type.type if orig_type.optional? || orig_type.vararg?
+    inf_type = inf_type.canonical
+    orig_type = orig_type.canonical
     if inf_type.to_s == orig_type.to_s
       return "E"
     elsif inf_type.is_a?(RDL::Type::NominalType) && orig_type.is_a?(RDL::Type::NominalType) && abbreviated_class?(orig_type.to_s, inf_type.to_s)
@@ -296,11 +314,17 @@ module RDL::Typecheck
       return "E"      
     elsif inf_type.is_a?(RDL::Type::NominalType) && orig_type.is_a?(RDL::Type::NominalType) && inf_type.klass.ancestors.any? { |anc| (anc.to_s == orig_type.to_s) || abbreviated_class?(orig_type.to_s, anc.to_s) }
       return "E"
+    elsif inf_type.is_a?(RDL::Type::GenericType) && (orig_type == RDL::Globals.types[:object])
+      return "E"
+    elsif [inf_type.to_s, orig_type.to_s].all? { |t| ["String", "Symbol", "(String or Symbol)", "(Symbol or String)"].include?(t) }
+      return "E"
     elsif inf_type.is_a?(RDL::Type::UnionType) && orig_type.is_a?(RDL::Type::NominalType) && inf_type.types.all? { |t| t.is_a?(RDL::Type::NominalType) && t.klass.ancestors.any? { |anc| (anc.to_s == orig_type.to_s) || abbreviated_class?(orig_type.to_s, anc.to_s) } }
       return "E"
     elsif !inf_type.is_a?(RDL::Type::VarType) && (orig_type.is_a?(RDL::Type::TopType))
       return "E"
     elsif inf_type.is_a?(RDL::Type::GenericType) && orig_type.is_a?(RDL::Type::GenericType) && inf_type.params[0] == orig_type.params[0] && inf_type.array_type? && orig_type.array_type?
+      return "E"
+    elsif inf_type.is_a?(RDL::Type::StructuralType) && orig_type.is_a?(RDL::Type::StructuralType) && (inf_type.methods.map { |m, _| m } == orig_type.methods.map { |m, _| m})
       return "E"
     elsif inf_type.is_a?(RDL::Type::GenericType) && orig_type.is_a?(RDL::Type::GenericType) && inf_type.base.to_s == orig_type.base.to_s
       return "P"
@@ -344,6 +368,7 @@ module RDL::Typecheck
 
     correct_types = 0
     meth_types = 0
+    ret_types = 0
     arg_types = 0
     var_types = 0
     typ_sols.each_pair { |km, typ|
@@ -374,10 +399,13 @@ module RDL::Typecheck
           twin_csv << [klass, meth, "Arg", name, inf_arg_type.to_s, orig_arg_typ.to_s, comp, code]
           arg_types +=1
         }
-        inf_ret_type = typ.solution.ret
-        comp = inf_ret_type.nil? ? "N" : compare_single_type(inf_ret_type, orig_typ.ret)
-        compares[comp] += 1
-        twin_csv << [klass, meth, "Ret", "", inf_ret_type.to_s, orig_typ.ret.to_s, comp, code]
+        unless (orig_typ.ret == RDL::Globals.types[:bot]) ## bot type is given to any returns for which we don't have a type
+          ret_types += 1
+          inf_ret_type = typ.solution.ret
+          comp = inf_ret_type.nil? ? "N" : compare_single_type(inf_ret_type, orig_typ.ret)
+          compares[comp] += 1
+          twin_csv << [klass, meth, "Ret", "", inf_ret_type.to_s, orig_typ.ret.to_s, comp, code]
+        end
       else
         comp = typ.solution.nil? ? "N" : compare_single_type(typ.solution, orig_typ)
         compares[comp] += 1
@@ -416,14 +444,16 @@ module RDL::Typecheck
     RDL::Logging.log :inference, :info, "Total not correct but got type for (T): #{compares["T"]}"
     twin_csv << ["Total # N:", compares["N"]]
     RDL::Logging.log :inference, :info, "Total no type for (N): #{compares["N"]}"
-    twin_csv << ["Total # method types:", meth_types]
-    RDL::Logging.log :inference, :info, "Total # method types: #{meth_types}"
+    #twin_csv << ["Total # method types:", meth_types]
+    #RDL::Logging.log :inference, :info, "Total # method types: #{meth_types}"
+    twin_csv << ["Total # return types:", ret_types]
+    RDL::Logging.log :inference, :info, "Total # return types: #{ret_types}"
     twin_csv << ["Total # arg types:", arg_types]
     RDL::Logging.log :inference, :info, "Total # argument types: #{arg_types}"
     twin_csv << ["Total # var types:", var_types]
     RDL::Logging.log :inference, :info, "Total # variable types: #{var_types}"
     twin_csv << ["Total # individual types:", var_types + meth_types + arg_types]
-    RDL::Logging.log :inference, :info, "Total # individual types: #{meth_types + arg_types + var_types}"
+    RDL::Logging.log :inference, :info, "Total # individual types: #{ret_types + arg_types + var_types}"
   rescue => e
     RDL::Logging.log :inference, :error, "Report Generation Error"
     RDL::Logging.log :inference, :debug_error, "... got #{e}"
@@ -436,6 +466,11 @@ module RDL::Typecheck
   def self.extract_solutions()
     ## Go through once to come up with solution for all var types.
     RDL::Logging.log_header :inference, :info, "Begin Extract Solutions"
+    if $use_twin_network
+      uri = URI "http://127.0.0.1:5000/"
+      $http = Net::HTTP.new(uri.hostname, uri.port)
+      #$http.start
+    end
     @counter = 0;
     used_twin = false
     typ_sols = {}
@@ -522,6 +557,7 @@ module RDL::Typecheck
   rescue => e
     puts "RECEIVED ERROR #{e} from #{e.backtrace}" 
   ensure
+    #$http.finish
     puts "MAKING EXTRACTION REPORT"
     return make_extraction_report(typ_sols)
   end

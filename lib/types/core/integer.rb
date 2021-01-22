@@ -195,7 +195,7 @@ RDL.type :Integer, :remainder, '(Float x {{ x!=0 }}) -> ``sing_or_type(trec, tar
 RDL.type :Integer, :remainder, '(Rational x {{ x!=0 }}) -> Rational r {{ r>=0 }}' ## TODO
 RDL.type :Integer, :remainder, '(BigDecimal x {{ x!=0 }}) -> ``sing_or_type(trec, targs, :gcd, "BigDecimal")``'
 RDL.type :Integer, :round, '() -> ``sing_or_type(trec, targs, :round, "Integer")``'
-RDL.type :Integer, :round, '(%numeric) -> ``sing_or_type(trec, targs, :round, "%numeric")``'
+RDL.type :Integer, :round, '(%numeric, ?%numeric) -> ``sing_or_type(trec, targs, :round, "%numeric")``'
 RDL.pre(:Integer, :round) { |x| x!=0 && if x.is_a?(Complex) then x.imaginary==0 && (if x.real.is_a?(Float)||x.real.is_a?(BigDecimal) then !x.real.infinite? && !x.real.nan? else true end) elsif x.is_a?(Float) then x!=Float::INFINITY && !x.nan? elsif x.is_a?(BigDecimal) then x!=BigDecimal::INFINITY && !x.nan? else true end} #Also, x must be in range [-2**31, 2**31].
 RDL.type :Integer, :size, '() -> ``sing_or_type(trec, targs, :size, "Integer")``'
 RDL.type :Integer, :succ, '() -> ``sing_or_type(trec, targs, :succ, "Integer")``'
@@ -203,6 +203,7 @@ RDL.type :Integer, :times, '() { (Integer) -> %any } -> Integer'
 RDL.type :Integer, :times, '() { () -> %any } -> Integer'
 RDL.type :Integer, :times, '() -> Enumerator<Integer>'
 RDL.type :Integer, :to_c, '() -> Complex r {{ r.imaginary==0 }}'
+RDL.type :Integer, :to_d, '(?Integer) -> BigDecimal'
 RDL.type :Integer, :to_f, '() -> ``sing_or_type(trec, targs, :to_f, "Float")``'
 RDL.type :Integer, :to_i, '() -> self'
 RDL.type :Integer, :to_int, '() -> self'

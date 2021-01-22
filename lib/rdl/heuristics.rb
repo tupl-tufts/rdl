@@ -48,11 +48,10 @@ class RDL::Heuristic
                      :debug,
                      "Struct_to_nominal heuristsic for %s in method %s:%s yields %d matching classes with methods: %s" %
                          [var_type.name, var_type.cls, var_type.meth, matching_classes.size, meth_names*","]
-    return if matching_classes.size > 10 ## in this case, just keep the struct types
+    return if (matching_classes.size == 0) || matching_classes.size > 10 ## in this case, just keep the struct types
     nom_sing_types = matching_classes.map { |c| if c.singleton_class? then RDL::Type::SingletonType.new(RDL::Util.singleton_class_to_class(c)) else RDL::Type::NominalType.new(c) end }
     union = RDL::Type::UnionType.new(*nom_sing_types).canonical
     #struct_types.each { |st| var_type.ubounds.delete_if { |s, loc| s.equal?(st) } } ## remove struct types from upper bounds
-
 
     return union
     ## used to add and propagate here. Now that this is a heuristic, this should be done after running the rule.
@@ -93,9 +92,7 @@ class RDL::Heuristic
 ## Below was query approach before implementing caching.
       params = { words: [name1] + names }
       uri.query = URI.encode_www_form(params)
-      #puts "SENDING QUERY OF SIZE #{names.size + 1}: #{names}"
       res = Net::HTTP.get_response(uri)
-      #puts "RECEIVED: #{res}"
       puts "Failed to make request to twin network server. Received response #{res.body}." unless res.msg == "OK"
 
       sim_score = res.body.to_f
@@ -178,22 +175,28 @@ class RDL::Heuristic
   def self.send_query(params)
     uri = URI "http://127.0.0.1:5000/"
     uri.query = URI.encode_www_form(params)
-    res = Net::HTTP.get_response(uri)
+    #res = Net::HTTP.get_response(uri)
+    puts "About to send query #{params}" if params[:action] == "get_similarity"
+    start = Time.now
+    #res = Net::HTTP.start(uri.hostname, uri.port, :use_ssl => uri.scheme == 'https', :read_timeout => 9000) { |http| res = http.request_get(uri) }
+    res = $http.request_get(uri)
+    endt = Time.now
+    puts "Total time taken: #{endt-start}"
     raise "Failed to make request to twin network server. Received response #{res.body}." unless res.msg == "OK"
     return res
   end
 
   def self.vectorize_var(var_type)
     return true if @vectorized_vars[var_type.object_id] ## already vectorized and cached server side
-    puts "About to vectorize var #{var_type}"
+    #puts "About to vectorize var #{var_type}" 
     if (var_type.category == :arg)
       ast = RDL::Typecheck.get_ast(var_type.cls, var_type.meth)
       return nil if ast.nil?
       locs = get_var_loc(ast, var_type) 
       source = ast.loc.expression.source
-      puts "Querying for var #{var_type.base_name}"
-      puts "Sanity check: "
-      locs.each_slice(2) { |b, e| puts "    #{source[b..e]} from #{b}..#{e}" }
+      #puts "Querying for var #{var_type.base_name}" 
+      #puts "Sanity check: "
+      #locs.each_slice(2) { |b, e| puts "    #{source[b..e]} from #{b}..#{e}" }
       params = { source: source, action: "bert_vectorize", object_id: var_type.object_id, locs: locs, category: "arg" }
       send_query(params)
     elsif (var_type.category == :var)
@@ -201,9 +204,9 @@ class RDL::Heuristic
         ast = RDL::Typecheck.get_ast(klass, meth)
         locs = get_var_loc(ast, var_type)
         source = ast.loc.expression.source
-        puts "Querying for var #{var_type.name} in method #{klass}##{meth}"
-        puts "Sanity check: "
-        locs.each_slice(2) { |b, e| puts "    #{source[b..e]} from #{b}..#{e}" }
+        #puts "Querying for var #{var_type.name} in method #{klass}##{meth}"
+        #puts "Sanity check: "
+        #locs.each_slice(2) { |b, e| puts "    #{source[b..e]} from #{b}..#{e}" }
         params = { source: source, action: "bert_vectorize", object_id: var_type.object_id, locs: locs, category: "var", average: false }
         send_query(params)
       }
@@ -215,10 +218,9 @@ class RDL::Heuristic
       locs = [ast.loc.name.begin_pos - begin_pos, ast.loc.name.end_pos - begin_pos-1] ## for now, let's just try using method name
       locs = locs + get_ret_sites(ast)
       source = ast.loc.expression.source
-      
-      puts "Querying for return #{var_type}"
-      puts "Sanity check: "
-        locs.each_slice(2) { |b, e| puts "    #{source[b..e]} from #{b}..#{e}" }
+      #puts "Querying for return #{var_type}"
+      #puts "Sanity check: "
+      #locs.each_slice(2) { |b, e| puts "    #{source[b..e]} from #{b}..#{e}" }
       params = { source: source, action: "bert_vectorize", object_id: var_type.object_id, locs: locs, category: "ret" }
       send_query(params)
     else
@@ -228,6 +230,11 @@ class RDL::Heuristic
     return true
   end
 
+  def self.vectorize_vars(vars)
+    vars = vars.keep_if { |v| !@vectorized_vars[v.object_id] && [:arg, :var, :ret].include?(v.category) }
+    return true if vars.empty?
+  end
+  
   ## [+ var_kind +] is either :arg, :ret, or :var.
   def self.visualize_bert(var_kind)
     var_id_list = []
@@ -288,10 +295,11 @@ class RDL::Heuristic
         raise "Got here for #{t}" if vars.empty?
         vars.each { |var2|
           next if (var_type == var2) || !((var2.category == :arg) || (var2.category == :var) || (var2.category == :ret)) #!(var_type.category == var2.category)
+          #next if !(var_type.category == var2.category)
           next if ((var_type.category == :ret) || (var2.category == :ret)) && !(var_type.category == var2.category) # only compare rets with rets
           count += 1
           if @bert_cache[var_type][var2]
-            #puts "Hit cache for vars #{var_type} and #{var2}, with score of #{@bert_cache[var_type][var2]}".red
+            puts "Hit cache for vars #{var_type} and #{var2}, with score of #{@bert_cache[var_type][var2]}".red 
           #sum += @bert_cache[var_type][var2]
             sim_score = @bert_cache[var_type][var2]
           else
@@ -300,19 +308,19 @@ class RDL::Heuristic
               puts "Could not find AST for #{var2}".yellow
               next
             end
-            puts "About to ask for similarity of #{var_type} and #{var2}"
-            res = send_query({ action: "get_similarity", id1: var_type.object_id, id2: var2.object_id })
+            puts "About to ask for similarity of #{var_type} and #{var2}" 
+            res = send_query({ action: "get_similarity", id1: var_type.object_id, id2: var2.object_id, kind1: var_type.category.to_s, kind2: var2.category.to_s })
             #sum += res.body.to_f
             sim_score = res.body.to_f
             @bert_cache[var_type][var2] = res.body.to_f
             @bert_cache[var2][var_type] = res.body.to_f
           end
           message = "Received similarity score of #{sim_score} for vars #{var_type.cls}##{var_type.meth}##{var_type.name} and #{var2.cls}##{var2.meth}##{var2.name}"
-          if sim_score > 0.9
-            puts message.green
+          if sim_score > 0.8
+            puts message.green 
             sols[sim_score] = t
           else
-            puts message.red
+            puts message.red 
             #puts "Twin network found insufficient average similarity score of #{sim_score} between #{name1} and #{names}.".red
           end          
         }
@@ -329,9 +337,8 @@ class RDL::Heuristic
         end
 =end
       }
-
       ## return list of types that are sorted from highest similarity score to lowest
-      return sols.sort.map { |sim_score, t| t }.reverse 
+      return sols.sort.map { |sim_score, t| t }.reverse.uniq
 
        
     else
@@ -357,8 +364,10 @@ class RDL::Heuristic
 
     ret_sites.each { |exp, _|
       if (exp.type == :send) || (exp.type == :csend)
-        locs << exp.loc.selector.begin_pos - begin_pos
-        locs << exp.loc.selector.end_pos - begin_pos
+        if exp.loc.selector
+          locs << exp.loc.selector.begin_pos - begin_pos
+          locs << exp.loc.selector.end_pos - begin_pos
+        end
       else
         locs << (exp.loc.expression.begin_pos - begin_pos)
         locs << (exp.loc.expression.end_pos - begin_pos - 1)

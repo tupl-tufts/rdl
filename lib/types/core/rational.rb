@@ -171,6 +171,8 @@ RDL.type :Rational, :round, '() -> Integer'
 
 RDL.type :Rational, :round, '(Integer) -> %numeric'
 
+RDL.type :Rational, :to_d, "(Integer) -> BigDecimal"
+
 RDL.type :Rational, :to_f, '() -> Float'
 RDL.pre(:Rational, :to_f) { self<=Float::MAX}
 

@@ -64,6 +64,7 @@ RDL.type :Kernel, 'self.printf', '(?IO, ?String, *%any) -> nil'
 RDL.type :Kernel, :proc, '() {(*%any) -> %any} -> Proc' # TODO more precise
 RDL.type :Kernel, :public_send, '(Symbol or String, *%any args) -> %any', wrap: false
 RDL.type :Kernel, 'self.putc', '(Integer) -> Integer'
+RDL.type :Kernel, 'self.putc', '(String) -> String'
 RDL.type :Kernel, 'self.puts', '(*[to_s : () -> String]) -> nil'
 RDL.type :Kernel, 'self.raise', '() -> %bot'
 RDL.type :Kernel, 'raise', '() -> %bot'

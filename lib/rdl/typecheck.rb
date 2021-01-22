@@ -215,7 +215,6 @@ module RDL::Typecheck
 
   def self.get_ast(klass, meth)
     file, line = RDL::Globals.info.get(klass, meth, :source_location)
-
     return nil if file.nil?
     #   return nil if RDL::Config.instance.continue_on_errors
     #
@@ -575,7 +574,7 @@ module RDL::Typecheck
   end
 
   def self.get_super_owner_from_class(cls, m)
-    raise Exception, "cls #{cls} is not a Class" if cls.class != Class
+    raise Exception, "cls #{cls} is not a Class" if (cls.class != Class)
     cls.superclass.instance_method(m).owner
   end
 
@@ -998,7 +997,7 @@ module RDL::Typecheck
             raise RuntimeError, "impossible to pass block arg and literal block" if scope[:block]
             envi, ti = tc(sscope, envi, ei.children[0])
             # convert using to_proc if necessary
-            if (e.children[1] == :map) || e.children[1] == :sum || e.children[1] == :keep_if
+            if (e.children[1] == :map) || e.children[1] == :sum || e.children[1] == :keep_if || e.children[1] == :all?
               ## block_pass calling map is a weird case:
               ## it takes a symbol representing method being called,
               ## where receiver is Array elements.
@@ -1415,9 +1414,17 @@ RUBY
   # where return site expression maps to a boolean indicating whether the expression was returned
   # with a `return` expression (true) or not (false).
   def self.find_ret_sites(e)
+    return {} if e.nil?
     case e.type
-    when :nil, :true, :false, :str, :string, :complex, :rational, :int, :float, :sym, :dstr, :xstr, :dsym, :regexp, :array, :hash, :irange, :erange, :self, :lvar, :ivar, :cvar, :gvar, :lvasgn, :ivasgn, :cvasgn, :gvasgn, :masgn, :op_asgn, :and_asgn, :or_asgn, :match_with_lvasgn, :nth_ref, :back_ref, :const, :defined?, :send, :csend, :yield, :and, :or, :break, :redo, :next, :retry, :super, :zsuper
+    when :nil, :true, :false, :str, :string, :complex, :rational, :int, :float, :sym, :dstr, :xstr, :dsym, :regexp, :array, :hash, :irange, :erange, :self, :lvar, :ivar, :cvar, :gvar, :lvasgn, :ivasgn, :cvasgn, :gvasgn, :masgn, :op_asgn, :and_asgn, :or_asgn, :match_with_lvasgn, :nth_ref, :back_ref, :const, :defined?, :yield, :and, :or, :break, :redo, :next, :retry, :super, :zsuper
       return {e => false}
+    when :send, :csend
+      if is_RDL(e.children[0]) && (e.children[1] == :type_cast)
+      ## for type casts, look at the expression within the cast
+        return find_ret_sites(e.children[2])
+      else
+        return { e => false }
+      end
     when :block ## TODO: check on this
       return {e.children[0] => false }
     when :if
@@ -1467,7 +1474,8 @@ RUBY
     rets = rets.merge(find_ret_sites(e.children[-1]))
     return rets
   else
-    error :unsupported_expression, [e.type, e], e
+    return { e => false }
+    #error :unsupported_expression, [e.type, e], e
     end
   end
 
@@ -1829,6 +1837,7 @@ RUBY
           # Module mixin handle
           # Here a module method is calling a non-existent method; check for it in all mixees
           # TODO: Handle :extend
+          return [env, [RDL::Globals.types[:bot]]] unless RDL::Globals.module_mixees[klass]
           nts = RDL::Globals.module_mixees[klass].map { |k, kind| if kind == :include then RDL::Type::NominalType.new(k) end }
           return [env, [RDL::Globals.types[:bot]]] if nts.empty? # if module not mixed in, this call can't happen; so %bot
           ut = RDL::Type::UnionType.new(*nts)

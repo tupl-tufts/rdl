@@ -58,7 +58,7 @@ module RDL::Type
     end
 
     def array_type?
-      is_a?(TupleType) || (is_a?(GenericType) && ((base == RDL::Globals.types[:array]) || ((defined? ActiveRecord_Relation) && (base.klass == ActiveRecord_Relation)))) || (self == RDL::Globals.types[:array]) || (is_a?(UnionType) && types.all? { |t| t.array_type? })
+      is_a?(TupleType) || (is_a?(GenericType) && ((base == RDL::Globals.types[:array]) || ((defined? ActiveRecord_Relation) && (base.klass == ActiveRecord_Relation)))) || (is_a?(NominalType) && (self == RDL::Globals.types[:array])) || (is_a?(UnionType) && types.all? { |t| t.array_type? })
     end
 
     def hash_type?
@@ -86,7 +86,6 @@ module RDL::Type
     # if inst is non-nil and ileft, returns inst(self) <= other, possibly mutating inst to make this true
     # if inst is non-nil and !ileft, returns self <= inst(other), again possibly mutating inst
     def self.leq(left, right, inst=nil, ileft=true, deferred_constraints=nil, no_constraint: false, ast: nil, propagate: false, new_cons: {}, removed_choices: {})
-      #propagate = false
       left = inst[left.name] if inst && ileft && left.is_a?(VarType) && !left.to_infer && inst[left.name]
       right = inst[right.name] if inst && !ileft && right.is_a?(VarType) && !right.to_infer && inst[right.name]
       left = left.type if left.is_a?(DependentArgType) || left.is_a?(AnnotatedArgType)

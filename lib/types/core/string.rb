@@ -75,6 +75,7 @@ RDL.type :String, :initialize, '(?String str) -> self new_str'
 RDL.type :String, 'self.try_convert', '(Object obj) -> String or nil new_string'
 RDL.type :String, :%, '(``targs[0]``) -> ``output_type(trec, targs, :%, "String")``'
 RDL.type :String, :*, '(Numeric) -> ``output_type(trec, targs, :*, "String")``'
+RDL.type :String, :-@, "() -> ``output_type(trec, targs, :-@, 'String')``"
 
 def String.plus_output(trec, targs)
   if trec.is_a?(RDL::Type::PreciseStringType) && targs[0].is_a?(RDL::Type::PreciseStringType)
