@@ -266,12 +266,15 @@ module RDL::Typecheck
   end
 
   def self._infer(klass, meth)
+    @num_lines = Hash.new(0) unless @num_lines
     RDL::Logging.log_header :inference, :debug, "Infering #{RDL::Util.pp_klass_method(klass, meth)}"
 
     RDL::Config.instance.use_comp_types = true
     RDL::Config.instance.number_mode = true
     @var_cache = {}
     ast = get_ast(klass, meth)
+    num_lines = RDL::Util.count_num_lines(klass, meth)
+    @num_lines[[klass, meth]] = num_lines.nil? ? 0 : num_lines
     if ast.nil?
       RDL::Logging.log :inference, :warning, "Warning: Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}; skipping method"
 
@@ -343,6 +346,7 @@ module RDL::Typecheck
     else
       targs_dup = Hash[targs.map { |k, t| [k, t.copy] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
       @num_casts = 0
+      @cached_cast_locs = []
       _, body_type = tc(scope, Env.new(targs_dup), body) ## TODO: need separate argument indicating we're performing inference? or is this exactly the same as type checking...
     end
 
@@ -356,7 +360,7 @@ module RDL::Typecheck
 
     RDL::Globals.info.set(klass, meth, :typechecked, true)
 
-    RDL::Globals.constrained_types << [klass, meth]
+    RDL::Globals.constrained_types << [klass, meth] unless RDL::Globals.constrained_types.include? [klass, name]
     RDL::Logging.log :inference, :debug, "Done with constraint generation."
   end
 
@@ -403,6 +407,7 @@ module RDL::Typecheck
       else
         targs_dup = Hash[targs.map { |k, t| [k, t.copy] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
         @num_casts = 0
+        @cached_cast_locs = []
         _, body_type = tc(scope, Env.new(targs_dup), body)
       end
       error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || meth == :initialize ||RDL::Type::Type.leq(body_type, type.ret, ast: ast)
@@ -417,6 +422,10 @@ module RDL::Typecheck
 
   def self.get_num_casts
     return @num_casts
+  end
+
+  def self.get_num_lines
+    return @num_lines
   end
 
   ### TODO: clean up below. Should probably incorporate it into `targs.merge` call in `self.typecheck`.
@@ -1630,7 +1639,8 @@ RUBY
     end
     sub_expr = e.children[2]
     env2, _ = tc(scope, env, sub_expr)
-    @num_casts += 1
+    @num_casts += 1 unless @cached_cast_locs.include?(e.object_id) ## make sure we only count casts once
+    @cached_cast_locs << e.object_id
     [env2, typ]
   end
 
@@ -2568,13 +2578,14 @@ RUBY
 
     meth_type = RDL::Type::MethodType.new(arg_types, block_type, ret_vartype)
     RDL::Globals.info.add(klass, meth, :type, meth_type)
+    RDL::Globals.types_to_delete << [klass, meth] unless RDL::Globals.types_to_delete.include? [klass, meth]
     return meth_type
   end
 
   def self.make_unknown_var_type(klass, name, kind_text)
     var_type = RDL::Type::VarType.new(cls: klass, name: name, category: kind_text)
     RDL::Globals.info.set(klass, name, :type, var_type)
-    RDL::Globals.constrained_types << [klass, name]
+    RDL::Globals.constrained_types << [klass, name] unless RDL::Globals.constrained_types.include? [klass, name]
     return var_type
   end
 

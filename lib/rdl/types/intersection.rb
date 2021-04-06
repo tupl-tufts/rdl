@@ -41,6 +41,10 @@ module RDL::Type
       super()
     end
 
+    def self.clear_cache!
+      @@cache = {}
+    end    
+
     def canonical
       canonicalize!
       return @canonical if @canonical

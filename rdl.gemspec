@@ -14,7 +14,7 @@ contracts or statically checked.
 EOF
   s.authors     = ['Jeffrey S. Foster', 'Brianna M. Ren', 'T. Stephen Strickland', 'Alexander T. Yu', 'Milod Kazerounian', 'Sankha Narayan Guria']
   s.email       = ['rdl-users@googlegroups.com']
-  s.files       = `git ls-files`.split($/)
+  s.files       = `git ls-files`.split($/) + ['./lib/rdl/eval_deepsim.rb']
   s.executables << 'rdl_query'
   s.homepage    = 'https://github.com/tupl-tufts/rdl'
   s.license     = 'BSD-3-Clause'

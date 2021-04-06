@@ -11,6 +11,10 @@ module RDL::Type
       return @@cache
     end
 
+    def self.clear_cache!
+      @@cache = nil
+    end    
+
     def initialize
       super
     end

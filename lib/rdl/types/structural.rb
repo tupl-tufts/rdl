@@ -29,6 +29,10 @@ module RDL::Type
       super()
     end
 
+    def self.clear_cache!
+      @@cache = {}
+    end
+
     def to_s  # :nodoc:
       "[ " + @methods.each_pair.map { |m, t| "#{m.to_s}: #{t.to_s}" }.sort.join(", ") + " ]"
     end

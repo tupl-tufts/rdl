@@ -21,6 +21,10 @@ module RDL::Type
       @name = name
     end
 
+    def self.clear_cache!
+      @@cache = {}
+    end
+
     def ==(other)
       return false if other.nil?
       other = other.canonical

@@ -25,6 +25,10 @@ module RDL::Type
       super()
     end
 
+    def self.clear_cache!
+      @@cache = {}
+    end    
+
     # def solution
     #   VarargType.new @type.solution
     # end

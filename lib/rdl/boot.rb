@@ -65,6 +65,9 @@ module RDL::Globals
   ## TODO: add inst/class vars to this list?
   @constrained_types = []
 
+  ## List of [klass, method] pairs to delete when we clear cache.
+  @types_to_delete = []
+
   # Map from symbols to Array<Proc> where the Procs are called when those symbols are rdl_do_typecheck'd
   @to_do_at = Hash.new
 
@@ -109,6 +112,7 @@ class << RDL::Globals # add accessors and readers for module variables
   attr_accessor :to_typecheck
   attr_accessor :to_infer
   attr_accessor :constrained_types
+  attr_accessor :types_to_delete
   attr_accessor :to_do_at
   attr_accessor :deferred
   attr_accessor :dep_types
@@ -180,6 +184,7 @@ require 'rdl/typecheck.rb'
 require 'rdl/reporting/reporting.rb'
 require 'rdl/constraint.rb'
 require 'rdl/heuristics.rb'
+require 'rdl/eval_deepsim.rb'
 #require_relative 'rdl/stats.rb'
 
 class << RDL::Globals
@@ -203,6 +208,7 @@ module RDL
       @to_infer = Hash.new
       @to_infer[:now] = Set.new
       @constrained_types = []
+      @types_to_delete = []
       @to_do_at = Hash.new
       @deferred = []
       # @dep_types = []

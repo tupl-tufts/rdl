@@ -1,7 +1,7 @@
 require 'csv'
 
-$use_twin_network = true
-$use_heuristics = false
+$use_twin_network = false
+$use_heuristics = true
 
 
 class << RDL::Typecheck
@@ -366,7 +366,7 @@ module RDL::Typecheck
 
   def self.make_extraction_report(typ_sols)
     report = RDL::Reporting::InferenceReport.new
-    twin_csv = CSV.open("#{if !$use_twin_network then 'no_' end}twin_#{if $use_heuristics then 'heur_' end}_#{RDL::Heuristic.simscore_cutoff}_#{RDL::Heuristic.get_top_n}_infer_data.csv", 'wb')
+    twin_csv = CSV.open("#{if !$use_twin_network then 'no_' end}twin_#{if $use_heuristics then 'heur_' end}_#{RDL::Heuristic.simscore_cutoff if $use_twin_network}_#{RDL::Heuristic.get_top_n if $use_twin_network}_infer_data.csv", 'wb')
     twin_csv << ["Class", "Method Name", "Arg/Ret/Var", "Variable Name", 
                  "Inferred Type", "Original Type", "Exact (E) / Up to Parameter (P) / Got Type (T) / None (N)", "Solution Source", "Source Code"]
     compares = Hash.new 0 

@@ -7,6 +7,10 @@ module RDL::Type
   class Type
     @@contract_cache = {}
 
+    def self.clear_cache!
+      @@contract_cache = {}
+    end
+
     def name
       RDL::Logging.log :typecheck, :error, "Attempted to access name field for #{self.class}"
       '_NAME_ERROR'

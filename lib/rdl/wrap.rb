@@ -460,6 +460,11 @@ module RDL::Annotate
     $orig_types = true
     klass, meth, type = RDL::Wrap.process_type_args(self, klass, meth, type)
     RDL::Globals.info.add(klass, meth, :orig_type, type)
+    if RDL::Util.method_defined?(klass, meth) #|| meth == :initialize
+      RDL::Globals.info.set(klass, meth, :source_location, RDL::Util.to_class(klass).instance_method(meth).source_location)
+    end
+    $orig_type_list = [] unless $orig_type_list
+    $orig_type_list << [klass, meth]
   end
 
   def orig_var_type(klass=self, var, type)
@@ -581,7 +586,6 @@ module RDL::Annotate
   end
 
   def create_binding_meth(klass, meth)
-    puts "CREATING BINDING METH FOR #{klass} AND #{meth}"
     require 'method_source'
     klass = klass.to_s
     meth = meth.to_sym
@@ -602,7 +606,6 @@ module RDL::Annotate
       }
       vals_hash = "{ " + arg_vals.join(",") + " }"
       meth_string = "def RDL.#{new_meth_name} #{args_string} \n #{vals_hash} \n end"
-      puts "ABOUT TO EVALUATE #{meth_string}"
       RDL.class_eval meth_string
     end
   end
@@ -851,43 +854,77 @@ module RDL
     nil
   end
 
-  def self.do_infer(sym, render_report: true)
+  def self.do_infer(sym, render_report: true, num_times: 1)
     return unless RDL::Globals.to_infer[sym]
+    raise "Expected num_times to be positive int, got #{num_times}." unless num_times > 0
+    run_times = []
 
-    RDL::Config.instance.use_unknown_types = true
-    $stn = 0
-    num_casts = 0
-    time = Time.now
+    $collecting_time_data = num_times > 1
+    num_times.times { |run_count|
+      RDL::Config.instance.use_unknown_types = true
+      $stn = 0
+      num_casts = 0
+      RDL::Heuristic.empty_cache!
 
-    RDL::Globals.to_infer[sym].each { |klass, meth|
-      begin
-        RDL::Typecheck.infer klass, meth
-        num_casts += RDL::Typecheck.get_num_casts if RDL::Typecheck.get_num_casts
-      rescue Exception => e
-        if RDL::Config.instance.continue_on_errors
-          RDL::Logging.log :inference, :debug_error, "Error: #{e}; recording %dyn"
+      (RDL::Globals.constrained_types + RDL::Globals.types_to_delete).each { |klass, name|
+        RDL::Globals.info.remove(klass, name, :type)
+      }
+      RDL::Globals.constrained_types = []
+      RDL::Globals.types_to_delete = []
+
+      time = Time.now
+
+      RDL::Globals.to_infer[sym].each { |klass, meth|
+        begin
+          RDL::Typecheck.infer klass, meth
+          num_casts += RDL::Typecheck.get_num_casts if RDL::Typecheck.get_num_casts
+        rescue Exception => e
+          if RDL::Config.instance.continue_on_errors
+            RDL::Logging.log :inference, :debug_error, "Error: #{e}; recording %dyn"
           # RDL::Globals.info.set(klass, meth, :type, [RDL::Globals.types[:dyn]])
-        else
-          raise e
+          else
+            raise e
+          end
         end
+      }
+
+      #RDL::Heuristic.visualize_bert(:ret)
+
+      RDL::Typecheck.resolve_constraints
+
+      report = RDL::Typecheck.extract_solutions
+
+      time = Time.now - time
+      run_times << time
+
+      if run_count == (num_times - 1)
+        report.to_csv 'infer_data_new.csv' if render_report
+        report.to_sorbet 'infer_data.rbi' if render_report
+
+        RDL::Logging.log :inference, :info, "Total number of type casts used: #{num_casts}."
+        nl = RDL::Typecheck.get_num_lines
+        RDL::Logging.log :inference, :info, "Analyized #{nl.size} methods comprising #{nl.values.sum} lines of code."
+
+        failed_twin_sols = RDL::Typecheck.failed_twin_sol_cache.values.map { |ts| ts.size }.sum
+        
+        if num_times == 1
+          RDL::Logging.log :inference, :info, "Total time taken: #{time}."
+          RDL::Logging.log :inference, :info, "Total amount of time spent on stn: #{$stn}."
+          RDL::Logging.log :inference, :info, "Total # rejected twin network solutions: #{failed_twin_sols}"
+        else
+          sorted = run_times.sort
+          median_proc = Proc.new { |sorted_arr| (sorted_arr[(sorted_arr.length - 1) / 2] + sorted_arr[sorted_arr.length / 2]) / 2.0 }
+          median = median_proc.call sorted
+          q1 = median_proc.call sorted[0..(sorted.length-1)/2]
+          q3 = median_proc.call sorted[sorted.length/2..-1]
+          RDL::Logging.log :inference, :info, "Total time taken across #{num_times} runs: #{run_times.sum}."
+          RDL::Logging.log :inference, :info, "Median time across #{num_times} runs: #{median}."
+          RDL::Logging.log :inference, :info, "SIQR across #{num_times} runs: #{(q3 - q1)/2.0}."
+        end
+        RDL::Heuristic.report_nums_above_cutoff
       end
     }
-
     RDL::Globals.to_infer[sym] = Set.new
-    #RDL::Heuristic.visualize_bert(:ret)
-
-    RDL::Typecheck.resolve_constraints
-
-    report = RDL::Typecheck.extract_solutions
-
-    report.to_csv 'infer_data_new.csv' if render_report
-    report.to_sorbet 'infer_data.rbi' if render_report
-
-    time = Time.now - time
-
-    RDL::Logging.log :inference, :info, "Total time taken: #{time}."
-    RDL::Logging.log :inference, :info, "Total number of type casts used: #{num_casts}."
-    RDL::Logging.log :inference, :info, "Total amount of time spent on stn: #{$stn}."
   end
 
   def self.load_sequel_schema(db)

@@ -1,7 +1,7 @@
 module RDL::Type
   class VarType < Type
     attr_reader :name, :cls, :meth, :category, :to_infer
-    attr_accessor :lbounds, :ubounds, :solution, :meths_using_var
+    attr_accessor :lbounds, :ubounds, :solution, :solution_source, :meths_using_var
 
     @@cache = {}
     @@print_XXX = false
@@ -50,13 +50,15 @@ module RDL::Type
       end
     end
 
+    def self.clear_cache!
+      @@cache = {}
+    end
 
     ## Adds an upper bound to self, and transitively pushes it to all of self's lower bounds.
     # [+ typ +] is the Type to add as upper bound.
     # [+ ast +] is the AST where the bound originates from, used for error messages.
     # [+ new_cons +] is a Hash<VarType, Array<[:upper or :lower, Type, AST]>>. When provided, can be used to roll back constraints in case an error pops up.
     def add_and_propagate_upper_bound(typ, ast, new_cons = {})
-
       return if self.equal?(typ)
       if !@ubounds.any? { |t, a| t == typ }
         @ubounds << [typ, ast]
@@ -67,7 +69,6 @@ module RDL::Type
           RDL::Logging.debug_error :inference, "Nil found in lbounds... Continuing"
           next
         end
-
         if lower_t.is_a?(VarType) && lower_t.to_infer
           lower_t.add_and_propagate_upper_bound(typ, ast, new_cons) unless lower_t.ubounds.any? { |t, _| t == typ }
         else
@@ -87,7 +88,6 @@ module RDL::Type
     def add_and_propagate_lower_bound(typ, ast, new_cons = {})
       return if self.equal?(typ)
       RDL::Logging.log :typecheck, :trace,  "#{typ} <= #{self}"
-
       if !@lbounds.any? { |t, a| t == typ }
         RDL::Logging.log :typecheck, :trace,  '@lbounds.any'
         @lbounds << [typ, ast]
@@ -99,7 +99,6 @@ module RDL::Type
           RDL::Logging.debug_error :inference, "Nil found in upper_t.lbounds... Continuing"
           next
         end
-
         if typ.is_a?(VarType) && !typ.ubounds
           RDL::Logging.debug_error :inference, "Nil found in ubounds... Continuing"
           next
@@ -112,16 +111,16 @@ module RDL::Type
           if typ.is_a?(VarType) && !typ.ubounds.any? { |t, _| t == upper_t }
             new_cons[typ] = new_cons[typ] ? new_cons[typ] | [[:upper, upper_t, ast]] : [[:upper, upper_t, ast]]
           end
-          RDL::Logging.log :typecheck, :trace, "about to check #{typ} <= #{upper_t} with".colorize(:green)
+          #RDL::Logging.log :typecheck, :trace, "about to check #{typ} <= #{upper_t} with".colorize(:green)
 
-          RDL::Util.each_leq_constraints(new_cons) { |a, b| RDL::Logging.log(:typecheck, :trace, "#{a} <= #{b}") }
+          #RDL::Util.each_leq_constraints(new_cons) { |a, b| RDL::Logging.log(:typecheck, :trace, "#{a} <= #{b}") }
 
           unless RDL::Type::Type.leq(typ, upper_t, {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons)
             d1 = ast.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [typ.to_s], ast.loc.expression).render.join("\n")
             d2 = a.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [upper_t.to_s], a.loc.expression).render.join("\n")
             raise RDL::Typecheck::StaticTypeError, ("Inconsistent type constraint #{typ} <= #{upper_t} generated during inference.\n #{d1}\n #{d2}")
           end
-          RDL::Logging.log :typecheck, :trace, "Checked #{typ} <= #{upper_t}".colorize(:green)
+          #RDL::Logging.log :typecheck, :trace, "Checked #{typ} <= #{upper_t}".colorize(:green)
         end
       }
     end
@@ -175,7 +174,7 @@ module RDL::Type
     end
 
     def ==(other)
-      return false if other.nil?
+      return false if other.class != self.class
       other = other.canonical
       return (other.instance_of? self.class) && other.to_s == to_s#(other.name.to_s == @name.to_s)
     end

@@ -92,7 +92,7 @@ module RDL::Type
     end
 
     def canonicalize!
-      @params.map! {|p| p.canonical}
+      @params.map! {|param| param.canonical }
     end
   end
 end
