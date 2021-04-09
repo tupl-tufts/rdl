@@ -1,14 +1,13 @@
 require 'csv'
 
 $use_twin_network = true
-$use_heuristics = false
+$use_heuristics = true
 
 
 class << RDL::Typecheck
   ## Hash<Type, Array<Symbol>>. A Hash mapping RDL types to a list of names of variables that have that type as a solution.
   attr_accessor :type_names_map
   attr_accessor :type_vars_map
-  attr_accessor :failed_twin_sol_cache
 end
 
 module RDL::Typecheck
@@ -16,13 +15,11 @@ module RDL::Typecheck
   @type_names_map = Hash.new { |h, k| h[k] = [] }#[]
   @type_vars_map = Hash.new { |h, k| h[k] = [] }#[]
   @failed_sol_cache = Hash.new { |h, k| h[k] = [] }
-  @failed_twin_sol_cache = Hash.new { |h, k| h[k] = [] }
 
   def self.empty_cache!
     @type_names_map = Hash.new { |h, k| h[k] = [] }#[]
     @type_vars_map = Hash.new { |h, k| h[k] = [] }#[]
     @failed_sol_cache = Hash.new { |h, k| h[k] = [] }
-    @failed_twin_sol_cache = Hash.new { |h, k| h[k] = [] }
   end
 
   def self.resolve_constraints
@@ -135,7 +132,6 @@ module RDL::Typecheck
                 return t
               rescue RDL::Typecheck::StaticTypeError => e
                 @failed_sol_cache[var] << t
-                @failed_twin_sol_cache[var] << t
                 undo_constraints(new_cons)
               end
             }

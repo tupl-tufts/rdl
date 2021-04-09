@@ -905,12 +905,10 @@ module RDL
         nl = RDL::Typecheck.get_num_lines
         RDL::Logging.log :inference, :info, "Analyized #{nl.size} methods comprising #{nl.values.sum} lines of code."
 
-        failed_twin_sols = RDL::Typecheck.failed_twin_sol_cache.values.map { |ts| ts.size }.sum
         
         if num_times == 1
           RDL::Logging.log :inference, :info, "Total time taken: #{time}."
           RDL::Logging.log :inference, :info, "Total amount of time spent on stn: #{$stn}."
-          RDL::Logging.log :inference, :info, "Total # rejected twin network solutions: #{failed_twin_sols}"
         else
           sorted = run_times.sort
           median_proc = Proc.new { |sorted_arr| (sorted_arr[(sorted_arr.length - 1) / 2] + sorted_arr[sorted_arr.length / 2]) / 2.0 }
