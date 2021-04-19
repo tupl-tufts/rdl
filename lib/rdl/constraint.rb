@@ -1,6 +1,6 @@
 require 'csv'
 
-$use_twin_network = true
+$use_twin_network = false
 $use_heuristics = false
 
 
