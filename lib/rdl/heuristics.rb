@@ -425,6 +425,7 @@ class RDL::Heuristic
       to_compare_ids = to_compare_vars_same_kind.map { |v| v.object_id }
       #kind = (var_type.category == :var) ? "cosine" : var_type.category.to_s ## kind of comparison to make
       kind = (var_type.category == :var) ? "arg" : var_type.category.to_s ## kind of comparison to make
+      #kind = "cosine"
       params = { action: "get_similarities", id1: var_type.object_id, id_comps: to_compare_ids, kind: kind }
       res = send_query(params)
       res = JSON.parse(res.body)

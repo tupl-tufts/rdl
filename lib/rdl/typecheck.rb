@@ -267,6 +267,7 @@ module RDL::Typecheck
 
   def self._infer(klass, meth)
     @num_lines = Hash.new(0) unless @num_lines
+    @num_cast_map = {} unless @num_cast_map
     RDL::Logging.log_header :inference, :debug, "Infering #{RDL::Util.pp_klass_method(klass, meth)}"
 
     RDL::Config.instance.use_comp_types = true
@@ -362,6 +363,7 @@ module RDL::Typecheck
 
     RDL::Globals.constrained_types << [klass, meth] unless RDL::Globals.constrained_types.include? [klass, name]
     RDL::Logging.log :inference, :debug, "Done with constraint generation."
+    @num_cast_map[[klass.to_s, meth.to_s]] = @num_casts
   end
 
   def self.typecheck(klass, meth, ast=nil, types = nil)
@@ -422,6 +424,14 @@ module RDL::Typecheck
 
   def self.get_num_casts
     return @num_casts
+  end
+
+  def self.get_meth_casts(klass, meth)
+    klass = klass.to_s
+    meth = meth.to_s
+    res = @num_cast_map[[klass, meth]]
+    puts "Couldn't find #{klass}/#{meth}" if res.nil?
+    return res
   end
 
   def self.get_num_lines

@@ -1,7 +1,7 @@
 require 'csv'
 
 $use_twin_network = true
-$use_heuristics = true
+$use_heuristics = false
 
 
 class << RDL::Typecheck
@@ -12,14 +12,49 @@ end
 
 module RDL::Typecheck
 
+  RUBY_TYPES = ["Abbrev", "Array", "Base64", "BasicObject", "Benchmark", "BigDecimal",
+                     "BigMath", "Class", "Complex", "Coverage", "CSV", "Date", "Dir", "Encoding",
+                     "Enumerable", "Enumerator", "Exception", "File", "FileUtils", "Float", "Gem",
+                     "Hash", "Integer", "IO", "Kernel", "Marshal", "MatchData", "Math", "Module",
+                     "NilClass", "Numeric", "Object", "Pathname", "PrettyPrint", "Proc", "Process",
+                     "Random", "Range", "Rational", "Regexp", "Set", "String", "StringScanner", "Symbol",
+                     "Time", "URI", "YAML", "FalseClass", "TrueClass", "Number"]
+
+  RAILS_TYPES = ["AbstractController", "AbstractController::Translation", "ActionController",
+                 "ActionController::Base", "ActionController::Instrumentation", "ActionController::Metal",
+                 "ActionController::MimeResponds", "ActionController::Parameters",
+                 "ActionController::StrongParameters", "ActionDispatch", 'ActionDispatch::Flash::FlashHash',
+                 "ActionMailer", 'ActionMailer::Base', 'ActionMailer::MessageDelivery',
+                 'ActionView::Helpers::SanitizeHelper', 'ActionView::Helpers::UrlHelper', 'ActiveModel::Errors',
+                 'ActiveModel::Validations', 'ActiveRecord::Associations::CollectionProxy',
+                 'ActiveRecord::Associations::ClassMethods', 'ActiveRecord::Base', 'ActiveRecord::FinderMethods',
+                 "ActiveRecord::ModelSchema::ClassMethods", 'ActiveRecord::Relation', 'ActiveRecord::Validations',
+                 'ActiveSupport::Logger', 'ActiveSupport::TaggedLogging', 'ActiveSupport::TimeWithZone',
+                'ActiveSupport::TimeZone']
+
+  @rails_types = []
+
   @type_names_map = Hash.new { |h, k| h[k] = [] }#[]
   @type_vars_map = Hash.new { |h, k| h[k] = [] }#[]
   @failed_sol_cache = Hash.new { |h, k| h[k] = [] }
+
+  @common_matches_by_twin = 0
+  @rare_matches_by_twin = 0
+  @common_by_twin = 0
+  @rare_by_twin = 0
+  @tot_orig_common = 0
+  @tot_orig_rare = 0 
 
   def self.empty_cache!
     @type_names_map = Hash.new { |h, k| h[k] = [] }#[]
     @type_vars_map = Hash.new { |h, k| h[k] = [] }#[]
     @failed_sol_cache = Hash.new { |h, k| h[k] = [] }
+    @common_matches_by_twin = 0
+    @rare_matches_by_twin = 0
+    @common_by_twin = 0
+    @rare_by_twin = 0
+    @tot_orig_common = 0
+    @tot_orig_rare = 0 
   end
 
   def self.resolve_constraints
@@ -381,8 +416,11 @@ module RDL::Typecheck
     ret_types = 0
     arg_types = 0
     var_types = 0
+    num_lines = 0
+    num_casts = 0
     diff_struct_types = 0
     typ_sols.each_pair { |km, typ|
+      compared = false
       klass, meth = km
       orig_typ = RDL::Globals.info.get(klass, meth, :orig_type)
       next if orig_typ.nil? || typ.solution.nil?
@@ -391,12 +429,12 @@ module RDL::Typecheck
         orig_typ = orig_typ[0]
       end
       if orig_typ.is_a?(RDL::Type::MethodType)
-        meth_types += 1
         ast = RDL::Typecheck.get_ast(klass, meth)
         code = ast.loc.expression.source
         orig_typ.args.each_with_index { |orig_arg_typ, i |
           inf_arg_type = typ.solution.args[i]
           comp = inf_arg_type.nil? ? "N" : compare_single_type(inf_arg_type, orig_arg_typ)
+          compared = true
           compares[comp] += 1
           if typ.args[i].nil?
             name = nil
@@ -412,19 +450,28 @@ module RDL::Typecheck
           end
           twin_csv << [klass, meth, "Arg", name, inf_arg_type.to_s, orig_arg_typ.to_s, comp, sol_source, code]
           arg_types +=1
+          update_type_counts(inf_arg_type, orig_arg_typ, comp, sol_source)          
         }
         unless (orig_typ.ret == RDL::Globals.types[:bot]) ## bot type is given to any returns for which we don't have a type
           ret_types += 1
           inf_ret_type = typ.solution.ret
           sol_source = typ.ret.solution_source
           comp = inf_ret_type.nil? ? "N" : compare_single_type(inf_ret_type, orig_typ.ret)
+          compared = true
+          update_type_counts(inf_ret_type, orig_typ, comp, sol_source)
           compares[comp] += 1
           twin_csv << [klass, meth, "Ret", "", inf_ret_type.to_s, orig_typ.ret.to_s, comp, sol_source, code]
+        end
+        if compared
+          meth_types += 1
+          num_lines += RDL::Util.count_num_lines(klass, meth)
+          num_casts += RDL::Typecheck.get_meth_casts(klass, meth)
         end
       else
         comp = typ.solution.nil? ? "N" : compare_single_type(typ.solution, orig_typ)
         compares[comp] += 1
         sol_source = typ.solution_source
+        update_type_counts(typ.solution, orig_typ, comp, sol_source)
         twin_csv << [klass, meth, "Var", meth, typ.solution.to_s, orig_typ.to_s, comp, sol_source, ""]
         var_types += 1
       end
@@ -465,7 +512,8 @@ module RDL::Typecheck
     twin_csv << ["Total # N:", compares["N"]]
     RDL::Logging.log :inference, :info, "Total no type for (N): #{compares["N"]}"
     #twin_csv << ["Total # method types:", meth_types]
-    #RDL::Logging.log :inference, :info, "Total # method types: #{meth_types}"
+    RDL::Logging.log :inference, :info, "Total # compared method types: #{meth_types} comprising #{num_lines} lines"
+    RDL::Logging.log :inference, :info, "Total # casts within compared method: #{num_casts}"
     twin_csv << ["Total # return types:", ret_types]
     RDL::Logging.log :inference, :info, "Total # return types: #{ret_types}"
     twin_csv << ["Total # arg types:", arg_types]
@@ -474,6 +522,12 @@ module RDL::Typecheck
     RDL::Logging.log :inference, :info, "Total # variable types: #{var_types}"
     twin_csv << ["Total # individual types:", var_types + meth_types + arg_types]
     RDL::Logging.log :inference, :info, "Total # individual types: #{ret_types + arg_types + var_types}"
+    RDL::Logging.log :inference, :info, "Total # common types guessed by twin: #{@common_by_twin}."
+    RDL::Logging.log :inference, :info, "Total # common type *matches* guessed by twin: #{@common_matches_by_twin}."
+    RDL::Logging.log :inference, :info, "Total # rare types guessed by twin: #{@rare_by_twin}"
+    RDL::Logging.log :inference, :info, "Total # rare type *matches* guessed by twin: #{@rare_matches_by_twin}"
+    RDL::Logging.log :inference, :info, "Total # common type originals: #{@tot_orig_common}"
+    RDL::Logging.log :inference, :info, "Total # rare type originals: #{@tot_orig_rare}"
   rescue => e
     RDL::Logging.log :inference, :error, "Report Generation Error"
     RDL::Logging.log :inference, :debug_error, "... got #{e}"
@@ -481,6 +535,38 @@ module RDL::Typecheck
     raise e unless RDL::Config.instance.continue_on_errors
   ensure
     return report
+  end
+
+  def self.update_type_counts(inf_type, orig_type, comp, sol_source)
+    if common_type?(orig_type)
+      @tot_orig_common += 1
+    else
+      @tot_orig_rare += 1
+    end
+    return unless (sol_source == "Twin") ## not interested in cases that constraints/heuristics got
+    if common_type?(inf_type) 
+      @common_by_twin += 1
+      if ["E", "P"].include?(comp)
+        @common_matches_by_twin += 1
+      end
+    else
+      puts "Rare type #{inf_type}"
+      ## rare type
+      @rare_by_twin += 1
+      if ["E", "P"].include?(comp)
+        @rare_matches_by_twin += 1
+      end
+    end
+  end
+
+  def self.common_type?(t)
+    t = t.type if t.optional? || t.vararg?
+    (t.is_a?(RDL::Type::NominalType) && (RUBY_TYPES.include?(t.name) || RAILS_TYPES.include?(t.name))) ||
+      (t == RDL::Globals.types[:bool]) ||
+      (t.to_s == "self") ||
+      (t.is_a?(RDL::Type::GenericType) && common_type?(t.base)) ||
+      (t.is_a?(RDL::Type::UnionType) && t.types.all? { |arm| common_type?(arm) } )
+
   end
 
   def self.extract_solutions()
