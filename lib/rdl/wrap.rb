@@ -950,7 +950,7 @@ module RDL
   end
 
   def self.load_rails_schema
-    return unless defined?(Rails)
+    return if !defined?(Rails) || (File.basename($0) == "rake")
     ::Rails.application.eager_load! # load Rails app
     models = ActiveRecord::Base.descendants.each { |m|
       begin
