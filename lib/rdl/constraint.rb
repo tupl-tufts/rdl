@@ -1,7 +1,7 @@
 require 'csv'
 
-$use_twin_network = false
-$use_heuristics = false
+#$use_twin_network = true
+#$use_heuristics = false
 
 
 class << RDL::Typecheck
@@ -37,6 +37,8 @@ module RDL::Typecheck
   @type_names_map = Hash.new { |h, k| h[k] = [] }#[]
   @type_vars_map = Hash.new { |h, k| h[k] = [] }#[]
   @failed_sol_cache = Hash.new { |h, k| h[k] = [] }
+  @tried_heuristic_list = {}
+  @tried_twin_list = {}  
 
   @common_matches_by_twin = 0
   @rare_matches_by_twin = 0
@@ -104,6 +106,10 @@ module RDL::Typecheck
     }
   end
 
+  def self.overly_general?(typ)
+    return (typ.is_a?(RDL::Type::UnionType) && !(typ == RDL::Globals.types[:bool])) || (typ == RDL::Globals.types[:bot]) || (typ == RDL::Globals.types[:top]) || (typ == RDL::Globals.types[:nil]) || typ.is_a?(RDL::Type::StructuralType) || typ.is_a?(RDL::Type::IntersectionType) || (typ == RDL::Globals.types[:object])    
+  end
+
   def self.extract_var_sol(var, category, add_sol_to_graph = true)    
     #raise "Expected VarType, got #{var}." unless var.is_a?(RDL::Type::VarType)
     return var.canonical unless var.is_a?(RDL::Type::VarType)
@@ -133,7 +139,7 @@ module RDL::Typecheck
     else
       raise "Unexpected VarType category #{category}."
     end
-    if  (sol.is_a?(RDL::Type::UnionType) && !(sol == RDL::Globals.types[:bool])) || (sol == RDL::Globals.types[:bot]) || (sol == RDL::Globals.types[:top]) || (sol == RDL::Globals.types[:nil]) || sol.is_a?(RDL::Type::StructuralType) || sol.is_a?(RDL::Type::IntersectionType) || (sol == RDL::Globals.types[:object])
+    if  overly_general?(sol)
       ## Try each rule. Return first non-nil result.
       ## If no non-nil results, return original solution.
       ## TODO: check constraints.
@@ -142,12 +148,15 @@ module RDL::Typecheck
 
       RDL::Heuristic.rules.each { |name, rule|
         next if (@counter == 1) && (name == :twin_network)
+        next if (name == :twin_network) && !$use_twin_network
+        next if (name != :twin_network) && !$use_heuristics
         start_time = Time.now
         RDL::Logging.log :heuristic, :debug, "Trying rule `#{name}` for variable #{var}."
         typ = rule.call(var)
         if typ.is_a?(Array) && (name == :twin_network)
           count = 0
           typ.each { |t|
+            @tried_twin_list[var] = true
             new_cons = {}
             count += 1
               begin
@@ -158,7 +167,7 @@ module RDL::Typecheck
                   var.add_and_propagate_lower_bound(t, nil, new_cons)
                 end
                 RDL::Logging.log :hueristic, :debug, "Heuristic Applied: #{name}"
-                puts "Successfully applied twin network! Solution #{t} for #{var}".blue unless $collecting_time_data
+                #puts "Successfully applied twin network! Solution #{t} for #{var}".blue unless $collecting_time_data
                 @new_constraints = true if !new_cons.empty?
                 RDL::Logging.log :inference, :trace, "New Constraints branch A" if !new_cons.empty?
                 raise "2. got here with #{var} and #{t}" if t.to_s == "%bot"
@@ -174,6 +183,7 @@ module RDL::Typecheck
           new_cons = {}
           begin
             typ = typ.canonical
+            @tried_heuristic_list[var] = true
             next if @failed_sol_cache[var].include?(typ)
             if add_sol_to_graph
               var.add_and_propagate_upper_bound(typ, nil, new_cons)
@@ -397,7 +407,8 @@ module RDL::Typecheck
 
   def self.make_extraction_report(typ_sols)
     report = RDL::Reporting::InferenceReport.new
-    twin_csv = CSV.open("#{if !$use_twin_network then 'no_' end}twin_#{if $use_heuristics then 'heur_' end}_#{RDL::Heuristic.simscore_cutoff}_#{RDL::Heuristic.get_top_n}_infer_data.csv", 'wb')
+    #twin_csv = CSV.open("#{if !$use_twin_network then 'no_' end}twin_#{if $use_heuristics then 'heur_' end}_#{RDL::Heuristic.simscore_cutoff}_#{RDL::Heuristic.get_top_n}_infer_data.csv", 'wb')
+    twin_csv = CSV.open("#{if $headeronly then 'headeronly_' end}#{if $namesonly then 'namesonly_' end}#{$infer_config}_top#{RDL::Heuristic.get_top_n}_infer_data.csv", 'wb')
     twin_csv << ["Class", "Method Name", "Arg/Ret/Var", "Variable Name", 
                  "Inferred Type", "Original Type", "Exact (E) / Up to Parameter (P) / Got Type (T) / None (N)", "Solution Source", "Source Code"]
     compares = Hash.new 0 
@@ -416,14 +427,61 @@ module RDL::Typecheck
     ret_types = 0
     arg_types = 0
     var_types = 0
+    noncomp_args = 0
+    noncomp_rets = 0
+    noncomp_vars = 0
+    noncomp_meths = 0
+    noncomp_no_type = 0
+    noncomp_og = 0
+    noncomp_usable = 0
     num_lines = 0
     num_casts = 0
     diff_struct_types = 0
+    no_type_tried_heur = 0
+    no_type_tried_twin = 0
+    arr_type_rejected = 0
+    hash_type_rejected = 0
     typ_sols.each_pair { |km, typ|
       compared = false
       klass, meth = km
       orig_typ = RDL::Globals.info.get(klass, meth, :orig_type)
-      next if orig_typ.nil? || typ.solution.nil?
+      next if typ.solution.nil?
+      if orig_typ.nil?
+        if typ.is_a?(RDL::Type::MethodType)
+          noncomp_meths += 1
+          typ.args.each { |t|
+            noncomp_args +=1
+            t = t.solution
+            if t.nil? || t.kind_of_var_input?
+              noncomp_no_type += 1
+            elsif overly_general?(t)
+              noncomp_og += 1
+            else
+              noncomp_usable += 1
+            end
+          }
+          noncomp_rets += 1
+          if typ.ret.solution.nil? || typ.ret.solution.kind_of_var_input?
+            noncomp_no_type += 1
+          elsif overly_general?(typ.ret)
+            noncomp_og += 1
+          else
+            noncomp_usable += 1
+          end
+        elsif typ.is_a?(RDL::Type::VarType)
+          noncomp_vars += 1
+          if typ.solution.nil? || typ.solution.kind_of_var_input?
+            noncomp_no_type += 1
+          elsif overly_general?(typ.solution)
+            noncomp_og += 1
+          else
+            noncomp_usable += 1
+          end
+        else
+          raise "Unexpected kind #{typ.class}"
+        end
+        next
+      end
       if orig_typ.is_a?(Array)
         raise "expected just one original type for #{klass}##{meth}" unless orig_typ.size == 1
         orig_typ = orig_typ[0]
@@ -450,13 +508,26 @@ module RDL::Typecheck
           end
           twin_csv << [klass, meth, "Arg", name, inf_arg_type.to_s, orig_arg_typ.to_s, comp, sol_source, code]
           arg_types +=1
-          update_type_counts(inf_arg_type, orig_arg_typ, comp, sol_source)          
+          update_type_counts(inf_arg_type, orig_arg_typ, comp, sol_source)
+          if comp == "N"
+            no_type_tried_heur += 1 if @tried_heuristic_list.has_key?(inf_arg_type)
+            no_type_tried_twin += 1 if @tried_twin_list.has_key?(inf_arg_type)
+            arr_type_rejected += 1 if orig_arg_typ.array_type? && @failed_sol_cache[inf_arg_type].any? { |t| t.array_type? }
+            hash_type_rejected += 1 if orig_arg_typ.hash_type? && @failed_sol_cache[inf_arg_type].any? { |t| t.hash_type? }
+          end
         }
         unless (orig_typ.ret == RDL::Globals.types[:bot]) ## bot type is given to any returns for which we don't have a type
           ret_types += 1
           inf_ret_type = typ.solution.ret
           sol_source = typ.ret.solution_source
           comp = inf_ret_type.nil? ? "N" : compare_single_type(inf_ret_type, orig_typ.ret)
+          if comp == "N"
+            no_type_tried_heur += 1 if @tried_heuristic_list.has_key?(inf_ret_type)
+            no_type_tried_twin += 1 if @tried_twin_list.has_key?(inf_ret_type)
+            arr_type_rejected += 1 if orig_typ.ret.array_type? && @failed_sol_cache[inf_ret_type].any? { |t| t.array_type? }
+            hash_type_rejected += 1 if orig_typ.ret.hash_type? && @failed_sol_cache[inf_ret_type].any? { |t| t.hash_type? }
+            
+          end
           compared = true
           update_type_counts(inf_ret_type, orig_typ, comp, sol_source)
           compares[comp] += 1
@@ -466,9 +537,36 @@ module RDL::Typecheck
           meth_types += 1
           num_lines += RDL::Util.count_num_lines(klass, meth)
           num_casts += RDL::Typecheck.get_meth_casts(klass, meth)
+        else
+          noncomp_meths += 1
+          typ.args.each { |t|            
+            t = t.solution
+            noncomp_args +=1
+            if t.nil? || t.kind_of_var_input?
+              noncomp_no_type += 1
+            elsif overly_general?(t)
+              noncomp_og += 1
+            else
+              noncomp_usable += 1
+            end
+          }
+          noncomp_rets += 1
+          if typ.ret.solution.kind_of_var_input? || typ.ret.solution.nil?
+            noncomp_no_type += 1
+          elsif overly_general?(typ.ret.solution)
+            noncomp_og += 1
+          else
+            noncomp_usable += 1
+          end
         end
       else
         comp = typ.solution.nil? ? "N" : compare_single_type(typ.solution, orig_typ)
+        if comp == "N"
+          no_type_tried_heur += 1 if @tried_heuristic_list.has_key?(typ)
+          no_type_tried_twin += 1 if @tried_twin_list.has_key?(typ)
+          arr_type_rejected += 1 if orig_typ.array_type? && @failed_sol_cache[typ].any? { |t| t.array_type? }
+          hash_type_rejected += 1 if orig_typ.hash_type? && @failed_sol_cache[typ].any? { |t| t.hash_type? }          
+        end        
         compares[comp] += 1
         sol_source = typ.solution_source
         update_type_counts(typ.solution, orig_typ, comp, sol_source)
@@ -499,21 +597,23 @@ module RDL::Typecheck
     }
 
     RDL::Logging.log_header :inference, :info, "Extraction Complete"
-    RDL::Logging.log :inference, :info, "SIMILARITY SCORE CUTOFF = #{RDL::Heuristic.simscore_cutoff}"
-    RDL::Logging.log :inference, :info, "USING TOP N=#{RDL::Heuristic.get_top_n} TYPES"
+    #RDL::Logging.log :inference, :info, "SIMILARITY SCORE CUTOFF = #{RDL::Heuristic.simscore_cutoff}"
+    RDL::Logging.log :inference, :info, "DeepSim using top N=#{RDL::Heuristic.get_top_n} Guesses"
     twin_csv << ["Total # E:", compares["E"]]
-    RDL::Logging.log :inference, :info, "Total exactly correct (E): #{compares["E"]}"
+    RDL::Logging.log :inference, :info, "Total exact matches (E): #{compares["E"]}"
     twin_csv << ["Total # P:", compares["P"]]
-    RDL::Logging.log :inference, :info, "Total correct up to parameter (P): #{compares["P"]}"
+    RDL::Logging.log :inference, :info, "Total matches up to parameter (P): #{compares["P"]}"
     twin_csv << ["Total # T:", compares["T"]]
-    RDL::Logging.log :inference, :info, "Total not correct but got type for (T): #{compares["T"] + compares["TS"]}"
+    RDL::Logging.log :inference, :info, "Total not match but got type for (T): #{compares["T"] + compares["TS"]}"
     twin_csv << ["Total # TS:", compares["TS"]]
     RDL::Logging.log :inference, :info, "Total number of T's that were structural types: #{compares["TS"]}"
     twin_csv << ["Total # N:", compares["N"]]
     RDL::Logging.log :inference, :info, "Total no type for (N): #{compares["N"]}"
+    #RDL::Logging.log :inference, :info, "Of N types, tried to apply a heuristic guess to #{no_type_tried_heur} positions, and tried to apply a DeepSim guess to #{no_type_tried_twin} positions. #{arr_type_rejected} array types were rejected even though the orig was an array type, and #{hash_type_rejected} hash types were rejected, etc."        
     #twin_csv << ["Total # method types:", meth_types]
     RDL::Logging.log :inference, :info, "Total # compared method types: #{meth_types} comprising #{num_lines} lines"
     RDL::Logging.log :inference, :info, "Total # casts within compared method: #{num_casts}"
+    #RDL::Logging.log :inference, :info, "#{noncomp_meths} non-compared methods (#{noncomp_args} args/#{noncomp_rets} rets) and #{noncomp_vars} non-compared variables. Of these, inferred: #{noncomp_usable} usable types, #{noncomp_og} overly general types, and #{noncomp_no_type} no types."
     twin_csv << ["Total # return types:", ret_types]
     RDL::Logging.log :inference, :info, "Total # return types: #{ret_types}"
     twin_csv << ["Total # arg types:", arg_types]
@@ -522,12 +622,36 @@ module RDL::Typecheck
     RDL::Logging.log :inference, :info, "Total # variable types: #{var_types}"
     twin_csv << ["Total # individual types:", var_types + meth_types + arg_types]
     RDL::Logging.log :inference, :info, "Total # individual types: #{ret_types + arg_types + var_types}"
-    RDL::Logging.log :inference, :info, "Total # common types guessed by twin: #{@common_by_twin}."
-    RDL::Logging.log :inference, :info, "Total # common type *matches* guessed by twin: #{@common_matches_by_twin}."
+=begin
+    RDL::Logging.log :inference, :info, "Total # library types guessed by twin: #{@common_by_twin}."
+    RDL::Logging.log :inference, :info, "Total # library type matches guessed by twin: #{@common_matches_by_twin}."
     RDL::Logging.log :inference, :info, "Total # rare types guessed by twin: #{@rare_by_twin}"
     RDL::Logging.log :inference, :info, "Total # rare type *matches* guessed by twin: #{@rare_matches_by_twin}"
-    RDL::Logging.log :inference, :info, "Total # common type originals: #{@tot_orig_common}"
-    RDL::Logging.log :inference, :info, "Total # rare type originals: #{@tot_orig_rare}"
+    #RDL::Logging.log :inference, :info, "Total # common type originals: #{@tot_orig_common}"
+    #RDL::Logging.log :inference, :info, "Total # rare type originals: #{@tot_orig_rare}"
+=end
+    $results_hash[:matches] = compares["E"]
+    $results_hash[:param] = compares["P"]
+    $results_hash[:gottype] = compares["T"] + compares["TS"]
+    $results_hash[:struct] = compares["TS"]
+    $results_hash[:notype] = compares["N"]
+    $results_hash[:compared_meths] = meth_types
+    $results_hash[:compared_ret_types] = ret_types
+    $results_hash[:compared_arg_types] = arg_types
+    $results_hash[:compared_var_types] = var_types
+    $results_hash[:compared_meths_lines] = num_lines
+    $results_hash[:compared_meths_casts] = num_casts
+    $results_hash[:noncomp_meths] = noncomp_meths
+    $results_hash[:noncomp_args] = noncomp_args
+    $results_hash[:noncomp_rets] = noncomp_rets
+    $results_hash[:noncomp_vars] = noncomp_vars
+    $results_hash[:noncomp_usable] = noncomp_usable
+    $results_hash[:noncomp_og] = noncomp_og
+    $results_hash[:noncomp_no_type] = noncomp_no_type
+    $results_hash[:noncomp_meths_lines] = num_lines
+    $results_hash[:noncomp_meths_casts] = num_casts
+    $results_hash[:library_guesses_by_twin] = @common_by_twin
+    $results_hash[:library_matches_by_twin] = @common_matches_by_twin
   rescue => e
     RDL::Logging.log :inference, :error, "Report Generation Error"
     RDL::Logging.log :inference, :debug_error, "... got #{e}"
@@ -546,14 +670,13 @@ module RDL::Typecheck
     return unless (sol_source == "Twin") ## not interested in cases that constraints/heuristics got
     if common_type?(inf_type) 
       @common_by_twin += 1
-      if ["E", "P"].include?(comp)
+      if ["E"].include?(comp)#if ["E", "P"].include?(comp)
         @common_matches_by_twin += 1
       end
     else
-      puts "Rare type #{inf_type}"
       ## rare type
       @rare_by_twin += 1
-      if ["E", "P"].include?(comp)
+      if ["E"].include?(comp)#if ["E", "P"].include?(comp)
         @rare_matches_by_twin += 1
       end
     end
@@ -661,7 +784,7 @@ module RDL::Typecheck
     puts "RECEIVED ERROR #{e} from #{e.backtrace}" 
   ensure
     $http.finish if $http
-    puts "MAKING EXTRACTION REPORT"
+    #puts "MAKING EXTRACTION REPORT"
     return make_extraction_report(typ_sols)
   end
 

@@ -854,11 +854,38 @@ module RDL
     nil
   end
 
-  def self.do_infer(sym, render_report: true, num_times: 1)
+  def self.do_infer(sym, render_report: true, num_times: 1, config: "C", topn: 3, headeronly: false, namesonly: false)
     return unless RDL::Globals.to_infer[sym]
     raise "Expected num_times to be positive int, got #{num_times}." unless num_times > 0
+    config_args = Object.const_defined?("INFER_CONFIG") ? INFER_CONFIG : ARGV
+    if config_args.size >= 1
+      config = config_args[0]
+    end
+    if config_args.size >= 2
+      topn = config_args[1].to_i
+    end
+    if (config_args.size == 3) || (config_args.size == 4)
+      fin_args = config_args.size == 3 ? [config_args[2]] : [config_args[2], config_args[3]]
+      raise "Expected final args to be headeronly and/or namesonly, received: #{fin_args}" unless fin_args.all? { |e| (e == "namesonly") || (e == "headeronly") }
+      headeronly = fin_args.include? "headeronly"
+      namesonly = fin_args.include? "namesonly"
+    end
+    #if (ARGV.size >= 1) || Object.const_defined?("INFER_CONFIG")
+    #  config = Object.const_defined?("INFER_CONFIG") ? INFER_CONFIG[0] : ARGV[0]
+    #end
+    raise "Expected config to be one of ['C', 'CH', 'CD', 'CHD'], got #{config}" unless ['C', 'CH', 'CD', 'CHD'].include?(config)
+    raise "Expected topn to be an integer, received #{topn}." unless topn.is_a?(Integer)
+    $infer_config = config
+    $topn = topn
+    $namesonly = namesonly
+    $headeronly = headeronly
+
+    $use_heuristics = config.include?("H")
+    $use_twin_network = config.include?("D")
     run_times = []
 
+    $results_hash = {}
+    
     $collecting_time_data = num_times > 1
     num_times.times { |run_count|
       RDL::Config.instance.use_unknown_types = true
@@ -901,14 +928,14 @@ module RDL
         report.to_csv 'infer_data_new.csv' if render_report
         report.to_sorbet 'infer_data.rbi' if render_report
 
-        RDL::Logging.log :inference, :info, "Total number of type casts used: #{num_casts}."
+        #RDL::Logging.log :inference, :info, "Total number of type casts used: #{num_casts}."
         nl = RDL::Typecheck.get_num_lines
         RDL::Logging.log :inference, :info, "Analyized #{nl.size} methods comprising #{nl.values.sum} lines of code."
 
         
         if num_times == 1
           RDL::Logging.log :inference, :info, "Total time taken: #{time}."
-          RDL::Logging.log :inference, :info, "Total amount of time spent on stn: #{$stn}."
+          #RDL::Logging.log :inference, :info, "Total amount of time spent on stn: #{$stn}."
         else
           sorted = run_times.sort
           median_proc = Proc.new { |sorted_arr| (sorted_arr[(sorted_arr.length - 1) / 2] + sorted_arr[sorted_arr.length / 2]) / 2.0 }
@@ -919,11 +946,30 @@ module RDL
           RDL::Logging.log :inference, :info, "Median time across #{num_times} runs: #{median}."
           RDL::Logging.log :inference, :info, "SIQR across #{num_times} runs: #{(q3 - q1)/2.0}."
         end
-        RDL::Heuristic.report_nums_above_cutoff
+        #RDL::Heuristic.report_nums_above_cutoff
+        $results_hash[:num_casts] = num_casts
+        $results_hash[:time] = time
+        write_results_hash()
       end
     }
     RDL::Globals.to_infer[sym] = Set.new
   end
+
+  def self.write_results_hash()
+    config = "C" + ($use_heuristics ? "H" : "") + ($use_twin_network ? "D" : "")
+    filename = "results_top#{$topn}.json"
+    filename = "headeronly_" + filename if $headeronly
+    filename = "namesonly_" + filename if $namesonly
+    if File.file?(filename)
+      old_res = JSON.parse(File.read(filename))
+    else
+      old_res = {}
+    end
+    old_res[config] = $results_hash
+    File.open(filename, "w") { |f|
+      f.puts JSON.pretty_generate(old_res)
+    }
+  end 
 
   def self.load_sequel_schema(db)
     db.disconnect

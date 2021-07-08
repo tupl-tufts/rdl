@@ -22,7 +22,7 @@ module RDL::Type
 
     def solution=(soln)
       @solution = soln
-      RDL::Logging.log :typecheck, :warning, "Solution written to #{self.class}"
+      #RDL::Logging.log :typecheck, :warning, "Solution written to #{self.class}"
     end
 
     def to_contract

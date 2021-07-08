@@ -2,7 +2,7 @@ class RDL::Heuristic
   
   @simscore_cutoff = 0.5
 
-  @top_n = 3
+  #@top_n = 3
 
   @nums_above_cutoff = {}
 
@@ -27,7 +27,8 @@ class RDL::Heuristic
   end
 
   def self.get_top_n
-    @top_n
+    #@top_n
+    $topn
   end
 
   @rules = {}
@@ -44,8 +45,6 @@ class RDL::Heuristic
   $use_only_param_position = false ## whether or not to use just an arg's parameter position, or use all of its uses in a method, when running on BERT model
 
   def self.empty_cache!
-    ## temporarily commenting out
-=begin    
     @meth_cache = {}
     @meth_to_cls_map = Hash.new {|h, m| h[m] = Set.new}  # maps a method to a set of classes with that method
     @ast_cache = {}
@@ -57,7 +56,6 @@ class RDL::Heuristic
     RDL::Typecheck.empty_cache!
     RDL::Type::StructuralType.clear_cache!
     RDL::Type::VarType.clear_cache!
-=end
     #RDL::Type::NominalType.clear_cache!
     #RDL::Type::SingletonType.clear_cache!
     #RDL::Type::IntersectionType.clear_cache!
@@ -310,7 +308,7 @@ class RDL::Heuristic
       return nil if ast.nil?
       begin_pos = ast.loc.expression.begin_pos
       locs = [ast.loc.name.begin_pos - begin_pos, ast.loc.name.end_pos - begin_pos-1] ## for now, let's just try using method name
-      locs = locs + get_ret_sites(ast)
+      locs = locs + get_ret_sites(ast) unless $namesonly
       locs = [ast.loc.name.begin_pos - begin_pos, ast.loc.name.end_pos - begin_pos-1] if locs.empty?
       return nil if locs.empty?
       source = ast.loc.expression.source
@@ -335,7 +333,7 @@ class RDL::Heuristic
       type = RDL::Globals.info.get(klass, mname, :type)
       orig_type = RDL::Globals.info.get(klass, mname, :orig_type)
       if orig_type.nil?
-        puts "Could not find original type for #{klass}##{mname}.".red unless $collecting_time_data
+        #puts "Could not find original type for #{klass}##{mname}.".red unless $collecting_time_data
         next
       end
       if type.is_a?(Array)
@@ -378,7 +376,7 @@ class RDL::Heuristic
 
   def self.fast_bert_model_guess(var_type)
     return unless (var_type.category == :arg) || (var_type.category == :var) || (var_type.category == :ret)
-    puts "Vectorizing #{var_type} of object id #{var_type.object_id}..." unless $collecting_time_data
+    #puts "Vectorizing #{var_type} of object id #{var_type.object_id}..." unless $collecting_time_data
     ret = vectorize_var(var_type)
     return nil if ret.nil?
 
@@ -395,19 +393,19 @@ class RDL::Heuristic
         #next if !(var_type.category == var2.category)
         next if ((var_type.category == :ret) || (var2.category == :ret)) && !(var_type.category == var2.category) # only compare rets with rets
         if sim_score = @bert_cache[var_type][var2]
-          puts "Hit cache for vars #{var_type} and #{var2}, with score of #{sim_score}".red unless $collecting_time_data
+          #puts "Hit cache for vars #{var_type} and #{var2}, with score of #{sim_score}".red unless $collecting_time_data
           message = "Received similarity score of #{sim_score} for vars #{var_type.cls}##{var_type.meth}##{var_type.name} and #{var2.cls}##{var2.meth}##{var2.name}"
           if sim_score > @simscore_cutoff
-            puts message.green unless $collecting_time_data
+            #puts message.green unless $collecting_time_data
             sols[sim_score] = t
           else
-            puts message.red unless $collecting_time_data
+            #puts message.red unless $collecting_time_data
           end
         else
-          puts "Vectorizing #{var2} of object id #{var2.object_id}..." unless $collecting_time_data
+          #puts "Vectorizing #{var2} of object id #{var2.object_id}..." unless $collecting_time_data
           vec_res = vectorize_var(var2)
           if vec_res.nil?
-            puts "Could not find AST for #{var2}".yellow unless $collecting_time_data
+            #puts "Could not find AST for #{var2}".yellow unless $collecting_time_data
             next
           end
           if (var_type.category == var2.category) || (var_type.category == :var) || (var2.category == :var)
@@ -426,7 +424,7 @@ class RDL::Heuristic
       #kind = (var_type.category == :var) ? "cosine" : var_type.category.to_s ## kind of comparison to make
       kind = (var_type.category == :var) ? "arg" : var_type.category.to_s ## kind of comparison to make
       #kind = "cosine"
-      params = { action: "get_similarities", id1: var_type.object_id, id_comps: to_compare_ids, kind: kind }
+      params = { action: "get_similarities", id1: var_type.object_id, id_comps: to_compare_ids, kind: kind, namesonly: $namesonly, headeronly: $headeronly }
       res = send_query(params)
       res = JSON.parse(res.body)
       raise "Expected #{to_compare_ids.size} similarity scores, received #{res.size}" unless res.size == to_compare_ids.size
@@ -436,10 +434,10 @@ class RDL::Heuristic
         @bert_cache[var_type][var2] = score
         message = "Received similarity score of #{score} for vars #{var_type.cls}##{var_type.meth}##{var_type.name} and #{var2.cls}##{var2.meth}##{var2.name}"
         if score > @simscore_cutoff
-          puts message.green unless $collecting_time_data
+          #puts message.green unless $collecting_time_data
           sols[score] = t
         else
-          puts message.red unless $collecting_time_data
+          #puts message.red unless $collecting_time_data
         end
       }
     end
@@ -447,7 +445,7 @@ class RDL::Heuristic
       to_compare_ids = to_compare_vars_diff_kind.map { |v| v.object_id }
       #kind = "cosine"
       kind = "arg"
-      params = { action: "get_similarities", id1: var_type.object_id, id_comps: to_compare_ids, kind: kind }
+      params = { action: "get_similarities", id1: var_type.object_id, id_comps: to_compare_ids, kind: kind, namesonly: $namesonly, headeronly: $headeronly }
       res = send_query(params)
       res = JSON.parse(res.body)
       raise "Expected #{to_compare_ids.size} similarity scores, received #{res.size}" unless res.size == to_compare_ids.size
@@ -457,17 +455,17 @@ class RDL::Heuristic
         @bert_cache[var_type][var2] = score
         message = "Received similarity score of #{score} for vars #{var_type.cls}##{var_type.meth}##{var_type.name} and #{var2.cls}##{var2.meth}##{var2.name}"
         if score > @simscore_cutoff
-          puts message.green unless $collecting_time_data
+          #puts message.green unless $collecting_time_data
           sols[score] = t
         else
-          puts message.red unless $collecting_time_data
+          #puts message.red unless $collecting_time_data
         end
       }
     end
 
     res = sols.sort.map { |sim_score, t| t }.reverse.uniq#.first(@top_n)
     @nums_above_cutoff[var_type] = res.size
-    return res.first(@top_n)
+    return res.first($topn)
   end
 
   def self.bert_model_guess(var_type)
@@ -486,17 +484,17 @@ class RDL::Heuristic
           next if ((var_type.category == :ret) || (var2.category == :ret)) && !(var_type.category == var2.category) # only compare rets with rets
           count += 1
           if @bert_cache[var_type][var2]
-            puts "Hit cache for vars #{var_type} and #{var2}, with score of #{@bert_cache[var_type][var2]}".red unless $collecting_time_data
+            #puts "Hit cache for vars #{var_type} and #{var2}, with score of #{@bert_cache[var_type][var2]}".red unless $collecting_time_data
           #sum += @bert_cache[var_type][var2]
             sim_score = @bert_cache[var_type][var2]
           else
             vec_res = vectorize_var(var2)
             if vec_res.nil?
-              puts "Could not find AST for #{var2}".yellow unless $collecting_time_data
+              #puts "Could not find AST for #{var2}".yellow unless $collecting_time_data
               next
             end
-            puts "About to ask for similarity of #{var_type} and #{var2}" unless $collecting_time_data
-            res = send_query({ action: "get_similarity", id1: var_type.object_id, id2: var2.object_id, kind1: var_type.category.to_s, kind2: var2.category.to_s })
+            #puts "About to ask for similarity of #{var_type} and #{var2}" unless $collecting_time_data
+            res = send_query({ action: "get_similarity", id1: var_type.object_id, id2: var2.object_id, kind1: var_type.category.to_s, kind2: var2.category.to_s, namesonly: $namesonly, headeronly: $headeronly })
             #sum += res.body.to_f
             sim_score = res.body.to_f
             @bert_cache[var_type][var2] = res.body.to_f
@@ -504,10 +502,10 @@ class RDL::Heuristic
           end
           message = "Received similarity score of #{sim_score} for vars #{var_type.cls}##{var_type.meth}##{var_type.name} and #{var2.cls}##{var2.meth}##{var2.name}"
           if sim_score > @simscore_cutoff
-            puts message.green unless $collecting_time_data
+            #puts message.green unless $collecting_time_data
             sols[sim_score] = t
           else
-            puts message.red unless $collecting_time_data
+            #puts message.red unless $collecting_time_data
             #puts "Twin network found insufficient average similarity score of #{sim_score} between #{name1} and #{names}.".red
           end          
         }
@@ -529,7 +527,7 @@ class RDL::Heuristic
 
        
     else
-      puts "not yet implemented"
+      #puts "not yet implemented"
     end
   end
 
@@ -581,11 +579,12 @@ class RDL::Heuristic
           ## Found the arg corresponding to var_type
           locs << (c.loc.name.begin_pos - begin_pos) ## translate it so that 0 is first position
           locs << (c.loc.name.end_pos - begin_pos - 1)
-          return locs if $use_only_param_position
+          #return locs if $headeronly #$use_only_param_position
         end
       }
+      return locs if $headeronly
     end
-
+    
     search_ast_for_var_locs(body, var_type.name, locs, begin_pos)
 
     raise "Expected even number of locations." unless (locs.length % 2) == 0
@@ -648,68 +647,63 @@ class String
   end
 
 end
-if $use_heuristics
-  if defined? Rails
-    RDL::Heuristic.add(:is_model) { |var| if var.base_name.camelize.is_rails_model? then var.base_name.to_type end }
-    RDL::Heuristic.add(:is_pluralized_model) { |var| if var.base_name.is_pluralized_model? then var.base_name.model_set_type end }
-  end
+if defined? Rails
+  RDL::Heuristic.add(:is_model) { |var| if var.base_name.camelize.is_rails_model? then var.base_name.to_type end }
+  RDL::Heuristic.add(:is_pluralized_model) { |var| if var.base_name.is_pluralized_model? then var.base_name.model_set_type end }
+end
 
-  RDL::Heuristic.add(:struct_to_nominal) { |var| t1 = Time.now; g = RDL::Heuristic.struct_to_nominal(var); $stn = $stn + (Time.now - t1); g }
-  RDL::Heuristic.add(:int_names) { |var| if var.base_name.end_with?("id") || (var.base_name.end_with? "num") || (var.base_name.end_with? "count") then RDL::Globals.types[:integer] end }
-  RDL::Heuristic.add(:int_array_name) { |var| if var.base_name.end_with?("ids") || (var.base_name.end_with? "nums") || (var.base_name.end_with? "counts") then RDL::Globals.parser.scan_str "#T Array<Integer>" end }
-  RDL::Heuristic.add(:predicate_method) { |var| if var.base_name.end_with?("?") then RDL::Globals.types[:bool] end }
-  RDL::Heuristic.add(:string_name) { |var| if var.base_name.end_with?("name") then RDL::Globals.types[:string] end }
+RDL::Heuristic.add(:struct_to_nominal) { |var| t1 = Time.now; g = RDL::Heuristic.struct_to_nominal(var); $stn = $stn + (Time.now - t1); g }
+RDL::Heuristic.add(:int_names) { |var| if var.base_name.end_with?("id") || (var.base_name.end_with? "num") || (var.base_name.end_with? "count") then RDL::Globals.types[:integer] end }
+RDL::Heuristic.add(:int_array_name) { |var| if var.base_name.end_with?("ids") || (var.base_name.end_with? "nums") || (var.base_name.end_with? "counts") then RDL::Globals.parser.scan_str "#T Array<Integer>" end }
+RDL::Heuristic.add(:predicate_method) { |var| if var.base_name.end_with?("?") then RDL::Globals.types[:bool] end }
+RDL::Heuristic.add(:string_name) { |var| if var.base_name.end_with?("name") then RDL::Globals.types[:string] end }
 
 
-  RDL::Heuristic.add(:hash_access) { |var|
-    old_var = var
-    var = var.type if old_var.is_a?(RDL::Type::OptionalType)
-    types = []
-    var.ubounds.reject { |t, ast| t.is_a?(RDL::Type::VarType) }.each { |t, ast|
-      if t.is_a?(RDL::Type::IntersectionType)
-        types = types + t.types
-      else
-        types << t
-      end
-    }
-    if !types.empty? && types.all? { |t| t.is_a?(RDL::Type::StructuralType) && t.methods.all? { |meth, typ| ((meth == :[]) || (meth == :[]=)) && typ.args[0].is_a?(RDL::Type::SingletonType) && typ.args[0].val.is_a?(Symbol)  } }
-      hash_typ = {}
-      types.each { |struct|
-        struct.methods.each { |meth, typ|
-          if meth == :[]
-            value_type = typ.ret#typ.ret.is_a?(RDL::Type::VarType) ? RDL::Typecheck.extract_var_sol(typ.ret, :arg).canonical : typ.ret.canonical
-          elsif meth == :[]=
-            value_type = typ.args[1]#typ.args[1].is_a?(RDL::Type::VarType) ? RDL::Typecheck.extract_var_sol(typ.args[1], :arg).canonical : typ.args[1].canonical
-          else
-            raise "Method should be one of :[] or :[]=, got #{meth}."
-          end
-          if value_type.is_a?(RDL::Type::UnionType)
-            RDL::Type::UnionType.new(*value_type.types.map { |t| RDL::Typecheck.extract_var_sol(t, :arg, false) }).drop_vars.canonical
-          elsif value_type.is_a?(RDL::Type::IntersectionType)
-            RDL::Type::IntersectionType.new(*value_type.types.map { |t| RDL::Typecheck.extract_var_sol(t, :arg) }).drop_vars.canonical
-          else
-            value_type = RDL::Typecheck.extract_var_sol(value_type, :arg, false)
-          end
-          #value_type = value_type.drop_vars!.canonical if (value_type.is_a?(RDL::Type::UnionType) || value_type.is_a?(RDL::Type::IntersectionType)) && (!value_type.types.all? { |t| t.is_a?(RDL::Type::VarType) })
-          hash_typ[typ.args[0].val] = RDL::Type::UnionType.new(value_type, hash_typ[typ.args[0].val]).canonical#RDL::Type::OptionalType.new(value_type) ## TODO:
-        }
-      }
-      #var.ubounds.delete_if { |t| t.is_a?(RDL::Type::StructuralType) } #= [] ## might have to change this later, in particular to take advantage of comp types when performing solution extraction
-      fht = RDL::Type::FiniteHashType.new(hash_typ, nil)
-      if old_var.is_a?(RDL::Type::OptionalType)
-        RDL::Type::OptionalType.new(fht)
-      else
-        fht
-      end
+RDL::Heuristic.add(:hash_access) { |var|
+  old_var = var
+  var = var.type if old_var.is_a?(RDL::Type::OptionalType)
+  types = []
+  var.ubounds.reject { |t, ast| t.is_a?(RDL::Type::VarType) }.each { |t, ast|
+    if t.is_a?(RDL::Type::IntersectionType)
+      types = types + t.types
+    else
+      types << t
     end
   }
-
-end
+  if !types.empty? && types.all? { |t| t.is_a?(RDL::Type::StructuralType) && t.methods.all? { |meth, typ| ((meth == :[]) || (meth == :[]=)) && typ.args[0].is_a?(RDL::Type::SingletonType) && typ.args[0].val.is_a?(Symbol)  } }
+    hash_typ = {}
+    types.each { |struct|
+      struct.methods.each { |meth, typ|
+        if meth == :[]
+          value_type = typ.ret#typ.ret.is_a?(RDL::Type::VarType) ? RDL::Typecheck.extract_var_sol(typ.ret, :arg).canonical : typ.ret.canonical
+        elsif meth == :[]=
+          value_type = typ.args[1]#typ.args[1].is_a?(RDL::Type::VarType) ? RDL::Typecheck.extract_var_sol(typ.args[1], :arg).canonical : typ.args[1].canonical
+        else
+          raise "Method should be one of :[] or :[]=, got #{meth}."
+        end
+        if value_type.is_a?(RDL::Type::UnionType)
+          RDL::Type::UnionType.new(*value_type.types.map { |t| RDL::Typecheck.extract_var_sol(t, :arg, false) }).drop_vars.canonical
+        elsif value_type.is_a?(RDL::Type::IntersectionType)
+          RDL::Type::IntersectionType.new(*value_type.types.map { |t| RDL::Typecheck.extract_var_sol(t, :arg) }).drop_vars.canonical
+        else
+          value_type = RDL::Typecheck.extract_var_sol(value_type, :arg, false)
+        end
+        #value_type = value_type.drop_vars!.canonical if (value_type.is_a?(RDL::Type::UnionType) || value_type.is_a?(RDL::Type::IntersectionType)) && (!value_type.types.all? { |t| t.is_a?(RDL::Type::VarType) })
+        hash_typ[typ.args[0].val] = RDL::Type::UnionType.new(value_type, hash_typ[typ.args[0].val]).canonical#RDL::Type::OptionalType.new(value_type) ## TODO:
+      }
+    }
+    #var.ubounds.delete_if { |t| t.is_a?(RDL::Type::StructuralType) } #= [] ## might have to change this later, in particular to take advantage of comp types when performing solution extraction
+    fht = RDL::Type::FiniteHashType.new(hash_typ, nil)
+    if old_var.is_a?(RDL::Type::OptionalType)
+      RDL::Type::OptionalType.new(fht)
+    else
+      fht
+    end
+  end
+}
 
 ### For rules involving :include?, :==, :!=, etc. we would need to track the exact receiver/args used in the method call, and somehow store these in the bounds created for a var type.
 
-if $use_twin_network
-  RDL::Heuristic.add(:twin_network) { |var| RDL::Heuristic.fast_bert_model_guess(var) }
-end
+RDL::Heuristic.add(:twin_network) { |var| RDL::Heuristic.fast_bert_model_guess(var) }
 
 

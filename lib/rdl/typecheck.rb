@@ -268,7 +268,7 @@ module RDL::Typecheck
   def self._infer(klass, meth)
     @num_lines = Hash.new(0) unless @num_lines
     @num_cast_map = {} unless @num_cast_map
-    RDL::Logging.log_header :inference, :debug, "Infering #{RDL::Util.pp_klass_method(klass, meth)}"
+    RDL::Logging.log_header :inference, :info, "Generating constraints for method #{RDL::Util.pp_klass_method(klass, meth)}..."
 
     RDL::Config.instance.use_comp_types = true
     RDL::Config.instance.number_mode = true
@@ -277,7 +277,7 @@ module RDL::Typecheck
     num_lines = RDL::Util.count_num_lines(klass, meth)
     @num_lines[[klass, meth]] = num_lines.nil? ? 0 : num_lines
     if ast.nil?
-      RDL::Logging.log :inference, :warning, "Warning: Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}; skipping method"
+      #RDL::Logging.log :inference, :warning, "Warning: Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}; skipping method"
 
       # if RDL::Config.instance.continue_on_errors
       #   puts "#{warning_text} recording %dyn" if RDL::Config.instance.convert_to_dyn_verbose

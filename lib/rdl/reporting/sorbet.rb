@@ -138,7 +138,7 @@ module RDL::Reporting::Sorbet
     when RDL::Type::TopType
       "T.nilable(BasicObject)" 
     else
-      RDL::Logging.warning :reporting, "Unmatched class #{typ.class}"
+      #RDL::Logging.warning :reporting, "Unmatched class #{typ.class}"
       'T.untyped'
 
     end
