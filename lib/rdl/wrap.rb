@@ -930,7 +930,7 @@ module RDL
 
         #RDL::Logging.log :inference, :info, "Total number of type casts used: #{num_casts}."
         nl = RDL::Typecheck.get_num_lines
-        RDL::Logging.log :inference, :info, "Analyized #{nl.size} methods comprising #{nl.values.sum} lines of code."
+        RDL::Logging.log :inference, :info, "Analyzed #{nl.size} methods comprising #{nl.values.sum} lines of code."
 
         
         if num_times == 1
