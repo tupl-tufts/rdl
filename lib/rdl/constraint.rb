@@ -598,7 +598,8 @@ module RDL::Typecheck
 
     RDL::Logging.log_header :inference, :info, "Extraction Complete"
     #RDL::Logging.log :inference, :info, "SIMILARITY SCORE CUTOFF = #{RDL::Heuristic.simscore_cutoff}"
-    RDL::Logging.log :inference, :info, "DeepSim using top N=#{RDL::Heuristic.get_top_n} Guesses"
+    RDL::Logging.log :inference, :info, "Ran SimTyper under configuration #{$infer_config}"
+    RDL::Logging.log :inference, :info, "DeepSim using top N=#{RDL::Heuristic.get_top_n} Guesses" if $use_twin_network
     twin_csv << ["Total # E:", compares["E"]]
     RDL::Logging.log :inference, :info, "Total exact matches (E): #{compares["E"]}"
     twin_csv << ["Total # P:", compares["P"]]

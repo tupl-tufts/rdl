@@ -45,17 +45,17 @@ class RDL::Heuristic
   $use_only_param_position = false ## whether or not to use just an arg's parameter position, or use all of its uses in a method, when running on BERT model
 
   def self.empty_cache!
-    @meth_cache = {}
-    @meth_to_cls_map = Hash.new {|h, m| h[m] = Set.new}  # maps a method to a set of classes with that method
-    @ast_cache = {}
-    @twin_cache = Hash.new { |h, k| h[k] = {} }
-    @bert_cache = Hash.new { |h, k| h[k] = {} }
-    @vectorized_vars = {}
+    #@meth_cache = {}
+    #@meth_to_cls_map = Hash.new {|h, m| h[m] = Set.new}  # maps a method to a set of classes with that method
+    #@ast_cache = {}
+    #@twin_cache = Hash.new { |h, k| h[k] = {} }
+    #@bert_cache = Hash.new { |h, k| h[k] = {} }
+    #@vectorized_vars = {}
     send_query({action: "empty_cache!"}) if $use_twin_network
-    RDL::Globals.parser_cache = Hash.new
-    RDL::Typecheck.empty_cache!
-    RDL::Type::StructuralType.clear_cache!
-    RDL::Type::VarType.clear_cache!
+    #RDL::Globals.parser_cache = Hash.new
+    #RDL::Typecheck.empty_cache!
+    #RDL::Type::StructuralType.clear_cache!
+    #RDL::Type::VarType.clear_cache!
     #RDL::Type::NominalType.clear_cache!
     #RDL::Type::SingletonType.clear_cache!
     #RDL::Type::IntersectionType.clear_cache!
@@ -579,10 +579,10 @@ class RDL::Heuristic
           ## Found the arg corresponding to var_type
           locs << (c.loc.name.begin_pos - begin_pos) ## translate it so that 0 is first position
           locs << (c.loc.name.end_pos - begin_pos - 1)
-          #return locs if $headeronly #$use_only_param_position
+          return locs if $headeronly #$use_only_param_position
         end
       }
-      return locs if $headeronly
+      #return locs if $headeronly
     end
     
     search_ast_for_var_locs(body, var_type.name, locs, begin_pos)
