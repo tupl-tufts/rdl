@@ -91,6 +91,7 @@ class RDL::Util
 
   def self.silent_warnings
     old_stderr = $stderr
+    require "stringio"
     $stderr = StringIO.new
     yield
   ensure
