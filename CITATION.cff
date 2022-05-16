@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+title: "RDL: Types, typechecking, and contracts for Ruby."
+version: 2.1.0
+message: "If you use this software, please cite it using the metadata from this file."
+authors:
+- family-names: "Foster"
+  given-names: "Jeffrey"
+  website: "http://www.cs.tufts.edu/~jfoster/"
+- family-names: "Ren"
+  given-names: "Brianna"
+  website: "https://briannren.github.io/"
+- family-names: "Strickland"
+  given-names: "Stephen"
+  website: "https://www.cs.umd.edu/~sstrickl/"
+- family-names: "Yu"
+  given-names: "Alexander"
+- family-names: "Kazerounian"
+  given-names: "Milod"
+- family-names: "Guria"
+  given-names: "Sankha Narayan"
+  website: "https://sankhs.com/"
+date-released: 2017-06-14
+url: "https://github.com/tupl-tufts/rdl"
+license: BSD-3-Clause
