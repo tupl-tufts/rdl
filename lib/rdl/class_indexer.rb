@@ -33,7 +33,6 @@ module ClassIndexer
 
     def on_class(node)
       class_name = get_const_name(node.children[0])#node.children[0].children[1].to_s
-
       if @current_class == "main"
         @current_class = class_name
         entered_class = class_name
@@ -41,10 +40,9 @@ module ClassIndexer
         @current_class << "::" + class_name
         entered_class = "::" + class_name
       end
-
       node.children.each { |c| process(c) }
 
-      @current_class.sub!(entered_class, "")
+      @current_class.delete_suffix!(entered_class)
       reset_class if @current_class.empty?
 
 =begin
@@ -58,7 +56,7 @@ module ClassIndexer
 
     def on_module(node)
       module_name = get_const_name(node.children[0])#node.children[0].children[1].to_s
-
+      
       if @current_class == "main"
         @current_class = module_name
         entered_class = module_name
@@ -67,10 +65,9 @@ module ClassIndexer
         @current_class << "::" + module_name
         entered_class = "::" + module_name
       end
-
       node.children.each { |c| process(c) }
 
-      @current_class.sub!(entered_class, "")
+      @current_class.delete_suffix!(entered_class)
       reset_class if @current_class.empty?
 =begin
       if @current_class.include?("::")

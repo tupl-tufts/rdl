@@ -1,6 +1,7 @@
 RDL.nowrap :Kernel
 
 RDL.type :Kernel, 'self.Array', '([to_ary: () -> Array<t>]) -> Array<t>'
+RDL.type :Kernel, 'self.Array', "(Range<x>) -> Array<x>"
 RDL.type :Kernel, 'self.Array', '([to_a: () -> Array<t>]) -> Array<t>'
 RDL.type :Kernel, 'self.===', "(%any) -> %bool"
 RDL.type :Kernel, 'self.Complex', '(Numeric x, Numeric y) -> Complex'
@@ -61,7 +62,9 @@ RDL.type :Kernel, 'self.open', '(String path, ?(String or Integer) mode, ?String
 # RDL.type :Kernel, 'self.print', '(*[to_s : () -> String] -> nil'
 RDL.type :Kernel, 'self.printf', '(?IO, ?String, *%any) -> nil'
 RDL.type :Kernel, :proc, '() {(*%any) -> %any} -> Proc' # TODO more precise
+RDL.type :Kernel, :public_send, '(Symbol or String, *%any args) -> %any', wrap: false
 RDL.type :Kernel, 'self.putc', '(Integer) -> Integer'
+RDL.type :Kernel, 'self.putc', '(String) -> String'
 RDL.type :Kernel, 'self.puts', '(*[to_s : () -> String]) -> nil'
 RDL.type :Kernel, 'self.raise', '() -> %bot'
 RDL.type :Kernel, 'raise', '() -> %bot'

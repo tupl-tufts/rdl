@@ -18,7 +18,7 @@ module RDL::Type
 
     def solution=(soln)
       @solution = soln
-      RDL::Logging.log :typecheck, :warning, "Solution written to #{self.class}"
+      #RDL::Logging.log :typecheck, :warning, "Solution written to #{self.class}"
     end
 
     def to_contract
@@ -57,6 +57,14 @@ module RDL::Type
       var_type? || optional_var_type? || fht_var_type? || vararg_var_type?
     end
 
+    def array_type?
+      is_a?(TupleType) || (is_a?(GenericType) && ((base == RDL::Globals.types[:array]) || ((defined? ActiveRecord_Relation) && (base.klass == ActiveRecord_Relation)))) || (is_a?(NominalType) && (self == RDL::Globals.types[:array])) || (is_a?(UnionType) && types.all? { |t| t.array_type? })
+    end
+
+    def hash_type?
+      is_a?(FiniteHashType) || (is_a?(GenericType) && (base == RDL::Globals.types[:hash])) || (self == RDL::Globals.types[:hash]) || (is_a?(UnionType) && types.all? { |t| t.hash_type? })
+    end
+        
     # default behavior, override in appropriate subclasses
     def canonical; return self; end
     def optional?; return false; end
@@ -78,7 +86,6 @@ module RDL::Type
     # if inst is non-nil and ileft, returns inst(self) <= other, possibly mutating inst to make this true
     # if inst is non-nil and !ileft, returns self <= inst(other), again possibly mutating inst
     def self.leq(left, right, inst=nil, ileft=true, deferred_constraints=nil, no_constraint: false, ast: nil, propagate: false, new_cons: {}, removed_choices: {})
-      #propagate = false
       left = inst[left.name] if inst && ileft && left.is_a?(VarType) && !left.to_infer && inst[left.name]
       right = inst[right.name] if inst && !ileft && right.is_a?(VarType) && !right.to_infer && inst[right.name]
       left = left.type if left.is_a?(DependentArgType) || left.is_a?(AnnotatedArgType)
@@ -87,6 +94,7 @@ module RDL::Type
       right = right.type if right.is_a? NonNullType
       left = left.canonical
       right = right.canonical
+      #puts "About to try #{left} <= #{right} with #{inst} and #{ileft}"
       return true if left.equal?(right)
 
       # top and bottom

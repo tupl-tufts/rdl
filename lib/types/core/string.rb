@@ -75,6 +75,7 @@ RDL.type :String, :initialize, '(?String str) -> self new_str'
 RDL.type :String, 'self.try_convert', '(Object obj) -> String or nil new_string'
 RDL.type :String, :%, '(``targs[0]``) -> ``output_type(trec, targs, :%, "String")``'
 RDL.type :String, :*, '(Numeric) -> ``output_type(trec, targs, :*, "String")``'
+RDL.type :String, :-@, "() -> ``output_type(trec, targs, :-@, 'String')``"
 
 def String.plus_output(trec, targs)
   if trec.is_a?(RDL::Type::PreciseStringType) && targs[0].is_a?(RDL::Type::PreciseStringType)
@@ -350,13 +351,14 @@ RDL.type :String, :slice!, '(Regexp, String) -> ``string_promote!(trec)``'
 RDL.type :String, :slice!, '(String) -> ``string_promote!(trec)``'
 RDL.type :String, :split, '(?(Regexp or String), ?Integer) -> ``output_type(trec, targs, :split, "Array<String>")``'
 RDL.type :String, :split, '(?Integer) -> ``output_type(trec, targs, :split, "Array<String>")``'
-RDL.type :String, :squeeze, '() -> ``output_type(trec, targs, :squeeze, "String")``'
-RDL.type :String, :squeeze!, '() -> ``mutate_output(trec, :squeeze!)``'
+RDL.type :String, :squeeze, '(?String) -> ``output_type(trec, targs, :squeeze, "String")``'
+RDL.type :String, :squeeze!, '(?String) -> ``mutate_output(trec, :squeeze!)``'
 RDL.type :String, :start_with?, '(* String) -> ``output_type(trec, targs, :start_with?, "%bool")``'
 RDL.type :String, :strip, '() -> ``output_type(trec, targs, :strip, "String")``'
 RDL.type :String, :strip!, '() -> ``mutate_output(trec, :strip!)``'
 RDL.type :String, :sub, '(Regexp or String, String or Hash) -> ``output_type(trec, targs, :sub, "String")``', wrap: false # Can't wrap these, since they mess with $1 etc
 RDL.type :String, :sub, '(Regexp or String) {(String) -> %any} -> ``output_type(trec, targs, :sub, "String")``', wrap: false
+RDL.type :String, :sub, '(Regexp or String) {() -> %any} -> ``output_type(trec, targs, :sub, "String")``', wrap: false
 RDL.type :String, :sub!, '(Regexp or String, String) -> ``string_promote!(trec)``', wrap: false
 RDL.type :String, :sub!, '(Regexp or String) {(String) -> %any} -> ``string_promote!(trec)``', wrap: false
 RDL.type :String, :succ, '() -> ``output_type(trec, targs, :succ, "String")``'

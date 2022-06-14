@@ -4,7 +4,9 @@ require 'set'
 require 'parser/current'
 #require 'method_source'
 require 'colorize'
+require 'pathname'
 require 'rake'
+require 'net/http'
 
 module RDL
 end

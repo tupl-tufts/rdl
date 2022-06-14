@@ -57,6 +57,28 @@ class RDL::Util
     nil
   end
 
+  def self.count_num_lines(klass, meth)
+    ast = RDL::Typecheck.get_ast(klass, meth)
+    return nil if ast.nil?
+    source = ast.loc.expression.source
+
+    lines = source.lines.delete_if { |line| line.empty? || line.strip.empty? || line.strip.start_with?("#") }
+    num_lines_to_subtract = 0
+    in_comment = false
+    lines.each { |line|
+      if line.start_with? "=begin"
+        in_comment = true
+        num_lines_to_subtract += 1
+      elsif line.start_with? "=end"
+        in_comment = false
+        num_lines_to_subtract += 1
+      elsif in_comment
+        num_lines_to_subtract += 1
+      end
+    }
+    return lines.size - num_lines_to_subtract
+  end
+  
   def self.puts_constraints(cons)
     each_leq_constraints(cons) { |a, b| puts "#{a} <= #{b}" }
   end

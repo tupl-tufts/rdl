@@ -460,6 +460,11 @@ module RDL::Annotate
     $orig_types = true
     klass, meth, type = RDL::Wrap.process_type_args(self, klass, meth, type)
     RDL::Globals.info.add(klass, meth, :orig_type, type)
+    if RDL::Util.method_defined?(klass, meth) #|| meth == :initialize
+      RDL::Globals.info.set(klass, meth, :source_location, RDL::Util.to_class(klass).instance_method(meth).source_location)
+    end
+    $orig_type_list = [] unless $orig_type_list
+    $orig_type_list << [klass, meth]
   end
 
   def orig_var_type(klass=self, var, type)
@@ -581,7 +586,6 @@ module RDL::Annotate
   end
 
   def create_binding_meth(klass, meth)
-    puts "CREATING BINDING METH FOR #{klass} AND #{meth}"
     require 'method_source'
     klass = klass.to_s
     meth = meth.to_sym
@@ -602,7 +606,6 @@ module RDL::Annotate
       }
       vals_hash = "{ " + arg_vals.join(",") + " }"
       meth_string = "def RDL.#{new_meth_name} #{args_string} \n #{vals_hash} \n end"
-      puts "ABOUT TO EVALUATE #{meth_string}"
       RDL.class_eval meth_string
     end
   end
@@ -913,7 +916,7 @@ module RDL
   end
 
   def self.load_rails_schema
-    return unless defined?(Rails)
+    return if !defined?(Rails) || (File.basename($0) == "rake") || $dont_load_rails
     ::Rails.application.eager_load! # load Rails app
     models = ActiveRecord::Base.descendants.each { |m|
       begin

@@ -8,7 +8,7 @@ class RDL::Config
   attr_accessor :report, :get_types, :guess_types
   attr_accessor :weak_update_promote, :widen_bound, :promote_widen, :use_comp_types, :check_comp_types
   attr_accessor :type_defaults, :infer_defaults, :pre_defaults, :post_defaults, :rerun_comp_types, :assume_dyn_type
-  attr_accessor :use_precise_string, :number_mode, :use_unknown_types, :infer_empties
+  attr_accessor :use_precise_string, :bool_singletons, :number_mode, :use_unknown_types, :infer_empties
   attr_accessor :continue_on_errors
   attr_accessor :log_levels, :disable_log_colors
   attr_accessor :log_file, :log_file_levels
@@ -36,6 +36,7 @@ class RDL::Config
     c.check_comp_types = false ## this for dynamically checking that the result of a computed type still holds
     c.rerun_comp_types = false ## this is for dynamically checking that a type computation still evaluates to the same thing as it did at type checking time
     c.use_precise_string = false
+    c.bool_singletons = false
     c.number_mode = false
     c.use_unknown_types = false
     c.infer_empties = true ## if [] and {} should be typed as Array<var> and Hash<var, var>

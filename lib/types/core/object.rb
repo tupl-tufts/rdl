@@ -26,7 +26,8 @@ RDL.type :Object, :!~, '(%any other) -> %bool', wrap: false
 RDL.type :Object, :<=>, '(%any other) -> Integer or nil', wrap: false
 RDL.type :Object, :===, '(%any other) -> %bool', wrap: false
 RDL.type :Object, :==, '(%any other) -> %bool', wrap: false
-RDL.type :Object, :=~, '(%any other) -> nil', wrap: false
+## Deprecated
+#RDL.type :Object, :=~, '(%any other) -> nil', wrap: false
 RDL.type :Object, :class, '() -> Class', wrap: false
 RDL.type :Object, :clone, '() -> self', wrap: false
 # RDL.type :Object, :define_singleton_method, '(XXXX : *XXXX)') # TODO
