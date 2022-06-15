@@ -3,7 +3,7 @@ RDL.nowrap :Dir
 RDL.rdl_alias :Dir, :'self.[]', :'self.glob'
 
 RDL.type :Dir, 'self.chdir', '(?(String or Pathname)) -> 0'
-RDL.type :Dir, 'self.chdir', '(?(String or Pathname)) { (String) -> u } -> u'
+RDL.type :Dir, 'self.chdir', '(?(String or Pathname)) { (?String) -> u } -> u'
 RDL.type :Dir, 'self.chroot', '(String) -> 0'
 RDL.type :Dir, 'self.delete', '(String) -> 0'
 RDL.type :Dir, 'self.entries', '(String, ?Encoding) -> Array<String>'

@@ -487,7 +487,8 @@ class Table
         return arg0
       else
         return arg0 if (meth==:where) && targs[0] <= RDL::Globals.types[:string]
-        raise "TODO WITH #{trec} AND #{targs} AND #{meth}"
+        #raise "TODO WITH #{trec} AND #{targs} AND #{meth}"
+        return RDL::Globals.types[:bot]
       end
     when RDL::Type::NominalType
      raise "TODO"

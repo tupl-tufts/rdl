@@ -2,6 +2,7 @@ RDL.nowrap :Pathname
 
 RDL.type :Pathname, 'self.getwd', '() -> Pathname'
 RDL.type :Pathname, 'self.glob', '(String p1, ?String p2) -> Array<Pathname>'
+RDL.type :Pathname, 'self.glob', '(String p1, ?String p2) { (String) -> %any } -> Array<Pathname>'
 RDL.rdl_alias :Pathname, 'self.pwd', 'self.getwd'
 RDL.type :Pathname, :+, '(String or Pathname other) -> Pathname'
 RDL.rdl_alias :Pathname, :/, :+

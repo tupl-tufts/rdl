@@ -5,6 +5,8 @@ module RDL::Reporting::Sorbet
   def to_sorbet_type(typ)
     RDL::Logging.debug :reporting, typ
 
+    typ = typ.canonical
+
     case typ
     when RDL::Type::StructuralType
       RDL::Globals.types[:dyn]
@@ -17,28 +19,26 @@ module RDL::Reporting::Sorbet
       RDL::Globals.types[:dyn]
 
     when RDL::Type::UnionType
-      type = typ.canonical
-      if type.is_a? RDL::Type::UnionType
-        types = type.types.map { |x| to_sorbet_type(x) }
+      if typ.is_a? RDL::Type::UnionType
+        types = typ.types.map { |x| to_sorbet_type(x) }
         RDL::Type::UnionType.new(*types)
       else
-        type
+        typ
       end
 
     when RDL::Type::IntersectionType
-      type = typ.canonical
-      if type.is_a? RDL::Type::IntersectionType
-        types = type.types.map { |x| to_sorbet_type(x) }
+      if typ.is_a? RDL::Type::IntersectionType
+        types = typ.types.map { |x| to_sorbet_type(x) }
         RDL::Type::IntersectionType.new(*types)
       else
-        type
+        typ
       end
 
     when RDL::Type::SingletonType
       typ.nominal
 
     when RDL::Type::FiniteHashType
-      c = typ.canonical
+      c = typ#.canonical
       types = c.elts.values.map { |v| v.is_a?(RDL::Type::OptionalType) ? to_sorbet_type(v.type) : to_sorbet_type(v) }
 
       return RDL::Globals.types[:dyn] if types.member? RDL::Globals.types[:dyn]
@@ -135,8 +135,10 @@ module RDL::Reporting::Sorbet
     when RDL::Type::TupleType
       "T::Array[#{to_sorbet_string RDL::Type::UnionType.new(*typ.params), header, in_hash: in_hash}]"
 
+    when RDL::Type::TopType
+      "T.nilable(BasicObject)" 
     else
-      RDL::Logging.warning :reporting, "Unmatched class #{typ.class}"
+      #RDL::Logging.warning :reporting, "Unmatched class #{typ.class}"
       'T.untyped'
 
     end

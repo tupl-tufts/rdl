@@ -84,8 +84,11 @@ class TestInfer < Minitest::Test
     assert expected_type.match(typ.solution), error_str
   end
 
-  def self.should_have_type(meth, typ, depends_on: [])
+  def self.should_have_type(meth, typ, depends_on: [], shouldSkip: false)
     define_method "test_#{meth}" do
+      if shouldSkip
+        skip
+      end
       assert_type_equal meth, tm(typ), depends_on: depends_on
     end
   end
@@ -145,7 +148,8 @@ class TestInfer < Minitest::Test
   def repeat_n(n)
     'a' * n
   end
-  should_have_type :repeat_n, '(Numeric) -> String'
+  should_have_type :repeat_n, '(Numeric) -> String', shouldSkip: true
+  # skipped because of `number_mode`.
 
   # Note: The last type in the unions below comes from requiring `sorbet` (via
   #       requiring `parlour`) to render RBI files. The Structural -> Nominal
