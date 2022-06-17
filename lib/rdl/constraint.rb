@@ -4,6 +4,7 @@ module RDL::Typecheck
 
   def self.resolve_constraints
     RDL::Logging.log_header :inference, :info, "Starting constraint resolution..."
+    RDL::Logging.log_header :inference, :trace, "Current constraints: #{RDL::Globals.constrained_types}"
     RDL::Globals.constrained_types.each { |klass, name|
       RDL::Logging.log :inference, :debug, "Resolving constraints from #{RDL::Util.pp_klass_method(klass, name)}"
       typ = RDL::Globals.info.get(klass, name, :type)
