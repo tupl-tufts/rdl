@@ -78,6 +78,7 @@ module RDL::Typecheck
     else
       raise "Unexpected VarType category #{category}."
     end
+    RDL::Logging.log :heuristic, :debug, "About to determine if heuristics can be applied. Current sol is `#{sol}`"
     if  sol.is_a?(RDL::Type::UnionType) || (sol == RDL::Globals.types[:bot]) || (sol == RDL::Globals.types[:top]) || (sol == RDL::Globals.types[:nil]) || sol.is_a?(RDL::Type::StructuralType) || sol.is_a?(RDL::Type::IntersectionType) || (sol == RDL::Globals.types[:object])
       ## Try each rule. Return first non-nil result.
       ## If no non-nil results, return original solution.
