@@ -15,4 +15,4 @@ class ActionController::Base
   end
 end
 
-RDL.type :'ActionController::StrongParameters', :params, "() -> Hash<Symbol, Symbol or String>", wrap: false#'() -> ActionController::Parameters'
+# RDL.type :'ActionController::StrongParameters', :params, "() -> Hash<Symbol, Symbol or String>", wrap: false#'() -> ActionController::Parameters'
