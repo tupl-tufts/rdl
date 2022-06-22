@@ -129,6 +129,7 @@ module ActiveRecord::Core::ClassMethods
   #type :find, '(Array<Integer>) -> ``DBType.find_output_type(trec, targs)``', wrap: false
   type :find, '(Integer, Integer, *Integer) -> ``DBType.find_output_type(trec, targs)``', wrap: false
   type :find_by, '(``DBType.find_input_type(trec, targs)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
+  type :find_or_create_by, '(``DBType.find_input_type(trec, targs)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
   ## TODO: find_by's with conditions given as string
 end
 
