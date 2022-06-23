@@ -2050,6 +2050,8 @@ RUBY
         raise RuntimeError, "impossible to get type #{trecv}"
       end
       puts trecv.inspect
+      puts "trets"
+      puts trets.inspect
       error :arg_type_single_receiver_error, [name, meth, msg], e
     end
     # TODO: issue warning if trets.size > 1 ?
