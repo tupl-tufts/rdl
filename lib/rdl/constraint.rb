@@ -350,7 +350,7 @@ module RDL::Typecheck
 
       RDL::Globals.constrained_types.each { |klass, name|
         begin
-          RDL::Logging.log_header :inference, :debug, "\nExtracting #{RDL::Util.pp_klass_method(klass, name)}"
+          RDL::Logging.log_header :inference, :debug, "Extracting #{RDL::Util.pp_klass_method(klass, name)}"
 
           RDL::Type::VarType.no_print_XXX!
           typ = RDL::Globals.info.get(klass, name, :type)
