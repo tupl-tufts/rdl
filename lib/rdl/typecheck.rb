@@ -1918,8 +1918,9 @@ RUBY
             inst = trecv.to_inst.merge(self: trecv)
           end
           block_types = (if tmeth.block.is_a?(RDL::Type::MethodType) then tmeth.block.args + [tmeth.block.ret] else [] end)
-          puts "About to determine if all args + ret + block types are comp types..."
+          puts "About to determine if any args + ret + block types are comp types..."
           unless (tmeth.args+[tmeth.ret]+block_types).all? { |t| !t.instance_of?(RDL::Type::ComputedType) }
+            puts "We have a comp type!"
             tmeth_old = tmeth
             trecv_old = trecv.copy
             targs_old = tactuals_expanded.map { |t| t.copy }
