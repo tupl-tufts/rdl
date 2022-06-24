@@ -1892,7 +1892,6 @@ RUBY
 
     # for ALL of the expanded lists of actuals...
     if RDL::Config.instance.use_comp_types
-      puts "USING COMP TYPES"
       ts = filter_comp_types(ts, true)
     else
       ts = filter_comp_types(ts, false)
