@@ -2000,6 +2000,7 @@ RUBY
       }
       if trets_tmp.empty?
         # no arm of the intersection matched this expanded actuals lists, so reset trets to signal error and break loop
+        puts "No arm of the intersection matched this expanded actuals lists. Resetting trets to signal error and break loop."
         trets = []
         break
       else
