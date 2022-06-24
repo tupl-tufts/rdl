@@ -131,7 +131,7 @@ module ActiveRecord::Core::ClassMethods
   type :find_by, '(``DBType.find_input_type(trec, targs)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
   ## TODO: find_by's with conditions given as string
 
-  #type :find_or_create_by, '(``DBType.find_input_type(trec, targs)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
+  type :find_or_create_by, '(``DBType.find_input_type(trec, targs)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
   #type :find_or_create_by, '(Boolean) -> Float', wrap: false
 end
 
@@ -153,9 +153,6 @@ module ActiveRecord::FinderMethods
   type :take!, '() -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type :take, '(Integer) -> ``DBType.rec_to_array(trec)``', wrap: false
   type :exists?, '(``DBType.exists_input_type(trec, targs)``) -> %bool', wrap: false
-
-  #type :find_or_create_by, '(``DBType.find_input_type(trec, targs)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
-  type :find_or_create_by, '(Boolean) -> Float', wrap: false
 end
 
 module ActiveRecord::Querying
