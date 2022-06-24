@@ -1702,6 +1702,7 @@ RUBY
           self_inst = trecv
         end
         ts = lookup(scope, trecv_lookup, meth_lookup, e)
+        puts "Completed type signature lookup for #{trecv_lookup}##{meth_lookup} ~~> #{ts}"
         ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] if init && (ts.nil?) # there's always a nullary new if initialize is undefined
         error :no_singleton_method_type, [trecv.val, meth], e unless ts
         inst = {self: self_inst}
