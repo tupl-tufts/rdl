@@ -1925,6 +1925,10 @@ RUBY
             binds = tc_bind_arg_types(tmeth, tactuals_expanded)
             #binds = {} if binds.nil?
             tmeth = tmeth_res = compute_types(tmeth, self_klass, trecv, tactuals_expanded, binds) unless binds.nil?
+            ##########################
+            # INSERT DEBUG STATEMENT #
+            puts "Computed comp type for #{tmeth_old}: #{tmeth}"
+            ##########################
             comp_type = true
           end
           tmeth = tmeth.instantiate(inst) if inst
