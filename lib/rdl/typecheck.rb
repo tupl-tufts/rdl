@@ -1901,7 +1901,7 @@ RUBY
     puts "trets"
     puts trets.inspect
     puts "ancestors"
-    puts trecv.val.ancestors.inspect
+    puts trecv.val.ancestors.inspect if trecv.val
 
     RDL::Type.expand_product(tactuals).each { |tactuals_expanded|
       puts "Checking if expanded product looks right: #{tactuals_expanded}"
