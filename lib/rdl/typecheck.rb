@@ -1668,12 +1668,10 @@ RUBY
   # raises exception if there are no possible valid calls
   def self.tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union)
     raise "Type checking not currently supported for method #{meth}." if [:define_method, :module_exec].include?(meth)
-=begin
     puts "----------------------"
     puts "Type checking method call to #{meth} for receiver #{trecv} and tactuals of size #{tactuals.size}:"
     tactuals.each { |t| puts t }
     puts "----------------------"
-=end
     if (trecv == RDL::Globals.types[:array])
       trecv = RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Globals.types[:bot])
     elsif (trecv == RDL::Globals.types[:hash])
