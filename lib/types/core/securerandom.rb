@@ -1,4 +1,4 @@
 RDL.nowrap :SecureRandom
 
-RDL.type SecureRandom, :hex, '(?{ n: Number }) -> String'
-RDL.type SecureRandom, :hex, '(?Number) -> String'
+RDL.type Random::Formatter, :hex, '(?{ n: Number }) -> String'
+RDL.type Random::Formatter, :hex, '(?Number) -> String'
