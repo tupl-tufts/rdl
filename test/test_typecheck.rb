@@ -1,7 +1,6 @@
 require 'minitest/autorun'
 $LOAD_PATH << File.dirname(__FILE__) + "/../lib"
 require 'rdl'
-require 'types/core'
 
 class N1
   class N2
@@ -9,7 +8,7 @@ class N1
     def self.foo
       :sym
     end
-   type 'self.foo', '() -> :sym'
+    type 'self.foo', '() -> :sym'
 
     def self.foo2
       :sym2
@@ -146,12 +145,11 @@ class TestTypecheck < Minitest::Test
   def setup
     RDL.reset
     RDL.type TestTypecheck, :_any_object, '() -> Object', wrap: false # a method that could return true or false
-    RDL.readd_comp_types
-    RDL.type_params :Hash, [:k, :v], :all? unless RDL::Globals.type_params["Hash"]
-    RDL.type_params :Array, [:t], :all? unless RDL::Globals.type_params["Array"]
-    RDL.rdl_alias :Array, :size, :length 
+    RDL.type TestTypecheck, :_any_integer, '() -> Integer', wrap: false
+
     RDL.type_params 'RDL::Type::SingletonType', [:t], :satisfies? unless RDL::Globals.type_params["RDL::Type::SingletonType"]
-=begin
+
+    RDL.nowrap :Array
     RDL.type_params :Array, [:t], :all?
     RDL.type :Array, :[]=, '(Integer, t) -> t', wrap: false
     RDL.type :Array, :[]=, '(Integer, Integer, t) -> t', wrap: false
@@ -164,23 +162,28 @@ class TestTypecheck < Minitest::Test
     RDL.type :Array, :index, '() -> Enumerator<t>', wrap: false
     RDL.type :Array, :map, '() {(t) -> u} -> Array<u>', wrap: false
     RDL.type :Array, :map, '() -> Enumerator<t>', wrap: false
+    RDL.type :Array, :length, '() -> ``output_type(trec, targs, :length, "Integer")``'
+    RDL.rdl_alias :Array, :size, :length
+
+    RDL.nowrap :Hash
     RDL.type_params :Hash, [:k, :v], :all?
     RDL.type :Hash, :length, '() -> Integer', wrap: false
-    RDL.rdl_alias :Array, :size, :length
     RDL.type :Hash, :[], '(k) -> v', wrap: false
     RDL.type :Hash, :[]=, '(k, v) -> v', wrap: false
-=end
+
+    RDL.nowrap :Range
     RDL.type_params(:Range, [:t], nil, variance: [:+]) { |t| t.member?(self.begin) && t.member?(self.end) } unless RDL::Globals.type_params["Range"]
     RDL.type :Range, :each, '() { (t) -> %any } -> self'
     RDL.type :Range, :each, '() -> Enumerator<t>'
-=begin
+
+    RDL.nowrap :Integer
+    RDL.type :Integer, :>=, '(Integer) -> %bool', wrap: false
     RDL.type :Integer, :<, '(Integer) -> %bool', wrap: false
     RDL.type :Integer, :>, '(Integer) -> %bool', wrap: false
-    RDL.type :Integer, :>=, '(Integer) -> %bool', wrap: false
     RDL.type :Integer, :+, '(Integer) -> Integer', wrap: false
     RDL.type :Integer, :&, '(Integer) -> Integer', wrap: false
     RDL.type :Integer, :*, '(Integer) -> Integer', wrap: false
-=end
+
     RDL.type :Integer, :to_s, '() -> String', wrap: false
     RDL.type :Kernel, 'self.puts', '(*[to_s : () -> String]) -> nil', wrap: false
     RDL.type :Kernel, :raise, '() -> %bot', wrap: false
@@ -189,11 +192,15 @@ class TestTypecheck < Minitest::Test
     RDL.type :Kernel, :raise, '(Exception, ?String, ?Array<String>) -> %bot', wrap: false
     RDL.type :Object, :===, '(%any other) -> %bool', wrap: false
     RDL.type :Object, :clone, '() -> self', wrap: false
-#    RDL.type :String, :*, '(Integer) -> String', wrap: false
-#    RDL.type :String, :+, '(String) -> String', wrap: false
+    RDL.type :String, :*, '(Integer) -> String', wrap: false
+    RDL.type :String, :+, '(String) -> String', wrap: false
 #    RDL.type :String, :===, '(%any) -> %bool', wrap: false
-#    RDL.type :String, :length, '() -> Integer', wrap: false
+    RDL.type :String, :length, '() -> Integer', wrap: false
     RDL.type :NilClass, :&, '(%any obj) -> false', wrap: false
+
+    RDL.nowrap :Regexp
+    RDL.type :Regexp, :=~, '(String str) -> Integer or nil', wrap: false # Can't wrap this or it will mess with $1, $2, etc
+
     @t3 = RDL::Type::SingletonType.new 3
     @t4 = RDL::Type::SingletonType.new 4
     @t5 = RDL::Type::SingletonType.new 5
@@ -218,6 +225,8 @@ class TestTypecheck < Minitest::Test
   # returns the type of the expression
   def do_tc(expr, scope: Hash.new, env: RDL::Typecheck::Env.new)
     ast = Parser::CurrentRuby.parse expr
+    scope[:klass] ||= "TestTypecheck"
+    scope[:meth] ||= :do_tc
     _, t = RDL::Typecheck.tc scope, env, ast
     return t
   end
@@ -764,6 +773,8 @@ class TestTypecheck < Minitest::Test
         x = 'one'; _send_block1(42) { |y| for x in 1..5 do end; y }; x
       end
     }
+    assert (@tfs <= do_tc("y = _any_integer; _send_block1(42) { |x| y = ''; x }; y", env: @env))
+    do_tc("if _any_object then _send_block1(42) { |x| x } else 10 end", env: @env)
   end
 
   def test_send_method_generic
@@ -774,7 +785,7 @@ class TestTypecheck < Minitest::Test
       type :_send_method_generic4, '(t) { (t) -> t } -> t'
       type :_send_method_generic5, '() { (u) -> u } -> u'
       type :_send_method_generic6, '() { (Integer) -> u } -> u'
-    }    
+    }
     assert do_tc('_send_method_generic1 3', env: @env) <= @t3
     assert do_tc('_send_method_generic1 "foo"', env: @env) <= RDL::Globals.types[:string]
     assert do_tc('_send_method_generic2 3, "foo"', env: @env) <= tt("3 or String")
@@ -793,9 +804,9 @@ class TestTypecheck < Minitest::Test
       type :_send_union1, "(Integer) -> Float"
       type :_send_union1, "(String) -> Rational"
     }
-    assert do_tc("(if _any_object then Integer.new else String.new end) * 2", env: @env) <= RDL::Type::UnionType.new(@tfs, RDL::Globals.types[:integer])
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(if _any_object then Object.new else Integer.new end) + 2", env: @env) }
-    assert do_tc("if _any_object then x = Integer.new else x = String.new end; _send_union1(x)", env: @env) <= tt("Float or Rational")
+    assert do_tc("(if _any_object then 6 else String.new end) * 2", env: @env) <= RDL::Type::UnionType.new(@tfs, RDL::Globals.types[:integer])
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("(if _any_object then Object.new else 5 end) + 2", env: @env) }
+    assert do_tc("if _any_object then x = 5 else x = String.new end; _send_union1(x)", env: @env) <= tt("Float or Rational")
   end
 
   def test_send_splat
@@ -953,7 +964,7 @@ class TestTypecheck < Minitest::Test
   # end
 
   def test_new
-    assert do_tc("B.new", env: @env) <= RDL::Type::NominalType.new(TestTypecheck::B)
+    assert do_tc("TestTypecheck::B.new", env: @env) <= RDL::Type::NominalType.new(TestTypecheck::B)
     assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("B.new(3)", env: @env) }
   end
 
@@ -1029,6 +1040,30 @@ class TestTypecheck < Minitest::Test
     assert do_tc("case when (x = 4) then x = 3 end; x", env: @env) <= @t34
     assert do_tc("x = 5; case when (x = 3) then 'foo' when (x = 4) then 'foo' end; x", env: @env) # first guard always executed! <= @t34
     assert do_tc("x = 6; case when (x = 3) then 'foo' when (x = 4) then 'foo' else x = 5 end; x", env: @env) <= @t345
+    assert self.class.class_eval {
+      type "(Object) -> Object", typecheck: :now
+      def case_arg(x)
+        case x
+        when Integer
+          1
+        when String
+          2
+        end
+        x
+      end
+    }
+  end
+
+  def test_when_block
+    RDL.type TestTypecheck, :m1, '(X) -> %any'
+    RDL.type TestTypecheck, :m2, '(Y) -> %any'
+    RDL.type TestTypecheck, :m3, '() { () -> %any } -> %any'
+    assert do_tc("x = _any_object; case x when X then m1(x) when Y then m2(x) end", env: @env)
+    assert_raises(RDL::Typecheck::StaticTypeError) {
+      assert do_tc("x = _any_object; case x when Y then m1(x) when Y then m2(x) end", env: @env)
+    }
+    assert do_tc("x = _any_object; case x when X then m1(x) when Y then m3() { m2(x) } end", env: @env, scope: Hash.new)
+    assert do_tc("x = _any_object; case x when X then m3() { m1(x) } when Y then m3() { m2(x) } end", env: @env, scope: Hash.new)
   end
 
   def test_while_until
@@ -1068,7 +1103,7 @@ class TestTypecheck < Minitest::Test
 
   def test_for
     assert do_tc("for i in 1..5 do end; i") <= RDL::Globals.types[:integer]
-    assert do_tc("for i in [1,2,3,4,5] do end; i") <= tt("1 or 2 or 3 or 4 or 5")
+    assert do_tc("for i in [1,2,3,4,5] do end; i") <= RDL::Globals.types[:integer]
     ## TODO: figure out why above fails to terminate
     assert do_tc("for i in 1..5 do break end", env: @env) <= tt("Range<Integer>")
     assert do_tc("for i in 1..5 do next end", env: @env) <= tt("Range<Integer>")
@@ -1212,28 +1247,18 @@ class TestTypecheck < Minitest::Test
     RDL.type :Array, :initialize, '() -> self', wrap: false
     RDL.type :Array, :initialize, '(Integer) -> self', wrap: false
     RDL.type :Array, :initialize, '(Integer, t) -> self<t>', wrap: false
-    assert_raises(RDL::Typecheck::StaticTypeError) {
+    assert (
       self.class.class_eval {
         type "(Integer, Integer) -> Array<Integer>", typecheck: :now
         def def_inst_fail(x, y) a = Array.new(x,y); a; end
       }
-    }
+    )
     assert (
       self.class.class_eval {
         type "(Integer, Integer) -> Array<Integer>", typecheck: :now
         def def_inst_pass(x, y) a = Array.new(x,y); RDL.instantiate!(a, "Integer"); a; end
       }
     )
-
-    # below works with computational types
-    #assert_raises(RDL::Typecheck::StaticTypeError) {
-    assert (
-      self.class.class_eval {
-        type "(Integer) -> Integer", typecheck: :now
-        def def_inst_hash_fail(x) hash = {}; hash["test"] = x; hash["test"]; end
-      }
-    )
-#     }
 
 =begin
    # below works with computational types
@@ -1819,7 +1844,7 @@ class TestTypecheck < Minitest::Test
         when :b
         end
       end
-      type(:foo, '(Symbol) -> NilClass', {:typecheck => :call})
+      type(:foo, '(Symbol) -> NilClass', :typecheck => :call)
     end
 
     assert_nil TestTypecheck::A5.new.foo(:a)
@@ -1932,6 +1957,62 @@ class TestTypecheck < Minitest::Test
     assert_nil ChildWithoutType.new.foo(1)
   end
 
+  module ModuleMixin1
+    def caller(x)
+      return in_mixee(x)
+    end
+  end
+  class ModuleMixee1a
+    include ModuleMixin1
+
+    def in_mixee(y)
+      return y
+    end
+  end
+  class ModuleMixee1b
+    include ModuleMixin1
+
+    def in_mixee(y)
+      return 3
+    end
+  end
+
+  def test_mixins_1
+    RDL.type ModuleMixin1, :caller, '(Integer) -> Integer', typecheck: :mm1
+    RDL.type ModuleMixee1a, :in_mixee, '(Integer) -> Integer', typecheck: :mm1
+    RDL.type ModuleMixee1b, :in_mixee, '(Integer) -> Integer', typecheck: :mm1
+    RDL.do_typecheck :mm1
+  end
+
+  module ModuleMixin2
+    def caller(x)
+      return in_mixee(x)
+    end
+  end
+  class ModuleMixee2a
+    include ModuleMixin2
+
+    def in_mixee(y)
+      return "foo"
+    end
+  end
+  class ModuleMixee2b
+    include ModuleMixin2
+
+    def in_mixee(y)
+      return 3
+    end
+  end
+
+  def test_mixins_2
+    RDL.type ModuleMixin2, :caller, '(Integer) -> Integer', typecheck: :mm2a
+    RDL.type ModuleMixee2a, :in_mixee, '(Integer) -> String', typecheck: :mm2b
+    RDL.type ModuleMixee2b, :in_mixee, '(Integer) -> Integer', typecheck: :mm2c
+    RDL.do_typecheck :mm2b
+    RDL.do_typecheck :mm2c
+    assert_raises(RDL::Typecheck::StaticTypeError) { RDL.do_typecheck :mm2a }
+  end
+
   def test_object_sing_method
     assert_raises(RDL::Typecheck::StaticTypeError) {
       Object.class_eval do
@@ -1942,6 +2023,11 @@ class TestTypecheck < Minitest::Test
         end
       end
     }
+  end
+
+  def test_match_with_lvasgn
+    assert do_tc("/foo/ =~ 'foo'") <= RDL::Globals.types[:integer]
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("/foo/ =~ 32") }
   end
 
   def test_raise_typechecks
@@ -1975,7 +2061,6 @@ class TestTypecheck < Minitest::Test
     end
   end
 
-  
   def test_sing_method_inheritence
     RDL.type SingletonInheritA, 'self.foo', '(Integer) -> Integer'
     self.class.class_eval do
@@ -1986,6 +2071,14 @@ class TestTypecheck < Minitest::Test
     end
   end
 
+  def test_default_args
+    self.class.class_eval do
+      type '(?String) -> String', typecheck: :now
+      def with_default_arg(x=RUBY_VERSION)
+        x
+      end
+    end
+  end
 
   def test_comp_types
     self.class.class_eval "class CompTypes; end"
@@ -2036,7 +2129,7 @@ class TestTypecheck < Minitest::Test
           return RDL::Globals.types[:integer]
         else
           raise RDL::Typecheck::StaticTypeError, "Unexpected input type."
-        end    
+        end
       end
 
       type '(Integer, String) -> Integer', typecheck: :now
@@ -2058,6 +2151,23 @@ class TestTypecheck < Minitest::Test
         end
       end
     }
+  end
 
+  # From https://stackoverflow.com/a/22777806
+  def capture_stdout
+    stdout = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = stdout
+  end
+
+  def test_note_type
+    output = capture_stdout do
+      do_tc "RDL.note_type Hash.new"
+    end
+    output = output.lines.map(&:chomp)
+    assert_equal "(string):1:15: note: Type is `Hash'", output[0]
   end
 end

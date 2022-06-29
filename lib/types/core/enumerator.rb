@@ -20,5 +20,6 @@ RDL.type :Enumerator, :peek, '() -> t'
 RDL.type :Enumerator, :peek_values, '() -> Array<t>'
 RDL.type :Enumerator, :rewind, '() -> self'
 RDL.type :Enumerator, :size, '() -> Integer or Float or nil'
-RDL.rdl_alias :Enumerator, :with_index, :each_with_index
+RDL.type :Enumerator, :with_index, "(?Integer) -> self"
+RDL.type :Enumerator, :with_index, "(?Integer) { (t, Integer) -> %any } -> %any"
 RDL.rdl_alias :Enumerator, :with_object, :each_with_object

@@ -19,5 +19,10 @@ EOF
   s.homepage    = 'https://github.com/tupl-tufts/rdl'
   s.license     = 'BSD-3-Clause'
   s.add_runtime_dependency 'parser', '~>2.3', '>= 2.3.1.4'
+  s.add_runtime_dependency 'rake', '~>13.0', '>= 13.0.1'
   s.add_runtime_dependency 'sql-parser', '~>0.0.2'
+  s.add_runtime_dependency 'method_source'
+  s.add_runtime_dependency 'colorize', '~>0.8', '>= 0.8.1'
+  s.add_runtime_dependency 'parlour', '~>2.1.0', '>= 2.1.0'
+  s.add_development_dependency 'coderay', '~>1.1', '>= 1.1.2'
 end

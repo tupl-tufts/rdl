@@ -2,12 +2,16 @@ RDL.nowrap :Enumerable
 
 RDL.type_params :Enumerable, [:t], :all?
 
-RDL.type :Enumerable, :all?, '() -> %bool', effect: [:blockdep, :blockdep]
-RDL.type :Enumerable, :all?, '() { (t) -> %bool } -> %bool', effect: [:blockdep, :blockdep]
+RDL.type :Enumerable, :all?, '() -> %bool'
+RDL.type :Enumerable, :all?, '() { (t) -> %bool } -> %bool'
+RDL.type :Enumerable, :all?, '() { (k, v) -> %bool } -> %bool'
+RDL.type :Enumerable, :all?, '([ ===: (%any) -> %bool]) -> %bool'
 RDL.type :Enumerable, :any?, '() -> %bool'
-RDL.type :Enumerable, :any?, '() { (t) -> %bool } -> %bool'
+RDL.type :Enumerable, :any?, '() { (t) -> %any } -> %bool'
 # RDL.type :Enumerable, :chunk, '(XXXX : *XXXX)' # TODO
 RDL.type :Enumerable, :collect, '() { (t) -> u } -> Array<u>'
+RDL.type :Enumerable, :collect, '() { () -> u } -> Array<u>'
+RDL.type :Enumerable, :collect, '() { (k, v) -> u } -> Array<u>'
 RDL.type :Enumerable, :collect, '() -> Enumerator<t>'
 # RDL.type :Enumerable, :collect_concat # TODO
 RDL.type :Enumerable, :count, '() -> Integer'
@@ -16,6 +20,7 @@ RDL.type :Enumerable, :count, '() { (t) -> %bool } -> Integer'
 RDL.type :Enumerable, :cycle, '(?Integer n) { (t) -> %any } -> nil'
 RDL.type :Enumerable, :cycle, '(?Integer n) -> Enumerator<t>'
 RDL.type :Enumerable, :detect, '(?Proc ifnone) { (t) -> %bool } -> t or nil' # TODO ifnone
+RDL.type :Enumerable, :detect, '() { (t) -> %bool } -> t or nil' # TODO ifnone
 RDL.type :Enumerable, :detect, '(?Proc ifnone) -> Enumerator<t>'
 RDL.type :Enumerable, :drop, '(Integer n) -> Array<t>'
 RDL.type :Enumerable, :drop_while, '() { (t) -> %bool } -> Array<t>'
@@ -24,8 +29,8 @@ RDL.type :Enumerable, :each_cons, '(Integer n) { (Array<t>) -> %any } -> nil'
 RDL.type :Enumerable, :each_cons, '(Integer n) -> Enumerator<t>'
 # RDL.type :Enumerable, :each_entry, '(XXXX : *XXXX)' # TODO
 RDL.rdl_alias :Enumerable, :each_slice, :each_cons
-RDL.type :Enumerable, :each_with_index, '() { (t, Integer) -> %any } -> Enumerable<t>', effect: [:blockdep, :blockdep] # args! note may not return self
-RDL.type :Enumerable, :each_with_index, '() -> Enumerable<t>', effect: [:blockdep, :blockdep] # args! note may not return self
+RDL.type :Enumerable, :each_with_index, '() { (t, Integer) -> %any } -> Enumerable<t>'
+RDL.type :Enumerable, :each_with_index, '() -> Enumerable<t>' # args! note may not return self
 # RDL.type :Enumerable, :each_with_object, '(XXXX : XXXX)' #TODO
 RDL.type :Enumerable, :entries, '() -> Array<t>' # TODO args?
 RDL.rdl_alias :Enumerable, :find, :detect
@@ -53,9 +58,9 @@ RDL.type :Enumerable, :max, '() { (t, t) -> Integer } -> t'
 RDL.type :Enumerable, :max, '(Integer) -> Array<t>'
 RDL.type :Enumerable, :max, '(Integer) { (t, t) -> Integer } -> Array<t>'
 RDL.type :Enumerable, :max_by, '() -> Enumerator<t>'
-RDL.type :Enumerable, :max_by, '() { (t, t) -> Integer } -> t'
+RDL.type :Enumerable, :max_by, '() { (t) -> Integer } -> t'
 RDL.type :Enumerable, :max_by, '(Integer) -> Enumerator<t>'
-RDL.type :Enumerable, :max_by, '(Integer) { (t, t) -> Integer } -> Array<t>'
+RDL.type :Enumerable, :max_by, '(Integer) { (t) -> Integer } -> Array<t>'
 RDL.rdl_alias :Enumerable, :member?, :include?
 RDL.type :Enumerable, :min, '() -> t'
 RDL.type :Enumerable, :min, '() { (t, t) -> Integer } -> t'

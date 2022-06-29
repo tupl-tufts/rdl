@@ -1,7 +1,8 @@
 RDL.nowrap :Kernel
 
-# RDL.type :Kernel, 'self.Array', '([to_ary: () -> Array<t>]) -> Array<t>'
-# RDL.type :Kernel, 'self.Array', '([to_a: () -> Array<t>]) -> Array<t>'
+RDL.type :Kernel, 'self.Array', '([to_ary: () -> Array<t>]) -> Array<t>'
+RDL.type :Kernel, 'self.Array', "(Range<x>) -> Array<x>"
+RDL.type :Kernel, 'self.Array', '([to_a: () -> Array<t>]) -> Array<t>'
 RDL.type :Kernel, 'self.===', "(%any) -> %bool"
 RDL.type :Kernel, 'self.Complex', '(Numeric x, Numeric y) -> Complex'
 RDL.type :Kernel, 'self.Complex', '(String x) -> Complex'
@@ -10,7 +11,7 @@ RDL.type :Kernel, 'self.Float', '(Numeric x) -> Float'
 # RDL.type :Kernel, 'self.Hash', '(x : [to_hash : () -> Hash<k,v>]) -> Hash<k,v>'
 RDL.type :Kernel, 'self.Hash', '(nil x) -> Hash<k,v>'
 # RDL.type :Kernel, 'self.Hash, '(x : []) -> Hash<k,v>'
-RDL.type :Kernel, 'self.Integer', '(Numeric or String arg, ?Integer base) -> Integer'
+RDL.type :Kernel, 'self.Integer', '(Numeric or String, ?Integer) -> Integer'
 # RDL.type :Kernel, 'self.Integer', '(arg : [to_int : () -> Integer], base : ?Integer) -> Integer'
 # RDL.type :Kernel, 'self.Integer', '(arg : [to_i : () -> Integer], base : ?Integer) -> Integer'
 RDL.type :Kernel, 'self.Rational', '(Numeric x, Numeric y) -> Rational'
@@ -30,7 +31,8 @@ RDL.type :Kernel, 'self.caller', '(?Integer start, ?Integer length) -> Array<Str
 RDL.type :Kernel, 'self.caller', '(Range) -> Array<String> or nil'
 RDL.type :Kernel, 'self.caller_locations', '(?Integer start, ?Integer length) -> Array<String> or nil'
 RDL.type :Kernel, 'self.caller_locations', '(Range) -> Array<String> or nil'
-# RDL.type :Kernel, 'self.catch' # TODO
+RDL.type :Kernel, 'self.catch', "(x) { (?x) -> u } -> u"
+ RDL.type :Kernel, 'self.dup', '() -> self'
 RDL.type :Kernel, 'self.eval', '(String, ?Binding, ?String filename, ?Integer lineno) -> %any'
 # RDL.type :Kernel, 'self.exec' #TODO
 RDL.type :Kernel, 'self.exit', '() -> %bot'
@@ -39,14 +41,17 @@ RDL.type :Kernel, 'self.exit!', '(Integer or %bool status) -> %bot'
 RDL.type :Kernel, 'self.fail', '() -> %bot'
 RDL.type :Kernel, 'self.fail', '(String) -> %bot'
 RDL.type :Kernel, 'self.fail', '(Class, Array<String>) -> %bot'
-RDL.type :Kernel, 'self.fail', '(Class, String, Array<String>) -> %bot'
+RDL.type :Kernel, 'self.fail', '(Class, String, ?Array<String>) -> %bot'
 # RDL.type :Kernel, 'self.fail', '(String or [exception : () -> String], ?String, ?Array<String>) -> %any'
 # RDL.type :Kernel, 'self.fork' #TODO
 RDL.type :Kernel, 'self.format', '(String format, *%any args) -> String'
 RDL.type :Kernel, 'self.gets', '(?String, ?Integer) -> String'
 RDL.type :Kernel, 'self.global_variables', '() -> Array<Symbol>'
+RDL.type :Kernel, 'self.instance_variable_get', '(Symbol or String) -> Object', wrap: false
+RDL.type :Kernel, 'self.instance_variable_set', '(Symbol or String, %any) -> Object', wrap: false # returns 2nd argument
 RDL.type :Kernel, 'self.iterator?', '() -> %bool'
 # RDL.type :Kernel, 'self.lambda' # TODO
+RDL.type :Kernel, 'self.kind_of?', '(Class or Module) -> %bool'
 RDL.type :Kernel, 'self.load', '(String filename, ?%bool) -> %bool'
 RDL.type :Kernel, 'self.local_variables', '() -> Array<Symbol>'
 # RDL.type :Kernel, 'self.loop' #TODO
@@ -57,24 +62,30 @@ RDL.type :Kernel, 'self.open', '(String path, ?(String or Integer) mode, ?String
 # RDL.type :Kernel, 'self.print', '(*[to_s : () -> String] -> nil'
 RDL.type :Kernel, 'self.printf', '(?IO, ?String, *%any) -> nil'
 RDL.type :Kernel, :proc, '() {(*%any) -> %any} -> Proc' # TODO more precise
+RDL.type :Kernel, :public_send, '(Symbol or String, *%any args) -> %any', wrap: false
 RDL.type :Kernel, 'self.putc', '(Integer) -> Integer'
-RDL.type :Kernel, 'self.puts', '(*[to_s : () -> String]) -> nil', effect: [:-,:+]
-RDL.type :Kernel, 'self.raise', '() -> %bot', effect: [:+, :+]
-RDL.type :Kernel, 'raise', '() -> %bot', effect: [:+, :+]
+RDL.type :Kernel, 'self.putc', '(String) -> String'
+RDL.type :Kernel, 'self.puts', '(*[to_s : () -> String]) -> nil'
+RDL.type :Kernel, 'self.raise', '() -> %bot'
+RDL.type :Kernel, 'raise', '() -> %bot'
 # RDL.type :Kernel, 'self.raise', '(String or [exception : () -> String], ?String, ?Array<String>) -> %any'
 # TODO: above same as fail?
-RDL.type :Kernel, 'self.rand', '(Integer or Range max) -> Numeric'
+RDL.type :Kernel, 'self.rand', '(Integer or Range<Integer> max) -> Integer'
+RDL.type :Kernel, 'self.rand', '() -> Float'
 RDL.type :Kernel, 'self.readline', '(?String, ?Integer) -> String'
 RDL.type :Kernel, 'self.readlines', '(?String, ?Integer) -> Array<String>'
 RDL.type :Kernel, 'self.require', '(String name) -> %bool'
 RDL.type :Kernel, 'self.require_relative', '(String name) -> %bool'
+RDL.type :Kernel, 'self.respond_to?', '(String or Symbol) -> %bool'
 RDL.type :Kernel, 'self.select',
           '(Array<IO> read, ?Array<IO> write, ?Array<IO> error, ?Integer timeout) -> Array<String>' # TODO: return RDL.type?
 # RDL.type :Kernel, 'self.set_trace_func' #TODO
+RDL.type :Kernel, 'self.singleton_class', '() -> Class'
 RDL.type :Kernel, 'self.sleep', '(Numeric duration) -> Integer'
 # RDL.type :Kernel, 'self.spawn' #TODO
 RDL.rdl_alias :Kernel, :'self.sprintf', :'self.format' # TODO: are they aliases?
-RDL.type :Kernel, 'self.srand', '(Numeric number) -> Numeric'
+RDL.type :Kernel, :sprintf, "(String, %any) -> String"
+RDL.type :Kernel, 'self.srand', '(Numeric number) -> Integer'
 RDL.type :Kernel, 'self.syscall', '(Integer num, *%any args) -> %any' # TODO : ?
 # RDL.type :Kernel, 'self.system' # TODO
 RDL.type :Kernel, 'self.test', '(String cmd, String file1, ?String file2) -> %bool or Time' # TODO: better, dependent RDL.type?
@@ -83,7 +94,7 @@ RDL.type :Kernel, 'self.test', '(String cmd, String file1, ?String file2) -> %bo
 # RDL.type :Kernel, 'self.trap' # TODO
 # RDL.type :Kernel, 'self.untrace_var' # TODO
 RDL.type :Kernel, 'self.warn', '(*String msg) -> nil'
-RDL.type :Kernel, :clone, '() -> self', effect: [:~, :+]
+RDL.type :Kernel, :clone, '() -> self'
 RDL.type :Kernel, :raise, '() -> %bot'
 RDL.type :Kernel, :raise, '(String) -> %bot'
 RDL.type :Kernel, :raise, '(Class, ?String, ?Array<String>) -> %bot'

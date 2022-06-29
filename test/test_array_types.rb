@@ -9,6 +9,7 @@ class TestArrayTypes < Minitest::Test
   def setup
     RDL.reset
     RDL.readd_comp_types
+    RDL::Config.instance.use_precise_string = false
     RDL.type_params :Array, [:t], :all? unless RDL::Globals.type_params["Array"]
     RDL.type_params(:Range, [:t], nil, variance: [:+]) { |t| t.member?(self.begin) && t.member?(self.end) } unless RDL::Globals.type_params["Range"]
   end
@@ -36,7 +37,7 @@ class TestArrayTypes < Minitest::Test
         a[3]
       end
 
-      type '([1,2,3]) -> Array<3 or 2 or 1>', typecheck: :now
+      type '([1,2,3]) -> Array<Integer>', typecheck: :now
       def access_test5(a)
         a[1..4]
       end
@@ -61,7 +62,7 @@ class TestArrayTypes < Minitest::Test
         a.first
       end
 
-      type '([1,2,3], Integer) -> Array<3 or 2 or 1>', typecheck: :now
+      type '([1,2,3], Integer) -> Array<Integer>', typecheck: :now
       def first_test2(a, i)
         a.first(i)
       end
@@ -71,7 +72,7 @@ class TestArrayTypes < Minitest::Test
         [1,2,3]*2
       end
 
-      type '([1,2,3], Integer) -> Array<3 or 2 or 1>', typecheck: :now
+      type '([1,2,3], Integer) -> Array<Integer>', typecheck: :now
       def mult_test2(a, i)
         a * i
       end
@@ -109,7 +110,7 @@ class TestArrayTypes < Minitest::Test
         a << 4
         true
       end
-      
+
       type '([1,2,3], [4,5,String]) -> [1,2,3,4,5,String]', typecheck: :now
       def plus_test1(x, y)
         x+y
@@ -161,7 +162,7 @@ class TestArrayTypes < Minitest::Test
         x
       end
 
-      type '(Integer, [1,2,3]) -> Array<1 or 2 or 3 or String>', typecheck: :now
+      type '(Integer, [1,2,3]) -> Array<Integer or String>', typecheck: :now
       def assign_test2(i, x)
         x[i] = "hi"
         x
