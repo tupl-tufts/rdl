@@ -1897,8 +1897,14 @@ RUBY
       ts = filter_comp_types(ts, false)
       error :no_non_dep_types, [trecv, meth], e unless !ts.empty?
     end
+    puts trecv.inspect
+    puts "trets"
+    puts trets.inspect
+    puts "ancestors"
+    puts trecv.val.ancestors.inspect
 
     RDL::Type.expand_product(tactuals).each { |tactuals_expanded|
+      puts "Checking if expanded product looks right: #{tactuals_expanded}"
       # AT LEAST ONE of the possible intesection arms must match
       trets_tmp = []
       #deferred_constraints = []
@@ -2057,11 +2063,6 @@ RUBY
       else
         raise RuntimeError, "impossible to get type #{trecv}"
       end
-      puts trecv.inspect
-      puts "trets"
-      puts trets.inspect
-      puts "ancestors"
-      puts trecv.val.ancestors.inspect
       error :arg_type_single_receiver_error, [name, meth, msg], e
     end
     # TODO: issue warning if trets.size > 1 ?
