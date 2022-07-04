@@ -533,6 +533,10 @@ p        else
         RDL::Type::GenericType.new(RDL::Globals.types[:array], DBType.rec_to_nominal(trec))
       when RDL::Type::VarType
         nom = DBType.rec_to_nominal(trec)
+        ###############################################################################################
+        # RIGHT HERE: if given a single value, return just `nom`
+        #             if given multiple values (i.e. multiple args or an array), return `Array<nom>`
+        ###############################################################################################
         RDL::Type::UnionType.new(RDL::Type::GenericType.new(RDL::Globals.types[:array], nom), nom)
       else
         raise RDL::Typecheck::StaticTypeError, "Unexpected arg type #{arg0} in call to ActiveRecord::Base#find."
