@@ -516,7 +516,6 @@ class DBType
       arg0 = targs[0]
       case arg0
       when RDL::Globals.types[:integer], RDL::Globals.types[:string], RDL::Globals.types[:symbol]
-        puts "!!!!!!!! Case #1 !!!!!!!!!!!!!"
         DBType.rec_to_nominal(trec)
       when RDL::Type::SingletonType
       # expecting symbol or integer here
@@ -539,7 +538,9 @@ p        else
         #             if given multiple values (i.e. multiple args or an array), return `Array<nom>`
         ###############################################################################################
         puts "!!!!!! Case #2 !!!!!!!!"
-        RDL::Type::UnionType.new(RDL::Type::GenericType.new(RDL::Globals.types[:array], nom), nom)
+        #RDL::Type::UnionType.new(RDL::Type::GenericType.new(RDL::Globals.types[:array], nom), nom)
+        # If only given one arg, the output type is just 1 object. Not an array.
+        nom
       else
         raise RDL::Typecheck::StaticTypeError, "Unexpected arg type #{arg0} in call to ActiveRecord::Base#find."
       end
