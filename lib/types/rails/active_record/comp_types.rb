@@ -538,6 +538,7 @@ p        else
         # RIGHT HERE: if given a single value, return just `nom`
         #             if given multiple values (i.e. multiple args or an array), return `Array<nom>`
         ###############################################################################################
+        puts "!!!!!! Case #2 !!!!!!!!"
         RDL::Type::UnionType.new(RDL::Type::GenericType.new(RDL::Globals.types[:array], nom), nom)
       else
         raise RDL::Typecheck::StaticTypeError, "Unexpected arg type #{arg0} in call to ActiveRecord::Base#find."
