@@ -22,13 +22,13 @@ module RDL::Reporting::CSV
 
       RDL::Logging.debug :inference, "Rendering #{RDL::Util.pp_klass_method(class_str, method.method_name)}"
 
-      if true#method.type.solution.is_a?(RDL::Type::MethodType)
+      if method.type.solution.is_a?(RDL::Type::MethodType)
         meth = method.type.solution
         inf_type = meth_to_s meth
       else
         RDL::Logging.warning :inference, "Got a non-method type in type solutions: #{method.type.class}"
 
-        RDL::Type::VarType.print_XXX!
+        RDL::Type::VarType.no_print_XXX!
         inf_type = method.type.to_s # This would be weird
       end
 
