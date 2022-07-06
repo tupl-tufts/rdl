@@ -293,7 +293,7 @@ module RDL::Typecheck
       end
 
       
-      #if true#!meth.to_s.include?("@") && !meth.to_s.include?("$")#orig_typ.is_a?(RDL::Type::MethodType)
+      #if !meth.to_s.include?("@") && !meth.to_s.include?("$")#orig_typ.is_a?(RDL::Type::MethodType)
       begin
         ast = RDL::Typecheck.get_ast(klass, meth)
         code = ""
