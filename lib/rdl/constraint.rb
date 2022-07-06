@@ -322,6 +322,7 @@ module RDL::Typecheck
         # end
       rescue => e
         puts "Failed to report type sol for #{klass}##{meth}"
+        puts "Error: #{e}"
       end
     }
 
