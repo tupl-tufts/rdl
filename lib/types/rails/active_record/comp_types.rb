@@ -516,6 +516,7 @@ class DBType
       arg0 = targs[0]
       case arg0
       when RDL::Globals.types[:integer], RDL::Globals.types[:string], RDL::Globals.types[:symbol]
+        puts "!!!!!!!! Case #1 !!!!!!!!!!!!!"
         DBType.rec_to_nominal(trec)
       when RDL::Type::SingletonType
       # expecting symbol or integer here
