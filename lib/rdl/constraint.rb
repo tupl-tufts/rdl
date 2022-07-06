@@ -320,7 +320,8 @@ module RDL::Typecheck
         # else
         #  complete_types << [klass, meth, typ, orig_typ, code, comment]
         # end
-        rescue => puts "Failed to report type sol for #{klass}##{meth}"
+      rescue => e
+        puts "Failed to report type sol for #{klass}##{meth}"
       end
     }
 
