@@ -296,7 +296,7 @@ module RDL::Typecheck
       #if true#!meth.to_s.include?("@") && !meth.to_s.include?("$")#orig_typ.is_a?(RDL::Type::MethodType)
       begin
         ast = RDL::Typecheck.get_ast(klass, meth)
-        code = ast.loc.expression.source
+        code = ast.loc.expression.source if ast else ""
         # if RDL::Util.has_singleton_marker(klass)
         #   comment = RDL::Util.to_class(RDL::Util.remove_singleton_marker(klass)).method(meth).comment
         # else

@@ -36,9 +36,6 @@ module RDL::Reporting::CSV
               method.orig_type, method.source_code]
     end
 
-    # Print instance var types
-    @variables
-
     @children.each_key do |key|
       @children[key].to_csv(path, csv)
     end
