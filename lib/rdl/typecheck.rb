@@ -1904,7 +1904,7 @@ RUBY
     puts trecv.val.ancestors.inspect if trecv.respond_to?(:val)
 
     RDL::Type.expand_product(tactuals).each { |tactuals_expanded|
-      puts "Checking if expanded product looks right: #{tactuals_expanded}"
+      puts "Checking if expanded product looks right..."#: #{tactuals_expanded}"
       # AT LEAST ONE of the possible intesection arms must match
       trets_tmp = []
       #deferred_constraints = []
