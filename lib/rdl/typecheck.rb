@@ -1941,7 +1941,7 @@ RUBY
           tmeth = tmeth.instantiate(inst) if inst
           tmeth_names << tmeth
           #deferred_constraints = []
-          puts "About to tc arg types:\n  tmeth: #{tmeth}\n  tactuals_expanded: #{tactuals_expanded})\n  ...with DCs: #{current_dcs}"
+          puts "About to tc arg types:\n  tmeth: #{tmeth}\n  ...with DCs: #{current_dcs}"
           tmeth_inst = tc_arg_types(tmeth, tactuals_expanded, current_dcs)
           #apply_deferred_constraints(deferred_constraints, e) unless deferred_constraints.empty?
           if tmeth_inst
