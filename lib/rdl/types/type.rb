@@ -577,12 +577,15 @@ module RDL::Type
         # But note, no width subtyping allowed, to match #member?
         right_elts = right.elts.clone # shallow copy
         left.elts.each_pair { |k, tl|
+          puts "leq: k=#{k}"
           if right_elts.has_key? k
             tr = right_elts[k]
             return false if tl.is_a?(OptionalType) && !tr.is_a?(OptionalType) # optional left, required right not allowed, since left may not have key
             tl = tl.type if tl.is_a? OptionalType
             tr = tr.type if tr.is_a? OptionalType
+            puts "leq: k=#{k} tl=#{tl} tr=#{tr}"
             return false unless leq(tl, tr, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+            puts "leq: we didn't return"
             right_elts.delete k
           else
             return false unless right.rest && leq(tl, right.rest, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)

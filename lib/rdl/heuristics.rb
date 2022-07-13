@@ -127,7 +127,11 @@ RDL::Heuristic.add(:string_name) { |var| if var.base_name.end_with?("name") then
 RDL::Heuristic.add(:hash_access) { |var|
   old_var = var
   var = var.type if old_var.is_a?(RDL::Type::OptionalType)
+
+  # accumulate all non-variable upper bounds
   types = []
+
+  # filter out var types
   var.ubounds.reject { |t, ast| t.is_a?(RDL::Type::VarType) }.each { |t, ast|
     if t.is_a?(RDL::Type::IntersectionType)
       types = types + t.types
@@ -135,6 +139,7 @@ RDL::Heuristic.add(:hash_access) { |var|
       types << t
     end
   }
+
   if !types.empty? && types.all? { |t| t.is_a?(RDL::Type::StructuralType) && t.methods.all? { |meth, typ| ((meth == :[]) || (meth == :[]=)) && typ.args[0].is_a?(RDL::Type::SingletonType) && typ.args[0].val.is_a?(Symbol)  } }
     hash_typ = {}
     types.each { |struct|
@@ -155,10 +160,19 @@ RDL::Heuristic.add(:hash_access) { |var|
         end
         #value_type = value_type.drop_vars!.canonical if (value_type.is_a?(RDL::Type::UnionType) || value_type.is_a?(RDL::Type::IntersectionType)) && (!value_type.types.all? { |t| t.is_a?(RDL::Type::VarType) })
         hash_typ[typ.args[0].val] = RDL::Type::UnionType.new(value_type, hash_typ[typ.args[0].val]).canonical#RDL::Type::OptionalType.new(value_type) ## TODO:
+
+        if value_type.is_a?(RDL::Type::VarType)
+          puts "Upper bound of #{value_type}:"
+          value_type.ubounds.each { |t, ast| 
+            puts " - #{t}"
+          }
+        end
+        puts "Adding to finite hash type: hash_typ[#{typ.args[0].val}] = #{hash_typ[typ.args[0].val]}"
       }
     }
     #var.ubounds.delete_if { |t| t.is_a?(RDL::Type::StructuralType) } #= [] ## might have to change this later, in particular to take advantage of comp types when performing solution extraction
     fht = RDL::Type::FiniteHashType.new(hash_typ, nil)
+    puts "Constructed FHT: #{fht}"
     if old_var.is_a?(RDL::Type::OptionalType)
       RDL::Type::OptionalType.new(fht)
     else

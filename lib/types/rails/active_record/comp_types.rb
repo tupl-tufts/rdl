@@ -323,6 +323,8 @@ end
 
 
 
+
+
 class DBType
   ## given a type (usually representing a receiver type in a method call), this method returns the nominal type version of that type.
   ## if the given type represents a joined table, then we return the nominal type version of the *base* of the joined table.
@@ -366,6 +368,7 @@ class DBType
     when RDL::Type::GenericType
       raise "Unexpected type #{trec}." unless (trec.base.klass == ActiveRecord_Relation) || (trec.base.klass == ActiveRecord::QueryMethods::WhereChain)
       param = trec.params[0]
+      puts "DBType.rec_to_schema-type: trec: #{trec}, param: #{param}"
       case param
       when RDL::Type::GenericType
         ## should be JoinTable
@@ -394,7 +397,9 @@ class DBType
         return RDL::Type::FiniteHashType.new(type_hash, nil)
       when RDL::Type::NominalType
         tname = param.klass.to_s.to_sym
-        return table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs)
+        res = table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs)
+        puts "Generic Nominal Type tname: #{tname}, res: #{res}"
+        return res
       else
         raise RDL::Typecheck::StaticTypeError, "Unexpected type parameter in  #{trec}."
       end
@@ -402,10 +407,15 @@ class DBType
       val = RDL.type_cast(trec.val, 'Class', force: true)
       raise RDL::Typecheck::StaticTypeError, "Unexpected receiver type #{trec}." unless val.is_a?(Class)
       tname = val.to_s.to_sym
-      return table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs)
+      res = table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs)
+      puts "Singleton Type tname: #{tname}, res: #{res}"
+      return res
     when RDL::Type::NominalType
       tname = trec.name.to_sym
-      return table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs)
+      res = table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs)
+      puts "Nominal Type tname: #{tname}, res: #{res}"
+      return res
+
     else
       raise RDL::Typecheck::StaticTypeError, "Unexpected receiver type #{trec}."
     end
