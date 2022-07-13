@@ -153,6 +153,7 @@ require	'rdl/types/method.rb'
 require 'rdl/types/singleton.rb'
 require 'rdl/types/ast_node.rb'
 require 'rdl/types/nominal.rb'
+require	'rdl/types/json.rb' ## depends on nominal.rb
 require	'rdl/types/non_null.rb'
 require 'rdl/types/optional.rb'
 require 'rdl/types/parser.tab.rb'
