@@ -8,7 +8,7 @@ module RDL::Type
     #attr_reader :schema # FiniteHashType
 
     def self.new(schema_s)
-      super "String"
+      super "JSON"
 
       # TODO: call super constructor of NominalType
       #raise "test"
@@ -17,7 +17,8 @@ module RDL::Type
     end
 
     def to_s
-      "JSON<#{@schema.to_s}>"
+      #"JSON<#{@schema.to_s}>"
+      return "JSON"
     end
 
   end

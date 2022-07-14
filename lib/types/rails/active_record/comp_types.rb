@@ -320,12 +320,36 @@ class ActiveRecord_Relation
   type :sort, "() { (t, t) -> Integer } -> Array<t>", wrap: false
 end
 
+module ActiveModel::Serializers::JSON
+  extend RDL::Annotate
 
+  type :as_json, "() -> ``DBType.rec_as_json(trec, nil)``", wrap: false
 
-
+end
 
 
 class DBType
+
+  ## given a type (usually representing a receiver type in a method call), this 
+  ## method returns a finite hash type (FHT) representing its serialized
+  ## version.
+  def self.rec_as_json(trec, options = nil)
+    # as a start
+    #return RDL::Type::JSONType.new(rec_to_schema_type(trec, true))
+
+    #return RDL::Type::JSONType.new(
+    #  RDL::Type::FiniteHashType.new([], nil)
+    #)
+
+    #return RDL::Type::JSONType.new(1)
+
+    return RDL::Type::NominalType.new(
+      "JSON<#{rec_to_schema_type(trec, true).to_s}"
+    )
+
+  end
+  RDL.type DBType, 'self.rec_as_json', "(RDL::Type::Type, Hash) -> RDL::Type::FiniteHashType", wrap: false, typecheck: :type_code
+
   ## given a type (usually representing a receiver type in a method call), this method returns the nominal type version of that type.
   ## if the given type represents a joined table, then we return the nominal type version of the *base* of the joined table.
   ## [+ t +] is the type for which we want the nominal type.
