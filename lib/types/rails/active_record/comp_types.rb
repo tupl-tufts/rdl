@@ -323,17 +323,67 @@ end
 module ActiveModel::Serializers::JSON
   extend RDL::Annotate
 
-  type :as_json, "() -> ``DBType.rec_as_json(trec, nil)``", wrap: false
+  type :as_json, "(%any) -> ``DBType.rec_as_json(trec, targs)``", wrap: false
 
 end
 
 
 class DBType
 
-  ## given a type (usually representing a receiver type in a method call), this 
+  ## given an RDL type representing one or more symbols,
+  ## extract the symbols out.
+  #
+  # (RDL::Type) -> Array<Symbol>
+  #
+  # example:
+  #   input: RDL type for [:body, :title]
+  #          (which is TupleType { params=[SingletonType { val=:body }, SingletonType { val=:title }]})
+  #   output: [:body, :title]
+  def self.type_to_keys(type)
+    case type
+    when RDL::Type::SingletonType
+      return [type.val]
+    when RDL::Type::TupleType
+      return type.params.map { |t| t.val }
+    else
+      raise "Unexpected type encountered when parsing JSON options. Expected SingletonType or TupleType, got #{type}"
+    end
+  end
+
+  ## given a type (usually representing a receiver type in a method call), this
   ## method returns a finite hash type (FHT) representing its serialized
   ## version.
+  # 
+  # `options` takes the same form as Rails' `as_json`:
+  #      only:   Attribute | List<Attribute>
+  #    except:   Attribute | List<Attribute>
+  #   methods:      Method | List<Method>       # calls methods with the
+  #                                             # model as an arg
+  #   include: Association | List<Association>
+  #
+  # Implementation closely follows `serializable_hash`:
+  #    https://apidock.com/rails/ActiveModel/Serialization/serializable_hash
   def self.rec_as_json(trec, options = nil)
+    # Step 1. use `rec_to_schema_type` to get the schema type and attribute names.
+    schema = rec_to_schema_type(trec, true, include_assocs: false)
+    attribute_names = schema.elts.keys
+    puts "rec_as_json comp type: attribute_names before filter = #{attribute_names}"
+
+    # Step 2. Filter by `only` and `except`.
+    if options[0].elts.key?(:only)
+      # Extract attribute names from type
+      only = type_to_keys(options[0].elts[:only])
+      puts "rec_as_json only keys: #{only}"
+      attribute_names &= only
+    elsif options[0].elts.key?(:except)
+      # Extract attribute names from type
+      except = type_to_keys(options[0].elts[:except])
+      puts "rec_as_json except keys: #{except}"
+      attribute_names -= except
+    end
+    # actually filter
+    schema.elts = schema.elts.filter { |k, v| puts k.class; puts attribute_names[0].class; attribute_names.include?(k) }
+
     # as a start
     #return RDL::Type::JSONType.new(rec_to_schema_type(trec, true))
 
@@ -343,12 +393,16 @@ class DBType
 
     #return RDL::Type::JSONType.new(1)
 
+    puts "rec_as_json comp type: options = #{options}"
+    puts "rec_as_json comp type: attribute_names after filter = #{attribute_names}"
+    puts "rec_as_json comp type: rec_to_schema_type + assocs = #{rec_to_schema_type(trec, true, include_assocs: true)}"
+
     return RDL::Type::NominalType.new(
-      "JSON<#{rec_to_schema_type(trec, true).to_s}"
+      "JSON<#{schema.to_s}>"
     )
 
   end
-  RDL.type DBType, 'self.rec_as_json', "(RDL::Type::Type, Hash) -> RDL::Type::FiniteHashType", wrap: false, typecheck: :type_code
+  RDL.type DBType, 'self.rec_as_json', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::FiniteHashType", wrap: false, typecheck: :type_code
 
   ## given a type (usually representing a receiver type in a method call), this method returns the nominal type version of that type.
   ## if the given type represents a joined table, then we return the nominal type version of the *base* of the joined table.
