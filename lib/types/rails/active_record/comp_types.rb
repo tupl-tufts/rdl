@@ -367,6 +367,8 @@ class DBType
   #
   # Implementation closely follows `serializable_hash`:
   #    https://apidock.com/rails/ActiveModel/Serialization/serializable_hash
+  #
+  # (RDL::Type::NominalType, Array<RDL::Type>)
   def self.rec_as_json(trec, options = nil)
     puts "rec_as_json: called with: trec='#{trec}' :: #{trec.class}      options='#{options}' :: #{options.class}"
     # Step 1. use `rec_to_schema_type` to get the schema type and attribute names.
@@ -399,13 +401,39 @@ class DBType
       # Is it a higher order association?
       case inclusions
       when RDL::Type::FiniteHashType
-        # 
+        # Loop over each included model
+        puts "FHT CASE: inclusions.elts => #{inclusions.elts.inspect} :: #{inclusions.elts.class}"
+        inclusions.elts.each do |included_symbol, included_options|
+          raise RDL::Typecheck::StaticTypeError, "JSON serialization includes an unknown association: '#{included_symbol}'" unless associated_with?(trec, included_symbol)
+
+          table_class = Object.const_get(trec.to_s.to_sym)
+          included_class_name = table_class.reflect_on_association(included_symbol).class_name.to_sym
+
+          included_options = [RDL::Type::FiniteHashType.new({}, nil)] unless included_options
+          included_options = [included_options] unless included_options.class == 'Array'
+
+          schema.elts[included_symbol.to_s] =
+            RDL::Type::GenericType.new(RDL::Globals.types[:array],
+              rec_as_json(RDL::Type::NominalType.new(included_class_name), included_options))
+        end
+          
 
       when RDL::Type::SingletonType # just one inclusion like `:body`
         # get the name of the included Model
         included_symbol = inclusions.val
         raise RDL::Typecheck::StaticTypeError, "JSON serialization includes an unknown association: '#{included_symbol}'" unless associated_with?(trec, included_symbol)
+
         table_class = Object.const_get(trec.to_s.to_sym)
+        # get name of associated class
+        included_class_name = table_class.reflect_on_association(included_symbol).class_name.to_sym
+        
+        # add the schem
+        schema.elts[included_symbol.to_s] = 
+          RDL::Type::GenericType.new(RDL::Globals.types[:array], 
+            rec_as_json(RDL::Type::NominalType.new(included_class_name)))
+
+
+
         puts "rec_as_json: table_class: '#{table_class.inspect}'"
         puts "rec_as_json: included_symbol: '#{included_symbol.inspect}' :: #{included_symbol.class}"
         puts "rec_as_json: reflected association: #{table_class.reflect_on_association(included_symbol).inspect}"# { |a|
@@ -426,13 +454,8 @@ class DBType
         #raise RDL::Typecheck::StaticTypeError, "Unexpected type `include`'d: '#{tinclusion}'." unless tinclusion.is_a?(Class)
         #included_name = tinclusion.to_s.to_sym
 
-        # get type of associated class
-        included_class_name = table_class.reflect_on_association(included_symbol).class_name.to_sym
         #tinclusion = table_name_to_schema_type(included_class_name, true)
         #puts "rec_as_json: tinclusion: #{tinclusion.inspect}"
-
-        # add the schem
-        schema.elts[included_symbol.to_s] = RDL::Type::GenericType.new(RDL::Globals.types[:array], rec_as_json(RDL::Type::NominalType.new(included_class_name)))
 
 
         #val = RDL.type_cast(trec.val, 'Class', force: true)
