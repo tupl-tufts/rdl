@@ -375,12 +375,12 @@ class DBType
     puts "rec_as_json comp type: attribute_names before filter = #{attribute_names}"
 
     # Step 2. Filter by `only` and `except`.
-    if options[0].elts.key?(:only)
+    if options and options[0].elts.key?(:only)
       # Extract attribute names from type
       only = type_to_keys(options[0].elts[:only])
       puts "rec_as_json only keys: #{only}"
       attribute_names &= only
-    elsif options[0].elts.key?(:except)
+    elsif options and options[0].elts.key?(:except)
       # Extract attribute names from type
       except = type_to_keys(options[0].elts[:except])
       puts "rec_as_json except keys: #{except}"
@@ -390,7 +390,7 @@ class DBType
     schema.elts = schema.elts.filter { |k, v| puts k.class; puts attribute_names[0].class; attribute_names.include?(k) }
 
     # Step 3. Add `include` associations.
-    if options[0].elts.key?(:include)
+    if options and options[0].elts.key?(:include)
       # Extract `include` value.
       inclusions = options[0].elts[:include]
       
@@ -425,11 +425,12 @@ class DBType
         #included_name = tinclusion.to_s.to_sym
 
         # get type of associated class
-        tinclusion = table_name_to_schema_type(table_class.reflect_on_association(included_symbol).class_name.to_sym, true)
+        included_class_name = table_class.reflect_on_association(included_symbol).class_name.to_sym
+        tinclusion = table_name_to_schema_type(included_class_name, true)
         puts "rec_as_json: tinclusion: #{tinclusion.inspect}"
 
         # add the schem
-        schema.elts[included_symbol.to_s] = RDL::Type::GenericType.new(RDL::Globals.types[:array], rec_as_json(tinclusion))
+        schema.elts[included_symbol.to_s] = RDL::Type::GenericType.new(RDL::Globals.types[:array], rec_as_json(RDL::Type::NominalType.new(included_class_name)))
 
 
         #val = RDL.type_cast(trec.val, 'Class', force: true)
