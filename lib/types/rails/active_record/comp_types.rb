@@ -399,6 +399,8 @@ class DBType
       # Is it a higher order association?
       case inclusions
       when RDL::Type::FiniteHashType
+        # 
+
       when RDL::Type::SingletonType # just one inclusion like `:body`
         # get the name of the included Model
         included_symbol = inclusions.val
@@ -426,8 +428,8 @@ class DBType
 
         # get type of associated class
         included_class_name = table_class.reflect_on_association(included_symbol).class_name.to_sym
-        tinclusion = table_name_to_schema_type(included_class_name, true)
-        puts "rec_as_json: tinclusion: #{tinclusion.inspect}"
+        #tinclusion = table_name_to_schema_type(included_class_name, true)
+        #puts "rec_as_json: tinclusion: #{tinclusion.inspect}"
 
         # add the schem
         schema.elts[included_symbol.to_s] = RDL::Type::GenericType.new(RDL::Globals.types[:array], rec_as_json(RDL::Type::NominalType.new(included_class_name)))
