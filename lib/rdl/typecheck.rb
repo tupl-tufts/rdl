@@ -1897,11 +1897,11 @@ RUBY
       ts = filter_comp_types(ts, false)
       error :no_non_dep_types, [trecv, meth], e unless !ts.empty?
     end
-    puts trecv.inspect
-    puts "trets"
-    puts trets.inspect
-    puts "ancestors"
-    puts trecv.val.ancestors.inspect if trecv.respond_to?(:val)
+    #puts trecv.inspect
+    #puts "trets"
+    #puts trets.inspect
+    #puts "ancestors"
+    #puts trecv.val.ancestors.inspect if trecv.respond_to?(:val)
 
     RDL::Type.expand_product(tactuals).each { |tactuals_expanded|
       puts "Checking if expanded product looks right..."#: #{tactuals_expanded}"
@@ -1934,7 +1934,12 @@ RUBY
             tmeth = tmeth_res = compute_types(tmeth, self_klass, trecv, tactuals_expanded, binds) unless binds.nil?
             ##########################
             # INSERT DEBUG STATEMENT #
-            puts "Computed comp type for #{tmeth_old}: #{tmeth}"
+            puts ""
+            puts "Computed comp type for #{meth}"
+            puts "    #{tmeth_old}"
+            puts "    ~>"
+            puts "    #{tmeth}"
+            puts ""
             ##########################
             comp_type = true
           end

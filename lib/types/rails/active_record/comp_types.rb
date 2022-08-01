@@ -6,9 +6,11 @@ class ActiveRecord::Base
   type Object, :present?, "() -> %bool", wrap: false
   type :initialize, '(``DBType.rec_to_schema_type(trec, true)``) -> self', wrap: false
   type 'self.create', '(``DBType.rec_to_schema_type(trec, true, include_assocs: true)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
+  type 'self.new', '(``DBType.rec_to_schema_type(trec, true, include_assocs: true)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type 'self.create!', '(``DBType.rec_to_schema_type(trec, true, include_assocs: true)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type :initialize, '() -> self', wrap: false
   type 'self.create', '() -> ``DBType.rec_to_nominal(trec)``', wrap: false
+  type 'self.new', '() -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type 'self.create!', '() -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type :attribute_names, "() -> Array<String>", wrap: false
   type :to_json, "(?{ only: Array<String> }) -> String", wrap: false
@@ -369,8 +371,14 @@ class DBType
   #    https://apidock.com/rails/ActiveModel/Serialization/serializable_hash
   #
   # (RDL::Type::NominalType, Array<RDL::Type>)
-  def self.rec_as_json(trec, options = nil)
+  def self.rec_as_json(trec, options = [RDL::Type::FiniteHashType.new({}, nil)])
     puts "rec_as_json: called with: trec='#{trec}' :: #{trec.class}      options='#{options}' :: #{options.class}"
+    raise RDL::Typecheck::StaticTypeError, "as_json called with invalid options. Expected Array, got #{options.class.to_s}" unless options.class == Array
+
+    if options.length < 1
+      options[0] = RDL::Type::FiniteHashType.new({}, nil)
+    end
+
     # Step 1. use `rec_to_schema_type` to get the schema type and attribute names.
     schema = rec_to_schema_type(trec, true, include_assocs: false)
     attribute_names = schema.elts.keys
@@ -410,7 +418,7 @@ class DBType
           included_class_name = table_class.reflect_on_association(included_symbol).class_name.to_sym
 
           included_options = [RDL::Type::FiniteHashType.new({}, nil)] unless included_options
-          included_options = [included_options] unless included_options.class == 'Array'
+          included_options = [included_options] unless included_options.class == Array
 
           schema.elts[included_symbol.to_s] =
             RDL::Type::GenericType.new(RDL::Globals.types[:array],

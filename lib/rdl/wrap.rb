@@ -943,6 +943,12 @@ module RDL
           ## difference between `text` and `string` is in the SQL types they're mapped to, not in Ruby types
           t_name = "String"
           s1[k] = RDL::Globals.types[:string]
+        elsif t_name == "Binary"
+          ## ActiveRecord accepts any value as a binary type.
+          ## It's intended to be a string value, but non-string
+          ## values are coerced into strings with their `to_s` method.
+          t_name = "%any"
+          s1[k] = RDL::Globals.special_types["%any"]
         else
           s1[k] = RDL::Type::NominalType.new(t_name)
         end

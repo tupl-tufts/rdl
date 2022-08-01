@@ -41,5 +41,6 @@ module RDL::Reporting::CSV
     end
 
     csv.close unless open_file
+    RDL::Logging.log :inference, :info, "File result is writed"
   end
 end
