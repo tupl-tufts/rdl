@@ -1,3 +1,4 @@
+
 class RDL::Heuristic
 
   @rules = {}
@@ -6,14 +7,30 @@ class RDL::Heuristic
 
   @meth_to_cls_map = Hash.new {|hash, m| hash[m] = Set.new}  # maps a method to a set of classes with that method
   @str_to_cls_map = {}  # this is needed to avoid calling the hash function on classes since hash can be overridden.
-  # RDL::Util.to_class does not always work adequately for deprecetaed modules/methods, hence the need for this map.
+  # RDL::Util.to_class does not always work adequately for deprecated modules/methods, hence the need for this map.
 
   def self.init_meth_to_cls  # to be called before the first call to struct_to_nominal
+
+    # determine how many modules to init
+    count = 0
+    ObjectSpace.each_object(Module).each do |c|
+      count = count + 1
+    end
+    RDL::Logging.log :heuristic, :trace, "init_meth_to_cls for #{count} modules..."
+
+    progress = 0
     ObjectSpace.each_object(Module).each do |c|
       @str_to_cls_map[c.to_s] = c
       class_methods = c.instance_methods | RDL::Globals.info.get_methods_from_class(c.to_s)
+      RDL::Logging.log :heuristic, :trace, "Mapping #{class_methods.length} methods from #{c.to_s}"
       class_methods.each {|m| @meth_to_cls_map[m] = @meth_to_cls_map[m].add(c.to_s)}
+      progress = progress + 1
+
+      if progress % 100 == 0
+        RDL::Logging.log :heuristic, :trace, "Progress: #{progress}/#{count}. initialized #{c}"
+      end
     end
+    RDL::Logging.log :heuristic, :trace, "init_meth_to_cls... done!"
   end
 
   def self.add(name, &blk)
@@ -58,6 +75,7 @@ class RDL::Heuristic
     return unless var_type.ubounds.any? { |t, loc| t.is_a?(RDL::Type::StructuralType) } ## upper bounds must include struct type(s)
     struct_types = var_type.ubounds.select { |t, loc| t.is_a?(RDL::Type::StructuralType) }
     struct_types.map! { |t, loc| t }
+    #debugger
     RDL::Logging.log :heuristic, :trace, "Found %d upper bounds of structural type" % struct_types.size
     return if struct_types.empty?
     meth_names = struct_types.map { |st| st.methods.keys }.flatten.uniq
@@ -65,7 +83,8 @@ class RDL::Heuristic
     meth_names.delete(:new)
     return if meth_names.empty?
     RDL::Logging.log :heuristic, :trace, "Corresponding methods are: %s" % (meth_names*", ")
-    matching_classes = matching_classes(meth_names)
+    #debugger
+    matching_classes = self.matching_classes(meth_names)
     matching_classes.reject! { |c| c.to_s.start_with?("#<Class") || /[^:]*::[a-z]/.match?(c.to_s) || c.to_s.include?("ARGF") } ## weird few constants where :: is followed by a lowecase letter... it's not a class and I can't find anything written about it.
     RDL::Logging.log :heuristic, :trace, "Throwing out 'weird constants' leaves %d matching classes" % matching_classes.size
     ## TODO: special handling for arrays/hashes/generics?
@@ -162,17 +181,17 @@ RDL::Heuristic.add(:hash_access) { |var|
         hash_typ[typ.args[0].val] = RDL::Type::UnionType.new(value_type, hash_typ[typ.args[0].val]).canonical#RDL::Type::OptionalType.new(value_type) ## TODO:
 
         if value_type.is_a?(RDL::Type::VarType)
-          puts "Upper bound of #{value_type}:"
+          RDL::Logging.log :heuristic, :trace, "Upper bound of #{value_type}:"
           value_type.ubounds.each { |t, ast| 
-            puts " - #{t}"
+            RDL::Logging.log :heuristic, :trace, " - #{t}"
           }
         end
-        puts "Adding to finite hash type: hash_typ[#{typ.args[0].val}] = #{hash_typ[typ.args[0].val]}"
+        RDL::Logging.log :heuristic, :trace, "Adding to finite hash type: hash_typ[#{typ.args[0].val}] = #{hash_typ[typ.args[0].val]}"
       }
     }
     #var.ubounds.delete_if { |t| t.is_a?(RDL::Type::StructuralType) } #= [] ## might have to change this later, in particular to take advantage of comp types when performing solution extraction
     fht = RDL::Type::FiniteHashType.new(hash_typ, nil)
-    puts "Constructed FHT: #{fht}"
+    RDL::Logging.log :heuristic, :trace, "Constructed FHT: #{fht}"
     if old_var.is_a?(RDL::Type::OptionalType)
       RDL::Type::OptionalType.new(fht)
     else
