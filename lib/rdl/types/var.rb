@@ -55,19 +55,31 @@ module RDL::Type
     # [+ ast +] is the AST where the bound originates from, used for error messages.
     # [+ new_cons +] is a Hash<VarType, Array<[:upper or :lower, Type, AST]>>. When provided, can be used to roll back constraints in case an error pops up.
     def add_and_propagate_upper_bound(typ, ast, new_cons = {})
+      # Self = Type variable T
+
+      # If we add T <= T, do nothing
       return if self.equal?(typ)
+
+
+      # If this upper bound doesn't already exist, add it to @ubounds.
       if !@ubounds.any? { |t, a| t == typ }
         @ubounds << [typ, ast]
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:upper, typ, ast]] : [[:upper, typ, ast]]
       end
+
+      # For each lower bound,
       @lbounds.each { |lower_t, a|
         if typ.is_a?(VarType) && !typ.lbounds
           RDL::Logging.debug_error :inference, "Nil found in lbounds... Continuing"
           next
         end
+
+        # Propagate upper bound (if we're inferring this lower bound type var)
         if lower_t.is_a?(VarType) && lower_t.to_infer
           lower_t.add_and_propagate_upper_bound(typ, ast, new_cons) unless lower_t.ubounds.any? { |t, _| t == typ }
         else
+
+          # 
           if typ.is_a?(VarType) && !typ.lbounds.any? { |t, _| t == lower_t }
             new_cons[typ] = new_cons[typ] ? new_cons[typ] | [[:lower, lower_t, ast]] : [[:lower, lower_t, ast]]
           end
