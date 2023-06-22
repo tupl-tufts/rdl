@@ -182,6 +182,7 @@ require 'rdl/typecheck.rb'
 require 'rdl/reporting/reporting.rb'
 require 'rdl/constraint.rb'
 require 'rdl/heuristics.rb'
+require 'rdl/openapi.rb'
 #require_relative 'rdl/stats.rb'
 
 class << RDL::Globals
