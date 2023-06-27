@@ -36,47 +36,57 @@ module RDL::Annotate
 
             ap "OpenAPI Path: #{path}. Resolved to Rails action: #{kontroller}##{method}"
 
-            ap "Resolved output type: -> #{translate_schema(verbs['get']['responses']['200']['content']['application/json; charset=utf-8']['schema'], openapi)}"
+            output_type = translate_path(verbs, openapi)
+            ap "Resolved type: #{output_type}}"
+            output_type_rdl = RDL::Wrap.type_to_type output_type
+            ap "Resolved RDL type: #{output_type_rdl}}"
+
+            # Actually perform the typechecking.
+            ap "Submitting to RDL: RDL.type, #{kontroller}, #{method.to_sym}, #{output_type}}"
+            RDL.type kontroller, method.to_sym, output_type, wrap: false
 
 
         }
 
 
-        #############
-        # test area
+    end
 
-        #puts
-        #puts
-        #puts
-        #ap "Route:"
-        #ap rails_paths[14]
+    # Translates an OpenAPI path to an RDL type.
+    # Currently, only supports GET endpoints with a 200 response.
+    def translate_path(endpoint, openapi)
+        input_type = ""
+        input_type = translate_parameters(endpoint['get']['parameters'], openapi) if endpoint['get'].has_key?('parameters')
 
-        #puts
-        #puts
-        #puts
-        #ap "Route Controller:"
-        #ap rails_paths[14].controller
+        output_type = translate_responses(endpoint['get']['responses'], openapi)
 
-        #puts
-        #puts
-        #puts
-        #ap "Route Action:"
-        #ap rails_paths[14].action
+        "(#{input_type}) -> #{output_type}"
+    end
 
-        #puts
-        #puts
-        #puts
-        #rails_paths.each { |p| 
-        #    ap "#{p.controller}_controller".camelize.constantize.new.class
-        #}
-        #klass = "#{rails_paths[14].controller}_controller".camelize.constantize.new
-        #ap "Route Class:"
-        #ap klass
+    # Translates an OpenAPI `parameters` field to an RDL type,
+    # representing the endpoint's input type.
+    def translate_parameters(parameters, openapi)
+        # Map each parameter type to its RDL type, then concatenate them and join with ", ".
+        parameters.map {|p| translate_schema(p['schema'], openapi)}.join(', ')
+    end
 
-        #
-        #############
+    # Translates an OpenAPI `responses` field to an RDL type, 
+    # representing the endpoint's output type.
+    # Currently, only supports a 200 response.
+    def translate_responses(responses, openapi)
+        RDL::Logging.log :openapi, :error, "OpenAPI spec doesn't have a 200 response: #{responses}" if !responses.has_key?('200')
 
-        exit(1)
+        response_content = responses['200']['content']
+
+        # Check if response_content has a key that starts with `application/json`. If so, extract the `schema` from within that, and pass it to `translate_schema`.
+        # Otherwise, return `nil`.
+        json_content = response_content.keys.find {|k| k.start_with?('application/json')}
+
+        if json_content != nil
+            translate_schema(response_content[json_content]['schema'], openapi)
+        else
+            nil
+        end
+
     end
 
 
@@ -101,7 +111,7 @@ module RDL::Annotate
 
         # Objects
         when 'object'
-            schema.to_s # conservative approximation for JSON
+            "{#{schema['properties'].map {|k, v| "#{k}: #{translate_schema(v, openapi)}"}.join(', ')}}"
 
         # Refs (reference to a schema defined elsewhere in the spec)
         # Refs have no "type", instead they have "$ref"
@@ -116,7 +126,9 @@ module RDL::Annotate
             end
 
         else
-            "String" # conservative approximation for everything else. If it's coming from OpenAPI, it can definitely be represented as a string.
+            #"String" # conservative approximation for everything else. If it's coming from OpenAPI, it can definitely be represented as a string.
+            # but I'll crash for now
+            RDL::Logging.log :openapi, :error, "Unknown field in OpenAPI definition: #{schema}"
         end
     end
 
