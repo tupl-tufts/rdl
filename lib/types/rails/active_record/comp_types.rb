@@ -479,8 +479,9 @@ class DBType
     puts "rec_as_json comp type: attribute_names after filter = #{attribute_names}"
     puts "rec_as_json comp type: rec_to_schema_type + assocs = #{rec_to_schema_type(trec, true, include_assocs: true)}"
 
-    return RDL::Type::NominalType.new(
-      "JSON<#{schema.to_s}>"
+    return RDL::Type::GenericType.new(
+      RDL::Type::NominalType.new("JSON"), # Base
+      schema # Generic parameter
     )
 
   end

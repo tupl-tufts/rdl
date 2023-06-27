@@ -273,7 +273,7 @@ RDL.type :Hash, :has_key?, '(%any) -> ``output_type(trec, targs, :has_key?, "%bo
 RDL.type :Hash, :key?, '(%any) -> ``output_type(trec, targs, :key?, "%bool")``'
 RDL.type :Hash, :has_value?, '(%any) -> ``output_type(trec, targs, :has_value?, "%bool")``'
 RDL.type :Hash, :value?, '(%any) -> ``output_type(trec, targs, :value?, "%bool")``'
-RDL.type :Hash, :to_s, '() -> String'
+RDL.type :Hash, :to_s, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new("JSON"), trec)``'
 RDL.type :Hash, :inspect, '() -> String'
 RDL.type :Hash, :invert, '() -> ``invert_output(trec)``'
 
