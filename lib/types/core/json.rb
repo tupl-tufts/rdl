@@ -1,0 +1,1 @@
+RDL.type_params :JSON, [:t], :all?
