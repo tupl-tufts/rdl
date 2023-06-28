@@ -45,13 +45,11 @@ module ClassIndexer
       @current_class.delete_suffix!(entered_class)
       reset_class if @current_class.empty?
 
-=begin
-      if @current_class.include?("::")
-        @current_class.sub!("::" + class_name, "")
-      else
-        reset_class
-      end
-=end
+      # if @current_class.include?("::")
+      #   @current_class.sub!("::" + class_name, "")
+      # else
+      #   reset_class
+      # end
     end
 
     def on_module(node)
@@ -69,24 +67,20 @@ module ClassIndexer
 
       @current_class.delete_suffix!(entered_class)
       reset_class if @current_class.empty?
-=begin
-      if @current_class.include?("::")
-        @current_class.sub!("::"+module_name, "")
-      else
-        reset_class
-      end
-=end
+      # if @current_class.include?("::")
+      #   @current_class.sub!("::"+module_name, "")
+      # else
+      #   reset_class
+      # end
     end
 
     def on_sclass(node)
       #raise "Not currently supported." unless (node.children[0].type == :self) || (node.children[0].loc.expression.source == @current_class)
-=begin
-      @current_class.prepend("[s]")
+      # @current_class.prepend("[s]")
 
-      node.children.each { |c| process(c) }
+      # node.children.each { |c| process(c) }
 
-      @current_class.sub!("[s]", "")
-=end
+      # @current_class.sub!("[s]", "")
       if node.children[0].type == :self
         @current_class.prepend("[s]")
         node.children.each { |c| process(c) }
