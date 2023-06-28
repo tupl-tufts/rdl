@@ -74,11 +74,9 @@ class RDL::Config
   end
 
   # To use, copy these 3 lines to the test file of a gem
-=begin
-require_relative '../rdl3/rdl/lib/rdl.rb'
-require_relative '../rdl3/rdl/lib/rdl_types.rb'
-RDL::Config.instance.profile_stats
-=end
+  # require_relative '../rdl3/rdl/lib/rdl.rb'
+  # require_relative '../rdl3/rdl/lib/rdl_types.rb'
+  # RDL::Config.instance.profile_stats
   def profile_stats(outname="/#{__FILE__[0...-3]}",outdir="")
     require 'profile'
     Profiler__.stop_profile # Leave setup out of stats
