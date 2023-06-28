@@ -736,7 +736,7 @@ module RDL::Typecheck
         [envi, RDL::Type::GenericType.new(RDL::Globals.types[:hash], tleft, tright)]
       end
       #TODO test!
-#    when :kwsplat # TODO!
+      # when :kwsplat # TODO!
     when :irange, :erange
       env1, t1 = tc(scope, env, e.children[0])
       env2, t2  = tc(scope, env1, e.children[1])
@@ -1028,10 +1028,7 @@ module RDL::Typecheck
         return [envi, block_ret_type]
       else
         unless tc_arg_types(scope[:tblock], tactuals)
-          msg = <<RUBY
-      Block type: #{scope[:tblock]}
-Actual arg types: (#{tactuals.map { |ti| ti.to_s }.join(', ')})
-RUBY
+          msg = "\nBlock type: #{scope[:tblock]}\nActual arg types: (#{tactuals.map { |ti| ti.to_s }.join(', ')})"
           msg.chomp! # remove trailing newline
           error :block_type_error, [msg], e
         end
@@ -1335,11 +1332,9 @@ RUBY
       envi = env
       tactuals = []
       block = scope[:block]
-=begin
-      if block
-        raise Exception, 'block in super method with block not supported'
-      end
-=end
+      # if block
+      #   raise Exception, 'block in super method with block not supported'
+      # end
       scope_merge(scope, block: nil, break: env, next: env) { |sscope|
         e.children.each { |ei|
           if ei.type == :splat
@@ -1370,11 +1365,9 @@ RUBY
     when :zsuper
       envi = env
       block = scope[:block]
-=begin
-      if block
-        raise Exception, 'super method not supported'
-      end
-=end
+      # if block
+      #   raise Exception, 'super method not supported'
+      # end
       klass = RDL::Util.to_class scope[:klass]
       mname = scope[:meth]
       sklass = get_super_owner_from_class klass, mname
@@ -2050,12 +2043,7 @@ RUBY
     end
 
     if trets.empty? # no possible matching call
-      msg = <<RUBY
-Method type:
-#{ tmeth_names.map { |ti| "        " + ti.to_s }.join("\n") }
-Actual arg type#{tactuals.size > 1 ? "s" : ""}:
-      (#{tactuals.map { |ti| ti.to_s }.join(', ')}) #{if block then '{ block }' end}
-RUBY
+      msg = "Method type:\n#{ tmeth_names.map { |ti| "        " + ti.to_s }.join("\n") }\nActual arg type#{tactuals.size > 1 ? "s" : ""}:\n(#{tactuals.map { |ti| ti.to_s }.join(', ')}) #{if block then '{ block }' end}"
       msg.chomp! # remove trailing newline
       name = if trecv.is_a?(RDL::Type::SingletonType) && trecv.val.is_a?(Class) && (meth == :new) then
         trecv.val.to_s
@@ -2397,13 +2385,11 @@ RUBY
         return tancestor if tancestor
       end
       if ancestor.instance_methods(false).member?(name)
-## Milod: Not sure what the purpose of the below lines is.
-=begin
-        if RDL::Util.has_singleton_marker klass
-          klass = RDL::Util.remove_singleton_marker klass
-          klass = '(singleton) ' + klass
-        end
-=end
+        ## Milod: Not sure what the purpose of the below lines is.
+        # if RDL::Util.has_singleton_marker klass
+        #   klass = RDL::Util.remove_singleton_marker klass
+        #   klass = '(singleton) ' + klass
+        # end
         return nil if the_klass.to_s.start_with?('#<Class:') and name == :new and !make_unknown
       end
     }
@@ -2472,14 +2458,12 @@ RUBY
     keyword_args = keyword_args.empty? ? [] : [RDL::Type::FiniteHashType.new(keyword_args, nil)]
     arg_types = arg_types + keyword_args
     if meth == :initialize
-=begin
-      if RDL::Util.has_singleton_marker(klass)
-        # to_class gets the class object itself, so remove singleton marker to get class rather than singleton class
-        ret_vartype = RDL::Type::SingletonType.new(RDL::Util.to_class(RDL::Util.remove_singleton_marker(klass)))
-      else
-        ret_vartype = RDL::Type::NominalType.new(klass)
-      end
-=end
+      # if RDL::Util.has_singleton_marker(klass)
+      #   # to_class gets the class object itself, so remove singleton marker to get class rather than singleton class
+      #   ret_vartype = RDL::Type::SingletonType.new(RDL::Util.to_class(RDL::Util.remove_singleton_marker(klass)))
+      # else
+      #   ret_vartype = RDL::Type::NominalType.new(klass)
+      # end
       ret_vartype = RDL::Globals.parser.scan_str "#T self"
     #ret_vartype = RDL::Type::VarType.new(:self) ## TODO: is this right? Or should it include klass/meth info?
     else
