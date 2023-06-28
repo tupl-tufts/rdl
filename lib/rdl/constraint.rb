@@ -96,15 +96,13 @@ module RDL::Typecheck
             typ = typ.canonical
             var.add_and_propagate_upper_bound(typ, nil, new_cons)
             var.add_and_propagate_lower_bound(typ, nil, new_cons)
-=begin
-            new_cons.each { |var, bounds|
-              bounds.each { |u_or_l, t, _|
-                puts "1. Added #{u_or_l} bound constraint #{t} of kind #{t.class} to variable #{var}"
-                puts "It has upper bounds: "
-                var.ubounds.each { |t, _| puts t }
-              }
-            }
-=end
+            # new_cons.each { |var, bounds|
+            #   bounds.each { |u_or_l, t, _|
+            #     puts "1. Added #{u_or_l} bound constraint #{t} of kind #{t.class} to variable #{var}"
+            #     puts "It has upper bounds: "
+            #     var.ubounds.each { |t, _| puts t }
+            #   }
+            # }
             RDL::Logging.log :hueristic, :debug, "Heuristic Applied: #{name}"
             @new_constraints = true if !new_cons.empty?
             RDL::Logging.log :inference, :trace, "New Constraints branch A" if !new_cons.empty?
@@ -134,13 +132,11 @@ module RDL::Typecheck
       sol = sol.canonical
       var.add_and_propagate_upper_bound(sol, nil, new_cons)
       var.add_and_propagate_lower_bound(sol, nil, new_cons)
-=begin
-      new_cons.each { |var, bounds|
-        bounds.each { |u_or_l, t, _|
-          puts "2. Added #{u_or_l} bound constraint #{t} to variable #{var}"
-        }
-      }
-=end
+      # new_cons.each { |var, bounds|
+      #   bounds.each { |u_or_l, t, _|
+      #     puts "2. Added #{u_or_l} bound constraint #{t} to variable #{var}"
+      #   }
+      # }
       @new_constraints = true if !new_cons.empty?
       RDL::Logging.log :inference, :trace, "New Constraints branch B" if !new_cons.empty?
 

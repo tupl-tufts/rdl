@@ -423,10 +423,10 @@ module RDL::Annotate
     end
     RDL::Globals.dep_types << [klass, meth, type] if typs.any? { |t| t.is_a?(RDL::Type::ComputedType) || (t.is_a?(RDL::Type::BoundArgType) && t.type.is_a?(RDL::Type::ComputedType)) }
     if meth
-# It turns out Ruby core/stdlib don't always follow this convention...
-#        if (meth.to_s[-1] == "?") && (type.ret != RDL::Globals.types[:bool])
-#          warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
-#        end
+      # It turns out Ruby core/stdlib don't always follow this convention...
+      #        if (meth.to_s[-1] == "?") && (type.ret != RDL::Globals.types[:bool])
+      #          warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
+      #        end
       RDL::Globals.info.add(klass, meth, :type, type)
       unless RDL::Globals.info.set(klass, meth, :typecheck, typecheck)
         raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
