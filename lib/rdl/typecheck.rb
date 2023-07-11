@@ -241,9 +241,10 @@ module RDL::Typecheck
 
     unless cache_hit
       begin
-        file_ast = Parser::CurrentRuby.parse_file file
+        file_ast = parse_file file
+        #file_ast = Parser::CurrentRuby.parse_file file
         mapper = ASTMapper.new(file)
-        mapper.process(file_ast)
+        mapper.process file_ast
         cache = {ast: file_ast, line_defs: mapper.line_defs}
         RDL::Globals.parser_cache[file] = [digest, cache]
       rescue => e
@@ -256,6 +257,31 @@ module RDL::Typecheck
     ast = RDL::Globals.parser_cache[file][1][:line_defs][line]
     return ast
   end
+
+  # Parses a file into an AST, while injecting the `params` argument into 
+  # controller methods where necessary.
+  def self.parse_file(file)
+    original_ast = Parser::CurrentRuby.parse_file file
+    #buffer = Parser::Source::Buffer.new "(ast)", source: (File.read file) # not for ParamsInjector.rewrite
+    #rewriter = ParamsInjector.
+    new_code = ParamsInjector.rewrite original_ast
+    ap "After injection: #{new_code}"
+
+    ap "Before eval:"
+    #ap eval "AdminController.instance_methods"
+    eval new_code, TOPLEVEL_BINDING
+    ap "After eval:"
+    #ap eval "AdminController.instance_methods"
+
+    #ap "new_code = #{new_code}"
+
+    new_ast = Parser::CurrentRuby.parse new_code, file
+
+    return new_ast
+
+  end
+
+
 
   def self.infer(klass, meth)
     _infer(klass, meth)
@@ -481,6 +507,7 @@ module RDL::Typecheck
     kw_args_matched = []
     kw_rest_matched = false
     args.children.each_with_index { |arg, index|
+      #ap "args_hash :: scope: #{scope}, env: #{env}, type: #{type}, args: #{args}, ast: #{ast}"
       error :type_args_fewer, [kind, kind], arg, block: (kind == 'block') if tpos >= type.args.length && arg.type != :blockarg  # blocks could be called with yield
       targ = type.args[tpos]
       (if (targ.is_a?(RDL::Type::AnnotatedArgType) || targ.is_a?(RDL::Type::DependentArgType) || targ.is_a?(RDL::Type::BoundArgType)) then targ = targ.type end)

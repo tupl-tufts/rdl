@@ -1,4 +1,8 @@
+# This file is responsible for translating OpenAPI specs (.json files)
+# into RDL types, to typecheck against Rails API code.
+
 module RDL::Annotate
+    # Typecheck this Rails project against an OpenAPI spec.
     def openapi(path_to_openapi_spec)
         # Step 1. Read in JSON file.
         RDL::Logging.log :openapi, :info, "Typechecking Rails project against OpenAPI spec: #{path_to_openapi_spec}"
@@ -43,30 +47,33 @@ module RDL::Annotate
 
             # Actually perform the typechecking.
             ap "Submitting to RDL: RDL.type, #{kontroller}, #{method.to_sym}, #{output_type}}"
-            RDL.type kontroller, method.to_sym, output_type, wrap: false
+            RDL.type kontroller, method.to_sym, output_type, wrap: false, typecheck: :openapi
 
 
         }
 
+        RDL.do_typecheck :openapi
+
+        RDL::Logging.log :openapi, :info, "Successfully type-checked against OpenAPI spec!"
 
     end
 
     # Translates an OpenAPI path to an RDL type.
     # Currently, only supports GET endpoints with a 200 response.
     def translate_path(endpoint, openapi)
-        input_type = ""
-        input_type = translate_parameters(endpoint['get']['parameters'], openapi) if endpoint['get'].has_key?('parameters')
+        input_type = "{}"
+        input_type = "?{#{translate_parameters(endpoint['get']['parameters'], openapi)}}" if endpoint['get'].has_key?('parameters')
 
         output_type = translate_responses(endpoint['get']['responses'], openapi)
 
-        "(#{input_type}) -> #{output_type}"
+        "(#{input_type}) -> JSON<#{output_type}>"
     end
 
     # Translates an OpenAPI `parameters` field to an RDL type,
     # representing the endpoint's input type.
     def translate_parameters(parameters, openapi)
         # Map each parameter type to its RDL type, then concatenate them and join with ", ".
-        parameters.map {|p| translate_schema(p['schema'], openapi)}.join(', ')
+        parameters.map {|p| "#{p['name']}: #{translate_schema(p['schema'], openapi)}"}.join(', ')
     end
 
     # Translates an OpenAPI `responses` field to an RDL type, 
