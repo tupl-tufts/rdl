@@ -264,17 +264,19 @@ module RDL::Typecheck
     original_ast = Parser::CurrentRuby.parse_file file
     #buffer = Parser::Source::Buffer.new "(ast)", source: (File.read file) # not for ParamsInjector.rewrite
     #rewriter = ParamsInjector.
+
+    # Step 1. Inject `params` argument into controller methods.
+    ap "About to inject params into #{file}"
     new_code = ParamsInjector.rewrite original_ast
-    ap "After injection: #{new_code}"
+    ap "After params injection: #{new_code}"
+    #eval new_code, TOPLEVEL_BINDING
+    new_ast = Parser::CurrentRuby.parse new_code, file
 
-    ap "Before eval:"
-    #ap eval "AdminController.instance_methods"
+    # Step 2. Inject class fields for calls to `respond_to`.
+    ap "About to inject respond_to into #{file}"
+    new_code = RespondToInjector.rewrite new_ast
+    ap "After RespondTo injection: #{new_code}"
     eval new_code, TOPLEVEL_BINDING
-    ap "After eval:"
-    #ap eval "AdminController.instance_methods"
-
-    #ap "new_code = #{new_code}"
-
     new_ast = Parser::CurrentRuby.parse new_code, file
 
     return new_ast
@@ -1690,8 +1692,8 @@ module RDL::Typecheck
     raise "Type checking not currently supported for method #{meth}." if [:define_method, :module_exec].include?(meth)
     puts ""
     puts "----------------------"
-    puts "Type checking method call to #{meth} for receiver #{trecv} and tactuals of size #{tactuals.size}:"
-    tactuals.each { |t| puts t }
+    ap "Type checking method call: #{trecv}.#{meth} @ #{e.location.expression} and tactuals of size #{tactuals.size}:"
+    #ap tactuals
     puts "----------------------"
     if (trecv == RDL::Globals.types[:array])
       trecv = RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Globals.types[:bot])
