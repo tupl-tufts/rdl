@@ -373,117 +373,124 @@ class DBType
   # (RDL::Type::NominalType, Array<RDL::Type>)
   def self.rec_as_json(trec, options = [RDL::Type::FiniteHashType.new({}, nil)])
     puts "rec_as_json: called with: trec='#{trec}' :: #{trec.class}      options='#{options}' :: #{options.class}"
+
+    # We will attempt to figure out the precise, JSON type for this call.
+    # If we cannot figure it out for any reason, we will default to a 
+    # fallback type: "String or Array<String>"
     raise RDL::Typecheck::StaticTypeError, "as_json called with invalid options. Expected Array, got #{options.class.to_s}" unless options.class == Array
 
-    if options.length < 1
-      options[0] = RDL::Type::FiniteHashType.new({}, nil)
-    end
+    begin
+      if options.length < 1
+        options[0] = RDL::Type::FiniteHashType.new({}, nil)
+      end
 
-    # Step 1. use `rec_to_schema_type` to get the schema type and attribute names.
-    schema = rec_to_schema_type(trec, true, include_assocs: false)
-    attribute_names = schema.elts.keys
-    puts "rec_as_json comp type: attribute_names before filter = #{attribute_names}"
+      # Step 1. use `rec_to_schema_type` to get the schema type and attribute names.
+      schema = rec_to_schema_type(trec, true, include_assocs: false)
+      attribute_names = schema.elts.keys
+      puts "rec_as_json comp type: attribute_names before filter = #{attribute_names}"
 
-    # Step 2. Filter by `only` and `except`.
-    if options and options[0].elts.key?(:only)
-      # Extract attribute names from type
-      only = type_to_keys(options[0].elts[:only])
-      puts "rec_as_json only keys: #{only}"
-      attribute_names &= only
-    elsif options and options[0].elts.key?(:except)
-      # Extract attribute names from type
-      except = type_to_keys(options[0].elts[:except])
-      puts "rec_as_json except keys: #{except}"
-      attribute_names -= except
-    end
-    # actually filter
-    schema.elts = schema.elts.filter { |k, v| puts k.class; puts attribute_names[0].class; attribute_names.include?(k) }
+      # Step 2. Filter by `only` and `except`.
+      if options and options[0].elts.key?(:only)
+        # Extract attribute names from type
+        only = type_to_keys(options[0].elts[:only])
+        puts "rec_as_json only keys: #{only}"
+        attribute_names &= only
+      elsif options and options[0].elts.key?(:except)
+        # Extract attribute names from type
+        except = type_to_keys(options[0].elts[:except])
+        puts "rec_as_json except keys: #{except}"
+        attribute_names -= except
+      end
+      # actually filter
+      schema.elts = schema.elts.filter { |k, v| puts k.class; puts attribute_names[0].class; attribute_names.include?(k) }
 
-    # Step 3. Add `include` associations.
-    if options and options[0].elts.key?(:include)
-      # Extract `include` value.
-      inclusions = options[0].elts[:include]
-      
-      puts "rec_as_json comp type: inclusions = #{inclusions} :: #{inclusions.class}"
+      # Step 3. Add `include` associations.
+      if options and options[0].elts.key?(:include)
+        # Extract `include` value.
+        inclusions = options[0].elts[:include]
+        
+        puts "rec_as_json comp type: inclusions = #{inclusions} :: #{inclusions.class}"
 
-      # Is it a higher order association?
-      case inclusions
-      when RDL::Type::FiniteHashType
-        # Loop over each included model
-        puts "FHT CASE: inclusions.elts => #{inclusions.elts.inspect} :: #{inclusions.elts.class}"
-        inclusions.elts.each do |included_symbol, included_options|
+        # Is it a higher order association?
+        case inclusions
+        when RDL::Type::FiniteHashType
+          # Loop over each included model
+          puts "FHT CASE: inclusions.elts => #{inclusions.elts.inspect} :: #{inclusions.elts.class}"
+          inclusions.elts.each do |included_symbol, included_options|
+            raise RDL::Typecheck::StaticTypeError, "JSON serialization includes an unknown association: '#{included_symbol}'" unless associated_with?(trec, included_symbol)
+
+            table_class = Object.const_get(trec.to_s.to_sym)
+            included_class_name = table_class.reflect_on_association(included_symbol).class_name.to_sym
+
+            included_options = [RDL::Type::FiniteHashType.new({}, nil)] unless included_options
+            included_options = [included_options] unless included_options.class == Array
+
+            schema.elts[included_symbol.to_s] =
+              RDL::Type::GenericType.new(RDL::Globals.types[:array],
+                rec_as_json(RDL::Type::NominalType.new(included_class_name), included_options))
+          end
+            
+
+        when RDL::Type::SingletonType # just one inclusion like `:body`
+          # get the name of the included Model
+          included_symbol = inclusions.val
           raise RDL::Typecheck::StaticTypeError, "JSON serialization includes an unknown association: '#{included_symbol}'" unless associated_with?(trec, included_symbol)
 
           table_class = Object.const_get(trec.to_s.to_sym)
+          # get name of associated class
           included_class_name = table_class.reflect_on_association(included_symbol).class_name.to_sym
-
-          included_options = [RDL::Type::FiniteHashType.new({}, nil)] unless included_options
-          included_options = [included_options] unless included_options.class == Array
-
-          schema.elts[included_symbol.to_s] =
-            RDL::Type::GenericType.new(RDL::Globals.types[:array],
-              rec_as_json(RDL::Type::NominalType.new(included_class_name), included_options))
-        end
           
+          # add the schem
+          schema.elts[included_symbol.to_s] = 
+            RDL::Type::GenericType.new(RDL::Globals.types[:array], 
+              rec_as_json(RDL::Type::NominalType.new(included_class_name)))
 
-      when RDL::Type::SingletonType # just one inclusion like `:body`
-        # get the name of the included Model
-        included_symbol = inclusions.val
-        raise RDL::Typecheck::StaticTypeError, "JSON serialization includes an unknown association: '#{included_symbol}'" unless associated_with?(trec, included_symbol)
 
-        table_class = Object.const_get(trec.to_s.to_sym)
-        # get name of associated class
-        included_class_name = table_class.reflect_on_association(included_symbol).class_name.to_sym
+
+          puts "rec_as_json: table_class: '#{table_class.inspect}'"
+          puts "rec_as_json: included_symbol: '#{included_symbol.inspect}' :: #{included_symbol.class}"
+          puts "rec_as_json: reflected association: #{table_class.reflect_on_association(included_symbol).inspect}"# { |a|
+            #puts "rec_as_json: reflecting on association: '#{a.inspect}'"
+            #if check_col
+            #  assoc_type = RDL::Type::NominalType.new(a.class_name)
+            #  if a.name.to_s == a.plural_name
+            #    ## association is plural
+            #    assoc_hash[a.name] = RDL::Type::OptionalType.new(RDL::Type::GenericType.new(RDL::Globals.types[:array], assoc_type))
+            #  else
+            #    assoc_hash[a.name] = RDL::Type::OptionalType.new(assoc_type)
+            #  end
+            #else
+            #  assoc_hash[a.name] = RDL::Type::OptionalType.new(RDL::Globals.types[:top])
+            #end
+          #}
+          #tinclusion = RDL.type_cast(included_symbol, 'Class', force: true)
+          #raise RDL::Typecheck::StaticTypeError, "Unexpected type `include`'d: '#{tinclusion}'." unless tinclusion.is_a?(Class)
+          #included_name = tinclusion.to_s.to_sym
+
+          #tinclusion = table_name_to_schema_type(included_class_name, true)
+          #puts "rec_as_json: tinclusion: #{tinclusion.inspect}"
+
+
+          #val = RDL.type_cast(trec.val, 'Class', force: true)
+          #raise RDL::Typecheck::StaticTypeError, "Unexpected receiver type #{trec}." unless val.is_a?(Class)
+          #tname = val.to_s.to_sym
+          #res = table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs)
+          #puts "Singleton Type tname: #{tname}, res: #{res}"
+        end
         
-        # add the schem
-        schema.elts[included_symbol.to_s] = 
-          RDL::Type::GenericType.new(RDL::Globals.types[:array], 
-            rec_as_json(RDL::Type::NominalType.new(included_class_name)))
-
-
-
-        puts "rec_as_json: table_class: '#{table_class.inspect}'"
-        puts "rec_as_json: included_symbol: '#{included_symbol.inspect}' :: #{included_symbol.class}"
-        puts "rec_as_json: reflected association: #{table_class.reflect_on_association(included_symbol).inspect}"# { |a|
-          #puts "rec_as_json: reflecting on association: '#{a.inspect}'"
-          #if check_col
-          #  assoc_type = RDL::Type::NominalType.new(a.class_name)
-          #  if a.name.to_s == a.plural_name
-          #    ## association is plural
-          #    assoc_hash[a.name] = RDL::Type::OptionalType.new(RDL::Type::GenericType.new(RDL::Globals.types[:array], assoc_type))
-          #  else
-          #    assoc_hash[a.name] = RDL::Type::OptionalType.new(assoc_type)
-          #  end
-          #else
-          #  assoc_hash[a.name] = RDL::Type::OptionalType.new(RDL::Globals.types[:top])
-          #end
-        #}
-        #tinclusion = RDL.type_cast(included_symbol, 'Class', force: true)
-        #raise RDL::Typecheck::StaticTypeError, "Unexpected type `include`'d: '#{tinclusion}'." unless tinclusion.is_a?(Class)
-        #included_name = tinclusion.to_s.to_sym
-
-        #tinclusion = table_name_to_schema_type(included_class_name, true)
-        #puts "rec_as_json: tinclusion: #{tinclusion.inspect}"
-
-
-        #val = RDL.type_cast(trec.val, 'Class', force: true)
-        #raise RDL::Typecheck::StaticTypeError, "Unexpected receiver type #{trec}." unless val.is_a?(Class)
-        #tname = val.to_s.to_sym
-        #res = table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs)
-        #puts "Singleton Type tname: #{tname}, res: #{res}"
       end
-      
+
+      puts "rec_as_json comp type: options = #{options}"
+      puts "rec_as_json comp type: attribute_names after filter = #{attribute_names}"
+      puts "rec_as_json comp type: rec_to_schema_type + assocs = #{rec_to_schema_type(trec, true, include_assocs: true)}"
+
+      return RDL::Type::GenericType.new(
+        RDL::Type::NominalType.new("JSON"), # Base
+        schema # Generic parameter
+      )
+    rescue RDL::Typecheck::StaticTypeError
+      return RDL::Globals.types[:string]
     end
-
-    puts "rec_as_json comp type: options = #{options}"
-    puts "rec_as_json comp type: attribute_names after filter = #{attribute_names}"
-    puts "rec_as_json comp type: rec_to_schema_type + assocs = #{rec_to_schema_type(trec, true, include_assocs: true)}"
-
-    return RDL::Type::GenericType.new(
-      RDL::Type::NominalType.new("JSON"), # Base
-      schema # Generic parameter
-    )
-
   end
   RDL.type DBType, 'self.rec_as_json', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::FiniteHashType", wrap: false, typecheck: :type_code
 
