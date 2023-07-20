@@ -93,27 +93,27 @@ module RDL::Typecheck
         insert_after(node.location.name, "(params=nil)")
       end
 
-    #  begin
-    #    ap args[0].inspect
-    #  rescue e
-    #  end
-    #  print()
+      #  begin
+      #    ap args[0].inspect
+      #  rescue e
+      #  end
+      #  print()
 
-    #  # Create new AST node to include `params` in args.
-    #  #params_node = AST::Node.new(:arg, [AST::Node.new(:params, [])])
+      #  # Create new AST node to include `params` in args.
+      #  #params_node = AST::Node.new(:arg, [AST::Node.new(:params, [])])
 
-    #  # Modify args to include params.
-    #  #ap "args_node.location:"
-    #  #ap args_node.location
-    #  #ap "node.location"
-    #  #ap node.location
-    #  #ap "@offset:"
-    #  #ap @offset
-    #  #insert_before(node.children[1].location.expression, "TEST")#params_node)
+      #  # Modify args to include params.
+      #  #ap "args_node.location:"
+      #  #ap args_node.location
+      #  #ap "node.location"
+      #  #ap node.location
+      #  #ap "@offset:"
+      #  #ap @offset
+      #  #insert_before(node.children[1].location.expression, "TEST")#params_node)
 
-    #  #align_replace(node.location.expression, @offset, "#{name}(#{args}, params: {}})")
+      #  #align_replace(node.location.expression, @offset, "#{name}(#{args}, params: {}})")
 
-    #  # Don't call super.on_def. Only top-level methods need params injected.
+      #  # Don't call super.on_def. Only top-level methods need params injected.
       super
     end
 
@@ -121,7 +121,7 @@ module RDL::Typecheck
       name, zuper, body = *node
       ap "on_class: #{name} < #{zuper}"
 
-      if is_controller(node)
+      if RDL::Typecheck.is_controller(node)
         #super.on_class(node)
         #ParamsInjector.rewrite body
         super
@@ -129,21 +129,6 @@ module RDL::Typecheck
 
     end
 
-    def is_controller(class_node)
-      name_node, zuper, body = *class_node
-      name_nodee = *name_node
-      name = name_nodee[1]
-
-      klass = RDL::Util.to_class(name)
-      #ap "Klass: "
-      #ap klass
-
-      if klass < ApplicationController
-        ap "#{name} is a controller"
-        return true
-      end
-      return false
-    end
 
     def initialize(offset)
       @offset = offset
@@ -154,9 +139,128 @@ module RDL::Typecheck
       buffer = Parser::Source::Buffer.new("(ast)")
       buffer.source = ast.location.expression.source
       puts "Creating buffer of length: #{ast.location.expression.source.length}"
-      #rewriter.source_buffer = buffer
       rewriter.rewrite(buffer, ast)
     end
+  end
+
+  class RespondToInjector < Parser::TreeRewriter
+
+    def on_block(node)
+      ap "on_block: #{node}"
+      
+      # E.g. (send nil :respond_to)
+      send_ast = node.children[0]
+      return unless send_ast.children[1] == :respond_to
+
+      # E.g. (args (arg :format))
+      args_ast = node.children[1]
+      return unless args_ast.children[0].children[0] == :format
+
+      ap "We are definitely in a `respond_to` block."
+
+      # E.g. (begin (send (lvar :format) :html) 
+      #             (block (send (lvar :format) :json)
+      #                    (args)
+      #                    (send nil :render (hash (pair (sym :json) (ivar :@talk))))))
+      body_ast = node.children[2]
+
+      possible_calls = body_ast.children
+      possible_calls = [body_ast] unless body_ast.type == :begin
+      # Find calls that look like `format.json { ... }`
+      format_json_block_calls = possible_calls.filter { |node|
+          node.type == :block &&
+          node.children[0].type == :send &&
+          node.children[0].children[0].children[0] == :format &&
+          node.children[0].children[1] == :json
+      }
+
+      # Find calls that look like `format.json`
+      format_json_empty_calls = possible_calls.filter { |node|
+          node.type == :send &&
+          node.children[0].children[0] == :format &&
+          node.children[1] == :json
+      }
+
+      ap "Identified #{format_json_block_calls.length} block calls to format.json:"
+      ap format_json_block_calls
+
+      ap ""
+      ap "Identified #{format_json_empty_calls.length} empty calls to format.json:"
+      ap format_json_empty_calls
+      #return unless body_ast.children.
+
+      ap "Here lies the code and source location for each block call to render:"
+      format_json_block_calls.each { |call_ast| 
+          render_src = call_ast.children[2].location.expression.source
+          ap call_ast.children[2].location.expression.source
+          ap "@"
+          ap call_ast.children[2].location.expression
+          ap ""
+          #exit(1)
+
+          # Inject the following expression after the `respond_to` call:
+          # return render ...
+
+          ap "about to insert `;__RDL_rendered = #{render_src};`"
+          insert_after(node.location.expression, ";__RDL_rendered = #{render_src};")
+      }
+
+    end
+
+    #def on_send(node)
+    #    ap "on_send: #{node}"
+
+    #    receiver, args = *node
+    #    if receiver == :format && args[0] == :json 
+    #        super
+    #    else
+    #        return nil
+    #    end
+    #end
+
+    #def on_class(node)
+    #  name, zuper, body = *node
+    #  ap "on_class: #{name} < #{zuper}"
+
+    #  if RDL::Typecheck.is_controller(node)
+    #    #super.on_class(node)
+    #    #ParamsInjector.rewrite body
+    #    super
+    #  else
+    #    return nil
+    #  end
+
+    #end
+
+
+    def initialize(offset)
+      @offset = offset
+    end
+
+    def self.rewrite(ast)
+      rewriter = RespondToInjector.new(ast.location.expression.begin_pos)
+      buffer = Parser::Source::Buffer.new("(ast)")
+      buffer.source = ast.location.expression.source
+      puts "Creating buffer of length: #{ast.location.expression.source.length}"
+      rewriter.rewrite(buffer, ast)
+    end
+
+  end
+
+  def self.is_controller(class_node)
+    name_node, zuper, body = *class_node
+    name_nodee = *name_node
+    name = name_nodee[1]
+
+    klass = RDL::Util.to_class(name)
+    #ap "Klass: "
+    #ap klass
+
+    if klass < ApplicationController
+    ap "#{name} is a controller"
+    return true
+    end
+    return false
   end
 
 end
