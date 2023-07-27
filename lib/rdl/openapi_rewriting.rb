@@ -189,6 +189,7 @@ module RDL::Typecheck
       ap format_json_empty_calls
       #return unless body_ast.children.
 
+      to_inject = ""
       ap "Here lies the code and source location for each block call to render:"
       format_json_block_calls.each { |call_ast| 
           render_src = call_ast.children[2].location.expression.source
@@ -201,9 +202,18 @@ module RDL::Typecheck
           # Inject the following expression after the `respond_to` call:
           # return render ...
 
-          ap "about to insert `;__RDL_rendered = #{render_src};`"
-          insert_after(node.location.expression, ";__RDL_rendered = #{render_src};")
+          #ap "about to insert `;__RDL_rendered = #{render_src};`"
+          to_inject += ";__RDL_rendered = #{render_src};"
+          #insert_after(node.location.expression, ";__RDL_rendered = #{render_src};")
       }
+
+      # Rewrite the block.
+      #block_code = RespondToInjector.rewrite(node)
+      block_code = node.location.expression.source
+      # Replace the block => block + `__RDL_rendered = ...`
+
+      ap "about to replace block => #{block_code + to_inject}"
+      #align_replace(node.location.expression, @offset, block_code + to_inject)
 
     end
 
