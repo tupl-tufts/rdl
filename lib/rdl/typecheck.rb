@@ -272,7 +272,7 @@ module RDL::Typecheck
     #eval new_code, TOPLEVEL_BINDING
     new_ast = Parser::CurrentRuby.parse new_code, file
 
-    # Step 2. Inject class fields for calls to `respond_to`.
+    ## Step 2. Inject class fields for calls to `respond_to`.
     ap "About to inject respond_to into #{file}"
     new_code = RespondToInjector.rewrite new_ast
     ap "After RespondTo injection: #{new_code}"
@@ -1724,7 +1724,128 @@ module RDL::Typecheck
         end
         ts = lookup(scope, trecv_lookup, meth_lookup, e)
         ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] if init && (ts.nil?) # there's always a nullary new if initialize is undefined
-        puts "Completed type signature lookup for #{trecv_lookup}##{meth_lookup} ~~> #{ts}"
+        #puts "ts: #{ts}"
+
+        #if meth == :all_recent
+        #  ap "Detected `all_recent`. info about the mysterious `ts`` on next line (vvv)"
+        #  ap "ts.class   -->  #{ts.class}"
+        #  ap "ts.length  -->  #{ts.length}"
+        #  ap "ts[0].class  -->  "
+        #  ap ts[0].class
+        #  ap "ts[0].args  -->  "
+        #  ap ts[0].args
+        #  ap "ts[0].block  -->  "
+        #  ap ts[0].block
+        #  puts
+        #  puts
+        #  ap "ts[0].ret.class  -->  "
+        #  ap ts[0].ret.class
+        #  ap "ts[0].ret.ubounds.class --> "
+        #  ap ts[0].ret.ubounds.class
+        #  ap "ts[0].ret.ubounds.length --> "
+        #  ap ts[0].ret.ubounds.length
+        #  ap "ts[0].ret.ubounds[0].class --> "
+        #  ap ts[0].ret.ubounds[0].class
+        #  if ts[0].ret.ubounds[0] != nil
+        #    ap "ts[0].ret.ubounds[0].length --> "
+        #    ap ts[0].ret.ubounds[0].length
+
+        #    ap "ts[0].ret.ubounds[0][0].class --> "
+        #    ap ts[0].ret.ubounds[0][0].class
+
+        #    # ts[0].ret.ubounds[0][0] => structural type
+        #    ap "ts[0].ret.ubounds[0][0].methods.class --> "
+        #    ap ts[0].ret.ubounds[0][0].methods.class
+
+        #    ap "ts[0].ret.ubounds[0][0].methods.keys --> "
+        #    ap ts[0].ret.ubounds[0][0].methods.keys
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].class --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].class
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.class --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.class
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args.class --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args.class
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args.length --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args.length
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].class --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].class
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds.class --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds.class
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds.length --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds.length
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0].class --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0].class # Array
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods.keys --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods.keys
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].class --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].class # MethodType
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret.class --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret.class # VarType
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret.ubounds[0][0].methods.keys --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret.ubounds[0][0].methods.keys
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret.ubounds[0][0].methods[:<=>].class --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret.ubounds[0][0].methods[:<=>].class
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret
+
+
+
+
+
+        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time] --> "
+        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time]
+
+        #    ap "ts[0].ret.ubounds[0][0] --> "
+        #    ap ts[0].ret.ubounds[0][0]
+
+        #  end
+
+
+        #  ap "ts[0].ret.ubounds --> "
+        #  ap ts[0].ret.ubounds
+
+
+
+
+
+        #  ap "ts[0].ret  -->  "
+        #  ap ts[0].ret
+        #  #ap "ts[0].to_infer --> "
+        #  #ap ts[0].instance_variable_get(:@to_infer)
+        #  #ap "ts[0].lbounds --> "
+        #  #ap ts[0].instance_variable_get(:@lbound)
+        #  #ap "ts[0].ubounds --> "
+        #  #ap ts[0].instance_variable_get(:@ubound)
+        #  #ap "ts[0].solution --> "
+        #  #ap ts[0].instance_variable_get(:@solution)
+        #  #ap "ts[0].cls --> "
+        #  #ap ts[0].instance_variable_get(:@cls)
+        #  #ap "ts[0].meth --> "
+        #  #ap ts[0].instance_variable_get(:@meth)
+
+        #  ap "ts[0]  -->"
+        #  puts ts[0]
+        #  ap "ts         -->  #{ts}"
+
+        #  #exit(1)
+        #end
+        puts "Completed type signature lookup for #{trecv_lookup}##{meth_lookup} ~~> "##{ts}"
+        puts ts[0]
+
         error :no_singleton_method_type, [trecv.val, meth], e unless ts
         inst = {self: self_inst}
         self_klass = trecv.val
