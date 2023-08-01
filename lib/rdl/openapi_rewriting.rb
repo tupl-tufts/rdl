@@ -121,7 +121,9 @@ module RDL::Typecheck
       name, zuper, body = *node
       ap "on_class: #{name} < #{zuper}"
 
-      if RDL::Typecheck.is_controller(node)
+      klass = RDL::Typecheck.get_class_from_node(node)
+
+      if RDL::Typecheck.is_controller(klass)
         #super.on_class(node)
         #ParamsInjector.rewrite body
         super
@@ -205,6 +207,7 @@ module RDL::Typecheck
           #ap "about to insert `;__RDL_rendered = #{render_src};`"
           to_inject += ";__RDL_rendered = #{render_src};"
           #insert_after(node.location.expression, ";__RDL_rendered = #{render_src};")
+          
       }
 
       # Rewrite the block.
@@ -213,7 +216,7 @@ module RDL::Typecheck
       # Replace the block => block + `__RDL_rendered = ...`
 
       ap "about to replace block => #{block_code + to_inject}"
-      #align_replace(node.location.expression, @offset, block_code + to_inject)
+      align_replace(node.location.expression, @offset, block_code + to_inject)
 
     end
 
@@ -228,27 +231,65 @@ module RDL::Typecheck
     #    end
     #end
 
-    #def on_class(node)
-    #  name, zuper, body = *node
-    #  ap "on_class: #{name} < #{zuper}"
+    def on_def(node)
+      ap "respond_to on_def: #{node.children[1]}"
 
-    #  if RDL::Typecheck.is_controller(node)
-    #    #super.on_class(node)
-    #    #ParamsInjector.rewrite body
-    #    super
-    #  else
-    #    return nil
-    #  end
+      # Are we in a Rails controller class?
+      if @klass
+        ap "respond_to on_def: we are in Rails controller #{@klass}"
 
-    #end
+        
+        # If so, rewrite the def.
+        #def_keyword_ast = node.children[0]
+        def_name_ast = node.children[0]
+        def_args_ast = node.children[1]
+        def_body_ast = node.children[2]
 
+        ap "respond_to on_def: #{def_name_ast}(#{def_args_ast})"
+        puts
+        return if def_body_ast == nil
 
-    def initialize(offset)
-      @offset = offset
+        
+        # This will add the `__RDL_rendered = ...` # assignments.
+        def_body_code = RespondToInjector.rewrite(def_body_ast, klass=@klass)
+
+        # Then, inject `return __RDL_rendered` at the end of the 
+        # method body.
+        #insert_after(def_body_ast.location.expression, ";return __RDL_rendered;")
+        align_replace(node.location.expression, @offset, 
+          "def #{def_name_ast} #{def_args_ast.location.expression.source};__RDL_rendered = nil\n    #{def_body_code};return __RDL_rendered;\n  end\n\n\n")
+          #def_code + ";return __RDL_rendered;")
+      end
     end
 
-    def self.rewrite(ast)
-      rewriter = RespondToInjector.new(ast.location.expression.begin_pos)
+    def on_class(node)
+      name_ast, super_ast, body_ast = *node
+      name_code = name_ast.location.expression.source
+      super_code = super_ast.location.expression.source
+      ap "on_class: #{name_ast} < #{super_ast}"
+
+      klass = RDL::Typecheck.get_class_from_node(node)
+
+      if RDL::Typecheck.is_controller(klass)
+        #@klass = klass
+        #super.on_class(node)
+        #ParamsInjector.rewrite body
+        # Rewrite the body
+        body_code = RespondToInjector.rewrite(body_ast, klass=klass)
+        align_replace(node.location.expression, @offset, "class #{name_code} < #{super_code}\n\n#{body_code}\nend")
+      end
+
+    end
+
+
+    def initialize(offset, klass=nil)
+      @offset = offset
+      @klass = klass
+    end
+
+    def self.rewrite(ast, klass=nil)
+      return unless ast != nil
+      rewriter = RespondToInjector.new(ast.location.expression.begin_pos, klass)
       buffer = Parser::Source::Buffer.new("(ast)")
       buffer.source = ast.location.expression.source
       puts "Creating buffer of length: #{ast.location.expression.source.length}"
@@ -257,20 +298,27 @@ module RDL::Typecheck
 
   end
 
-  def self.is_controller(class_node)
+  def self.get_class_from_node(class_node)
     name_node, zuper, body = *class_node
     name_nodee = *name_node
     name = name_nodee[1]
 
-    klass = RDL::Util.to_class(name)
+    return RDL::Util.to_class(name)
+  end
+
+  def self.is_controller(klass)
     #ap "Klass: "
     #ap klass
 
     if klass < ApplicationController
-    ap "#{name} is a controller"
-    return true
+      ap "#{klass.name} is a Rails controller"
+      return true
     end
     return false
+  end
+
+  def self.is_controller_method(klass, meth)
+    RDL::Typecheck.is_controller(klass) && klass.action_methods.include?(meth)
   end
 
 end
