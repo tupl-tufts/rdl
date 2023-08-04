@@ -9,11 +9,12 @@ module RDL::Typecheck
 
   # Create mapping from file/line numbers to the def that appears at that location
   class ASTMapper < AST::Processor
-    attr_accessor :line_defs
+    attr_accessor :line_defs, :klass
 
-    def initialize(file)
+    def initialize(file, klass=nil)
       @file = file
       @line_defs = Hash.new # map from line numbers to defs
+      @klass = klass
     end
 
     def handler_missing(node)
@@ -23,10 +24,27 @@ module RDL::Typecheck
     def on_def(node)
       # (def name args body)
       name, _, body = *node
-      if @line_defs[node.loc.line]
+
+      if @klass
+        # If we're mapping line #'s from a Rails controller,
+        # the file has been rewritten, and we must refer to the
+        # original line #'s from Ruby.
+        file, line = klass.instance_method(name).source_location
+
+        if RDL::Typecheck.is_controller @klass
+          ap "ASTMapper on #{file}. Rewritten controller method #{name}. Old line number = #{line}, transformed line number = #{node.loc.line}"
+        end
+        loc = line
+      else
+        # If we're not in a rewritten Rails controller, we can
+        # use the location from the parser.
+        loc = node.loc.line
+      end
+
+      if @line_defs[loc]
         raise RuntimeError, "Multiple defs per line (#{name} and #{@line_defs[node.loc.line].children[1]} in #{@file}) currently not allowed"
       end
-      @line_defs[node.loc.line] = node
+      @line_defs[loc] = node
       process body
       node.updated(nil, nil)
     end
@@ -40,6 +58,33 @@ module RDL::Typecheck
       @line_defs[node.loc.line] = node
       process body
       node.updated(nil, nil)
+    end
+
+    def on_class(node)
+      name_ast, super_ast, body_ast = *node
+      
+      klass = RDL::Typecheck.get_class_from_node(node)
+
+      # If we're mapping line #'s from a Rails controller,
+      # the file has been rewritten, and we must refer to the
+      # original line #'s from Ruby.
+      #if !RDL::Typecheck.is_controller(klass)
+      #  klass = nil
+      #end
+
+      nested_line_defs = ASTMapper.process(body_ast, @file, klass=klass)
+      @line_defs = @line_defs.merge nested_line_defs
+    end
+
+    # Recursively process a class within this file.
+    # This is used so that the ASTProcessor knows we're inside a class def.
+    # Returns: the line defs from the subtree
+    def self.process(ast, file, klass=nil)
+      return unless ast != nil
+      processor = ASTMapper.new(file, klass=klass)
+      processor.process ast
+
+      processor.line_defs
     end
 
   end
@@ -241,11 +286,13 @@ module RDL::Typecheck
 
     unless cache_hit
       begin
-        file_ast = parse_file file
+        ## Pre-transformation ast, used for def lookups by line #
+        #old_ast = Parser::CurrentRuby.parse_file file
+
+        # Post-transformation ast, used for everything else
+        file_ast, line_defs = parse_file file
         #file_ast = Parser::CurrentRuby.parse_file file
-        mapper = ASTMapper.new(file)
-        mapper.process file_ast
-        cache = {ast: file_ast, line_defs: mapper.line_defs}
+        cache = {ast: file_ast, line_defs: line_defs}
         RDL::Globals.parser_cache[file] = [digest, cache]
       rescue => e
         RDL::Logging.log :typecheck, :error, "Failed to parse #{file}; #{e}"
@@ -254,6 +301,12 @@ module RDL::Typecheck
         raise e
       end
     end
+
+    ap "typecheck.rb :: get_ast(klass=#{klass}, meth=#{meth}).
+    Resolved to #{file}##{line} when asking Rails.
+    Parser cache = #{RDL::Globals.parser_cache[file][1][:line_defs].keys}"
+    ap meth
+    puts
     ast = RDL::Globals.parser_cache[file][1][:line_defs][line]
     return ast
   end
@@ -261,6 +314,9 @@ module RDL::Typecheck
   # Parses a file into an AST, while injecting the `params` argument into 
   # controller methods where necessary.
   def self.parse_file(file)
+    # before we rewrite, require the file so we get the original line numbers.
+    #require file
+
     original_ast = Parser::CurrentRuby.parse_file file
     #buffer = Parser::Source::Buffer.new "(ast)", source: (File.read file) # not for ParamsInjector.rewrite
     #rewriter = ParamsInjector.
@@ -276,10 +332,15 @@ module RDL::Typecheck
     ap "About to inject respond_to into #{file}"
     new_code = RespondToInjector.rewrite new_ast
     ap "After RespondTo injection: #{new_code}"
-    eval new_code, TOPLEVEL_BINDING
     new_ast = Parser::CurrentRuby.parse new_code, file
 
-    return new_ast
+    ## Step 3. Extract line # definitions from the transformed code.
+    line_defs = ASTMapper.process new_ast, file
+
+    ## Step 4. Evaluate new code
+    eval new_code, TOPLEVEL_BINDING
+
+    return new_ast, line_defs
 
   end
 

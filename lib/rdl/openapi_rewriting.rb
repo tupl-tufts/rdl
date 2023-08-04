@@ -78,6 +78,9 @@ module RDL::Typecheck
       name, args_node, body_node = *node
 
       args = *args_node
+
+      ap "ParamsInjector :: on_def -> #{name}(#{args_node})"
+
       #puts ""
       #puts ""
       #ap "on_def: #{name}(#{args})"
@@ -257,7 +260,7 @@ module RDL::Typecheck
         # method body.
         #insert_after(def_body_ast.location.expression, ";return __RDL_rendered;")
         align_replace(node.location.expression, @offset, 
-          "def #{def_name_ast} #{def_args_ast.location.expression.source};__RDL_rendered = nil\n    #{def_body_code};return __RDL_rendered;\n  end\n\n\n")
+          "def #{def_name_ast} #{def_args_ast.location.expression.source};__RDL_rendered = nil\n    #{def_body_code};return __RDL_rendered;\n  end\n\n")
           #def_code + ";return __RDL_rendered;")
       end
     end

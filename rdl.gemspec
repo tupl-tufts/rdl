@@ -24,5 +24,6 @@ EOF
   s.add_runtime_dependency 'method_source'
   s.add_runtime_dependency 'colorize', '~>0.8', '>= 0.8.1'
   s.add_runtime_dependency 'parlour', '~>2.1.0', '>= 2.1.0'
+  s.add_runtime_dependency 'awesome_print'
   s.add_development_dependency 'coderay', '~>1.1', '>= 1.1.2'
 end
