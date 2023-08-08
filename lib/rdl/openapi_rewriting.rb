@@ -29,118 +29,65 @@
 
 module RDL::Typecheck
   class ParamsInjector < Parser::TreeRewriter
-    
-    # On an function argument definition, inject the `params` argument.
-    # This will only be called on controller methods.
-    def on_args(node)
-      #ap "on_args:"
-      #ap node
-      #ap "args.location"
-      #ap node.location
-      #print()
-
-      ap "Number of args being defined: #{node.children.length}"
-
-      ap "Args: #{node.location.expression.source}" unless node.location.expression == nil
-
-      # If the source doesn't exist, then just add "(params)" and call it a day.
-      if node.location.expression == nil
-        #insert_after(node.location.expression, "(params={})")
-        # ^ this doesn't work either
-        ap "No params defined. Injected earlier."
-        return
-      elsif node.location.expression.source.start_with?("|") # lambda
-        ap "Lambda. No injection."
-        return
-      elsif node.children.none? {|node| node.children[0] == :params}# regular function, with one or more arguments. Requires a comma to be added
-        node.children.each {|n| ap "Processing arg:"; ap n.children[0]}
-        replace(node.location.expression, node.location.expression.source.insert(-2, ", params=nil"))
-        ap "Arguments defined but no params. Injected."
-      else
-        ap "Params already defined. No injection."
-      end
-
-
-      # If the source starts with "|", don't inject params (this is for a lambda)
-
-
-      #return unless node.location.expression != nil
-
-      #ap "Expression: #{node.location.expression.source}"
-
-
-      #insert_after(node.location.expression, ", params: {}") unless node.location.expression == nil
-      #replace(node.location.expression, ", params: {}")# unless node.location.expression == nil
-      ap "Injection successful! @ #{node.location.expression}"# unless node.location.expression == nil
-    end
 
     def on_def(node)
-      name, args_node, body_node = *node
 
-      args = *args_node
+      if @klass
+        name, args_node, body_node = *node
+        args = *args_node
+        ap "ParamsInjector :: on_def -> #{name}(#{args_node})"
 
-      ap "ParamsInjector :: on_def -> #{name}(#{args_node})"
+        rewritten_args = ""
+        body_code = (body_node && body_node.location.expression.source) || ""
 
-      #puts ""
-      #puts ""
-      #ap "on_def: #{name}(#{args})"
-      #ap "node.location"
-      #ap node.location
-      #ap "node:"
-      #ap node
-      #ap node.children[0].location.source
+        if args_node.location.expression == nil # no args
+          #insert_after(node.location.name, "(params=nil)")
+          rewritten_args = "(params=nil)"
+        elsif args_node.location.expression.source.start_with?("|") # lambda
+          ap "Lambda. No injection."
+          rewritten_args = args_node.location.expression.source
+        elsif args_node.children.none? {|node| node.children[0] == :params}# regular function, with one or more arguments. Requires a comma to be added
+          args_node.children.each {|n| ap "Processing arg:"; ap n.children[0]}
+          rewritten_args = args_node.location.expression.source.insert(-2, ", params=nil")
+          ap "Arguments defined but no params. Injected."
+        else
+          ap "Params already defined. No injection."
+          rewritten_args = args_node.location.expression.source
+        end
 
-      #ap "Checking args_node.location:"
-      #ap args_node.location
-      if args_node.location.expression == nil # no args
-        insert_after(node.location.name, "(params=nil)")
+        # `rewritten_args` now contains the source code for args /with/ params.
+
+        # Replace the class definition.
+        align_replace(node.location.expression, @offset,
+          "def #{name}#{rewritten_args} \n#{body_code}\nend")
       end
-
-      #  begin
-      #    ap args[0].inspect
-      #  rescue e
-      #  end
-      #  print()
-
-      #  # Create new AST node to include `params` in args.
-      #  #params_node = AST::Node.new(:arg, [AST::Node.new(:params, [])])
-
-      #  # Modify args to include params.
-      #  #ap "args_node.location:"
-      #  #ap args_node.location
-      #  #ap "node.location"
-      #  #ap node.location
-      #  #ap "@offset:"
-      #  #ap @offset
-      #  #insert_before(node.children[1].location.expression, "TEST")#params_node)
-
-      #  #align_replace(node.location.expression, @offset, "#{name}(#{args}, params: {}})")
-
-      #  # Don't call super.on_def. Only top-level methods need params injected.
-      super
     end
 
     def on_class(node)
-      name, zuper, body = *node
-      ap "on_class: #{name} < #{zuper}"
+      name_ast, super_ast, body_ast = *node
+      name_code = name_ast.location.expression.source
+      super_code = super_ast.location.expression.source
+      ap "on_class: #{name_ast} < #{super_ast}"
 
       klass = RDL::Typecheck.get_class_from_node(node)
 
       if RDL::Typecheck.is_controller(klass)
-        #super.on_class(node)
-        #ParamsInjector.rewrite body
-        super
+        # Rewrite the body
+        body_code = ParamsInjector.rewrite(body_ast, klass=klass)
+        align_replace(node.location.expression, @offset, "class #{name_code} < #{super_code}\n\n#{body_code}\nend")
       end
 
     end
 
 
-    def initialize(offset)
+    def initialize(offset, klass=nil)
       @offset = offset
+      @klass = klass
     end
 
-    def self.rewrite(ast)
-      rewriter = ParamsInjector.new(ast.location.expression.begin_pos)
+    def self.rewrite(ast, klass=nil)
+      return unless ast != nil
+      rewriter = ParamsInjector.new(ast.location.expression.begin_pos, klass)
       buffer = Parser::Source::Buffer.new("(ast)")
       buffer.source = ast.location.expression.source
       puts "Creating buffer of length: #{ast.location.expression.source.length}"
@@ -256,11 +203,14 @@ module RDL::Typecheck
         # This will add the `__RDL_rendered = ...` # assignments.
         def_body_code = RespondToInjector.rewrite(def_body_ast, klass=@klass)
 
+        # Determine the argument source code.
+        def_args_code = (def_args_ast.location.expression && def_args_ast.location.expression.source) || ""
+
         # Then, inject `return __RDL_rendered` at the end of the 
         # method body.
         #insert_after(def_body_ast.location.expression, ";return __RDL_rendered;")
         align_replace(node.location.expression, @offset, 
-          "def #{def_name_ast} #{def_args_ast.location.expression.source};__RDL_rendered = nil\n    #{def_body_code};return __RDL_rendered;\n  end\n\n")
+          "def #{def_name_ast} #{def_args_code};__RDL_rendered = nil\n    #{def_body_code};return __RDL_rendered;\n  end\n\n")
           #def_code + ";return __RDL_rendered;")
       end
     end
@@ -274,9 +224,6 @@ module RDL::Typecheck
       klass = RDL::Typecheck.get_class_from_node(node)
 
       if RDL::Typecheck.is_controller(klass)
-        #@klass = klass
-        #super.on_class(node)
-        #ParamsInjector.rewrite body
         # Rewrite the body
         body_code = RespondToInjector.rewrite(body_ast, klass=klass)
         align_replace(node.location.expression, @offset, "class #{name_code} < #{super_code}\n\n#{body_code}\nend")

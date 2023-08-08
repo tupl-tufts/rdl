@@ -286,12 +286,9 @@ module RDL::Typecheck
 
     unless cache_hit
       begin
-        ## Pre-transformation ast, used for def lookups by line #
-        #old_ast = Parser::CurrentRuby.parse_file file
-
-        # Post-transformation ast, used for everything else
+        # Parse and transform file, while extracting old line numbers.
         file_ast, line_defs = parse_file file
-        #file_ast = Parser::CurrentRuby.parse_file file
+
         cache = {ast: file_ast, line_defs: line_defs}
         RDL::Globals.parser_cache[file] = [digest, cache]
       rescue => e
@@ -318,8 +315,8 @@ module RDL::Typecheck
     #require file
 
     original_ast = Parser::CurrentRuby.parse_file file
-    #buffer = Parser::Source::Buffer.new "(ast)", source: (File.read file) # not for ParamsInjector.rewrite
-    #rewriter = ParamsInjector.
+    buffer = Parser::Source::Buffer.new "(ast)", source: (File.read file) # not for ParamsInjector.rewrite
+    #rewriter = ParamsInjector.rewrite 
 
     # Step 1. Inject `params` argument into controller methods.
     ap "About to inject params into #{file}"
@@ -327,6 +324,7 @@ module RDL::Typecheck
     ap "After params injection: #{new_code}"
     #eval new_code, TOPLEVEL_BINDING
     new_ast = Parser::CurrentRuby.parse new_code, file
+    #new_ast = original_ast
 
     ## Step 2. Inject class fields for calls to `respond_to`.
     ap "About to inject respond_to into #{file}"
