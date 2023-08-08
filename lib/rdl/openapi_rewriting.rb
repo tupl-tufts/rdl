@@ -170,16 +170,24 @@ module RDL::Typecheck
 
     end
 
-    #def on_send(node)
-    #    ap "on_send: #{node}"
+    def on_send(node)
+        ap "on_send: #{node}"
 
-    #    receiver, args = *node
-    #    if receiver == :format && args[0] == :json 
-    #        super
-    #    else
-    #        return nil
-    #    end
-    #end
+        # Don't rewrite unless we're in a Rails controller
+        return unless @klass
+
+        #receiver, args = *node
+        method_name = node.children[1]
+        args = node.children[2]
+
+        if method_name == :render #&& args[] receiver == :format && args[0] == :json 
+            ap "on_send: Identified a call to format.json: #{node}"
+
+            # Assign the result of this call to `__RDL_rendered`
+            to_inject = "__RDL_rendered = "
+            align_replace(node.location.expression, @offset, to_inject + node.location.expression.source)
+        end
+    end
 
     def on_def(node)
       ap "respond_to on_def: #{node.children[1]}"
