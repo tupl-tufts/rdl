@@ -356,6 +356,47 @@ class DBType
     end
   end
 
+
+  ## Determines the output type for a call to `render`.
+  ## Given: `targs` from the `render` call.
+  def self.render_output(targs)
+    ap "Comp type: render_output. Called with #{targs}"
+
+    # If the call doesn't look like:
+    #     render json: ..., ...
+    # 
+    # just return string.
+    return RDL::Globals.types[:string] unless
+      targs && targs.length && targs.length > 0 &&
+      targs[0].is_a?(RDL::Type::FiniteHashType) &&
+      targs[0].elts[:json]
+
+    # If the `x` in `render json: x` is just a Ruby hash
+    # (i.e. FHT), return the serialized type.
+    if targs[0].elts[:json].is_a? RDL::Type::FiniteHashType
+      return RDL::Type::GenericType.new(
+        RDL::Type::NominalType.new("JSON"), # Base
+        targs[0].elts[:json] # Generic parameter
+      )
+    end
+
+    # If the `x` in `render json: x` is /already/ a JSON object
+    # (i.e. @model.to_json), return that.
+    if (targs[0].elts[:json].is_a? RDL::Type::GenericType) && 
+      (targs[0].elts[:json].base == "JSON") && 
+      (targs[0].elts[:json].params[0].is_a? RDL::Type::FiniteHashType) 
+      then
+      return targs[0].elts[:json]
+    end
+
+    ap "Comp type: render_output. trec is an ActiveModel relation. Calling rec_as_json..."
+
+    #                       receiver              render options
+    return self.rec_as_json(targs[0].elts[:json], [targs[0]])
+  end
+
+
+
   ## given a type (usually representing a receiver type in a method call), this
   ## method returns a finite hash type (FHT) representing its serialized
   ## version.
@@ -488,7 +529,10 @@ class DBType
         RDL::Type::NominalType.new("JSON"), # Base
         schema # Generic parameter
       )
-    rescue RDL::Typecheck::StaticTypeError
+    rescue RDL::Typecheck::StaticTypeError => e
+      ap "rec_as_json failed to determine a type:"
+      ap e
+      ap e.backtrace
       return RDL::Globals.types[:string]
     end
   end
@@ -585,6 +629,7 @@ class DBType
       return res
 
     else
+      
       raise RDL::Typecheck::StaticTypeError, "Unexpected receiver type #{trec}."
     end
   end
