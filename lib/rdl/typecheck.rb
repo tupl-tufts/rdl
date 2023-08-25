@@ -1554,6 +1554,14 @@ module RDL::Typecheck
         tleft = RDL::Globals.info.get(klass, name, :type)
       elsif RDL::Config.instance.assume_dyn_type
         tleft = RDL::Globals.types[:dyn]
+      elsif RDL::Config.instance.strict_field_inference
+        # strict field inference implies that the types of instance variables
+        # does not change. this case represents the first time we see as
+        # assignment to this instance variable, so we assume tright is its
+        # truthful type.
+        tleft = tright
+        RDL::Globals.info.set(klass, name, :type, tright)
+        ap "Strict field inference :: trusting type #{klass}##{name} : #{tright}"
       elsif RDL::Config.instance.use_unknown_types || RDL::Globals.to_infer.values.any? { |set| set.include?([klass, name]) }
         tleft = make_unknown_var_type(klass, name, :var)
       else
