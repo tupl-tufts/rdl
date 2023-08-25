@@ -320,12 +320,14 @@ class ActiveRecord_Relation
   type :update_all, '(``RDL::Type::UnionType.new(RDL::Globals.types[:string], DBType.rec_to_schema_type(trec, true))``) -> Integer', wrap: false
   type :valid, "() -> self", wrap: false
   type :sort, "() { (t, t) -> Integer } -> Array<t>", wrap: false
+
+  type :as_json, "(?%any) -> ``DBType.rec_as_json(trec, targs)``", wrap: false
 end
 
 module ActiveModel::Serializers::JSON
   extend RDL::Annotate
 
-  type :as_json, "(%any) -> ``DBType.rec_as_json(trec, targs)``", wrap: false
+  type :as_json, "(?%any) -> ``DBType.rec_as_json(trec, targs)``", wrap: false
 
 end
 
@@ -383,7 +385,7 @@ class DBType
     # If the `x` in `render json: x` is /already/ a JSON object
     # (i.e. @model.to_json), return that.
     if (targs[0].elts[:json].is_a? RDL::Type::GenericType) && 
-      (targs[0].elts[:json].base == "JSON") && 
+      (targs[0].elts[:json].base.name == "JSON") && 
       (targs[0].elts[:json].params[0].is_a? RDL::Type::FiniteHashType) 
       then
       return targs[0].elts[:json]
