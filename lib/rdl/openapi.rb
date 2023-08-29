@@ -17,7 +17,7 @@ module RDL::Annotate
         end
 
         # Step 4. Get paths for this Rails application.
-        rails_paths = Rails.application.routes.routes.routes.map {|r| ActionDispatch::Routing::RouteWrapper.new(r)}.reject(&:internal?)
+        rails_paths = Rails.application.routes.routes.map {|r| ActionDispatch::Routing::RouteWrapper.new(r)}.reject(&:internal)
 
 
         # Step 5. Go through each path in the OpenAPI spec, and figure out:
