@@ -391,6 +391,17 @@ class DBType
       return targs[0].elts[:json]
     end
 
+    # If the `x` in `render json: x` is an /array/ of JSON objects,
+    # (i.e. @models.to_json), return that.
+    if (targs[0].elts[:json].is_a? RDL::Type::GenericType) &&
+      (targs[0].elts[:json].base.name == "Array") && 
+      (targs[0].elts[:json].params[0].is_a? RDL::Type::GenericType) && 
+      (targs[0].elts[:json].params[0].base.name == "JSON") && 
+      (targs[0].elts[:json].params[0].params[0].is_a? RDL::Type::FiniteHashType)    
+      then
+      return targs[0].elts[:json]
+    end
+      
     ap "Comp type: render_output. trec is an ActiveModel relation. Calling rec_as_json..."
 
     #                       receiver              render options
@@ -527,10 +538,21 @@ class DBType
       puts "rec_as_json comp type: attribute_names after filter = #{attribute_names}"
       puts "rec_as_json comp type: rec_to_schema_type + assocs = #{rec_to_schema_type(trec, true, include_assocs: true)}"
 
-      return RDL::Type::GenericType.new(
+      ret_type = RDL::Type::GenericType.new(
         RDL::Type::NominalType.new("JSON"), # Base
         schema # Generic parameter
       )
+
+      # If rec_as_json was called on an ActiveRecord_Relation,
+      # it will return an array of results.
+      if trec.class == RDL::Type::GenericType && trec.base.name == "ActiveRecord_Relation"
+        ret_type = RDL::Type::GenericType.new(
+          RDL::Type::NominalType.new("Array"), # Base
+          ret_type # Generic parameter
+        )
+      end
+
+      return ret_type
     rescue RDL::Typecheck::StaticTypeError => e
       ap "rec_as_json failed to determine a type:"
       ap e
