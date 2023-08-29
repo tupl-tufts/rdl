@@ -8,6 +8,8 @@ module RDL::Type
 
     def self.new(*types)
       return RDL::Globals.types[:bot] if types.size == 0
+      return types[0] if types.size == 1 && types[0]
+
       ts = []
       # flatten nested unions, check that all args are types
       types.each { |t|
@@ -21,7 +23,6 @@ module RDL::Type
           ts << t if t
         end
       }
-      return ts[0] if ts.size == 1
       return UnionType.__new__(ts)
     end
 
