@@ -66,7 +66,7 @@ module RDL::Annotate
 
         output_type = translate_responses(endpoint['get']['responses'], openapi)
 
-        "(#{input_type}) -> JSON<#{output_type}>"
+        "(#{input_type}) -> #{output_type}"
     end
 
     # Translates an OpenAPI `parameters` field to an RDL type,
@@ -106,19 +106,25 @@ module RDL::Annotate
         case schema['type']
         # Primitives
         when 'integer'
-            'Integer'
+            '?Integer'
         when 'float', 'double'
-            'Float'
+            if RDL::Config.instance.number_mode
+                '?Integer'
+            else
+                '?Float'
+            end
         when 'string'
-            'String'
+            '?(String or Symbol)'
 
         # Arrays
         when 'array'
+            throw "Array schema missing `items` field: #{schema}" unless schema['items']
             "Array<#{translate_schema(schema['items'], openapi)}>"
 
         # Objects
         when 'object'
-            "{#{schema['properties'].map {|k, v| "#{k}: #{translate_schema(v, openapi)}"}.join(', ')}}"
+            throw "Object schema missing `properties` field: #{schema}" unless schema['properties']
+            "JSON<{#{schema['properties'].map {|k, v| "#{k}: #{translate_schema(v, openapi)}"}.join(', ')}}>"
 
         # Refs (reference to a schema defined elsewhere in the spec)
         # Refs have no "type", instead they have "$ref"
