@@ -956,6 +956,21 @@ module RDL
         RDL.type model, (k).to_sym, "() -> #{t_name}", wrap: false ## create method type for column getter
         RDL.type model, (k+"?").to_sym, "() -> %bool", wrap: false if t_name == "%bool" ## boolean column attributes get automatic `?` method
       }
+
+
+      # If the field contains a "presence validator", it will be non-null.
+      # Otherwise, mark this as an optional type.
+      s1 = s1.map { |k, v|
+        if model.validators_on(k).any? {|validator| validator.is_a? ActiveRecord::Validations::PresenceValidator} || k == "id"
+          # Presence validator found
+          [k, v]
+        else
+          # No presence validator found
+          [k, RDL::Type::OptionalType.new(v)]
+        end
+      }.to_h
+
+      # Take note of model's associations
       s2 = s1.transform_keys { |k| k.to_sym }
       assoc = {}
       model.reflect_on_all_associations.each { |a|
