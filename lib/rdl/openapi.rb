@@ -73,7 +73,12 @@ module RDL::Annotate
     # representing the endpoint's input type.
     def translate_parameters(parameters, openapi)
         # Map each parameter type to its RDL type, then concatenate them and join with ", ".
-        parameters.map {|p| "#{p['name']}: #{translate_schema(p['schema'], openapi)}"}.join(', ')
+        parameters.map {|p| 
+            # Symbol to add, if the parameter is optional
+            opt = "?"
+            opt = "" if p.has_key?('required') && (p['required'] == true)
+            "#{p['name']}: #{opt}#{translate_schema(p['schema'], openapi)}"
+        }.join(', ')
     end
 
     # Translates an OpenAPI `responses` field to an RDL type, 
@@ -106,15 +111,15 @@ module RDL::Annotate
         case schema['type']
         # Primitives
         when 'integer'
-            '?Integer'
+            'Integer'
         when 'float', 'double'
             if RDL::Config.instance.number_mode
-                '?Integer'
+                'Integer'
             else
-                '?Float'
+                'Float'
             end
         when 'string'
-            '?(String or Symbol)'
+            '(String or Symbol)'
 
         # Arrays
         when 'array'
@@ -124,7 +129,15 @@ module RDL::Annotate
         # Objects
         when 'object'
             throw "Object schema missing `properties` field: #{schema}" unless schema['properties']
-            "JSON<{#{schema['properties'].map {|k, v| "#{k}: #{translate_schema(v, openapi)}"}.join(', ')}}>"
+
+            fields = schema['properties'].map {|k, v| 
+                # Symbol to add, if the property is optional
+                opt = "?"
+                opt = "" if schema.has_key?('required') && schema['required'].include?(k)
+                "#{k}: #{opt}#{translate_schema(v, openapi)}"
+            }.join(', ')
+
+            "JSON<{#{fields}}>"
 
         # Refs (reference to a schema defined elsewhere in the spec)
         # Refs have no "type", instead they have "$ref"
