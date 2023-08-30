@@ -61,8 +61,8 @@ module RDL::Annotate
     # Translates an OpenAPI path to an RDL type.
     # Currently, only supports GET endpoints with a 200 response.
     def translate_path(endpoint, openapi)
-        input_type = "?{}"
-        input_type = "?{#{translate_parameters(endpoint['get']['parameters'], openapi)}}" if endpoint['get'].has_key?('parameters')
+        input_type = "{}"
+        input_type = "{#{translate_parameters(endpoint['get']['parameters'], openapi)}}" if endpoint['get'].has_key?('parameters')
 
         output_type = translate_responses(endpoint['get']['responses'], openapi)
 

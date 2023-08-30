@@ -42,13 +42,13 @@ module RDL::Typecheck
 
         if args_node.location.expression == nil # no args
           #insert_after(node.location.name, "(params=nil)")
-          rewritten_args = "(params=nil)"
+          rewritten_args = "(params)"
         elsif args_node.location.expression.source.start_with?("|") # lambda
           ap "Lambda. No injection."
           rewritten_args = args_node.location.expression.source
         elsif args_node.children.none? {|node| node.children[0] == :params}# regular function, with one or more arguments. Requires a comma to be added
           args_node.children.each {|n| ap "Processing arg:"; ap n.children[0]}
-          rewritten_args = args_node.location.expression.source.insert(-2, ", params=nil")
+          rewritten_args = args_node.location.expression.source.insert(-2, ", params")
           ap "Arguments defined but no params. Injected."
         else
           ap "Params already defined. No injection."
