@@ -119,7 +119,7 @@ module RDL::Annotate
                 'Float'
             end
         when 'string'
-            '(String or Symbol)'
+            'String'
 
         # Arrays
         when 'array'
@@ -139,17 +139,34 @@ module RDL::Annotate
 
             "JSON<{#{fields}}>"
 
-        # Refs (reference to a schema defined elsewhere in the spec)
+        
+
+        # Refs (reference to a schema defined elsewhere in the spec) and `anyOf`
         # Refs have no "type", instead they have "$ref"
         when nil
             if schema["$ref"] != nil
                 translate_schema(resolve_ref(schema["$ref"], openapi), openapi)
 
+            elsif schema["oneOf"] != nil
+                # Get the schemas
+                children = schema["oneOf"]
+                if !children.is_a?(Array)
+                    RDL::Logging.log :openapi, :error, "Schema contains `oneOf`, but is not an array: #{schema}"
+                end
+
+                # Translate the schemas
+                translated_children = children.map {|child| translate_schema(child, openapi)}
+
+                # Join them. Resulting type will look like "JSON<{error: string}> or JSON<{numPosts: integer}>"
+                translated_children.join(" or ")
+
             else
-                RDL::Logging.log :openapi, :error, "Schema missing 'type' or '$ref': #{schema}"
+                RDL::Logging.log :openapi, :error, "Schema missing 'type', '$ref', or 'oneOf': #{schema}"
                 throw ""
 
             end
+
+
 
         else
             #"String" # conservative approximation for everything else. If it's coming from OpenAPI, it can definitely be represented as a string.

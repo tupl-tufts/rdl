@@ -439,7 +439,7 @@ class DBType
       end
 
       # Step 1. use `rec_to_schema_type` to get the schema type and attribute names.
-      schema = rec_to_schema_type(trec, true, include_assocs: false, partial: false)
+      schema = rec_to_schema_type(trec, true, include_assocs: false, output: true)
       attribute_names = schema.elts.keys
       puts "rec_as_json comp type: attribute_names before filter = #{attribute_names}"
 
@@ -479,7 +479,7 @@ class DBType
             included_options = [RDL::Type::FiniteHashType.new({}, nil)] unless included_options
             included_options = [included_options] unless included_options.class == Array
 
-            schema.elts[included_symbol.to_s] =
+            schema.elts[included_symbol] =
               RDL::Type::GenericType.new(RDL::Globals.types[:array],
                 rec_as_json(RDL::Type::NominalType.new(included_class_name), included_options))
           end
@@ -495,7 +495,7 @@ class DBType
           included_class_name = table_class.reflect_on_association(included_symbol).class_name.to_sym
           
           # add the schem
-          schema.elts[included_symbol.to_s] = 
+          schema.elts[included_symbol] = 
             RDL::Type::GenericType.new(RDL::Globals.types[:array], 
               rec_as_json(RDL::Type::NominalType.new(included_class_name)))
 
@@ -536,7 +536,7 @@ class DBType
 
       puts "rec_as_json comp type: options = #{options}"
       puts "rec_as_json comp type: attribute_names after filter = #{attribute_names}"
-      puts "rec_as_json comp type: rec_to_schema_type + assocs = #{rec_to_schema_type(trec, true, include_assocs: true, partial: false)}"
+      puts "rec_as_json comp type: rec_to_schema_type + assocs = #{rec_to_schema_type(trec, true, include_assocs: true, output: true)}"
 
       ret_type = RDL::Type::GenericType.new(
         RDL::Type::NominalType.new("JSON"), # Base
@@ -599,11 +599,9 @@ class DBType
   ## [+ trec +] is the type of the receiver in the method call.
   ## [+ check_col +] is a boolean indicating whether or not the column types (i.e., values in the finite hash type) will be checked.
   ## [+ include_assocs +] is a bool indicating whether or not to include associations in returned hash, e.g., for `create` method.
-  ## [+ partial +] specifies if it's ok for the schema to be missing some 
-  #                fields. All fields will be marked optional under this 
-  #                mode. With `partial: false`, fields will be optional 
-  #                according to the database schema (Rails validators).
-  def self.rec_to_schema_type(trec, check_col, takes_array=false, include_assocs: false, partial: true)
+  ## [+ output +] Whether the resulting FHT will be used as output, vs. as
+  ##              to an ActiveRecord function. See `table_name_to_schema_type`.
+  def self.rec_to_schema_type(trec, check_col, takes_array=false, include_assocs: false, output: false)
     case trec
     when RDL::Type::GenericType
       raise "Unexpected type #{trec}." unless (trec.base.klass == ActiveRecord_Relation) || (trec.base.klass == ActiveRecord::QueryMethods::WhereChain)
@@ -614,19 +612,19 @@ class DBType
         ## should be JoinTable
         raise "1. rec_to_schema unexpected type #{trec}" unless param.base.klass == JoinTable
         base_name = RDL.type_cast(param.params[0], "RDL::Type::NominalType", force: true).klass.to_s.singularize.to_sym ### singularized symbol name of first param in JoinTable, which is base table of the joins
-        type_hash = table_name_to_schema_type(base_name, check_col, takes_array, include_assocs: include_assocs, partial: partial).elts
+        type_hash = table_name_to_schema_type(base_name, check_col, takes_array, include_assocs: include_assocs, output: output).elts
         pp1 = param.params[1]
         case pp1
         when RDL::Type::NominalType
           ## just one table joined to base table
           joined_name = pp1.klass.to_s.singularize.to_sym
-          joined_type = RDL::Type::OptionalType.new(table_name_to_schema_type(joined_name, check_col, takes_array, include_assocs: include_assocs, partial: partial))
+          joined_type = RDL::Type::OptionalType.new(table_name_to_schema_type(joined_name, check_col, takes_array, include_assocs: include_assocs, output: output))
           type_hash = type_hash.merge({ joined_name.to_s.pluralize.underscore.to_sym => joined_type })
         when RDL::Type::UnionType
           ## multiple tables joined to base table
           joined_hash = RDL.type_cast(Hash[pp1.types.map { |t|
                                joined_name = RDL.type_cast(t, "RDL::Type::NominalType", force: true).klass.to_s.singularize.to_sym
-                               joined_type = RDL::Type::OptionalType.new(table_name_to_schema_type(joined_name, check_col, takes_array, include_assocs: include_assocs, partial: partial))
+                               joined_type = RDL::Type::OptionalType.new(table_name_to_schema_type(joined_name, check_col, takes_array, include_assocs: include_assocs, output: output))
                                [joined_name.to_s.pluralize.underscore.to_sym, joined_type]
                              }
                                           ], "Hash<Symbol, RDL::Type::FiniteHashType>", force: true)
@@ -637,7 +635,7 @@ class DBType
         return RDL::Type::FiniteHashType.new(type_hash, nil)
       when RDL::Type::NominalType
         tname = param.klass.to_s.to_sym
-        res = table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs, partial: partial)
+        res = table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs, output: output)
         puts "Generic Nominal Type tname: #{tname}, res: #{res}"
         return res
       else
@@ -647,12 +645,12 @@ class DBType
       val = RDL.type_cast(trec.val, 'Class', force: true)
       raise RDL::Typecheck::StaticTypeError, "Unexpected receiver type #{trec}." unless val.is_a?(Class)
       tname = val.to_s.to_sym
-      res = table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs, partial: partial)
+      res = table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs, output: output)
       puts "Singleton Type tname: #{tname}, res: #{res}"
       return res
     when RDL::Type::NominalType
       tname = trec.name.to_sym
-      res = table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs, partial: partial)
+      res = table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs, output: output)
       puts "Nominal Type tname: #{tname}, res: #{res}"
       return res
 
@@ -666,11 +664,24 @@ class DBType
   ## turns a given table name into the appropriate finite hash type based on table schema, with optional or top-type values
   ## [+ tname +] is the table name as a symbol
   ## [+ check_col +] is a boolean indicating whether or not column types will eventually be checked
-  ## [+ partial +] specifies if it's ok for the schema to be missing some 
-  #                fields. All fields will be marked optional under this 
-  #                mode. With `partial: false`, fields will be optional 
-  #                according to the database schema (Rails validators).
-  def self.table_name_to_schema_type(tname, check_col, takes_array=false, include_assocs: false, partial: true)
+  ## [+ output +] specifies if the resulting type will be used for output, as 
+  #               opposed to input to an ActiveRecord function. 
+  #               For input to a function, all fields will be marked optional, 
+  #               and all "String"s will be "(String or Symbol)".
+  #
+  #               This is enable something like 
+  #                   `Model.find(:title => "Hello World")`
+  #               Here, the input to `find` is 
+  #                    `table_name_to_schema_type("Model", output: false)`
+  #
+  #               This lets the user specify only some fields, and index column
+  #               names using symbols.
+  #
+  #               When `output` is set to `true`, the resulting FHT will be
+  #               accurate with respect to the ActiveModel schema. E.g.,
+  #               fields are marked optional unless they have a 
+  #               PresenceValidator, and strings are just strings.
+  def self.table_name_to_schema_type(tname, check_col, takes_array=false, include_assocs: false, output: false)
     puts "table_name_to_schema_type: called with tname='#{tname}' :: #{tname.class}"
     #h = RDL.type_cast({}, "Hash<%any, RDL::Type::Type>", force: true)
     ttype = RDL::Globals.ar_db_schema[tname]
@@ -683,12 +694,12 @@ class DBType
                  v = v.type if optional
 
                  # Modify the type as necessary
-                 v = RDL::Type::UnionType.new(v, RDL::Globals.types[:symbol]) if v == RDL::Globals.types[:string] ## ran into cases where symbols can be accepted in addition to string values.
+                 v = RDL::Type::UnionType.new(v, RDL::Globals.types[:symbol]) if v == RDL::Globals.types[:string] if !output ## ran into cases where symbols can be accepted in addition to string values.
                  v = RDL::Type::UnionType.new(v, RDL::Type::GenericType.new(RDL::Globals.types[:array], v)).canonical if takes_array
 
                  # Add the optional type back in, if it was already there or if 
                  # it's requested.
-                 v = RDL::Type::OptionalType.new(v) if optional || partial
+                 v = RDL::Type::OptionalType.new(v) if optional || !output
                  [k, v]
                else
                  [k, RDL::Type::OptionalType.new(RDL::Globals.types[:top])]
