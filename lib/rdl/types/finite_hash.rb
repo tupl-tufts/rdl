@@ -37,7 +37,12 @@ module RDL::Type
 
     def to_s
       return @the_hash.to_s if @the_hash
-      return "{ " + @elts.map { |k, t| k.to_s + ": " + t.to_s }.join(', ') + (if @rest then ", **" + @rest.to_s else "" end) + " }"
+      return "{ " + @elts.map { |k, t| 
+        # Key string. To disambiguate symbol keys vs. string keys. 
+        # Strings are surrounded by "" when printed as keys
+        k_str = if k.is_a? String then "\"#{k}\"" else "#{k.to_s}" end
+        k_str + ": " + t.to_s 
+      }.join(', ') + (if @rest then ", **" + @rest.to_s else "" end) + " }"
     end
 
     def ==(other) # :nodoc:
