@@ -25,15 +25,13 @@ module RDL::Typecheck
       # (def name args body)
       name, _, body = *node
 
-      if @klass
+      if @klass && RDL::Typecheck.is_controller(@klass)
         # If we're mapping line #'s from a Rails controller,
         # the file has been rewritten, and we must refer to the
         # original line #'s from Ruby.
         file, line = klass.instance_method(name).source_location
 
-        if RDL::Typecheck.is_controller @klass
-          ap "ASTMapper on #{file}. Rewritten controller method #{name}. Old line number = #{line}, transformed line number = #{node.loc.line}"
-        end
+        ap "ASTMapper on #{file}. Rewritten controller method #{name}. Old line number = #{line}, transformed line number = #{node.loc.line}"
         loc = line
       else
         # If we're not in a rewritten Rails controller, we can
