@@ -7,6 +7,7 @@ require 'colorize'
 require 'pathname'
 require 'rake'
 require 'net/http'
+require 'awesome_print'
 
 module RDL
 end
