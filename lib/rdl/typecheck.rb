@@ -78,7 +78,7 @@ module RDL::Typecheck
     # This is used so that the ASTProcessor knows we're inside a class def.
     # Returns: the line defs from the subtree
     def self.process(ast, file, klass=nil)
-      return unless ast != nil
+      return Hash.new unless ast != nil
       processor = ASTMapper.new(file, klass=klass)
       processor.process ast
 
