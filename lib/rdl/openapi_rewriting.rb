@@ -66,7 +66,7 @@ module RDL::Typecheck
     def on_class(node)
       name_ast, super_ast, body_ast = *node
       name_code = name_ast.location.expression.source
-      super_code = super_ast.location.expression.source
+      super_code = (super_ast && super_ast.location.expression.source) || "Object"
       ap "on_class: #{name_ast} < #{super_ast}"
 
       klass = RDL::Typecheck.get_class_from_node(node)
@@ -226,7 +226,7 @@ module RDL::Typecheck
     def on_class(node)
       name_ast, super_ast, body_ast = *node
       name_code = name_ast.location.expression.source
-      super_code = super_ast.location.expression.source
+      super_code = (super_ast && super_ast.location.expression.source) || "Object"
       ap "on_class: #{name_ast} < #{super_ast}"
 
       klass = RDL::Typecheck.get_class_from_node(node)
@@ -272,7 +272,7 @@ module RDL::Typecheck
     #ap "Klass: "
     #ap klass
 
-    if klass && defined?(Rails) && klass < ApplicationController
+    if klass && defined?(Rails) && klass.class.superclass.to_s == "ApplicationController"
       ap "#{klass.name} is a Rails controller"
       return true
     end
