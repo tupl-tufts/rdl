@@ -268,7 +268,7 @@ module RDL::Typecheck
     #ap "Klass: "
     #ap klass
 
-    if klass < ApplicationController
+    if defined?(Rails) && klass < ApplicationController
       ap "#{klass.name} is a Rails controller"
       return true
     end
