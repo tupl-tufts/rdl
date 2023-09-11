@@ -275,7 +275,12 @@ RUBY
         unless !h.has_key?(:typecheck) || RDL::Globals.info.set(klass, meth, :typecheck, h[:typecheck])
           raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
         end
-        RDL::Typecheck.typecheck(klass, meth) if h[:typecheck] == :now
+        
+        # Only perform `typecheck: now` if we have parsed this file already.
+        # If we haven't parsed this file yet, it will be re-eval'd, causing
+        # `do_method_added` to be called again.
+        RDL::Typecheck.typecheck(klass, meth) if (h[:typecheck] == :now && RDL::Typecheck.parsed?(klass, meth))
+
         if (h[:typecheck] && h[:typecheck] != :call)
           RDL::Globals.to_typecheck[h[:typecheck]] = Set.new unless RDL::Globals.to_typecheck[h[:typecheck]]
           RDL::Globals.to_typecheck[h[:typecheck]].add([klass, meth])

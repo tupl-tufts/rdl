@@ -256,6 +256,12 @@ module RDL::Typecheck
     return node != nil && node.type == :const && node.children[0] == nil && node.children[1] == :RDL
   end
 
+  ## Has this method's source code been parsed yet?
+  def self.parsed?(klass, meth)
+    file, line = RDL::Globals.info.get(klass, meth, :source_location)
+    return RDL::Globals.parser_cache[file]
+  end
+
   def self.get_ast(klass, meth)
     file, line = RDL::Globals.info.get(klass, meth, :source_location)
 
@@ -285,7 +291,7 @@ module RDL::Typecheck
     unless cache_hit
       begin
         # Parse and transform file, while extracting old line numbers.
-        file_ast, line_defs = parse_file file
+        file_ast, line_defs, new_src = parse_file file
 
         cache = {ast: file_ast, line_defs: line_defs}
         RDL::Globals.parser_cache[file] = [digest, cache]
@@ -303,11 +309,18 @@ module RDL::Typecheck
     ap meth
     puts
     ast = RDL::Globals.parser_cache[file][1][:line_defs][line]
+
+    ## If the code was transformed, eval it /after/ setting
+    ## the parser_cache. This is important for the `typecheck: now`
+    ## feature.
+    eval new_src, TOPLEVEL_BINDING, file if new_src
     return ast
   end
 
   # Parses a file into an AST, while injecting the `params` argument into 
   # controller methods where necessary.
+  # Returns (file_ast, line_defs, src_code). The `src_code` should be
+  # eval'd as method definitions may have changed.
   def self.parse_file(file)
     # before we rewrite, require the file so we get the original line numbers.
     #require file
@@ -333,10 +346,7 @@ module RDL::Typecheck
     ## Step 3. Extract line # definitions from the transformed code.
     line_defs = ASTMapper.process new_ast, file
 
-    ## Step 4. Evaluate new code
-    eval new_code, TOPLEVEL_BINDING
-
-    return new_ast, line_defs
+    return new_ast, line_defs, new_code
 
   end
 
