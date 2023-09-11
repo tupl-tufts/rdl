@@ -261,14 +261,18 @@ module RDL::Typecheck
     name_nodee = *name_node
     name = name_nodee[1]
 
-    return RDL::Util.to_class(name)
+    begin
+      return RDL::Util.to_class(name)
+    rescue NameError
+      return nil
+    end
   end
 
   def self.is_controller(klass)
     #ap "Klass: "
     #ap klass
 
-    if defined?(Rails) && klass < ApplicationController
+    if klass && defined?(Rails) && klass < ApplicationController
       ap "#{klass.name} is a Rails controller"
       return true
     end
