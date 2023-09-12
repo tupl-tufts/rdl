@@ -16,11 +16,8 @@ module RDL::Annotate
             RDL::Logging.log :openapi, :error, "Tried to typecheck a Rails project against an OpenAPI spec, but Rails is not loaded. Please load Rails and try again."
         end
 
-        # Step 4. Get paths for this Rails application.
-        rails_paths = Rails.application.routes.routes.map {|r| ActionDispatch::Routing::RouteWrapper.new(r)}.reject(&:internal)
 
-
-        # Step 5. Go through each path in the OpenAPI spec, and figure out:
+        # Step 4. Go through each path in the OpenAPI spec, and figure out:
         #         1. What Rails controller it belongs to
         #         2. What that method name is called
         #         3. what type this method has
@@ -52,6 +49,7 @@ module RDL::Annotate
 
         }
 
+        # Step 5. Do the typecheck
         RDL.do_typecheck :openapi
 
         RDL::Logging.log :openapi, :info, "Successfully type-checked against OpenAPI spec!"
