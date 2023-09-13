@@ -664,14 +664,14 @@ class DBType
   ## turns a given table name into the appropriate finite hash type based on table schema, with optional or top-type values
   ## [+ tname +] is the table name as a symbol
   ## [+ check_col +] is a boolean indicating whether or not column types will eventually be checked
-  ## [+ output +] specifies if the resulting type will be used for output, as 
+  ## [+ output +] true if the resulting type will be used for output, as 
   #               opposed to input to an ActiveRecord function. 
   #               For input to a function, all fields will be marked optional, 
   #               and all "String"s will be "(String or Symbol)".
   #
   #               This is enable something like 
   #                   `Model.find(:title => "Hello World")`
-  #               Here, the input to `find` is 
+  #               Here, the call to `table_name_to_schema_type` is 
   #                    `table_name_to_schema_type("Model", output: false)`
   #
   #               This lets the user specify only some fields, and index column
