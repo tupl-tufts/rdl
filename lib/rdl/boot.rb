@@ -8,7 +8,6 @@ require 'pathname'
 require 'rake'
 require 'net/http'
 require 'awesome_print'
-require 'debug/open'
 
 module RDL
 end
