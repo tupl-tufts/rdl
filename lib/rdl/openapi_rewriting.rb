@@ -272,7 +272,7 @@ module RDL::Typecheck
     #ap "Klass: "
     #ap klass
 
-    if klass && defined?(Rails) && klass.superclass.to_s == "ApplicationController"
+    if klass && defined?(Rails) && (klass.method_defined? :superclass) && (klass.superclass.to_s == "ApplicationController")
       ap "#{klass.name} is a Rails controller"
       return true
     end
