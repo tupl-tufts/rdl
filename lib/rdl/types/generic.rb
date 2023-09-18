@@ -83,6 +83,7 @@ module RDL::Type
     end
 
     def to_inst
+      raise "No type parameters defined for #{base.name}" unless RDL::Globals.type_params[base.name]
       return RDL::Globals.type_params[base.name][0].zip(@params).to_h
     end
 
