@@ -1,0 +1,296 @@
+{
+  "openapi" : "3.0.1",
+  "info" : {
+    "title" : "RDL Test",
+    "description" : "Description",
+    "version" : "0.1"
+  },
+  "servers" : [ {
+    "url" : "http://test.io"
+  } ],
+  "paths" : {
+    "/posts.json" : {
+      "get" : {
+        "description" : "Show all posts.",
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json; charset=utf-8" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/SlimPost"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posts/{id}.json" : {
+      "get" : {
+        "description": "Show a specific post.",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "schema" : {
+            "type" : "integer"
+          },
+          "required" : true
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json; charset=utf-8" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SlimPostWithComments"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/latest.json" : {
+      "get" : {
+        "description" : "Get the latest post.",
+        "parameters" : [],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json; charset=utf-8" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PostWithComments"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oldest.json" : {
+      "get" : {
+        "description" : "Get the oldest post.",
+        "parameters" : [],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json; charset=utf-8" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PostWithComments"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chronological.json" : {
+      "get" : {
+        "description" : "Show all posts in chronological order.",
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json; charset=utf-8" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Post"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search.json" : {
+      "get" : {
+        "description" : "Search for a post.",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "SHOULD_FAIL",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json; charset=utf-8" : {
+                "schema" : {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "numFound": {
+                          "type": "integer"
+                        },
+                        "posts": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Post"
+                          }
+
+                        }
+                      },
+                      "required": [
+                        "numFound",
+                        "posts"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "error"
+                      ]
+
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+  },
+  "components" : {
+    "schemas" : {
+      "SlimPost" : {
+        "type" : "object",
+        "properties" : {
+          "title" : {
+            "type" : "string"
+          },
+          "views" : {
+            "type" : "integer"
+          },
+          "content" : {
+            "type" : "string"
+          }
+        },
+        "required": [
+          "title",
+          "views",
+          "content"
+        ]
+      },
+      "Post" : {
+        "type" : "object",
+        "properties" : {
+          "id": {
+            "type": "integer"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "views" : {
+            "type" : "integer"
+          },
+          "content" : {
+            "type" : "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "views",
+          "content"
+        ]
+      },
+      "SlimComment": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "Comment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "content"
+        ]
+      },
+      "PostWithComments" : {
+        "type" : "object",
+        "properties" : {
+          "id": {
+            "type": "integer"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "views" : {
+            "type" : "integer"
+          },
+          "content" : {
+            "type" : "string"
+          },
+          "comments": {
+            "type": "array",
+            "items": {
+              "$ref" : "#/components/schemas/Comment"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "views",
+          "content",
+          "comments"
+        ]
+      },
+      "SlimPostWithComments": {
+        "type" : "object",
+        "properties" : {
+          "title" : {
+            "type" : "string"
+          },
+          "views" : {
+            "type" : "integer"
+          },
+          "content" : {
+            "type" : "string"
+          },
+          "comments": {
+            "type": "array",
+            "items": {
+              "$ref" : "#/components/schemas/SlimComment"
+            }
+          }
+        },
+        "required": [
+          "title",
+          "views",
+          "content",
+          "comments"
+        ]
+      }
+    }
+  }
+}
