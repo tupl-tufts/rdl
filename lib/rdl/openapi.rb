@@ -31,6 +31,7 @@ module RDL::Annotate
             puts
             puts
             puts
+            RDL::Logging.log :openapi, :error, "Tried to typecheck path #{path} but matching Rails route was not found!" unless route
             kontroller = "#{route[:controller]}_controller".camelize.constantize.new.class
 
             method = route[:action]
@@ -43,7 +44,7 @@ module RDL::Annotate
             ap "Resolved RDL type: #{output_type_rdl}}"
 
             # Actually perform the typechecking.
-            ap "Submitting to RDL: RDL.type, #{kontroller}, #{method.to_sym}, #{output_type}}"
+            ap "Submitting to RDL: RDL.type, #{kontroller}, #{method.to_sym}, #{output_type}"
             RDL.type kontroller, method.to_sym, output_type, wrap: false, typecheck: :openapi
 
 
