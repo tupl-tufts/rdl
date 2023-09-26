@@ -1162,6 +1162,8 @@ module RDL::Typecheck
     when :if
       envi, tguard = tc(scope, env, e.children[0]) # guard; any type allowed
       # always type check both sides
+
+      ## NOTE(Mark): Scope below must be adjusted to include path constraint info.
       envleft, tleft = if e.children[1].nil? then [envi, RDL::Globals.types[:nil]] else tc(scope, envi, e.children[1]) end # then
       envright, tright = if e.children[2].nil? then [envi, RDL::Globals.types[:nil]] else tc(scope, envi, e.children[2]) end # else
       if tguard.is_a? RDL::Type::SingletonType
@@ -1170,6 +1172,8 @@ module RDL::Typecheck
         [Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright).canonical]
       end
     when :case
+
+      # NOTE(Mark): Here too.
       envi = env
       envi, tcontrol = tc(scope, envi, e.children[0]) unless e.children[0].nil? # the control expression, which make be nil
       # for each guard, invoke guard === control expr, then possibly do body, possibly short-circuiting arbitrary later stuff
@@ -1918,8 +1922,8 @@ module RDL::Typecheck
 
         #  #exit(1)
         #end
-        puts "Completed type signature lookup for #{trecv_lookup}##{meth_lookup} ~~> "##{ts}"
-        puts ts[0]
+        puts "Completed type signature lookup for #{trecv_lookup}##{meth_lookup} ~~> "
+        puts ts[0] if ts
 
         error :no_singleton_method_type, [trecv.val, meth], e unless ts
         inst = {self: self_inst}
