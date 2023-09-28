@@ -932,6 +932,7 @@ RDL supports the following configuration options:
 * `config.use_comp_types` - when true, RDL makes use of types with type-level computations. When false, RDL ignores such types. By default set to true.
 * `config.check_comp_types` - when true, RDL inserts dynamic checks which ensure that methods with type-level computations will return the expected type. False by default.
 * `config.rerun_comp_types` - when true, RDL inserts dynamic checks which rerun type-level computations at method call sites, ensuring that they evaluate to the same type they did at type checking time.  False by default.
+* `config.strict_field_inference` - when true during inference, RDL will trust the first type it infers for a class field. This is to gain more accuracy for comp types during inference. False by default.
 
 
 # Bibliography
