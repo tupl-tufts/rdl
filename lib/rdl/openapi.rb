@@ -105,7 +105,6 @@ module RDL::Annotate
     #
     # schema: OpenAPI schema (in JSON)
     # openapi: the entire OpenAPI spec (in JSON, used for #ref's)
-
     def translate_schema(schema, openapi)
         case schema['type']
         # Primitives
@@ -140,8 +139,10 @@ module RDL::Annotate
 
         
 
-        # Refs (reference to a schema defined elsewhere in the spec) and `anyOf`
-        # Refs have no "type", instead they have "$ref"
+        # Here is where we deal with special cases. These types have no "type"
+        # field.
+        # Refs (reference to a schema defined elsewhere in the spec) have "$ref"
+        # and `oneOf` has "oneOf"
         when nil
             if schema["$ref"] != nil
                 translate_schema(resolve_ref(schema["$ref"], openapi), openapi)
@@ -177,7 +178,7 @@ module RDL::Annotate
     # resolves a $ref within a schema.
     #
     # ref: a $ref string. Looks like "#/components/schemas/Talk"
-    #
+    # openapi: the entire OpenAPI spec (in JSON, used for #ref's)
     def resolve_ref(ref, openapi)
         # First, ensure this is a local reference.
         # Remote references are a thing, but I don't think we will need to deal with them.

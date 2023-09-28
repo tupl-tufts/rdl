@@ -37,6 +37,8 @@ require 'rdl'
 require 'types/core'
 require 'coderay'
 
+require 'debug/open'
+
 ## String methods we need from Rails.
 class String
     # Taken from Rails: 

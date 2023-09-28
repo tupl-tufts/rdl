@@ -63,13 +63,6 @@ module RDL::Typecheck
       
       klass = RDL::Typecheck.get_class_from_node(node)
 
-      # If we're mapping line #'s from a Rails controller,
-      # the file has been rewritten, and we must refer to the
-      # original line #'s from Ruby.
-      #if !RDL::Typecheck.is_controller(klass)
-      #  klass = nil
-      #end
-
       nested_line_defs = ASTMapper.process(body_ast, @file, klass=klass)
       @line_defs = @line_defs.merge nested_line_defs
     end
@@ -266,10 +259,6 @@ module RDL::Typecheck
     file, line = RDL::Globals.info.get(klass, meth, :source_location)
 
     return nil if file.nil?
-    #   return nil if RDL::Config.instance.continue_on_errors
-    #
-    #   raise RuntimeError, "No file for #{RDL::Util.pp_klass_method(klass, meth)}" if file.nil?
-    # end
 
     raise RuntimeError, "static type checking in irb not supported" if file == "(irb)"
     if file == "(pry)"
@@ -290,7 +279,7 @@ module RDL::Typecheck
 
     unless cache_hit
       begin
-        # Parse and transform file, while extracting old line numbers.
+        # Parse and transform file, while extracting old line numbers
         file_ast, line_defs, new_src = parse_file file
 
         cache = {ast: file_ast, line_defs: line_defs}
@@ -322,20 +311,15 @@ module RDL::Typecheck
   # Returns (file_ast, line_defs, src_code). The `src_code` should be
   # eval'd as method definitions may have changed.
   def self.parse_file(file)
-    # before we rewrite, require the file so we get the original line numbers.
-    #require file
 
     original_ast = Parser::CurrentRuby.parse_file file
-    buffer = Parser::Source::Buffer.new "(ast)", source: (File.read file) # not for ParamsInjector.rewrite
-    #rewriter = ParamsInjector.rewrite 
+    buffer = Parser::Source::Buffer.new "(ast)", source: (File.read file)
 
     # Step 1. Inject `params` argument into controller methods.
     ap "About to inject params into #{file}"
     new_code = ParamsInjector.rewrite original_ast
     ap "After params injection: #{new_code}"
-    #eval new_code, TOPLEVEL_BINDING
     new_ast = Parser::CurrentRuby.parse new_code, file
-    #new_ast = original_ast
 
     ## Step 2. Inject class fields for calls to `respond_to`.
     ap "About to inject respond_to into #{file}"
@@ -347,7 +331,6 @@ module RDL::Typecheck
     line_defs = ASTMapper.process new_ast, file
 
     return new_ast, line_defs, new_code
-
   end
 
 

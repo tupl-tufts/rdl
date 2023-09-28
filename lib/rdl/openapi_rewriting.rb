@@ -7,12 +7,11 @@
 #    argument, `params`, that allows for per-endpoint parameter
 #    inference.
 #
-# 2. In Rails controllers, we inject hidden class fields,
-#    each named `@__{FUNCTION}_render{NUM}`. `{FUNCTION}` corresponds
-#    to the name of the controller function. These are injected
-#    for each call to `respond_to { format.json }`, and is used
-#    to infer the actual JSON type that is being rendered at the
-#    endpoint. The translation looks like this:
+# 2. In Rails controllers, all calls to `render` are rewritten.
+#    The original call remains, but we also inject another identical
+#    call, whose result is written to the local variable `__RDL_rendered`.
+#    At the end of every Rails action, we inject `return __RDL_rendered`.
+#    The translation looks like this:
 #
 #        respond_to do |format|
 #            format.json { render json: @theme.errors, status: :unprocessable_entity }
@@ -21,11 +20,16 @@
 #        ~~>
 #        
 #        respond_to do |format|
-#          @__create_render1 = render json: @theme.errors, status: :unprocessable_entity
 #          format.json { render json: @theme.errors, status: :unprocessable_entity }
 #        end
+#   ~~>  __RDL_rendered = render json: @theme.errors, status: :unprocessable_entity
+#   ~~>  return __RDL_rendered
 # 
-#    We can then access the JSON type being rendered through this class field.
+#    
+# The result of these two rewriting passes on Rails controllers leads to a 
+# nice property: want to infer the input and output of a Rails controller?
+# Simply infer its type normally. The `params` will be its input type,
+# and the `render`'d output will be its return type.
 
 module RDL::Typecheck
   class ParamsInjector < Parser::TreeRewriter
@@ -41,7 +45,6 @@ module RDL::Typecheck
         body_code = (body_node && body_node.location.expression.source) || ""
 
         if args_node.location.expression == nil # no args
-          #insert_after(node.location.name, "(params=nil)")
           rewritten_args = "(params)"
         elsif args_node.location.expression.source.start_with?("|") # lambda
           ap "Lambda. No injection."
@@ -149,7 +152,6 @@ module RDL::Typecheck
           ap "@"
           ap call_ast.children[2].location.expression
           ap ""
-          #exit(1)
 
           # Inject the following expression after the `respond_to` call:
           # return render ...
@@ -256,6 +258,7 @@ module RDL::Typecheck
 
   end
 
+  # Get the actual Ruby class from a class definition AST node.
   def self.get_class_from_node(class_node)
     name_node, zuper, body = *class_node
     name_nodee = *name_node
@@ -268,6 +271,7 @@ module RDL::Typecheck
     end
   end
 
+  # Is the given Ruby class a Rails controller?
   def self.is_controller(klass)
     #ap "Klass: "
     #ap klass
