@@ -37,8 +37,6 @@ require 'rdl'
 require 'types/core'
 require 'coderay'
 
-require 'debug/open'
-
 ## String methods we need from Rails.
 class String
     # Taken from Rails: 
@@ -283,7 +281,6 @@ class TestOpenAPI < Minitest::Test
         typ = infer_method_type klass, meth, depends_on: depends_on
         RDL::Type::VarType.no_print_XXX!
 
-        #require 'debug/open'
         if expected_type.ret != typ.solution.ret
             ast  = RDL::Typecheck.get_ast(klass, meth)
             code = CodeRay.scan(ast.loc.expression.source, :ruby).term
@@ -297,7 +294,6 @@ class TestOpenAPI < Minitest::Test
     end
 
     def self.should_have_type(klass, meth, typ, depends_on: [], shouldSkip: false)
-        #require 'debug/open'
         define_method "test_#{meth}" do
         if shouldSkip
             skip
