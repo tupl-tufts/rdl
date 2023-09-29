@@ -280,7 +280,7 @@ module RDL::Typecheck
     unless cache_hit
       begin
         # Parse and transform file, while extracting old line numbers
-        file_ast, line_defs, new_src = parse_file file
+        file_ast, line_defs, new_src = parse_file file, klass
 
         cache = {ast: file_ast, line_defs: line_defs}
         RDL::Globals.parser_cache[file] = [digest, cache]
@@ -310,27 +310,30 @@ module RDL::Typecheck
   # controller methods where necessary.
   # Returns (file_ast, line_defs, src_code). The `src_code` should be
   # eval'd as method definitions may have changed.
-  def self.parse_file(file)
+  def self.parse_file(file, klass)
 
-    original_ast = Parser::CurrentRuby.parse_file file
+    ast = Parser::CurrentRuby.parse_file file
     buffer = Parser::Source::Buffer.new "(ast)", source: (File.read file)
+    code = nil
 
-    # Step 1. Inject `params` argument into controller methods.
-    ap "About to inject params into #{file}"
-    new_code = ParamsInjector.rewrite original_ast
-    ap "After params injection: #{new_code}"
-    new_ast = Parser::CurrentRuby.parse new_code, file
+    if RDL::Typecheck.is_controller klass
+      # Step 1. Inject `params` argument into controller methods.
+      ap "About to inject params into #{file}"
+      code = ParamsInjector.rewrite ast
+      ap "After params injection: #{code}"
+      ast = Parser::CurrentRuby.parse code, file
 
-    ## Step 2. Inject class fields for calls to `respond_to`.
-    ap "About to inject respond_to into #{file}"
-    new_code = RespondToInjector.rewrite new_ast
-    ap "After RespondTo injection: #{new_code}"
-    new_ast = Parser::CurrentRuby.parse new_code, file
+      ## Step 2. Inject class fields for calls to `respond_to`.
+      ap "About to inject respond_to into #{file}"
+      code = RespondToInjector.rewrite ast
+      ap "After RespondTo injection: #{code}"
+      ast = Parser::CurrentRuby.parse code, file
+    end
 
     ## Step 3. Extract line # definitions from the transformed code.
-    line_defs = ASTMapper.process new_ast, file
+    line_defs = ASTMapper.process ast, file
 
-    return new_ast, line_defs, new_code
+    return ast, line_defs, code
   end
 
 
