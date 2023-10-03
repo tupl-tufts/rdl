@@ -14,6 +14,7 @@ class TestPathInfer < Minitest::Test
 
   def setup
     RDL.reset
+    RDL::Config.instance.path_sensitive = :all
     RDL::Config.instance.number_mode = true
 
     # TODO: this will go away after config/reset
@@ -92,6 +93,28 @@ class TestPathInfer < Minitest::Test
       assert_type_equal meth, tm(typ), depends_on: depends_on
     end
   end
+
+  # SP = single path
+  # MP = multiple paths
+
+  # ----------------------------------------------------------------------------
+  def MP_if1
+    if true
+      return 1
+    else
+      return "Nope"
+    end
+  end
+  should_have_type :MP_if1, '() -> Integer or String' # NOTE(Mark): how should we parse path types?
+
+  def MP_if2
+    if true
+      return 1
+    else
+      return 2
+    end
+  end
+  should_have_type :MP_if2, '() -> Integer'
 
   # ----------------------------------------------------------------------------
 

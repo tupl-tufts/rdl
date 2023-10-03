@@ -13,6 +13,7 @@ class RDL::Config
   attr_accessor :continue_on_errors
   attr_accessor :log_levels, :disable_log_colors
   attr_accessor :log_file, :log_file_levels
+  attr_accessor :path_sensitive
 
   def initialize
     RDL::Config.reset(self)
@@ -59,6 +60,7 @@ class RDL::Config
       wrap: :critical,
       reporting: :info
     }
+    c.path_sensitive = nil # Options: nil, :json, :all
   end
 
   def add_nowrap(*klasses)
