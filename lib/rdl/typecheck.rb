@@ -2181,7 +2181,7 @@ module Parser
           raise IndexError, "The range #{range} is outside the bounds of the source of size #{@source_buffer.source.size}"
         end
         dummy_range = Parser::Source::Range.new(@source_buffer, range.begin_pos - offset, range.end_pos - offset)
-        action = TreeRewriter::Action.new(dummy_range, @enforcer, attributes)
+        action = TreeRewriter::Action.new(dummy_range, @enforcer, **attributes)
         @action_root = @action_root.combine(action)
         self
       end

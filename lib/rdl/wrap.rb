@@ -144,7 +144,7 @@ RUBY
     else
       raise ArgumentError, "Invalid arguments to `type`"
     end
-    raise ArgumentError, "Excepting method type, got #{type.class} instead" if type.class != RDL::Type::MethodType
+    raise ArgumentError, "Expecting method type, got #{type.class} instead" if type.class != RDL::Type::MethodType
 #    meth = :initialize if meth && slf && meth.to_sym == :new  # actually wrap constructor
     klass = RDL::Util.add_singleton_marker(klass) if slf
     return [klass, meth, type]
