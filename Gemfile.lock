@@ -1,0 +1,30 @@
+PATH
+  remote: .
+  specs:
+    rdl (2.1.0)
+      parser (~> 3.2, >= 3.2.2.4)
+      sql-parser (~> 0.0.2)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    ast (2.4.2)
+    minitest (5.20.0)
+    parser (3.2.2.4)
+      ast (~> 2.4.1)
+      racc
+    racc (1.7.3)
+    rake (13.0.6)
+    sql-parser (0.0.2)
+      racc
+
+PLATFORMS
+  arm64-darwin-21
+
+DEPENDENCIES
+  minitest (~> 5.10)
+  rake (~> 13.0.1)
+  rdl!
+
+BUNDLED WITH
+   2.3.22
