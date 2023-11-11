@@ -19,7 +19,7 @@ GEM
       racc
 
 PLATFORMS
-  arm64-darwin-21
+  ruby
 
 DEPENDENCIES
   minitest (~> 5.10)
