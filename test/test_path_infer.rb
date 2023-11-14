@@ -405,6 +405,23 @@ class TestPathInfer < Minitest::Test
   should_have_type: MP_pattern_12, '() -> nil'
 
   # ---------------------------------------------------------------------------
+  # Pattern #13: JSON merging.
+  # ---------------------------------------------------------------------------
+  def MP_pattern_13(params)
+    json = {title: "Hello world",
+            content: "This is a blog post"}
+
+    new_json = if params[:include_time]
+      json.merge({datetime: "2023-11-14 @ 11:47AM EST"})
+    else
+      json.merge({date: "2023-11-14"})
+    end
+
+    new_json
+  end
+  should_have_type: MP_pattern_13, '() -> nil'
+
+  # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
   # ---------------------------------------------------------------------------
   #def MP_pattern_1
