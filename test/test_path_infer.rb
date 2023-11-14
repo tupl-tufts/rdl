@@ -289,6 +289,19 @@ class TestPathInfer < Minitest::Test
   should_have_type: MP_pattern_2, '() -> nil'
 
   # ---------------------------------------------------------------------------
+  # Pattern #3: Parameter size.
+  # ---------------------------------------------------------------------------
+  def MP_pattern_3(params)
+    if params[:file].size > 1048576
+      return {failure: "Asset too large"}
+    else
+      return {success: "Success"}
+    end
+  end
+  should_have_type: MP_pattern_3, '() -> nil'
+
+
+  # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
   # ---------------------------------------------------------------------------
   #def MP_pattern_1
