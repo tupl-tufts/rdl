@@ -313,6 +313,18 @@ class TestPathInfer < Minitest::Test
   should_have_type: MP_pattern_4, '() -> nil'
 
   # ---------------------------------------------------------------------------
+  # Pattern #5: Param existence.
+  # ---------------------------------------------------------------------------
+  def MP_pattern_5(params)
+    if params[:name]
+      return {success: "Success"}
+    else
+      return {failure: "Name required"}
+    end
+  end
+  should_have_type: MP_pattern_5, '() -> nil'
+
+  # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
   # ---------------------------------------------------------------------------
   #def MP_pattern_1
