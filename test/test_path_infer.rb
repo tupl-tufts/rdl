@@ -300,6 +300,17 @@ class TestPathInfer < Minitest::Test
   end
   should_have_type: MP_pattern_3, '() -> nil'
 
+  # ---------------------------------------------------------------------------
+  # Pattern #4: Param compared to database state.
+  # ---------------------------------------------------------------------------
+  def MP_pattern_4(params)
+    if @level.name.downcase == params[:name].downcase
+      return {failure: "Cannot change only the capitalization of the name"}
+    else
+      return {success: "Success"}
+    end
+  end
+  should_have_type: MP_pattern_4, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
