@@ -392,6 +392,19 @@ class TestPathInfer < Minitest::Test
   should_have_type: MP_pattern_11, '() -> nil'
 
   # ---------------------------------------------------------------------------
+  # Pattern #12: Request type.
+  # We will leave this uninterpreted as well.
+  # ---------------------------------------------------------------------------
+  def MP_pattern_12
+    if request.put?
+      {status: 200}
+    else
+      {status: 500}
+    end
+  end
+  should_have_type: MP_pattern_12, '() -> nil'
+
+  # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
   # ---------------------------------------------------------------------------
   #def MP_pattern_1
