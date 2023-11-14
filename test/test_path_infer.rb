@@ -422,6 +422,18 @@ class TestPathInfer < Minitest::Test
   should_have_type: MP_pattern_13, '() -> nil'
 
   # ---------------------------------------------------------------------------
+  # Pattern #14: At least one param must be present.
+  # ---------------------------------------------------------------------------
+  def MP_pattern_14(params)
+    if params.select { |_, v| v.present? }.present?
+      {success: "Success"}
+    else 
+      {failure: "At least one param is required"}
+    end
+  end
+  should_have_type: MP_pattern_14, '() -> nil'
+
+  # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
   # ---------------------------------------------------------------------------
   #def MP_pattern_1
