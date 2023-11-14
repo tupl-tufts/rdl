@@ -349,6 +349,16 @@ class TestPathInfer < Minitest::Test
   should_have_type: MP_pattern_7, '() -> nil'
 
   # ---------------------------------------------------------------------------
+  # Pattern #8: Ruby exception handling.
+  # ---------------------------------------------------------------------------
+  def MP_pattern_8
+    return {success: "1 / 0 = #{1 / 0}"}
+  rescue ZeroDivisionError => e
+    return {failure: "Why would I expect this to work..."}
+  end
+  should_have_type: MP_pattern_8, '() -> nil'
+
+  # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
   # ---------------------------------------------------------------------------
   #def MP_pattern_1
