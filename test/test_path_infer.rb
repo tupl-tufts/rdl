@@ -337,6 +337,18 @@ class TestPathInfer < Minitest::Test
   should_have_type: MP_pattern_6, '() -> nil'
 
   # ---------------------------------------------------------------------------
+  # Pattern #7: Comparison between two params.
+  # ---------------------------------------------------------------------------
+  def MP_pattern_7(params)
+    if params[:new_section_code] == params[:current_section_code]
+      return {failure: "Section codes must be different"}
+    else
+      return {success: "Success"}
+    end
+  end
+  should_have_type: MP_pattern_7, '() -> nil'
+
+  # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
   # ---------------------------------------------------------------------------
   #def MP_pattern_1
