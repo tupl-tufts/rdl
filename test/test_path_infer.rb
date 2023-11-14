@@ -367,6 +367,18 @@ class TestPathInfer < Minitest::Test
   should_have_type: MP_pattern_9, '() -> nil'
 
   # ---------------------------------------------------------------------------
+  # Pattern #10: Site configuration.
+  # Here, a property on a database object is used to determine the type of 
+  # response. We will mock this by using an unknown class variable.
+  # ---------------------------------------------------------------------------
+  def MP_pattern_10
+    raise ZeroDivisionError.new if !@level.enabled
+
+    return {success: "Success"}
+  end
+  should_have_type: MP_pattern_10, '() -> nil'
+
+  # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
   # ---------------------------------------------------------------------------
   #def MP_pattern_1
