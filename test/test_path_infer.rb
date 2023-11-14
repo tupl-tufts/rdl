@@ -379,6 +379,19 @@ class TestPathInfer < Minitest::Test
   should_have_type: MP_pattern_10, '() -> nil'
 
   # ---------------------------------------------------------------------------
+  # Pattern #11: Email verification.
+  # We will not be mocking this here. We will leave it uninterpreted.
+   ---------------------------------------------------------------------------
+  def MP_pattern_11(params)
+    if EmailToken.confirm(params[:token])
+      return {success: "Success"}
+    else
+      return {failure: "Failure"}
+    end
+  end
+  should_have_type: MP_pattern_11, '() -> nil
+
+  # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
   # ---------------------------------------------------------------------------
   #def MP_pattern_1
