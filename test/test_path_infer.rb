@@ -359,6 +359,14 @@ class TestPathInfer < Minitest::Test
   should_have_type: MP_pattern_8, '() -> nil'
 
   # ---------------------------------------------------------------------------
+  # Pattern #9: Conditional status code.
+  # ---------------------------------------------------------------------------
+  def MP_pattern_9(success)
+    return {message: "Message", status: (!!success)? 200 : 422}
+  end
+  should_have_type: MP_pattern_9, '() -> nil'
+
+  # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
   # ---------------------------------------------------------------------------
   #def MP_pattern_1
