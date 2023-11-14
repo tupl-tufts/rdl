@@ -389,7 +389,7 @@ class TestPathInfer < Minitest::Test
       return {failure: "Failure"}
     end
   end
-  should_have_type: MP_pattern_11, '() -> nil
+  should_have_type: MP_pattern_11, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
