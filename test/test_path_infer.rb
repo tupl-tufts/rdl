@@ -271,7 +271,7 @@ class TestPathInfer < Minitest::Test
 
     return {status: "Success"}
   end
-  should_have_type: MP_pattern_1, '() -> nil'
+  should_have_type :MP_pattern_1, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #2: Database Error Propagation.
@@ -286,7 +286,7 @@ class TestPathInfer < Minitest::Test
       return {success: "success"}
     end
   end
-  should_have_type: MP_pattern_2, '() -> nil'
+  should_have_type :MP_pattern_2, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #3: Parameter size.
@@ -298,7 +298,7 @@ class TestPathInfer < Minitest::Test
       return {success: "Success"}
     end
   end
-  should_have_type: MP_pattern_3, '() -> nil'
+  should_have_type :MP_pattern_3, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #4: Param compared to database state.
@@ -310,7 +310,7 @@ class TestPathInfer < Minitest::Test
       return {success: "Success"}
     end
   end
-  should_have_type: MP_pattern_4, '() -> nil'
+  should_have_type :MP_pattern_4, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #5: Param existence.
@@ -322,7 +322,7 @@ class TestPathInfer < Minitest::Test
       return {failure: "Name required"}
     end
   end
-  should_have_type: MP_pattern_5, '() -> nil'
+  should_have_type :MP_pattern_5, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #6: Complex input validation.
@@ -334,7 +334,7 @@ class TestPathInfer < Minitest::Test
       return {success: "Success"}
     end
   end
-  should_have_type: MP_pattern_6, '() -> nil'
+  should_have_type :MP_pattern_6, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #7: Comparison between two params.
@@ -346,7 +346,7 @@ class TestPathInfer < Minitest::Test
       return {success: "Success"}
     end
   end
-  should_have_type: MP_pattern_7, '() -> nil'
+  should_have_type :MP_pattern_7, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #8: Ruby exception handling.
@@ -356,7 +356,7 @@ class TestPathInfer < Minitest::Test
   rescue ZeroDivisionError => e
     return {failure: "Why would I expect this to work..."}
   end
-  should_have_type: MP_pattern_8, '() -> nil'
+  should_have_type M:P_pattern_8, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #9: Conditional status code.
@@ -364,7 +364,7 @@ class TestPathInfer < Minitest::Test
   def MP_pattern_9(success)
     return {message: "Message", status: (!!success)? 200 : 422}
   end
-  should_have_type: MP_pattern_9, '() -> nil'
+  should_have_type :MP_pattern_9, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #10: Site configuration.
@@ -376,7 +376,7 @@ class TestPathInfer < Minitest::Test
 
     return {success: "Success"}
   end
-  should_have_type: MP_pattern_10, '() -> nil'
+  should_have_type :MP_pattern_10, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #11: Email verification.
@@ -389,7 +389,7 @@ class TestPathInfer < Minitest::Test
       return {failure: "Failure"}
     end
   end
-  should_have_type: MP_pattern_11, '() -> nil'
+  should_have_type :MP_pattern_11, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #12: Request type.
@@ -402,7 +402,7 @@ class TestPathInfer < Minitest::Test
       {status: 500}
     end
   end
-  should_have_type: MP_pattern_12, '() -> nil'
+  should_have_type :MP_pattern_12, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #13: JSON merging.
@@ -419,7 +419,7 @@ class TestPathInfer < Minitest::Test
 
     new_json
   end
-  should_have_type: MP_pattern_13, '() -> nil'
+  should_have_type :MP_pattern_13, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #14: At least one param must be present.
@@ -431,14 +431,14 @@ class TestPathInfer < Minitest::Test
       {failure: "At least one param is required"}
     end
   end
-  should_have_type: MP_pattern_14, '() -> nil'
+  should_have_type :MP_pattern_14, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
   # ---------------------------------------------------------------------------
   #def MP_pattern_1
   #end
-  #should_have_type: MP_pattern_1, '() -> nil'
+  #should_have_type :MP_pattern_1, '() -> nil'
 
   # ----------------------------------------------------------------------------
 
