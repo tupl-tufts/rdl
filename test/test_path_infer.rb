@@ -7,6 +7,7 @@ require 'minitest/autorun'
 $LOAD_PATH << File.dirname(__FILE__) + '/../lib'
 require 'rdl'
 require 'types/core'
+#require 'debug/open'
 
 # Testing Inference (constraint.rb)
 class TestPathInfer < Minitest::Test
@@ -16,6 +17,7 @@ class TestPathInfer < Minitest::Test
     RDL.reset
     RDL::Config.instance.path_sensitive = :all
     RDL::Config.instance.number_mode = true
+    RDL::Config.instance.use_precise_string = true
 
     # TODO: this will go away after config/reset
     RDL::Config.instance.use_precise_string = false
@@ -100,21 +102,198 @@ class TestPathInfer < Minitest::Test
   # ----------------------------------------------------------------------------
   def MP_if1
     if true
-      return 1
+      1
     else
-      return "Nope"
+      "Nope"
     end
   end
-  should_have_type :MP_if1, '() -> Integer or String' # NOTE(Mark): how should we parse path types?
+  should_have_type :MP_if1, '() -> Integer' # NOTE(Mark): how should we parse path types?
 
   def MP_if2
-    if true
-      return 1
+    if true || false
+      1
     else
-      return 2
+      "error"
     end
   end
   should_have_type :MP_if2, '() -> Integer'
+
+  def MP_if3 # fix in _tc:when :and, :or
+    if true && false
+      1
+    else
+      "error"
+    end
+  end
+  should_have_type :MP_if3, '() -> String'
+
+  #def MP_if4(params)
+  #  if params[:test]
+  #    1
+  #  else
+  #    "error"
+  #  end
+  #end
+  #should_have_type :MP_if4, '() -> Integer or String' # NOTE(Mark): how should we parse path types?
+
+  def MP_if5
+    x = 1
+    if x + x + x == 3
+      1
+    else
+      "error"
+    end
+  end
+  should_have_type :MP_if5, '() -> Integer or String'
+
+  def MP_if6
+    x = 1
+    if x + x + x == 3
+      x = 1
+    else
+      x = "error"
+    end
+
+    return x
+  end
+  should_have_type :MP_if6, '() -> String'
+
+  def MP_if7(x)
+    response = {
+      title: "Hello world",
+      description: "This is a story"
+    }
+
+    if x + x = x == 3
+      response[:fetched] = Date.now
+      response[:created] = Date.new(2023, 11, 13)
+    end
+
+    return response
+  end
+  should_have_type :MP_if7, '(Integer) -> JSON<{}>'
+
+  def MP_typetest_0(x)
+    case x
+    when Integer then true
+    when String then false
+    end
+  end
+  should_have_type :MP_typetest_0, '(%any) -> Integer or String'
+
+  def MP_typetest_1(x)
+    if x.is_a? Integer
+      return x + x
+    else
+      return false
+    end
+  end
+  should_have_type :MP_typetest_1, '(%any) -> Integer or String'
+
+  def MP_typetest_2(x)
+    y = 1
+    if x.is_a? Integer
+      y = "Hello world"
+    end
+
+    y
+  end
+  should_have_type :MP_typetest_2, '(%any) -> Integer or String'
+
+  def MP_typetest_3(x)
+    y = 1
+    if x.is_a? Integer
+      y = "Hello world"
+    end
+
+    if x.is_a? Integer # re-using path context
+      y = y.upcase
+    end
+
+    y
+  end
+  should_have_type :MP_typetest_3, '(%any) -> Integer or String'
+
+  def MP_flow1
+    x = 1
+    if x + x + x == 3
+      x = "Hello world"
+    end
+
+    x = true
+
+    return x
+  end
+  should_have_type :MP_flow1, '() -> true'
+
+
+  # A variable *maybe* has a value
+  #def MP_one_plus_one(x)
+  #  if x
+  #    y = 1 + 1
+  #  end
+
+  #  y
+  #end
+
+  #def MP_ret1(x)
+  #  if x
+  #    return 1
+  #  end
+  #end
+  #should_have_type :MP_ret1, '() -> Integer or nil'
+
+  #def MP_ret2(x)
+  #  if x
+  #    return 1
+  #  else
+  #    return "hello world"
+  #  end
+  #end
+  #should_have_type :MP_ret2, '%any -> Integer or String'
+
+  # ---------------------------------------------------------------------------
+  # Pattern #1: Session state.
+  # ---------------------------------------------------------------------------
+  # Uses a `current_user` method defined by ActionController::Base.
+  # We will mock it here.
+  def current_user
+    if x + x + x == 3
+      5
+    else
+      nil
+    end
+  end
+  def MP_pattern_1
+    unless current_user
+      return {}
+    end
+
+    return {status: "Success"}
+  end
+  should_have_type: MP_pattern_1, '() -> nil'
+
+  # ---------------------------------------------------------------------------
+  # Pattern #2: Database Error Propagation.
+  # Here, we'll be mocking this with `Hash.has_value?`, since it has the same
+  # type signature as `ActiveModel.save`.
+  # ---------------------------------------------------------------------------
+  def MP_pattern_2
+    @obj = {}
+    if @obj.has_value? 1
+      return {failure: "fail"}
+    else
+      return {success: "success"}
+    end
+  end
+  should_have_type: MP_pattern_2, '() -> nil'
+
+  # ---------------------------------------------------------------------------
+  # Pattern #1: Session state.
+  # ---------------------------------------------------------------------------
+  #def MP_pattern_1
+  #end
+  #should_have_type: MP_pattern_1, '() -> nil'
 
   # ----------------------------------------------------------------------------
 
