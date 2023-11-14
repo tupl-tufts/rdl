@@ -356,7 +356,7 @@ class TestPathInfer < Minitest::Test
   rescue ZeroDivisionError => e
     return {failure: "Why would I expect this to work..."}
   end
-  should_have_type M:P_pattern_8, '() -> nil'
+  should_have_type :MP_pattern_8, '() -> nil'
 
   # ---------------------------------------------------------------------------
   # Pattern #9: Conditional status code.
@@ -381,7 +381,7 @@ class TestPathInfer < Minitest::Test
   # ---------------------------------------------------------------------------
   # Pattern #11: Email verification.
   # We will not be mocking this here. We will leave it uninterpreted.
-   ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
   def MP_pattern_11(params)
     if EmailToken.confirm(params[:token])
       return {success: "Success"}
