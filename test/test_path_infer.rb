@@ -325,6 +325,18 @@ class TestPathInfer < Minitest::Test
   should_have_type: MP_pattern_5, '() -> nil'
 
   # ---------------------------------------------------------------------------
+  # Pattern #6: Complex input validation.
+  # ---------------------------------------------------------------------------
+  def MP_pattern_6(params)
+    if params[:student_ids].split(',').map(to_i).nil?
+      return {failure: "Comma-separated list of IDs expected"}
+    else
+      return {success: "Success"}
+    end
+  end
+  should_have_type: MP_pattern_6, '() -> nil'
+
+  # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
   # ---------------------------------------------------------------------------
   #def MP_pattern_1
