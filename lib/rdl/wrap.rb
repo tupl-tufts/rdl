@@ -402,7 +402,7 @@ module RDL::Annotate
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
-  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil)
+  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil, effect: nil, read: [], write: [])
     return if version && !(Gem::Requirement.new(version).satisfied_by? Gem.ruby_version)
     klass, meth, type = begin
                           RDL::Wrap.process_type_args(self, *args)
@@ -428,6 +428,9 @@ module RDL::Annotate
 #          warn "#{RDL::Util.pp_klass_method(klass, meth)}: methods that end in ? should have return type %bool"
 #        end
       RDL::Globals.info.add(klass, meth, :type, type)
+      RDL::Globals.info.add(klass, meth, :effect, effect)
+      read.each { |r| RDL::Globals.info.add(klass, meth, :read, r) }
+      write.each { |w| RDL::Globals.info.add(klass, meth, :write, w) }
       unless RDL::Globals.info.set(klass, meth, :typecheck, typecheck)
         raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
       end

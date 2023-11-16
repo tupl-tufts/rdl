@@ -228,6 +228,9 @@ module RDL::Type
         return true
       end
 
+      # optional
+      return leq(left, right.type, inst, ileft) if right.is_a? OptionalType
+
       # union
       return left.types.all? { |t| leq(t, right, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) } if left.is_a?(UnionType)
       if right.instance_of?(UnionType)

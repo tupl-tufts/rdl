@@ -38,6 +38,10 @@ module RDL::Type
       return (other.instance_of? OptionalType) && (@type.match(other.type, type_var_table))
     end
 
+    def <=(other)
+      return Type.leq(self.type, other)
+    end
+
     # Note: no member?, because these can only appear in MethodType, where they're handled specially
 
     def instantiate(inst)
