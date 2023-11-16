@@ -1686,7 +1686,7 @@ RUBY
     case trecv
     when RDL::Type::SingletonType
       if trecv.val.is_a? Class or trecv.val.is_a? Module
-        if (meth == :new) && trecv.val.methods.include?(:new) && trecv.val.method(:new).owner == Class then ## last condition makes sure :new isn't overriden
+        if (meth == :new) && trecv.val.methods.include?(:new) && trecv.val.method(:new).owner.is_a?(Class) then ## last condition makes sure :new isn't overriden
           meth_lookup = :initialize
           init = true
           trecv_lookup = trecv.val.to_s

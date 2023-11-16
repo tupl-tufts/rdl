@@ -1247,6 +1247,7 @@ class TestTypecheck < Minitest::Test
     RDL.type :Array, :initialize, '() -> self', wrap: false
     RDL.type :Array, :initialize, '(Integer) -> self', wrap: false
     RDL.type :Array, :initialize, '(Integer, t) -> self<t>', wrap: false
+
     assert (
       self.class.class_eval {
         type "(Integer, Integer) -> Array<Integer>", typecheck: :now
@@ -1260,7 +1261,6 @@ class TestTypecheck < Minitest::Test
       }
     )
 
-=begin
    # below works with computational types
     assert_raises(RDL::Typecheck::StaticTypeError) {
       self.class.class_eval {
@@ -1268,7 +1268,7 @@ class TestTypecheck < Minitest::Test
         def def_inst_hash_fail2(x) hash = {}; hash.instantiate("Integer", "String") ; hash["test"] = x; hash["test"]; end
       }
     }
-=end
+
     assert(
       self.class.class_eval {
         type "(Integer) -> Integer", typecheck: :now
