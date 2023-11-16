@@ -11,6 +11,9 @@ module RDL::Type
     end
 
     def self.new(val)
+      if RDL::Config.instance.number_mode && val.is_a?(Numeric) #&& !val.is_a?(Integer)
+        return RDL::Type::NominalType.new(Integer)
+      end
       t = @@cache[val]
       return t if t
       t = self.__new__ val
@@ -30,7 +33,7 @@ module RDL::Type
 
     alias eql? ==
 
-    def match(other)
+    def match(other, type_var_table = {})
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
@@ -46,6 +49,8 @@ module RDL::Type
         ":#{@val}"
       elsif @val.nil?
         "nil"
+      elsif @val.is_a?(Class)
+        "[s]#{@val}"
       else
         @val.to_s
 #        "Singleton(#{@val.to_s})"

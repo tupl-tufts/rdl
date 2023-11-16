@@ -10,6 +10,7 @@ module RDL::Type
 
     def self.new(name)
       name = name.to_s
+      name = "Integer" if RDL::Config.instance.number_mode && ["Float", "Rational", "Complex", "BigDecimal", "BigDecimal::ROUND_MODE", "Numeric"].include?(name)
       t = @@cache[name]
       return t if t
       t = self.__new__ name
@@ -28,7 +29,7 @@ module RDL::Type
 
     alias eql? ==
 
-    def match(other)
+    def match(other, type_var_table = {})
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
@@ -47,6 +48,8 @@ module RDL::Type
           n = @name
         end
         return RDL::Util.add_singleton_marker(n[8..-2])
+      elsif RDL::Config.instance.number_mode && (@name == "Integer")
+        return "Number"
       else
         return @name
       end
@@ -79,7 +82,7 @@ module RDL::Type
     def copy
       return self
     end
-    
+
     @@cache.merge!({"NilClass" => SingletonType.new(nil),
                     "TrueClass" => SingletonType.new(true),
                     "FalseClass" => SingletonType.new(false),

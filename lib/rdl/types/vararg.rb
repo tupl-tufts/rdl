@@ -1,6 +1,7 @@
 module RDL::Type
   class VarargType < Type
     attr_reader :type
+    attr_accessor :solution
 
     @@cache = {}
 
@@ -24,6 +25,10 @@ module RDL::Type
       super()
     end
 
+    # def solution
+    #   VarargType.new @type.solution
+    # end
+
     def to_s
       if @type.instance_of? UnionType
         "*(#{@type.to_s})"
@@ -40,11 +45,12 @@ module RDL::Type
 
     alias eql? ==
 
-    def match(other)
+    def match(other, type_var_table = {})
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
-      return (other.instance_of? VarargType) && (@type.match(other.type))
+
+      return (other.instance_of? VarargType) && (@type.match(other.type, type_var_table))
     end
 
     # Note: no member?, because these can only appear in MethodType, where they're handled specially

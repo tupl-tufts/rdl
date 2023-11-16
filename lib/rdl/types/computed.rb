@@ -11,7 +11,7 @@ module RDL::Type
 
     def compute(bind)
       res = bind.eval(@code)
-      raise RuntimeError, "Expected ComputedType to evaluate to type, instead got #{res}." unless res.is_a?(Type)
+      raise RuntimeError, "Expected ComputedType to evaluate to type, instead got #{res} for code #{@code}." unless res.is_a?(Type)
       res
     end
 
@@ -31,6 +31,10 @@ module RDL::Type
 
     def widen
       self
+    end
+
+    def copy
+      return self
     end
     
     def <=(other)

@@ -16,11 +16,19 @@ class TestHashTypes < Minitest::Test
 
   def test_hash_methods
     self.class.class_eval {
+
+      type '(Integer) -> Integer', typecheck: :now
+      def def_inst_hash_fail(x)
+        hash = {}
+        hash["test"] = x
+        hash["test"]
+      end
+
       type '({bar: Integer, baz: String}) -> String', typecheck: :now
       def access_test1(x)
         x[:baz]
       end
-      
+
       type '({bar: Integer, baz: String}) -> {bar: Integer, baz: String}', typecheck: :now
       def access_test2(x)
         x[:baz]
@@ -32,7 +40,7 @@ class TestHashTypes < Minitest::Test
         x[y]
       end
 
-      type '(Hash) -> v', typecheck: :now
+      type '(Hash<Symbol, %bot>) -> %bot', typecheck: :now
       def access_test4(x)
         x[:blah]
       end
@@ -102,7 +110,7 @@ class TestHashTypes < Minitest::Test
         y.merge(x)
       end
       
-      type '(Hash, { bar: Integer, baz: String }) -> Hash', typecheck: :now
+      type '(Hash, { bar: Integer, baz: String }) -> Hash<Symbol, Integer or String>', typecheck: :now
       def merge_test7(x, y)
         x.merge(y)
       end
@@ -112,7 +120,7 @@ class TestHashTypes < Minitest::Test
         y.merge(x)
       end
 
-      type '(Hash, Hash<Integer, String>) -> Hash', typecheck: :now
+      type '(Hash, Hash<Integer, String>) -> Hash<Integer, String>', typecheck: :now
       def merge_test9(x, y)
         x.merge(y)
       end

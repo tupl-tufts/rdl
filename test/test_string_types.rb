@@ -9,6 +9,7 @@ class TestStringTypes < Minitest::Test
 
   def setup
     RDL.reset
+    RDL::Config.instance.use_precise_string = true
     RDL.readd_comp_types
   end  
 
