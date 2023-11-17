@@ -11,4 +11,4 @@ if defined? Pathname
 else
   RDL.type_alias '%path', '%string'
 end
-RDL.type_alias '%open_args', '{external_encoding: ?String, internal_encoding: ?String, encoding: ?String, textmode: ?%any, binmode: ?%any, autoclose: ?%any, mode: ?String}'
+RDL.type_alias '%open_args', '{external_encoding: ?(String or Encoding), internal_encoding: ?(String or Encoding), encoding: ?(String or Encoding), textmode: ?%any, binmode: ?%any, autoclose: ?%any, mode: ?String}'

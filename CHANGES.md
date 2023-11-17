@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [2.2.0] - 2019-06-07
+## [2.2.0] - 2019-06-09
 
 ### Fixed
 - Dynamic type checking of initialize method

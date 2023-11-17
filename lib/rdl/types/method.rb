@@ -15,7 +15,8 @@ module RDL::Type
     # [+args+] List of types of the arguments of the procedure (use [] for no args).
     # [+block+] The type of the block passed to this method, if it takes one.
     # [+ret+] The type that the procedure returns.
-    def initialize(args, block, ret)
+    # [+sol+] Whether or not this is being used as a type inference solution
+    def initialize(args, block, ret, sol=false)
       # First check argument types have form (any number of required
       # or optional args, at most one vararg, any number of named arguments)
       state = :required
@@ -23,35 +24,47 @@ module RDL::Type
         arg = arg.type if arg.instance_of? RDL::Type::AnnotatedArgType
         case arg
         when OptionalType
-          raise "Optional arguments not allowed after varargs" if state == :vararg
-          raise "Optional arguments not allowed after named arguments" if state == :hash
+          #raise "Optional arguments not allowed after varargs" if state == :vararg
+          #raise "Optional arguments not allowed after named arguments" if state == :hash
           state = :optional
         when VarargType
           raise "Multiple varargs not allowed" if state == :vararg
           raise "Varargs not allowed after named arguments" if state == :hash
           state = :vararg
         when FiniteHashType
-          raise "Only one set of named arguments allowed" if state == :hash
+          #raise "Only one set of named arguments allowed" if state == :hash
           state = :hash
         else
           raise "Attempt to create method type with non-type arg" unless arg.is_a? Type
 #          raise "Required arguments not allowed after varargs" if state == :vararg # actually they are allowed!
-          raise "Required arguments not allowed after named arguments" if state == :hash
+          #raise "Required arguments not allowed after named arguments" if state == :hash
         end
       }
       @args = *args
 
-      if block.instance_of? OptionalType
-        raise "Block must be MethodType" unless block.type.is_a? MethodType
-      else
-        raise "Block must be MethodType" unless (not block) or (block.instance_of? MethodType)
+      unless sol
+        if block.instance_of? OptionalType
+          raise "Block must be MethodType, got #{block}" unless block.type.is_a? MethodType or block.type.is_a?(VarType)
+        else
+          raise "Block must be MethodType, got #{block}" unless (not block) or (block.instance_of? MethodType) or block.instance_of?(VarType)
+        end
       end
       @block = block
 
-      raise "Attempt to create method type with non-type ret" unless ret.is_a? Type
+      raise "Attempt to create method type with non-type ret #{ret} of class #{ret.class}" unless ret.is_a? Type
       @ret = ret
 
       super()
+    end
+
+    # The solution to a method type is a method type made up of the solutions of
+    # its parts.
+    def solution
+      arg_sols  = @args.map(&:solution)
+      block_sol = @block.solution
+      ret_sol   = @ret.solution
+
+      self.class.new arg_sols, block_sol, ret_sol, true
     end
 
     # TODO: Check blk
@@ -120,7 +133,6 @@ module RDL::Type
 	  bind.local_variable_set(t.name.to_sym,args[actual])
           preds.push(t)
           t = t.type.instantiate(inst)
-          the_actual = nil
           if actual == args.size
             next unless t.instance_of? FiniteHashType
             if t.member?({}, vars_wild: true) # try matching against the empty hash
@@ -133,7 +145,6 @@ module RDL::Type
         else
           t = NominalType.new 'Proc' if t.instance_of? MethodType
           t = t.instantiate(inst)
-          the_actual = nil
           if actual == args.size
             next unless t.instance_of? FiniteHashType
             if t.member?({}, vars_wild: true) # try matching against the empty hash
@@ -302,6 +313,17 @@ RUBY
                             @ret.widen)
     end
 
+    def canonical
+      canonicalize!
+      return self
+    end
+
+    def canonicalize!
+      @args.map { |a| a.canonical }
+      @block.canonical if @block
+      @ret.canonical
+    end
+
     def copy
       return MethodType.new(@args.map { |arg| arg.copy },
                             @block ? @block.copy : nil,
@@ -319,16 +341,17 @@ RUBY
     alias eql? ==
 
     # other may not be a query
-    def match(other)
+    def match(other, type_var_table = {})
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return false unless other.instance_of? MethodType
-      return false unless @ret.match(other.ret)
+      return false unless @ret.match(other.ret, type_var_table)
+
       if @block == nil
         return false unless other.block == nil
       else
         return false if other.block == nil
-        return false unless @block.match(other.block)
+        return false unless @block.match(other.block, type_var_table)
       end
       # Check arg matches; logic is similar to pre_cond
       states = [[0,0]] # [position in self, position in other]
@@ -350,7 +373,7 @@ RUBY
           s_arg_t = s_arg_t.type if s_arg_t.instance_of? AnnotatedArgType
           o_arg_t = other.args[o_arg]
           o_arg_t = o_arg_t.type if o_arg_t.instance_of? AnnotatedArgType
-          next unless s_arg_t.match(o_arg_t)
+          next unless s_arg_t.match(o_arg_t, type_var_table)
           states << [s_arg+1, o_arg+1]
         end
       end

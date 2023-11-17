@@ -2,11 +2,17 @@ require 'delegate'
 require 'digest'
 require 'set'
 require 'parser/current'
+#require 'method_source'
+require 'colorize'
+require 'pathname'
+require 'rake'
+require 'net/http'
 
 module RDL
 end
 
 require 'rdl/config.rb'
+require 'rdl/logging.rb'
 def RDL.config
   yield(RDL::Config.instance)
 end
@@ -49,6 +55,17 @@ module RDL::Globals
   @to_typecheck = Hash.new
   @to_typecheck[:now] = Set.new
 
+  # Map from symbols to set of [class, method] pairs to infer when those symbols are rdl_do_infer'd
+  # (or the methods are defined, for the symbol :now)
+  @to_infer = Hash.new
+  @to_infer[:now] = Set.new
+
+  ## List of [klass, method] pairs for which we have generated constraints.
+  ## That is, if we look up RDL::Globals.info.get(klass, meth, :type), we will get a single MethodType
+  ## composed of VarTypes with constraints.
+  ## TODO: add inst/class vars to this list?
+  @constrained_types = []
+
   # Map from symbols to Array<Proc> where the Procs are called when those symbols are rdl_do_typecheck'd
   @to_do_at = Hash.new
 
@@ -59,13 +76,29 @@ module RDL::Globals
   @dep_types = []
 
   ## Hash mapping node object IDs (integers) to a list [tmeth, tmeth_old, tmeth_res, self_klass, trecv_old, targs_old], where: tmeth is a MethodType that is fully evaluated (i.e., no ComputedTypes) *and instantiated*, tmeth_old is the unevaluated method type (i.e., with ComputedTypes), tmeth_res is the result of evaluating tmeth_old *but not instantiating it*, self_klass is the class where the MethodType is defined, trecv_old was the receiver type used to evaluate tmeth_old, and targs_old is an Array of the argument types used to evaluate tmeth_old.
-  @comp_type_map = {}
+  @comp_type_map = Hash.new
 
   # Map from ActiveRecord table names (symbols) to their schema types, which should be a Table type
-  @ar_db_schema = {}
+  @ar_db_schema = Hash.new
 
   # Map from Sequel table names (symbols) to their schema types, which should be a Table type
-  @seq_db_schema = {}
+  @seq_db_schema = Hash.new
+
+  # Array<[String, String]>, where each first string is a class name and each second one is a method name.
+  # klass/method pairs here should not be inferred.
+  @no_infer_meths = []
+
+  # Array<String> of absolute file paths for files that should not be inferred.
+  @no_infer_files = []
+
+  # If non-nil, should be a symbol. Added, untyped methods will be tagged
+  # with that symbol
+  @infer_added = nil
+
+  # Hash<Module module, [Class/Module class/module_name, :include or :extend]>
+  # Map from module names k to pairs [class/module v, :include/:extend] indicating the module
+  # k was included/extended in v
+  @module_mixees = Hash.new
 end
 
 class << RDL::Globals # add accessors and readers for module variables
@@ -75,12 +108,19 @@ class << RDL::Globals # add accessors and readers for module variables
   attr_reader :aliases
   attr_accessor :to_wrap
   attr_accessor :to_typecheck
+  attr_accessor :to_infer
+  attr_accessor :constrained_types
   attr_accessor :to_do_at
   attr_accessor :deferred
   attr_accessor :dep_types
   attr_accessor :comp_type_map
   attr_accessor :ar_db_schema
   attr_accessor :seq_db_schema
+  attr_accessor :no_infer_meths
+  attr_accessor :no_infer_files
+  attr_accessor :infer_added
+  attr_accessor :infer_added_filter_dirs
+  attr_accessor :module_mixees
 end
 
 # Create switches to control whether wrapping happens and whether
@@ -122,6 +162,7 @@ require 'rdl/types/tuple.rb'
 require 'rdl/types/type_query.rb'
 require 'rdl/types/union.rb'
 require 'rdl/types/var.rb'
+require 'rdl/types/choice.rb' ## depends on var.rb
 require	'rdl/types/vararg.rb'
 require 'rdl/types/wild_query.rb'
 require	'rdl/types/string.rb'
@@ -133,9 +174,13 @@ require 'rdl/contracts/or.rb'
 require 'rdl/contracts/proc.rb'
 
 require 'rdl/util.rb'
+require 'rdl/class_indexer.rb'
 require 'rdl/wrap.rb'
 require 'rdl/query.rb'
 require 'rdl/typecheck.rb'
+require 'rdl/reporting/reporting.rb'
+require 'rdl/constraint.rb'
+require 'rdl/heuristics.rb'
 #require_relative 'rdl/stats.rb'
 
 class << RDL::Globals
@@ -148,6 +193,7 @@ end
 module RDL
   def self.reset
     RDL::Globals.module_eval {
+      RDL::Config.reset
       @info = RDL::Info.new
       @wrapped_calls = Hash.new 0
       @type_params = Hash.new
@@ -155,10 +201,20 @@ module RDL
       @to_wrap = Set.new
       @to_typecheck = Hash.new
       @to_typecheck[:now] = Set.new
+      @to_infer = Hash.new
+      @to_infer[:now] = Set.new
+      @constrained_types = []
       @to_do_at = Hash.new
+      @deferred = []
+      # @dep_types = []
+      # @comp_type_map = Hash.new
       @ar_db_schema = Hash.new
       @seq_db_schema = Hash.new
-      @deferred = []
+      @no_infer_meths = []
+      @no_infer_files = []
+      @infer_added = nil
+      # @module_mixees = Hash.new - resetting this breaks test cases that assume
+      # we know which modules are mixed into which other modules
 
       @parser = RDL::Type::Parser.new
 

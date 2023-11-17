@@ -29,6 +29,7 @@ class RDL::Wrap
     RDL::Globals.wrap_switch.off {
       klass_str = klass_str.to_s
       klass = RDL::Util.to_class klass_str
+      # the_meth = klass.instance_method(meth)
       return if wrapped? klass, meth
       return if RDL::Config.instance.nowrap.member? klass_str.to_sym
       raise ArgumentError, "Attempt to wrap #{RDL::Util.pp_klass_method(klass, meth)}" if klass.to_s =~ /^RDL::/
@@ -76,8 +77,9 @@ class RDL::Wrap
                 ret = RDL::Type::MethodType.check_ret_types(self, "#{full_method_name}", types, inst, matches, ret, bind, *args, &blk) unless (meth.to_sym == :initialize)
               end
             end
-            if RDL::Config.instance.guess_types.include?("#{klass_str_without_singleton}".to_sym)
-              RDL::Globals.info.add(klass, meth, :otype, { args: (args.map { |arg| arg.class }), ret: ret.class, block: block_given? })
+            if RDL::Config.instance.guess_types.include?("#{klass_str_without_singleton}".to_sym) || RDL::Config.instance.get_types.include?([klass.to_s, meth])
+            #puts "adding to otypes!"
+              RDL::Globals.info.add(klass, meth, :otype, { args: (args.map { |arg| RDL::Wrap.val_to_type(arg) }), ret: RDL::Wrap.val_to_type(ret), block: block_given? })
             end
             return ret
           }
@@ -144,10 +146,28 @@ RUBY
     else
       raise ArgumentError, "Invalid arguments to `type`"
     end
-    raise ArgumentError, "Excepting method type, got #{type.class} instead" if type.class != RDL::Type::MethodType
+    raise ArgumentError, "Expecting method type, got #{type.class} instead" if type.class != RDL::Type::MethodType
 #    meth = :initialize if meth && slf && meth.to_sym == :new  # actually wrap constructor
     klass = RDL::Util.add_singleton_marker(klass) if slf
     return [klass, meth, type]
+  end
+
+  def self.process_infer_args(default_class, *args)
+    klass = meth = nil
+    default_class = "Object" if (default_class.is_a? Object) && (default_class.to_s == "main") # special case for main
+    if args.size == 2
+      klass = class_to_string args[0]
+      slf, meth = meth_to_sym args[1]
+    elsif args.size == 1
+      klass = default_class.to_s
+      slf, meth = meth_to_sym args[0]
+    elsif args.size == 0
+      klass = default_class.to_s
+    else
+      raise ArgumentError, "Invalid arguments to `infer`"
+    end
+    klass = RDL::Util.add_singleton_marker(klass) if slf
+    return [klass, meth]
   end
 
   private
@@ -196,8 +216,38 @@ RUBY
     end
   end
 
+  def self.val_to_type(val)
+    case val
+    when TrueClass, FalseClass, NilClass
+      RDL::Type::SingletonType.new(val)
+    when Array
+      typs = []
+      val.each { |t| typs << val_to_type(t) }
+      param = RDL::Type::UnionType.new(*typs).canonical
+      RDL::Type::GenericType.new(RDL::Globals.types[:array], param)
+    when Hash
+      key_typs = []
+      val_typs = []
+      val.each_key { |k| key_typs << val_to_type(k) }
+      val.each_value { |v| val_typs << val_to_type(v) }
+      key_param = RDL::Type::UnionType.new(*key_typs).canonical
+      val_param = RDL::Type::UnionType.new(*val_typs).canonical
+      RDL::Type::GenericType.new(RDL::Globals.types[:hash], key_param, val_param)
+    else
+      RDL::Type::NominalType.new(val.class)
+    end
+  end
+
   # called by Object#method_added (sing=false) and Object#singleton_method_added (sing=true)
   def self.do_method_added(the_self, sing, klass, meth)
+    if sing
+      loc = the_self.singleton_method(meth).source_location
+    else
+      loc = the_self.instance_method(meth).source_location
+    end
+    RDL::Logging.log :wrap, :trace, "[#{loc && loc[0] || '??'}] Method #{klass}##{meth} added"
+    RDL::Globals.info.set(klass, meth, :source_location, loc)
+
     # Apply any deferred contracts and reset list
 
     if RDL::Globals.deferred.size > 0
@@ -206,7 +256,9 @@ RUBY
       else
         loc = the_self.instance_method(meth).source_location
       end
+
       RDL::Globals.info.set(klass, meth, :source_location, loc)
+
       a = RDL::Globals.deferred
       RDL::Globals.deferred = [] # Reset before doing more work to avoid infinite recursion
       a.each { |prev_klass, kind, contract, h|
@@ -219,7 +271,6 @@ RUBY
           raise RuntimeError, "Deferred #{kind} contract from class #{prev_klass} being applied in class #{tmp_klass} to #{meth}"
         end
         RDL::Globals.info.add(klass, meth, kind, contract)
-        RDL::Globals.info.add(klass, meth, :effect, h[:effect]) if h.has_key?(:effect)
         RDL::Wrap.wrap(klass, meth) if h[:wrap]
         unless !h.has_key?(:typecheck) || RDL::Globals.info.set(klass, meth, :typecheck, h[:typecheck])
           raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
@@ -229,7 +280,30 @@ RUBY
           RDL::Globals.to_typecheck[h[:typecheck]] = Set.new unless RDL::Globals.to_typecheck[h[:typecheck]]
           RDL::Globals.to_typecheck[h[:typecheck]].add([klass, meth])
         end
+        if kind == :infer
+          if tag == :now
+            RDL::Typecheck.infer(klass, meth)
+          else
+            RDL::Globals.to_infer[tag] = Set.new unless RDL::Globals.to_infer[tag]
+            RDL::Globals.to_infer[tag].add([klass, meth])
+          end
+        end
       }
+    elsif RDL::Globals.infer_added &&
+      !(RDL::Globals.info.has_any?(klass, meth, [:typecheck, :infer]))
+      # Tag this method to be added to to-be-inferred set if it doesn't already have a type, and as
+      # long as it isn't marked as being skipped
+      unless ((RDL::Util.has_singleton_marker(klass) &&
+               RDL::Globals.no_infer_meths.include?([RDL::Util.remove_singleton_marker(klass).to_s, "self."+meth.to_s])) ||
+              (RDL::Globals.no_infer_meths.include?([klass.to_s, meth.to_s])) ||
+              (loc && RDL::Globals.infer_added_filter_dirs && !RDL::Globals.infer_added_filter_dirs.member?(loc[0])))
+        RDL::Logging.log :wrap, :trace, "... Added"
+        tag = RDL::Globals.infer_added
+        RDL::Globals.to_infer[tag] = Set.new unless RDL::Globals.to_infer[tag]
+        RDL::Globals.to_infer[tag].add([klass, meth])
+      else
+        RDL::Logging.log :wrap, :trace, "... Rejected"
+      end
     end
 
     # Wrap method if there was a prior contract for it.
@@ -252,6 +326,10 @@ RUBY
 
     if RDL::Config.instance.guess_types.include?(the_self.to_s.to_sym) && !RDL::Globals.info.has?(klass, meth, :type)
       # Added a method with no type annotation from a class we want to guess types for
+      RDL::Wrap.wrap(klass, meth)
+    end
+    if RDL::Config.instance.get_types.include?([klass, meth])
+      RDL.create_binding_meth(klass, meth)
       RDL::Wrap.wrap(klass, meth)
     end
   end
@@ -324,7 +402,7 @@ module RDL::Annotate
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
-  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil, effect: nil)
+  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil, effect: nil, read: [], write: [])
     return if version && !(Gem::Requirement.new(version).satisfied_by? Gem.ruby_version)
     klass, meth, type = begin
                           RDL::Wrap.process_type_args(self, *args)
@@ -338,7 +416,6 @@ module RDL::Annotate
                           err.set_backtrace bt
                           raise err
                         end
-    effect[0] = :- if effect && effect[0] == :~ ## For now, treating pure-ish :~ as :-, since we realized it doesn't actually affect termination checking.
     typs = type.args + [type.ret]
     if type.block
       block_type = type.block.is_a?(RDL::Type::OptionalType) ? type.block.type : type.block
@@ -352,6 +429,8 @@ module RDL::Annotate
 #        end
       RDL::Globals.info.add(klass, meth, :type, type)
       RDL::Globals.info.add(klass, meth, :effect, effect)
+      read.each { |r| RDL::Globals.info.add(klass, meth, :read, r) }
+      write.each { |w| RDL::Globals.info.add(klass, meth, :write, w) }
       unless RDL::Globals.info.set(klass, meth, :typecheck, typecheck)
         raise RuntimeError, "Inconsistent typecheck flag on #{RDL::Util.pp_klass_method(klass, meth)}"
       end
@@ -375,13 +454,171 @@ module RDL::Annotate
       end
     else
       RDL::Globals.deferred << [klass, :type, type, {wrap: wrap,
-                                               typecheck: typecheck, effect: effect}]
+                                               typecheck: typecheck}]
     end
     nil
   end
 
+  def orig_type(klass=self, meth, type, wrap: nil, typecheck: nil)
+    $orig_types = true
+    klass, meth, type = RDL::Wrap.process_type_args(self, klass, meth, type)
+    RDL::Globals.info.add(klass, meth, :orig_type, type)
+    if RDL::Util.method_defined?(klass, meth) #|| meth == :initialize
+      RDL::Globals.info.set(klass, meth, :source_location, RDL::Util.to_class(klass).instance_method(meth).source_location)
+    end
+    $orig_type_list = [] unless $orig_type_list
+    $orig_type_list << [klass, meth]
+  end
+
+  def orig_var_type(klass=self, var, type)
+    raise RuntimeError, "Variable cannot begin with capital" if var.to_s =~ /^[A-Z]/
+    return if var.to_s =~ /^[a-z]/ # local variables handled specially, inside type checker
+    klass = RDL::Util::GLOBAL_NAME if var.to_s =~ /^\$/
+    unless RDL::Globals.info.set(klass, var, :orig_type, RDL::Globals.parser.scan_str("#T #{type}"))
+      raise RuntimeError, "Type already declared for #{var}"
+    end
+  end
+
   def readd_comp_types
     RDL::Globals.dep_types.each { |klass, meth, t| RDL::Globals.info.add(klass, meth, :type, t) unless meth.nil? }
+  end
+
+  # Very similar to `type`, but arguments are:
+  # [+ klass +] may be Class, Symbol, or String
+  # [+ method +] may be Symbol or String
+  # [+ time +] indicates a method type that should be statically inferred at the given time, as follows
+  #    if :now, indicates method type should be inferred immediately
+  #    if other-symbol, indicates method type should be inferred when RDL.do_infer(other-symbol) is called
+  # time is currently a *required* parameter
+  # possible invocations:
+  # infer(klass, meth, time: sym)
+  # infer(meth, time: sym)
+  # infer(time: sym)
+  def infer(*args, time: RDL::Config.instance.infer_defaults[:time])
+    ## TODO: do we want to handle the case that time is :call?
+    raise RuntimeError, "Calls to `infer` must come with a specified time." if !time
+    ## might remove the above error later.
+    klass, meth = begin
+                    RDL::Wrap.process_infer_args(self, *args)
+                  rescue Racc::ParseError => err
+                    # Remove enough backtrace to only include actual source line
+                    # Warning: Adjust the -5 below if the code (or this comment) changes
+                    bt = err.backtrace
+                    bt.shift until bt[0] =~ /^#{__FILE__}:#{__LINE__-5}/
+                    bt.shift # remove RDL::Globals.contract_switch.off call
+                    bt.shift # remove type call itself
+                    err.set_backtrace bt
+                    raise err
+                  end
+    if meth
+      unless RDL::Globals.info.set(klass, meth, :infer, time)
+        raise RuntimeError, "Inconsistent infer time flag on #{RDL::Util.pp_klass_method(klass, meth)}"
+      end
+      if RDL::Util.method_defined?(klass, meth) #|| meth == :initialize
+        RDL::Globals.info.set(klass, meth, :source_location, RDL::Util.to_class(klass).instance_method(meth).source_location)
+        RDL::Typecheck.infer(klass, meth) if time == :now
+      end
+      RDL::Globals.to_infer[time] = Set.new unless RDL::Globals.to_infer[time]
+      RDL::Globals.to_infer[time].add([klass, meth])
+    else
+      RDL::Globals.deferred << [klass, :infer, time, { }]
+
+    end
+    nil
+  end
+
+  # [+ path +] is a String pathname, for which all direct ".rb" subfiles will be inferred.
+  def infer_all(path)
+    path = Pathname.new(path).expand_path
+    rb_files = Dir.entries(path).keep_if { |f| f.end_with?(".rb") }
+    rb_files.each { |f| infer_file(path+f, more: true) }
+    #RDL.do_infer :all
+  end
+
+  # [+ file +] is the String absolute path for a file, for which we want to infer all contained methods.
+  # [+ more +] is a %bool indicating whether there are other methods outside given file to infer.
+  #     When false, we infer after processing all methods in file. When true, we do not infer in this method.
+  def infer_file(file, more: false)
+    file = Pathname.new(file).expand_path.to_s
+    return if RDL::Globals.no_infer_files.include? file
+    index = ClassIndexer.process_file(file)
+    index.each { |klass, meth_list|
+      if RDL::Util.has_singleton_marker(klass)
+        klass = RDL::Util.remove_singleton_marker(klass)
+        meth_list.each { |meth|
+          infer(klass, "self." + meth[:name], time: :files) unless RDL::Globals.no_infer_meths.include?([klass.to_s, "self."+meth[:name]])
+        }
+      else
+        meth_list.each { |meth|
+          infer klass, meth[:name], time: :files unless RDL::Globals.no_infer_meths.include?([klass.to_s, meth[:name].to_s])
+        }
+      end
+    }
+    #RDL.do_infer :all
+  end
+
+  def get_path_types(path, no_include = [])
+    require 'pathname'
+    path = ::Pathname.new(path).expand_path
+    rb_files = Dir.entries(path).keep_if { |f| f.end_with?(".rb") }
+    rb_files.each { |f| get_file_types(path+f) unless no_include.include?(f) }
+  end
+
+  def get_file_types(file)
+    file = Pathname.new(file).expand_path.to_s
+    puts "ABOUT TO INDEX FILE #{file}"
+    index = ClassIndexer.process_file(file)
+    index.each { |klass, meth_list|
+      meth_list.each { |meth|
+        meth = meth[:name].to_sym
+        #RDL::Config.instance.get_types << [klass, meth]
+        #RDL::Wrap.wrap(klass, meth) if RDL::Util.method_defined?(klass, meth)
+        get_type(klass, meth)
+      }
+    }
+  end
+
+  def get_type(klass, meth)
+    klass = klass.to_s
+    meth = meth.to_sym
+    RDL::Config.instance.get_types << [klass, meth]
+    if RDL::Util.method_defined?(klass, meth)
+      create_binding_meth(klass, meth)
+      RDL::Wrap.wrap(klass, meth)
+    end
+  end
+
+  def create_binding_meth(klass, meth)
+    require 'method_source'
+    klass = klass.to_s
+    meth = meth.to_sym
+    the_meth = RDL::Util.to_class(klass).instance_method(meth)
+    new_meth_name = "RDL_#{klass}_#{(meth.hash + meth.to_s.hash).abs}".gsub("::", "__").gsub("[s]", "singleton_")
+    return if RDL.singleton_class.method_defined? new_meth_name
+    if !RDL.method_defined?(new_meth_name)
+      ast = Parser::CurrentRuby.parse(the_meth.source) #RDL::Typecheck.get_ast(klass, meth)
+      if (ast.type != :def) && (ast.type != :defs)
+        ast = RDL::Typecheck.get_ast(klass, meth)
+      end
+      #args_expression = ast.children[1].loc.expression.source
+      args_expression = ast.children[1].loc.expression
+      args_string = args_expression ? args_expression.source : "" ## args_expression is nil if there are no arguments
+      arg_vals = []
+      the_meth.parameters.each { |kind, name|
+        arg_vals << "#{name}: #{name}" if name
+      }
+      vals_hash = "{ " + arg_vals.join(",") + " }"
+      meth_string = "def RDL.#{new_meth_name} #{args_string} \n #{vals_hash} \n end"
+      RDL.class_eval meth_string
+    end
+  end
+
+  def no_infer_meth(klass, meth)
+    RDL::Globals.no_infer_meths << [klass.to_s, meth.to_s]
+  end
+
+  def no_infer_file(path)
+    RDL::Globals.no_infer_files << Pathname.new(path).expand_path.to_s
   end
 
   # [+ klass +] is the class containing the variable; self if omitted; ignored for local and global variables
@@ -394,6 +631,20 @@ module RDL::Annotate
     unless RDL::Globals.info.set(klass, var, :type, RDL::Globals.parser.scan_str("#T #{typ}"))
       raise RuntimeError, "Type already declared for #{var}"
     end
+    nil
+  end
+
+  def infer_var_type(klass=self, var)
+    raise RuntimeError, "Variable cannot begin with capital" if var.to_s =~ /^[A-Z]/
+    return if var.to_s =~ /^[a-z]/ # local variables handled specially, inside type checker
+    klass = RDL::Util::GLOBAL_NAME if var.to_s =~ /^\$/
+    unless RDL::Globals.info.set(klass, var, :type, RDL::Type::VarType.new(cls: klass, name: var, category: :var))
+      raise RuntimeError, "Type already declared for #{var}"
+    end
+    ## RDL::Globals.constrained_types includes the list of all types we want to perform constraint resolution/
+    ## solution extract for. VarTypes in methods get added to this list after calling RDL.do_infer.
+    ## Not sure when/where to add variable VarTypes so I'm doing it here.
+    RDL::Globals.constrained_types << [klass, var]
     nil
   end
 
@@ -432,25 +683,8 @@ module RDL::Annotate
     nil
   end
 
-  # Aliases contracts for meth_old and meth_new. Currently, this must
-  # be called for any aliases or they will not be wrapped with
-  # contracts. Only creates aliases in the current class.
   def rdl_alias(klass=self, new_name, old_name)
-    klass = klass.to_s
-    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
-    RDL::Globals.aliases[klass] = {} unless RDL::Globals.aliases[klass]
-    if RDL::Globals.aliases[klass][new_name]
-      raise RuntimeError,
-            "Tried to alias #{new_name}, already aliased to #{RDL::Globals.aliases[klass][new_name]}"
-    end
-    RDL::Globals.aliases[klass][new_name] = old_name
-
-    if Module.const_defined?(klass) && RDL::Util.to_class(klass).method_defined?(new_name)
-      RDL::Wrap.wrap(klass, new_name)
-    else
-      RDL::Globals.to_wrap << [klass, old_name]
-    end
-    nil
+    RDL.alias klass, new_name, old_name
   end
 
   # [+ klass +] is the class whose type parameters to set; self if omitted
@@ -583,6 +817,31 @@ module RDL
     RDL::Globals.to_do_at[sym] << blk
   end
 
+  # Mark all untyped methods added in the passed block as being inferred
+  def self.infer_added(tag, include: nil, exclude: nil)
+    dirs = RDL::Globals.infer_added_filter_dirs
+    tmp = RDL::Globals.infer_added
+
+    filter_list = nil
+    filter_list = FileList[include] if include
+    filter_list = (filter_list || FileList['**/*']).exclude(exclude) if exclude
+
+    RDL::Globals.infer_added = tag
+    RDL::Globals.infer_added_filter_dirs = filter_list && filter_list.map { |f| File.join(Dir.pwd, f) }
+
+    if RDL::Globals.infer_added_filter_dirs
+      RDL::Logging.log :wrap, :debug, "Got Filter..."
+      RDL::Globals.infer_added_filter_dirs.each { |d| RDL::Logging.log :wrap, :trace, "\t#{d}" }
+    else
+      RDL::Logging.log :wrap, :debug, "No filter..."
+    end
+
+    yield
+
+    RDL::Globals.infer_added = tmp
+    RDL::Globals.infer_added_filter_dirs = dirs
+  end
+
   # Invokes all callbacks from rdl_at(sym), in unspecified order.
   # Afterwards, type checks all methods that had annotation `typecheck: sym' at type call, in unspecified order.
   def self.do_typecheck(sym)
@@ -598,7 +857,45 @@ module RDL
     nil
   end
 
+  def self.do_infer(sym, render_report: true)
+    return unless RDL::Globals.to_infer[sym]
+
+    RDL::Config.instance.use_unknown_types = true
+    $stn = 0
+    num_casts = 0
+    time = Time.now
+
+    RDL::Globals.to_infer[sym].each { |klass, meth|
+      begin
+        RDL::Typecheck.infer klass, meth
+        num_casts += RDL::Typecheck.get_num_casts if RDL::Typecheck.get_num_casts
+      rescue Exception => e
+        if RDL::Config.instance.continue_on_errors
+          RDL::Logging.log :inference, :debug_error, "Error: #{e}; recording %dyn"
+          # RDL::Globals.info.set(klass, meth, :type, [RDL::Globals.types[:dyn]])
+        else
+          raise e
+        end
+      end
+    }
+
+    RDL::Globals.to_infer[sym] = Set.new
+    RDL::Typecheck.resolve_constraints
+
+    report = RDL::Typecheck.extract_solutions
+
+    report.to_csv 'infer_data_new.csv' if render_report
+    report.to_sorbet 'infer_data.rbi' if render_report
+
+    time = Time.now - time
+
+    RDL::Logging.log :inference, :info, "Total time taken: #{time}."
+    RDL::Logging.log :inference, :info, "Total number of type casts used: #{num_casts}."
+    RDL::Logging.log :inference, :info, "Total amount of time spent on stn: #{$stn}."
+  end
+
   def self.load_sequel_schema(db)
+    db.disconnect
     db.tables.each { |table|
       hash_str = "{ "
       kl_name = table.to_s.camelize.singularize
@@ -622,7 +919,7 @@ module RDL
   end
 
   def self.load_rails_schema
-    return unless defined?(Rails)
+    return if !defined?(Rails) || (File.basename($0) == "rake") || $dont_load_rails
     ::Rails.application.eager_load! # load Rails app
     models = ActiveRecord::Base.descendants.each { |m|
       begin
@@ -632,6 +929,7 @@ module RDL
       end }
 
     models.each { |model|
+      next if !model.table_exists?
       next if model.to_s == "ApplicationRecord"
       next if model.to_s == "GroupManager"
       RDL.nowrap model
@@ -653,19 +951,23 @@ module RDL
         end
         RDL.type model, (k+"=").to_sym, "(#{t_name}) -> #{t_name}", wrap: false ## create method type for column setter
         RDL.type model, (k).to_sym, "() -> #{t_name}", wrap: false ## create method type for column getter
+        RDL.type model, (k+"?").to_sym, "() -> %bool", wrap: false if t_name == "%bool" ## boolean column attributes get automatic `?` method
       }
       s2 = s1.transform_keys { |k| k.to_sym }
       assoc = {}
       model.reflect_on_all_associations.each { |a|
+        class_name = a.class_name.starts_with?("::") ? a.class_name[2..-1] : a.class_name
         ## Generate method types based on associations
         add_ar_assoc(assoc, a.macro, a.name)
         if a.name.to_s.pluralize == a.name.to_s ## plural association
           ## This actually returns an Associations CollectionProxy, which is a descendant of ActiveRecord_Relation (see below actual type). This makes no difference in practice.
-          RDL.type model, a.name, "() -> ActiveRecord_Relation<#{a.name.to_s.camelize.singularize}>", wrap: false
+          RDL.type model, a.name, "() -> ActiveRecord_Relation<#{class_name}>", wrap: false
+          RDL.type model, "#{a.name}=", "(ActiveRecord_Relation<#{class_name}> or Array<#{class_name}>) -> ``targs[0]``", wrap: false
           #ActiveRecord_Associations_CollectionProxy<#{a.name.to_s.camelize.singularize}>'
         else
           ## association is singular, we just return an instance of associated class
-          RDL.type model, a.name, "() -> #{a.name.to_s.camelize.singularize}", wrap: false
+          RDL.type model, a.name, "() -> #{class_name}", wrap: false
+          RDL.type model, "#{a.name}=", "(#{class_name}) -> #{class_name}", wrap: false
         end
       }
       s2[:__associations] = RDL::Type::FiniteHashType.new(assoc, nil)
@@ -680,7 +982,6 @@ module RDL
   def self.check_type_code
     RDL.config { |config| config.use_comp_types = false }
     count = 1
-    #code_type = RDL::Globals.parser.scan_str "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
     RDL::Globals.dep_types.each { |klass, meth, typ|
       klass = RDL::Util.has_singleton_marker(klass) ? RDL::Util.remove_singleton_marker(klass) : klass
       arg_list = "(trec, targs"
@@ -706,7 +1007,7 @@ module RDL
           end
           eval tmp_eval
           ast = Parser::CurrentRuby.parse tmp_meth
-          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type], [[:-, :+]]) 
+          RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type])
           count += 1
         end
       }
@@ -751,8 +1052,14 @@ module RDL
 
   # Returns a new object that wraps self in a type cast. If force is true this cast is *unchecked*, so use with caution
   def self.type_cast(obj, typ, force: false)
-    new_typ = if typ.is_a? RDL::Type::Type then typ else RDL::Globals.parser.scan_str "#T #{typ}" end
-    raise RuntimeError, "type cast error: self not a member of #{new_typ}" unless force || new_typ.member?(obj)
+    new_typ = if typ.is_a? RDL::Type::Type
+                typ
+              elsif RDL::Util.has_singleton_marker(typ)
+                RDL::Type::SingletonType.new(RDL::Globals.parser.scan_str("#T #{RDL::Util.remove_singleton_marker(typ)}").klass)
+              else
+                RDL::Globals.parser.scan_str "#T #{typ}"
+              end
+    raise RuntimeError, "type cast error: self  of class #{self.class} not a member of #{new_typ}" unless force || new_typ.member?(obj)
     new_obj = SimpleDelegator.new(obj)
     new_obj.instance_variable_set('@__rdl_type', new_typ)
     new_obj
@@ -800,6 +1107,28 @@ module RDL
     obj
   end
 
+  # Aliases contracts for meth_old and meth_new in klass. Currently, this
+  # must be called for any aliases or they will not be wrapped with
+  # contracts.
+  def self.alias(klass, new_name, old_name)
+    klass = klass.to_s
+    klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
+    RDL::Globals.aliases[klass] = {} unless RDL::Globals.aliases[klass]
+    if RDL::Globals.aliases[klass][new_name]
+      raise RuntimeError,
+            "Tried to alias #{new_name}, already aliased to #{RDL::Globals.aliases[klass][new_name]}"
+    end
+    RDL::Globals.aliases[klass][new_name] = old_name
+
+    if Module.const_defined?(klass) && RDL::Util.to_class(klass).method_defined?(new_name)
+      RDL::Wrap.wrap(klass, new_name)
+    else
+      RDL::Globals.to_wrap << [klass, old_name]
+    end
+    nil
+  end
+
+
   private
   def self.add_ar_assoc(hash, aname, aklass)
     kl_type = RDL::Type::SingletonType.new(aklass)
@@ -819,19 +1148,29 @@ class Object
     sklass = RDL::Util.add_singleton_marker(klass)
     RDL::Wrap.do_method_added(self, true, sklass, meth)
     nil
-  end  
+  end
 end
 
 class Module
   define_method :singleton_method_added, Object.instance_method(:singleton_method_added)
 
-  RDL::Util.silent_warnings { 
-  
+  RDL::Util.silent_warnings {
+
   def method_added(meth)
     klass = self.to_s
     klass = "Object" if (klass.is_a? Object) && (klass.to_s == "main")
     RDL::Wrap.do_method_added(self, false, klass, meth)
     nil
+  end
+
+  def included(other)
+    RDL::Globals.module_mixees[self] = [] unless RDL::Globals.module_mixees[self]
+    RDL::Globals.module_mixees[self] << [other, :include]
+  end
+
+  def extended(other)
+    RDL::Globals.module_mixees[self] = [] unless RDL::Globals.module_mixees[self]
+    RDL::Globals.module_mixees[self] << [other, :extend]
   end
 
   }
@@ -875,4 +1214,3 @@ class SimpleDelegator
   end
 
 end
-

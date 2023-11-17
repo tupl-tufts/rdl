@@ -580,7 +580,7 @@ Value types can also be declared as optional, indicating that the key/value pair
 ```ruby
 type MyClass, :foo, '(a: Integer, b: ?String) { () -> %any } -> %any'
 ```
-With this type, `foo` takes a hash where key `:a` is mapped to an `Integer`, and furthermore the hash may or may not include a key `:b` that is mapped to a `String`. 
+With this type, `foo` takes a hash where key `:a` is mapped to an `Integer`, and furthermore the hash may or may not include a key `:b` that is mapped to a `String`.
 
 RDL also allows a "rest" type in finite hashes (of course, they're not so finite if they use it!):
 ```ruby
@@ -734,7 +734,7 @@ RDL uses the same approach for hashes: hash literals are treated as finite hashe
 
 ## Other Features and Limitations
 
-*Displaying types.* As an aid to debugging, the method `RDL.note_type e` will display the type of `e` during type checking. At run time, this method returns its argument. Note that in certain cases RDL may type check the same code repeatedly, in which case an expression's type could be printed multiple times.
+* *Displaying types.* As an aid to debugging, the method `RDL.note_type e` will display the type of `e` during type checking. At run time, this method returns its argument. Note that in certain cases RDL may type check the same code repeatedly, in which case an expression's type could be printed multiple times.
 
 * *Conditional guards and singletons.* If an `if` or `unless` guard has a singleton type, RDL will typecheck both branches but not include types from the unrealizable branch in the expression type. For example, `if true then 1 else 'two' end` has type `1`. RDL behaves similarly for `&&` and `||`. However, RDL does not implement this logic for `case`.
 
@@ -762,6 +762,7 @@ RDL's static type checker makes some assumptions that should hold unless your Ru
 * `Class#===` is not redefined
 * `Proc#call` is not redefined
 * `Object#class` is not redefined
+* Methods that take blocks with externally visible effects do not store those blocks and then call them later
 
 (More assumptions will be added here as they are added to RDL...)
 
@@ -989,7 +990,7 @@ it matches the latest gem version.
 
 # Authors
 
-* [Jeffrey S. Foster](http://www.cs.umd.edu/~jfoster/)
+* [Jeffrey S. Foster](http://www.cs.tufts.edu/~jfoster/)
 * [Brianna M. Ren](https://www.cs.umd.edu/~bren/)
 * [T. Stephen Strickland](https://www.cs.umd.edu/~sstrickl/)
 * Alexander T. Yu

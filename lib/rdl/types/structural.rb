@@ -63,13 +63,14 @@ module RDL::Type
 
     alias eql? ==
 
-    def match(other)
+    def match(other, type_var_table = {})
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return false unless other.instance_of? StructuralType
-      return (@methods.length == other.methods.length &&
-              @methods.all? { |k, v| (other.methods.has_key? k) && (v.match(other.methods[k]))})
+
+      return @methods.length == other.methods.length &&
+             @methods.all? { |k, v| other.methods.key?(k) && v.match(other.methods[k], type_var_table) }
     end
 
     def hash  # :nodoc:

@@ -14,7 +14,7 @@ module RDL::Type
         if t.instance_of? UnionType
           ts.concat t.types
         else
-          raise RuntimeError, "Attempt to create union type with non-type" unless t.is_a?(Type) || t.nil?
+          raise RuntimeError, "Attempt to create union type with non-type #{t}" unless t.is_a?(Type) || t.nil?
           raise RuntimeError, "Attempt to create union with optional type" if t.is_a? OptionalType
           raise RuntimeError, "Attempt to create union with vararg type" if t.is_a? VarargType
           raise RuntimeError, "Attempt to create union with annotated type" if t.is_a? AnnotatedArgType
@@ -35,30 +35,60 @@ module RDL::Type
 
     def canonical
       canonicalize!
+      return RDL::Globals.types[:bot] if types.size == 0
       return @canonical if @canonical
       return self
     end
 
     def canonicalize!
       return if @canonicalized
+      @types.map! { |t| t.canonical }
       # for any type such that a supertype is already in ts, set its position to nil
       for i in 0..(@types.length-1)
         for j in (i+1)..(@types.length-1)
-          next if (@types[j].nil?) || (@types[i].nil?)
-          (@types[i] = nil; break) if @types[i] <= @types[j]
-          (@types[j] = nil) if @types[j] <= @types[i]
+          next if (@types[j].nil?) || (@types[i].nil?) || @types[i].is_a?(ChoiceType) || @types[j].is_a?(ChoiceType) || @types[i].is_a?(VarType) || @types[j].is_a?(VarType)#(@types[i].is_a?(VarType) && (@types[i].to_infer || @types[j].is_a?(VarType))) || (@types[j].is_a?(VarType) && @types[j].to_infer)## now that we're doing inference, don't want to just treat VarType as a subtype of others in Union
+          #next if (@types[j].nil?) || (@types[i].nil?) || (@types[i].is_a?(VarType)) || (@types[j].is_a?(VarType)) ## now that we're doing inference, don't want to just treat VarType as a subtype of others in Union
+          (@types[i] = nil; break) if Type.leq(@types[i], @types[j], {}, true, [])
+          (@types[j] = nil) if Type.leq(@types[j], @types[i], {}, true, [])
         end
       end
       @types.delete(nil) # eliminate any "deleted" elements
-      @types.sort! { |a, b| a.object_id <=> b.object_id } # canonicalize order
+      @types.sort! { |a, b| a.to_s <=> b.to_s } # canonicalize order
+      @types.map { |t| t.canonical }
       @types.uniq!
       @canonical = @types[0] if @types.size == 1
       @canonicalized = true
     end
 
+    def drop_vars!
+      @types.map! { |t|
+        if t.is_a?(IntersectionType) then
+          t.drop_vars! unless t.types.all? { |t| t.is_a?(VarType) }
+          if t.types.empty? then nil else t end
+        else t
+        end }
+      @types.delete(nil)
+      @types.reject! { |t| t.is_a? VarType }
+      self
+    end
+
+    def drop_vars
+      return RDL::Globals.types[:bot] if @types.all? { |t| t.is_a? VarType } ## when all are VarTypes, we have nothing concrete to reduce to, so don't want to drop vars
+      #return self if @types.all? { |t| t.is_a? VarType } ## when all are VarTypes, we have nothing concrete to reduce to, so don't want to drop vars
+      new_types = []
+      for i in 0..(@types.length-1)
+        if @types[i].is_a?(IntersectionType)
+          new_types <<  @types[i].drop_vars.canonical
+        else
+          new_types << @types[i] unless @types[i].is_a? VarType
+        end
+      end
+      RDL::Type::UnionType.new(*new_types).canonical
+    end
+
     def to_s  # :nodoc:
       return @canonical.to_s if @canonical
-      return "#{@types.map { |t| t.to_s }.join(' or ')}"
+      return "(#{@types.map { |t| t.to_s }.sort.join(' or ')})"
     end
 
     def ==(other)  # :nodoc:
@@ -74,15 +104,15 @@ module RDL::Type
 
     alias eql? ==
 
-    def match(other)
+    def match(other, type_var_table = {})
       canonicalize!
-      return @canonical.match(other) if @canonical
+      return @canonical.match(other, type_var_table) if @canonical
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
       return false unless other.instance_of? UnionType
       return false if @types.length != other.types.length
-      @types.all? { |t| other.types.any? { |ot| t.match(ot) } }
+      @types.all? { |t| other.types.any? { |ot| t.match(ot, type_var_table) } }
     end
 
     def <=(other)

@@ -3,11 +3,10 @@ require_relative "#{File.dirname(__FILE__)}/sql-strings.rb"
 class ActiveRecord::Base
   extend RDL::Annotate
 
-  type Object, :try, "(Symbol) -> Object", wrap: false
   type Object, :present?, "() -> %bool", wrap: false
   type :initialize, '(``DBType.rec_to_schema_type(trec, true)``) -> self', wrap: false
-  type 'self.create', '(``DBType.rec_to_schema_type(trec, true)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
-  type 'self.create!', '(``DBType.rec_to_schema_type(trec, true)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
+  type 'self.create', '(``DBType.rec_to_schema_type(trec, true, include_assocs: true)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
+  type 'self.create!', '(``DBType.rec_to_schema_type(trec, true, include_assocs: true)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type :initialize, '() -> self', wrap: false
   type 'self.create', '() -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type 'self.create!', '() -> ``DBType.rec_to_nominal(trec)``', wrap: false
@@ -18,11 +17,39 @@ class ActiveRecord::Base
   type :save!, '(?{ validate: %bool }) -> %bool', wrap: false
   type 'self.transaction', '() {() -> u} -> u', wrap: false
 
-  type RDL::Globals, 'self.ar_db_schema', "() -> Hash<%any, RDL::Type::GenericType>", wrap: false, effect: [:+, :+]
-  type String, :singularize, "() -> String", wrap: false, effect: [:+, :+]
-  type String, :camelize, "() -> String", wrap: false, effect: [:+, :+]
-  type String, :pluralize, "() -> String", wrap: false, effect: [:+, :+]
-  type String, :underscore, "() -> String", wrap: false, effect: [:+, :+]
+  type RDL::Globals, 'self.ar_db_schema', "() -> Hash<%any, RDL::Type::GenericType>", wrap: false
+  type String, :singularize, "() -> String", wrap: false
+  type String, :camelize, "() -> String", wrap: false
+  type String, :pluralize, "() -> String", wrap: false
+  type String, :underscore, "() -> String", wrap: false
+
+  type Object, :try, "(Symbol) -> ``try_output(trec, targs)``", wrap: false
+
+  def Object.try_output(trec, targs)
+    case trec
+    when RDL::Type::SingletonType
+      klass = trec.val.class
+      inst = {self: trec }
+    when RDL::Type::NominalType
+      klass = trec.klass
+      inst = {self: trec }
+    when RDL::Type::GenericType
+      klass = trec.base.klass
+      inst = trec.to_inst.merge(self: trec)
+    else
+      raise "Unexpected type #{trec}."
+    end
+    case targs[0]
+    when RDL::Type::SingletonType
+      meth_types = RDL::Typecheck.lookup({}, klass.to_s, targs[0].val, nil, make_unknown: false)#RDL::Globals.info.get(klass, targs[0].val, :type)
+      #meth_types = meth_types[0] if meth_types
+      ret_type = meth_types ? RDL::Type::UnionType.new(*meth_types.map { |mt| mt.ret } ).canonical : RDL::Globals.types[:top]
+    else
+      return RDL::Globals.types[:top]
+    end
+  end        
+
+
 
   def self.access_output(trec, targs)
     case trec
@@ -44,7 +71,7 @@ class ActiveRecord::Base
       raise 'unexpected type'
     end
   end
-  RDL.type ActiveRecord::Base, 'self.access_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
+  RDL.type ActiveRecord::Base, 'self.access_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
   def self.uc_first_arg(trec)
     case trec
@@ -58,7 +85,7 @@ class ActiveRecord::Base
       raise "unexpected type"
     end
   end
-  RDL.type ActiveRecord::Base, 'self.uc_first_arg', "(RDL::Type::Type) -> RDL::Type::UnionType", wrap: false, typecheck: :type_code, effect: [:+, :+]
+  RDL.type ActiveRecord::Base, 'self.uc_first_arg', "(RDL::Type::Type) -> RDL::Type::UnionType", wrap: false, typecheck: :type_code
 
   def self.uc_second_arg(trec, targs)
     case trec
@@ -72,7 +99,7 @@ class ActiveRecord::Base
       raise "unexpected type"
     end
   end
-  RDL.type ActiveRecord::Base, 'self.uc_second_arg', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
+  RDL.type ActiveRecord::Base, 'self.uc_second_arg', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
 
 end
@@ -98,8 +125,8 @@ module ActiveRecord::Core::ClassMethods
   extend RDL::Annotate
   ## Types from this module are used when receiver is ActiveRecord::Base
 
-  type :find, '(Integer or String) -> ``DBType.find_output_type(trec, targs)``', wrap: false
-  type :find, '(Array<Integer>) -> ``DBType.find_output_type(trec, targs)``', wrap: false
+  type :find, '(Integer or String or Symbol or Array<Integer>) -> ``DBType.find_output_type(trec, targs)``', wrap: false
+  #type :find, '(Array<Integer>) -> ``DBType.find_output_type(trec, targs)``', wrap: false
   type :find, '(Integer, Integer, *Integer) -> ``DBType.find_output_type(trec, targs)``', wrap: false
   type :find_by, '(``DBType.find_input_type(trec, targs)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
   ## TODO: find_by's with conditions given as string
@@ -153,6 +180,9 @@ module ActiveRecord::Querying
   type :order, '(%any) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), DBType.rec_to_nominal(trec))``', wrap: false
   type :includes, '(``DBType.joins_one_input_type(trec, targs)``) -> ``DBType.joins_output(trec, targs)``', wrap: false
   type :includes, '(``DBType.joins_multi_input_type(trec, targs)``, %any, *%any) -> ``DBType.joins_output(trec, targs)``', wrap: false
+  type :preload, '(``DBType.joins_one_input_type(trec, targs)``) -> ``DBType.joins_output(trec, targs)``', wrap: false
+  type :preload, '(``DBType.joins_multi_input_type(trec, targs)``, %any, *%any) -> ``DBType.joins_output(trec, targs)``', wrap: false
+
   type :limit, '(Integer) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), DBType.rec_to_nominal(trec))``', wrap: false
   type :count, '() -> Integer', wrap: false
   type :count, '(``DBType.count_input(trec, targs)``) -> Integer', wrap: false
@@ -179,10 +209,27 @@ module ActiveRecord::Relation::QueryMethods
   type :order, '(%any) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), RDL.type_cast(trec, "RDL::Type::GenericType", force: true).params[0])``', wrap: false
   type :includes, '(``DBType.joins_one_input_type(trec, targs)``) -> ``DBType.joins_output(trec, targs)``', wrap: false
   type :includes, '(``DBType.joins_multi_input_type(trec, targs)``, %any, *%any) -> ``DBType.joins_output(trec, targs)``', wrap: false
+  type :preload, '(``DBType.joins_one_input_type(trec, targs)``) -> ``DBType.joins_output(trec, targs)``', wrap: false
+  type :preload, '(``DBType.joins_multi_input_type(trec, targs)``, %any, *%any) -> ``DBType.joins_output(trec, targs)``', wrap: false
+
   type :limit, '(Integer) -> ``trec``', wrap: false
   type :references, '(Symbol, *Symbol) -> self', wrap: false
 end
 
+
+module ActionController::Instrumentation
+  extend RDL::Annotate
+=begin
+  type :redirect_to, "(``redirect_input(targs)``) -> String", wrap: false
+
+  ## When first input is a VarType, we want to associate that VarType with the first (optional) arg of redirect_to.
+  ## Same goes if first input is anything *other than* a FHT.
+  ## Otherwise, we drop first optional arg.
+  def self.redirect_input(targs)
+
+  end
+=end
+end
 
 class ActiveRecord::QueryMethods::WhereChain
   extend RDL::Annotate
@@ -195,7 +242,8 @@ end
 module ActiveRecord::Delegation
   extend RDL::Annotate
 
-  type :+, '(%any) -> ``DBType.plus_output_type(trec, targs)``', wrap: false
+  #type :+, '(%any) -> ``DBType.plus_output_type(trec, targs)``', wrap: false
+  type :+, '(ActiveRecord_Relation<x>) -> ``DBType.plus_output_type(trec, targs)``', wrap: false
 
 end
 
@@ -242,13 +290,13 @@ class ActiveRecord_Relation
 
   type_params [:t], :dummy
 
-  type :each, '() -> Enumerator<t>', wrap: false
-  type :each, '() { (t) -> %any } -> Array<t>', wrap: false
+  type :each, '() -> ``DBType.each_no_block_ret(trec)``', wrap: false
+  type :each, '() { (``DBType.each_block_arg(trec)``) -> %any } -> Array<t>', wrap: false
   type :empty?, '() -> %bool', wrap: false
   type :present?, '() -> %bool', wrap: false
-  type :create, '(``DBType.rec_to_schema_type(trec, true)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
+  type :create, '(``DBType.rec_to_schema_type(trec, true, include_assocs: true)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type :create, '() -> ``DBType.rec_to_nominal(trec)``', wrap: false
-  type :create!, '(``DBType.rec_to_schema_type(trec, true)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
+  type :create!, '(``DBType.rec_to_schema_type(trec, true, include_assocs: true)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type :create!, '() -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type :new, '(``DBType.rec_to_schema_type(trec, true)``) -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type :new, '() -> ``DBType.rec_to_nominal(trec)``', wrap: false
@@ -263,8 +311,12 @@ class ActiveRecord_Relation
   type :to_a, "() -> ``DBType.rec_to_array(trec)``", wrap: false
   type :[], "(Integer) -> t", wrap: false
   type :size, "() -> Integer", wrap: false
-  type :update_all, '(``DBType.rec_to_schema_type(trec, true)``) -> Integer', wrap: false
+  type :update_all, '(``RDL::Type::UnionType.new(RDL::Globals.types[:string], DBType.rec_to_schema_type(trec, true))``) -> Integer', wrap: false
+  type :valid, "() -> self", wrap: false
+  type :sort, "() { (t, t) -> Integer } -> Array<t>", wrap: false
 end
+
+
 
 
 class DBType
@@ -293,18 +345,19 @@ class DBType
       end
     end
   end
-  RDL.type DBType, 'self.rec_to_nominal', "(RDL::Type::Type) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
+  RDL.type DBType, 'self.rec_to_nominal', "(RDL::Type::Type) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
   def self.rec_to_array(trec)
     RDL::Type::GenericType.new(RDL::Globals.types[:array], rec_to_nominal(trec))
   end
-    RDL.type DBType, 'self.rec_to_array', "(RDL::Type::Type) -> RDL::Type::GenericType", wrap: false, typecheck: :type_code, effect: [:+, :+]
+    RDL.type DBType, 'self.rec_to_array', "(RDL::Type::Type) -> RDL::Type::GenericType", wrap: false, typecheck: :type_code
 
   ## given a receiver type in various kinds of query calls, returns the accepted finite hash type input,
   ## or a union of types if the receiver represents joined tables.
   ## [+ trec +] is the type of the receiver in the method call.
   ## [+ check_col +] is a boolean indicating whether or not the column types (i.e., values in the finite hash type) will be checked.
-  def self.rec_to_schema_type(trec, check_col, takes_array=false)
+  ## [+ include_assocs +] is a bool indicating whether or not to include associations in returned hash, e.g., for `create` method.
+  def self.rec_to_schema_type(trec, check_col, takes_array=false, include_assocs: false)
     case trec
     when RDL::Type::GenericType
       raise "Unexpected type #{trec}." unless (trec.base.klass == ActiveRecord_Relation) || (trec.base.klass == ActiveRecord::QueryMethods::WhereChain)
@@ -312,31 +365,32 @@ class DBType
       case param
       when RDL::Type::GenericType
         ## should be JoinTable
-        raise "unexpected type #{trec}" unless param.base.klass == JoinTable
+        raise "1. rec_to_schema unexpected type #{trec}" unless param.base.klass == JoinTable
         base_name = RDL.type_cast(param.params[0], "RDL::Type::NominalType", force: true).klass.to_s.singularize.to_sym ### singularized symbol name of first param in JoinTable, which is base table of the joins
-        type_hash = table_name_to_schema_type(base_name, check_col, takes_array).elts
+        type_hash = table_name_to_schema_type(base_name, check_col, takes_array, include_assocs: include_assocs).elts
         pp1 = param.params[1]
         case pp1
         when RDL::Type::NominalType
           ## just one table joined to base table
           joined_name = pp1.klass.to_s.singularize.to_sym
-          joined_type = RDL::Type::OptionalType.new(table_name_to_schema_type(joined_name, check_col, takes_array))
+          joined_type = RDL::Type::OptionalType.new(table_name_to_schema_type(joined_name, check_col, takes_array, include_assocs: include_assocs))
           type_hash = type_hash.merge({ joined_name.to_s.pluralize.underscore.to_sym => joined_type })
         when RDL::Type::UnionType
           ## multiple tables joined to base table
           joined_hash = RDL.type_cast(Hash[pp1.types.map { |t|
                                joined_name = RDL.type_cast(t, "RDL::Type::NominalType", force: true).klass.to_s.singularize.to_sym
-                               joined_type = table_name_to_schema_type(joined_name, check_col, takes_array)
+                               joined_type = RDL::Type::OptionalType.new(table_name_to_schema_type(joined_name, check_col, takes_array, include_assocs: include_assocs))
                                [joined_name.to_s.pluralize.underscore.to_sym, joined_type]
                              }
-                            ], "Hash<Symbol, RDL::Type::FiniteHashType>", force: true)
+                                          ], "Hash<Symbol, RDL::Type::FiniteHashType>", force: true)
+          type_hash = type_hash.merge(joined_hash)
         else
-          raise "unexpected type #{trec}"
+          raise "2. rec_to_schema unexpected type #{trec}"
         end
         return RDL::Type::FiniteHashType.new(type_hash, nil)
       when RDL::Type::NominalType
         tname = param.klass.to_s.to_sym
-        return table_name_to_schema_type(tname, check_col, takes_array)
+        return table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs)
       else
         raise RDL::Typecheck::StaticTypeError, "Unexpected type parameter in  #{trec}."
       end
@@ -344,43 +398,63 @@ class DBType
       val = RDL.type_cast(trec.val, 'Class', force: true)
       raise RDL::Typecheck::StaticTypeError, "Unexpected receiver type #{trec}." unless val.is_a?(Class)
       tname = val.to_s.to_sym
-      return table_name_to_schema_type(tname, check_col, takes_array)
+      return table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs)
     when RDL::Type::NominalType
       tname = trec.name.to_sym
-      return table_name_to_schema_type(tname, check_col, takes_array)
+      return table_name_to_schema_type(tname, check_col, takes_array, include_assocs: include_assocs)
     else
       raise RDL::Typecheck::StaticTypeError, "Unexpected receiver type #{trec}."
     end
   end
-  RDL.type DBType, 'self.rec_to_schema_type', "(RDL::Type::Type, %bool, ?%bool) -> RDL::Type::FiniteHashType", wrap: false, typecheck: :type_code, effect: [:+, :+]
+  RDL.type DBType, 'self.rec_to_schema_type', "(RDL::Type::Type, %bool, ?%bool) -> RDL::Type::FiniteHashType", wrap: false, typecheck: :type_code
 
   ## turns a given table name into the appropriate finite hash type based on table schema, with optional or top-type values
   ## [+ tname +] is the table name as a symbol
   ## [+ check_col +] is a boolean indicating whether or not column types will eventually be checked
-  def self.table_name_to_schema_type(tname, check_col, takes_array=false)
+  def self.table_name_to_schema_type(tname, check_col, takes_array=false, include_assocs: false)
     #h = RDL.type_cast({}, "Hash<%any, RDL::Type::Type>", force: true)
     ttype = RDL::Globals.ar_db_schema[tname]
     raise RDL::Typecheck::StaticTypeError, "No table type for #{tname} found." unless ttype
     tschema = RDL.type_cast(ttype.params[0], "RDL::Type::FiniteHashType", force: true).elts.except(:__associations)
     h = Hash[tschema.map { |k, v|
-      if check_col
-        v = RDL::Type::UnionType.new(v, RDL::Type::GenericType.new(RDL::Globals.types[:array], v)) if takes_array
-        [k, RDL::Type::OptionalType.new(v)]
-      else
-        [k, RDL::Type::OptionalType.new(RDL::Globals.types[:top])]
-      end
+               if check_col
+                 v = RDL::Type::UnionType.new(v, RDL::Globals.types[:symbol]) if v == RDL::Globals.types[:string] ## ran into cases where symbols can be accepted in addition to string values.
+                 v = RDL::Type::UnionType.new(v, RDL::Type::GenericType.new(RDL::Globals.types[:array], v)).canonical if takes_array
+                 [k, RDL::Type::OptionalType.new(v)]
+               else
+                 [k, RDL::Type::OptionalType.new(RDL::Globals.types[:top])]
+               end
              }]
+    if include_assocs
+      ## include associations in schema hash
+      table_class = Object.const_get(tname)
+      assoc_hash = {}
+      table_class.reflect_on_all_associations.each { |a|
+        if check_col
+          assoc_type = RDL::Type::NominalType.new(a.class_name)
+          if a.name.to_s == a.plural_name
+            ## association is plural
+            assoc_hash[a.name] = RDL::Type::OptionalType.new(RDL::Type::GenericType.new(RDL::Globals.types[:array], assoc_type))
+          else
+            assoc_hash[a.name] = RDL::Type::OptionalType.new(assoc_type)
+          end
+        else
+          assoc_hash[a.name] = RDL::Type::OptionalType.new(RDL::Globals.types[:top])
+        end
+      }
+      h.merge!(assoc_hash)
+    end
     RDL::Type::FiniteHashType.new(RDL.type_cast(h, "Hash<%any, RDL::Type::Type>", force: true), nil)
   end
-  RDL.type DBType, 'self.table_name_to_schema_type', "(Symbol, %bool, ?%bool) -> RDL::Type::FiniteHashType", wrap: false, typecheck: :type_code, effect: [:+, :+]
+  RDL.type DBType, 'self.table_name_to_schema_type', "(Symbol, %bool, ?%bool) -> RDL::Type::FiniteHashType", wrap: false, typecheck: :type_code
 
   def self.where_input_type(trec, targs)
-    handle_sql_strings(trec, targs) if targs[0].is_a? RDL::Type::PreciseStringType
+    handle_sql_strings(trec, targs) if targs[0].is_a?(RDL::Type::PreciseStringType) && !targs[1].nil? && !targs[1].kind_of_var_input?
     tschema = rec_to_schema_type(trec, true, true)
     return RDL::Type::UnionType.new(tschema, RDL::Globals.types[:string], RDL::Globals.types[:array]) ## no indepth checking for string or array cases
   end
-  RDL.type Object, 'self.handle_sql_strings', "(RDL::Type::Type, Array<RDL::Type::Type>) -> %any", wrap: false, effect: [:+, :+]
-  RDL.type DBType, 'self.where_input_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::UnionType", wrap: false, typecheck: :type_code, effect: [:+, :+]
+  RDL.type Object, 'self.handle_sql_strings', "(RDL::Type::Type, Array<RDL::Type::Type>) -> %any", wrap: false
+  RDL.type DBType, 'self.where_input_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::UnionType", wrap: false, typecheck: :type_code
 
   def self.find_input_type(trec, targs)
     handle_sql_strings(trec, targs) if targs[0].is_a? RDL::Type::PreciseStringType
@@ -407,13 +481,13 @@ class DBType
       raise RDL::Typecheck::StaticTypeError, "Unexpected receiver type #{trec}."
     end
   end
-    RDL.type DBType, 'self.where_noarg_output_type', "(RDL::Type::Type) -> RDL::Type::GenericType", wrap: false, typecheck: :type_code, effect: [:+, :+]
+    RDL.type DBType, 'self.where_noarg_output_type', "(RDL::Type::Type) -> RDL::Type::GenericType", wrap: false, typecheck: :type_code
 
   def self.not_input_type(trec, targs)
     tschema = rec_to_schema_type(trec, true)
     return RDL::Type::UnionType.new(tschema, RDL::Globals.types[:string], RDL::Globals.types[:array]) ## no indepth checking for string or array cases
   end
-  RDL.type DBType, 'self.not_input_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::UnionType", wrap: false, typecheck: :type_code, effect: [:+, :+]
+  RDL.type DBType, 'self.not_input_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::UnionType", wrap: false, typecheck: :type_code
 
   def self.exists_input_type(trec, targs)
     raise "Unexpected number of arguments to ActiveRecord::Base#exists?." unless targs.size <= 1
@@ -427,7 +501,7 @@ class DBType
     end
     return RDL::Type::OptionalType.new(RDL::Type::UnionType.new(RDL::Globals.types[:integer], RDL::Globals.types[:string], typ))
   end
-  RDL.type DBType, 'self.exists_input_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
+  RDL.type DBType, 'self.exists_input_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
 
   def self.find_output_type(trec, targs)
@@ -437,7 +511,7 @@ class DBType
     when 1
       arg0 = targs[0]
       case arg0
-      when RDL::Globals.types[:integer], RDL::Globals.types[:string]
+      when RDL::Globals.types[:integer], RDL::Globals.types[:string], RDL::Globals.types[:symbol]
         DBType.rec_to_nominal(trec)
       when RDL::Type::SingletonType
       # expecting symbol or integer here
@@ -448,13 +522,14 @@ class DBType
         ## TODO
         ## Actually, this is deprecated in later versions
           raise RDL::Typecheck::StaticTypeError, "Unexpected arg type #{arg0} in call to ActiveRecord::Base#find."
-        else
+p        else
           raise RDL::Typecheck::StaticTypeError, "Unexpected arg type #{arg0} in call to ActiveRecord::Base#find."
         end
-      when RDL::Type::GenericType
+      when RDL::Type::GenericType, RDL::Type::TupleType
         RDL::Type::GenericType.new(RDL::Globals.types[:array], DBType.rec_to_nominal(trec))
-      when RDL::Type::TupleType
-        RDL::Type::GenericType.new(RDL::Globals.types[:array], DBType.rec_to_nominal(trec))
+      when RDL::Type::VarType
+        nom = DBType.rec_to_nominal(trec)
+        RDL::Type::UnionType.new(RDL::Type::GenericType.new(RDL::Globals.types[:array], nom), nom)
       else
         raise RDL::Typecheck::StaticTypeError, "Unexpected arg type #{arg0} in call to ActiveRecord::Base#find."
       end
@@ -462,7 +537,7 @@ class DBType
       DBType.rec_to_nominal(trec)
     end
   end
-  RDL.type DBType, 'self.find_output_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
+  RDL.type DBType, 'self.find_output_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
   def self.joins_one_input_type(trec, targs)
     return RDL::Globals.types[:top] unless targs.size == 1 ## trivial case, won't be matched
@@ -504,7 +579,7 @@ class DBType
       raise RDL::Typecheck::StaticTypeError, "Unexpected arg type #{arg0} in call to joins."
     end
   end
-  RDL.type DBType, 'self.joins_one_input_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
+  RDL.type DBType, 'self.joins_one_input_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
   def self.joins_multi_input_type(trec, targs)
     return RDL::Globals.types[:top] unless targs.size > 1 ## trivial case, won't be matched
@@ -513,7 +588,7 @@ class DBType
     }
     return targs[0] ## since this method is called as first argument in type
   end
-  RDL.type DBType, 'self.joins_multi_input_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
+  RDL.type DBType, 'self.joins_multi_input_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
   def self.associated_with?(rec, sym)
     tschema = RDL::Globals.ar_db_schema[rec.to_s.to_sym]
@@ -537,7 +612,7 @@ class DBType
     }
     return false
   end
-    RDL.type DBType, 'self.associated_with?', "(Class or Symbol or String, Symbol) -> %bool", wrap: false, typecheck: :type_code, effect: [:+, :+]
+    RDL.type DBType, 'self.associated_with?', "(Class or Symbol or String, Symbol) -> %bool", wrap: false, typecheck: :type_code
 
   def self.get_joined_args(targs)
     arg_types = RDL.type_cast([], "Array<RDL::Type::Type>", force: true)
@@ -548,10 +623,12 @@ class DBType
       arg_types = arg_types + [RDL::Type::NominalType.new(RDL.type_cast(arg.val, "Symbol", force: true).to_s.singularize.camelize)]
     when RDL::Type::FiniteHashType
       hsh = arg.elts
-      raise 'not supported' unless hsh.size == 1
-      key, val = RDL.type_cast(hsh.first, "[Symbol, RDL::Type::SingletonType<Symbol>]", force: true)
-      val = val.val
-      arg_types = arg_types + [RDL::Type::UnionType.new(RDL::Type::NominalType.new(key.to_s.singularize.camelize), RDL::Type::NominalType.new(val.to_s.singularize.camelize))]
+      #raise "got #{hsh} but it's not supported" unless hsh.size == 1
+      hsh.each { |key, val| 
+        #key, val = RDL.type_cast(hsh.first, "[Symbol, RDL::Type::SingletonType<Symbol>]", force: true)
+        val = val.val
+        arg_types = arg_types + [RDL::Type::UnionType.new(RDL::Type::NominalType.new(key.to_s.singularize.camelize), RDL::Type::NominalType.new(val.to_s.singularize.camelize))]
+      }
     else
       raise "Unexpected arg type #{arg} to joins."
     end
@@ -564,7 +641,7 @@ class DBType
       raise "oops, didn't expect to get here."
     end
   end
-    RDL.type DBType, 'self.get_joined_args', "(Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
+    RDL.type DBType, 'self.get_joined_args', "(Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
   def self.joins_output(trec, targs)
     arg_type = get_joined_args(targs)
@@ -584,20 +661,20 @@ class DBType
         raise "unexpected parameter type in #{trec}"
       end
     else
-      raise "unexpected type #{trec}"
+      raise "joins_output unexpected type #{trec}"
     end
     jt = RDL::Type::GenericType.new(RDL::Type::NominalType.new(JoinTable), rec_to_nominal(trec), joined)
     ret = RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), jt)
     return ret
   end
-  RDL.type DBType, 'self.joins_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
+  RDL.type DBType, 'self.joins_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
     def self.plus_output_type(trec, targs)
     typs = RDL.type_cast([], "Array<RDL::Type::Type>", force: true)
     [trec, targs[0]].each { |t|
       case t
       when RDL::Type::GenericType
-        raise "Expected ActiveRecord_Relation." unless t.base.name == "ActiveRecord_Relation"
+        raise "Expected ActiveRecord_Relation or Array, got #{t} for #{trec} and #{targs}." unless (t.base.name == "ActiveRecord_Relation") or (t.base.name == "Array")
         param0 = t.params[0]
         case param0
         when RDL::Type::GenericType
@@ -609,13 +686,16 @@ class DBType
         else
           raise "unexpected paramater type in #{t}"
         end
+      when RDL::Type::VarType
+        return RDL::Globals.types[:array]
       else
-        raise "unexpected type #{t}"
+        #raise "plus unexpected type #{t} with #{trec} and #{targs[0]}"
+        return RDL::Globals.types[:bot]
       end
     }
     RDL::Type::GenericType.new(RDL::Type::NominalType.new(Array), RDL::Type::UnionType.new(*typs))
     end
-    RDL.type DBType, 'self.plus_output_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::GenericType", wrap: false, typecheck: :type_code, effect: [:+, :+]
+    RDL.type DBType, 'self.plus_output_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::GenericType", wrap: false, typecheck: :type_code
 
     def self.count_input(trec, targs)
       hash_type = rec_to_schema_type(trec, true)## Bug found here. orginally had: rec_to_schema_type(trec, targs).elts
@@ -632,6 +712,22 @@ class DBType
       }
       return RDL::Type::OptionalType.new(RDL::Type::UnionType.new(*typs))
     end
-    RDL.type DBType, 'self.count_input', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::OptionalType", wrap: false, typecheck: :type_code, effect: [:+, :+]
+    RDL.type DBType, 'self.count_input', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::OptionalType", wrap: false, typecheck: :type_code
 
+
+  def self.each_block_arg(trec)
+    case trec.params[0]
+    when RDL::Type::GenericType
+      raise "Expected JoinTable" unless trec.params[0].base.klass == JoinTable
+      return trec.params[0].params[0]
+    else
+      return trec.params[0]
+    end
+  end
+
+  def self.each_no_block_ret(trec)
+    RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), each_block_arg(trec))
+  end
+    
 end
+

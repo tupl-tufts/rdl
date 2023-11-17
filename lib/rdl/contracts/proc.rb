@@ -9,11 +9,11 @@ module RDL::Contract
 
 
     def wrap(slf, &blk)
-      Proc.new {|*v, &other_blk|
-        @pre_cond.check(slf, *v, &other_blk)
-        tmp = other_blk ? slf.instance_exec(*v, other_blk, &blk) : slf.instance_exec(*v, &blk) # TODO fix blk
+      Proc.new {|*v, **kv, &other_blk|
+        @pre_cond.check(slf, *v, **kv, &other_blk)
+        tmp = other_blk ? slf.instance_exec(*v, **kv, &other_blk) : slf.instance_exec(*v, **kv, &blk) # TODO fix blk
         # tmp = blk.call(*v, &other_blk) # TODO: Instance eval with self
-        @post_cond.check(slf, tmp, *v, &other_blk)
+        @post_cond.check(slf, tmp, *v, **kv, &other_blk)
         tmp
       }
     end

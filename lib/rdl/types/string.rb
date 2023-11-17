@@ -68,8 +68,8 @@ module RDL::Type
       check_bounds
     end
 
-    def check_bounds
-      return (@lbounds.all? { |lbound| lbound <= self }) && (@ubounds.all? { |ubound| self <= ubound } )
+    def check_bounds(no_promote=false)
+      return (@lbounds.all? { |lbound| lbound.<=(self, no_promote) }) && (@ubounds.all? { |ubound| self.<=(ubound, no_promote) } )
     end
 
     def cant_promote!

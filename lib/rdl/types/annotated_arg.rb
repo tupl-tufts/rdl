@@ -56,5 +56,13 @@ module RDL::Type
     def vararg?
       return type.vararg?
     end
+
+    def <=(other)
+      if other.is_a? AnnotatedArgType
+        Type.leq(@type, other.type)
+      else
+        Type.leq(@type, other)
+      end
+    end
   end
 end

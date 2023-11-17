@@ -1,0 +1,29 @@
+name: RDL Test
+
+on:
+  push:
+    branches: [ master, dev ]
+  pull_request:
+    branches: [ master, dev ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        ruby-version: ['2.7.6', '3.2.2']
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby-version }}
+        bundler-cache: true
+    - name: Run Tests
+      run: |
+        gem install bundler
+        bundle install --jobs 4 --retry 3
+        bundle exec rake test

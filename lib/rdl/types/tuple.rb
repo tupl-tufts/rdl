@@ -36,17 +36,21 @@ module RDL::Type
 
     alias eql? ==
 
-    def match(other)
-      return @array.match(other) if @array
+    def match(other, type_var_table = {})
+      return @array.match(other, type_var_table) if @array
+
       other = other.canonical
       other = other.type if other.instance_of? AnnotatedArgType
       return true if other.instance_of? WildQuery
-      return (other.instance_of? TupleType) && (@params.length == other.params.length) && (@params.zip(other.params).all? { |t,o| t.match(o) })
+
+      (other.instance_of? TupleType) &&
+        (@params.length == other.params.length) &&
+        (@params.zip(other.params).all? { |t, o| t.match(o, type_var_table) })
     end
 
     def promote(t=nil)
       return false if @cant_promote
-      param = UnionType.new(*@params, t)
+      param = (@params.empty? && !t) ? RDL::Type::VarType.new(:t) : UnionType.new(*@params.map { |p| if p.is_a?(RDL::Type::SingletonType) && !p.val.nil? then p.nominal else p end }, t)
       param = param.widen if RDL::Config.instance.promote_widen
       GenericType.new(RDL::Globals.types[:array], param)
     end
@@ -95,7 +99,7 @@ module RDL::Type
     end
 
     def copy
-      return TupleType.new(*@params.map { |t| t.copy })      
+      return TupleType.new(*@params.map { |t| t.copy })
     end
 
     def hash

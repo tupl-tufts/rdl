@@ -3,17 +3,16 @@ RDL.nowrap :Array
 RDL.type_params :Array, [:t], :all?
 
 def Array.to_type(t)
-  case t
-  when RDL::Type::Type
+  if t.is_a?(RDL::Type::Type)
     t
-  when Array
+  elsif t.is_a?(Array)
     RDL.type_cast(RDL::Type::TupleType.new(*(t.map { |i| to_type(RDL.type_cast(i, "Object")) })), "RDL::Type::TupleType", force: true)
   else
     t = "nil" if t.nil?
     RDL::Globals.parser.scan_str "#T #{t}"
   end
 end
-RDL.type Array, 'self.to_type', "(Object) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
+RDL.type Array, 'self.to_type', "(Object) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
 
 def Array.output_type(trec, targs, meth_name, default1, default2=default1, use_sing_val: true, nil_false_default: false)
@@ -21,7 +20,12 @@ def Array.output_type(trec, targs, meth_name, default1, default2=default1, use_s
   when RDL::Type::TupleType
     if targs.empty? || targs.all? { |t| t.is_a?(RDL::Type::SingletonType) }
       vals = RDL.type_cast((if use_sing_val then targs.map { |t| RDL.type_cast(t, "RDL::Type::SingletonType").val } else targs end), "Array<%any>", force: true)
-      res = RDL.type_cast(trec.params.send(meth_name, *vals), "Object", force: true)
+      begin
+        res = RDL.type_cast(trec.params.send(meth_name, *vals), "Object", force: true)
+      rescue => e#ArgumentError => e
+        puts "GOT ERROR #{e} FOR METHOD #{meth_name} CALLED ON TREC #{trec} AND ARGS #{targs}"
+        return RDL::Globals.types[:bot]
+      end
       if !res && nil_false_default
         if default1 == :promoted_param
           trec.promote.params[0]
@@ -46,7 +50,7 @@ def Array.output_type(trec, targs, meth_name, default1, default2=default1, use_s
     RDL::Globals.parser.scan_str "#T #{default2}"
   end
 end
-RDL.type Array, 'self.output_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, String or Symbol, ?(String or Symbol), { use_sing_val: ?%bool, nil_false_default: ?%bool }) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
+RDL.type Array, 'self.output_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, String or Symbol, ?(String or Symbol), { use_sing_val: ?%bool, nil_false_default: ?%bool }) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
 
 def Array.any_or_t(trec, vararg=false)
@@ -59,7 +63,7 @@ def Array.any_or_t(trec, vararg=false)
     if vararg then RDL::Type::VarargType.new(ret) else ret end
   end
 end
-RDL.type Array, 'self.any_or_t', "(RDL::Type::Type, ?%bool) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
+RDL.type Array, 'self.any_or_t', "(RDL::Type::Type, ?%bool) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
 
 def Array.promoted_or_t(trec, vararg=false)
@@ -72,7 +76,7 @@ def Array.promoted_or_t(trec, vararg=false)
     if vararg then RDL::Type::VarargType.new(ret) else ret end
   end
 end
-RDL.type Array, 'self.promoted_or_t', "(RDL::Type::Type, ?%bool) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
+RDL.type Array, 'self.promoted_or_t', "(RDL::Type::Type, ?%bool) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
 
 def Array.promote_tuple(trec)
@@ -83,7 +87,7 @@ def Array.promote_tuple(trec)
     trec
   end
 end
-RDL.type Array, 'self.promote_tuple', "(RDL::Type::Type) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:+, :+]
+RDL.type Array, 'self.promote_tuple', "(RDL::Type::Type) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
 
 def Array.promote_tuple!(trec)
@@ -95,7 +99,7 @@ def Array.promote_tuple!(trec)
     trec
   end
 end
-RDL.type Array, 'self.promote_tuple!', "(RDL::Type::Type) -> RDL::Type::Type", wrap: false, typecheck: :type_code, effect: [:~, :+]
+RDL.type Array, 'self.promote_tuple!', "(RDL::Type::Type) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
 RDL.type :Array, :<<, '(``any_or_t(trec)``) -> ``append_push_output(trec, targs, :<<)``'
 
@@ -110,14 +114,14 @@ def Array.append_push_output(trec, targs, meth)
     RDL::Globals.parser.scan_str "#T Array<t>"
   end
 end
-RDL.type Array, 'self.append_push_output', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Array, 'self.append_push_output', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
 RDL.type :Array, :[], '(Range<Integer>) -> ``output_type(trec, targs, :[], :promoted_array, "Array<t>")``'
 RDL.type :Array, :[], '(Integer or Float) -> ``output_type(trec, targs, :[], :promoted_param, "t")``'
 RDL.type :Array, :[], '(Integer, Integer) -> ``output_type(trec, targs, :[], :promoted_array, "Array<t>")``'
 RDL.type :Array, :&, '(Array<u>) -> ``output_type(trec, targs, :&, :promoted_array, "Array<t>")``'
 RDL.type :Array, :*, '(Integer) -> ``output_type(trec, targs, :*, :promoted_array, "Array<t>")``'
-RDL.type :Array, :*, '(String) -> String'
+RDL.type :Array, :*, '(String) -> ``output_type(trec, targs, :*, "String")``'
 RDL.type :Array, :+, '(``plus_input(targs)``) -> ``plus_output(trec, targs)``'
 
 
@@ -125,13 +129,15 @@ def Array.plus_input(targs)
   case targs[0]
   when RDL::Type::TupleType
     return targs[0]
-  when RDL::Type::GenericType
-    return RDL::Globals.parser.scan_str "#T Array<u>"
+  when RDL::Type::GenericType, RDL::Type::VarType
+    parse_string = defined?(Rails) && (targs[0].is_a?(RDL::Type::VarType) || (targs[0].is_a?(RDL::Type::GenericType) && targs[0].base.to_s == "ActiveRecord_Relation")) ? "Array<u> or ActiveRecord_Relation<u>" : "Array<u>"
+    x = RDL::Globals.parser.scan_str "#T #{parse_string}"
+    x
   else
     RDL::Globals.types[:array]
   end
 end
-RDL.type Array, 'self.plus_input', "(Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+RDL.type Array, 'self.plus_input', "(Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
 
 def Array.plus_output(trec, targs)
@@ -144,7 +150,7 @@ def Array.plus_output(trec, targs)
       promoted = RDL.type_cast(targs[0], "RDL::Type::TupleType", force: true).promote
       param_union = RDL::Type::UnionType.new(promoted.params[0], trec.params[0])
       return RDL::Type::GenericType.new(trec.base, param_union)
-    when RDL::Type::GenericType
+    when RDL::Type::GenericType, RDL::Type::VarType
       return RDL::Globals.parser.scan_str "#T Array<u or t>"
     else
       ## targs[0] should just be array here
@@ -157,14 +163,14 @@ def Array.plus_output(trec, targs)
     when RDL::Type::GenericType
       promoted = trec.promote
       param_union = RDL::Type::UnionType.new(promoted.params[0], RDL.type_cast(targs[0], "RDL::Type::GenericType", force: true).params[0] )
-      return RDL::Type::GenericType.new(RDL.type_cast(targs[0], "RDL::Type::GenericType", force: true).base, param_union)
+      return RDL::Type::GenericType.new(RDL::Globals.types[:array], param_union)
     else
       ## targs[0] should just be Array here
       return RDL::Globals.types[:array]
     end
   end
 end
-RDL.type Array, 'self.plus_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+RDL.type Array, 'self.plus_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
 RDL.type :Array, :-, '(Array<u>) -> ``output_type(trec, targs, :-, :promoted_array, "Array<t>")``'
 RDL.type :Array, :slice, '(Range<Integer>) -> ``output_type(trec, targs, :slice, :promoted_array, "Array<t>")``'
@@ -197,9 +203,11 @@ def Array.assign_output(trec, targs)
     RDL::Globals.parser.scan_str "#T t"
   end
 end
-RDL.type Array, 'self.assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Array, 'self.assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
 RDL.type :Array, :[]=, '(Integer, Integer, ``any_or_t(trec)``) -> t'
+RDL.type :Array, :[]=, '(Integer, Integer, ``any_or_t(trec)``) -> t'
+RDL.type :Array, :[]=, '(Integer, Integer, ``RDL::Type::VarType.new(:self)``) -> self'
 
 
 def Array.multi_assign_output(trec, targs)
@@ -217,7 +225,7 @@ def Array.multi_assign_output(trec, targs)
   end
 =end
 end
-RDL.type Array, 'self.multi_assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Array, 'self.multi_assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
 RDL.type :Array, :[]=, '(Range<Integer>, ``any_or_t(trec)``) -> ``multi_assign_output(trec, targs)``'
 RDL.type :Array, :assoc, '(t) -> Array<t>'
@@ -226,7 +234,6 @@ RDL.type :Array, :clear, '() -> self'
 RDL.type :Array, :map, '() {(``promoted_or_t(trec)``) -> u } -> Array<u>'
 RDL.type :Array, :map, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), promoted_or_t(trec))``'
 RDL.type :Array, :map!, '() {(``promoted_or_t(trec)``) -> u} -> ``map_output(trec)``'
-
 
 def Array.map_output(trec)
   case trec
@@ -238,7 +245,7 @@ def Array.map_output(trec)
     RDL::Globals.parser.scan_str "#T Array<u>"
   end
 end
-RDL.type Array, 'self.map_output', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Array, 'self.map_output', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false
   
 RDL.type :Array, :map!, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), promoted_or_t(trec))``'
 RDL.type :Array, :collect, '() {(``promoted_or_t(trec)``) -> u} -> Array<u>'
@@ -246,7 +253,7 @@ RDL.type :Array, :collect, '() -> ``RDL::Type::GenericType.new(RDL::Type::Nomina
 RDL.type :Array, :combination, '(Integer) { (self) -> %any } -> self'
 RDL.type :Array, :combination, '(Integer) -> Enumerator<self>'
 RDL.type :Array, :push, '(``any_or_t(trec, true)``) -> ``append_push_output(trec, targs, :push)``'
-RDL.type ::Array, :compact, '() -> ``RDL::Type::GenericType.new(RDL::Globals.types[:array], promoted_or_t(trec))``'
+RDL.type :Array, :compact, '() -> ``RDL::Type::GenericType.new(RDL::Globals.types[:array], promoted_or_t(trec))``'
 RDL.type :Array, :compact!, '() -> ``promote_tuple!(trec)``'
 RDL.type :Array, :concat, '(``promote_tuple(trec)``) -> ``promote_tuple!(trec)``' ## could be more precise here
 RDL.type :Array, :count, '() -> ``output_type(trec, targs, :count, "Integer")``'
@@ -254,9 +261,9 @@ RDL.type :Array, :count, '(``any_or_t(trec)``) -> Integer'
 RDL.type :Array, :count, '() { (``promoted_or_t(trec)``) -> %bool } -> Integer'
 RDL.type :Array, :cycle, '(?Integer) { (``promoted_or_t(trec)``) -> %any } -> %any'
 RDL.type :Array, :cycle, '(?Integer) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), promoted_or_t(trec))``'
-RDL.type :Array, :delete, '(u) -> ``promote_tuple!(trec); targs[0]``'
+RDL.type :Array, :delete, '(%any) -> ``promote_tuple!(trec); targs[0]``'
 RDL.type :Array, :delete, '(u) { () -> v } -> ``promote_tuple!(trec); RDL::Globals.parser.scan_str "#T u or v"``'
-RDL.type :Array, :delete_at, '(Integer) -> ``promote_tuple!(trec)``'
+RDL.type :Array, :delete_at, '(Integer) -> ``promote_tuple!(trec).params[0]``'
 RDL.type :Array, :delete_if, '() { (``promoted_or_t(trec)``) -> %bool } -> ``promote_tuple!(trec)``'
 RDL.type :Array, :delete_if, '() -> ``promote_tuple!(trec); RDL::Globals.parser.scan_str "#T Enumerator<t>"``'
 RDL.type :Array, :drop, '(Integer) -> ``promote_tuple!(trec)``'
@@ -264,12 +271,39 @@ RDL.type :Array, :drop_while, '() { (``promoted_or_t(trec)``) -> %bool } -> ``pr
 RDL.type :Array, :drop_while, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), promoted_or_t(trec))``'
 RDL.type :Array, :each, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), promoted_or_t(trec))``'
 RDL.type :Array, :each, '() { (``promoted_or_t(trec)``) -> %any } -> self'
+RDL.type :Array, :each, '() { (``each_arg(trec, 0)``, ``each_arg(trec, 1)``) -> %any } -> self' ## hack: if receiver is an array of arrays, then each block can take multiple args. not sure how to generalize this to arbitrary args, so for now I'm just getting it to work with two.
+RDL.type :Array, :each, '() { (``each_arg(trec, 0)``, ``each_arg(trec, 1)``, ``each_arg(trec, 2)``, ``each_arg(trec, 3)``, ``each_arg(trec, 4)``, ``each_arg(trec, 5)``) -> %any } -> self' ## hack: if receiver is an array of arrays, then each block can take multiple args. not sure how to generalize this to arbitrary args, so for now I'm just getting it to work with two.
+
+def Array.each_arg(trec, num)
+  case trec
+  when RDL::Type::TupleType
+    if trec.params.all? { |t| t.is_a?(RDL::Type::TupleType) }
+      first_params = RDL::Type::UnionType.new(*trec.params.map { |t| t.params[num] })
+      first_params = first_params.canonical if first_params.is_a?(RDL::Type::UnionType)
+      return first_params
+    else
+      return promoted_or_t(trec)
+    end
+  else
+    if trec.params[0].is_a?(RDL::Type::TupleType)
+      if trec.params[0].params.size > num
+        return trec.params[0].params[num]
+      else
+        return RDL::Globals.types[:bot]
+      end
+    else
+      return promoted_or_t(trec)
+    end
+  end
+end
+
+
 RDL.type :Array, :each_index, '() { (Integer) -> %any } -> self'
 RDL.type :Array, :each_index, '() -> Enumerator<Integer>'
-RDL.type :Array, :empty?, '() -> ``output_type(trec, targs, :empty?, "%bool")``', effect: [:+, :+]
+RDL.type :Array, :empty?, '() -> ``output_type(trec, targs, :empty?, "%bool")``'
 RDL.type :Array, :fetch, '(Integer) -> ``output_type(trec, targs, :[], :promoted_param, "t")``'
-RDL.type :Array, :fetch, '(Integer, u) -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("u"), output_type(trec, targs, :[], :promoted_param, "t"))``'
-RDL.type :Array, :fetch, '(Integer) { (Integer) -> u } -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("u"), output_type(trec, targs, :[], :promoted_param, "t"))``'
+RDL.type :Array, :fetch, '(Integer, %any) -> ``RDL::Type::UnionType.new(targs[1], output_type(trec, targs, :[], :promoted_param, "t"))``'
+RDL.type :Array, :fetch, '(Integer) { (Integer) -> u } -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("#T u"), output_type(trec, targs, :[], :promoted_param, "t"))``'
 RDL.type :Array, :fill, '(``any_or_t(trec)``) -> ``fill_output(trec, targs)``'
 
 
@@ -289,14 +323,14 @@ def Array.fill_output(trec, targs)
     RDL::Globals.parser.scan_str "#T Array<t>"
   end
 end
-RDL.type Array, 'self.fill_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Array, 'self.fill_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
 RDL.type :Array, :fill, '(``promoted_or_t(trec)``, Integer, ?Integer) -> ``promote_tuple!(trec)``' ## can be more precise for this one, but would require many cases
 RDL.type :Array, :fill, '(``promoted_or_t(trec)``, Range<Integer>) -> ``promote_tuple!(trec)``'
 RDL.type :Array, :fill, '() { (Integer) -> ``promoted_or_t(trec)`` } -> ``promote_tuple!(trec)``'
 RDL.type :Array, :fill, '(Integer, ?Integer) { (Integer) -> ``promoted_or_t(trec)`` } -> ``promote_tuple!(trec)``'
 RDL.type :Array, :fill, '() { (Range<Integer>) -> ``promoted_or_t(trec)`` } -> ``promote_tuple!(trec)``'
-RDL.type :Array, :flatten, '() -> Array<%any>' # Can't give a more precise RDL.type
+RDL.type :Array, :flatten, '(?Integer) -> Array<%any>' # Can't give a more precise RDL.type
 RDL.type :Array, :index, '(u) -> ``t = output_type(trec, targs, :index, "Integer", use_sing_val: false, nil_false_default: true)``'
 RDL.type :Array, :index, '() { (``promoted_or_t(trec)``) -> %bool } -> Integer'
 RDL.type :Array, :index, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), promoted_or_t(trec))``'
@@ -323,7 +357,7 @@ def Array.include_output(trec, targs)
     RDL::Globals.types[:bool]
   end
 end
-RDL.type Array, 'self.include_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:+, :+]
+RDL.type Array, 'self.include_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
 
 RDL.type :Array, :insert, '(Integer, ``promoted_or_t(trec)``) -> ``promote_tuple!(trec)``'
@@ -332,7 +366,7 @@ RDL.type :Array, :join, '(?String) -> String'
 RDL.type :Array, :keep_if, '() { (``promoted_or_t(trec)``) -> %bool } -> ``promote_tuple!(trec)``'
 RDL.type :Array, :last, '() -> ``output_type(trec, targs, :last, :promoted_param, "t")``'
 RDL.type :Array, :last, '(Integer) -> ``output_type(trec, targs, :last, :promoted_array, "Array<t>")``'
-RDL.type :Array, :member?, '(u) -> ``output_type(trec, targs, :member?, "%bool", use_sing_val: false, nil_false_default: true)``'
+RDL.type :Array, :member?, '(%any) -> ``output_type(trec, targs, :member?, "%bool", use_sing_val: false, nil_false_default: true)``'
 RDL.type :Array, :length, '() -> ``output_type(trec, targs, :length, "Integer")``'
 RDL.type :Array, :permutation, '(?Integer) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), promoted_or_t(trec))``'
 RDL.type :Array, :permuation, '(?Integer) { (``promote_tuple(trec)``) -> %any } -> ``promote_tuple(trec)``'
@@ -341,6 +375,7 @@ RDL.type :Array, :pop, '() -> ``promote_tuple(trec); RDL::Globals.parser.scan_st
 RDL.type :Array, :product, '(*Array<u>) -> ``RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::UnionType.new(promoted_or_t(trec), RDL::Globals.parser.scan_str("#T u"))))``'
 RDL.type :Array, :rassoc, '(u) -> ``promoted_or_t(trec)``'
 RDL.type :Array, :reject, '() { (``promoted_or_t(trec)``) -> %bool } -> ``promote_tuple(trec)``'
+RDL.type :Array, :reject, '() { () -> %bool } -> ``promote_tuple(trec)``'
 RDL.type :Array, :reject, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), promoted_or_t(trec))``'
 RDL.type :Array, :reject!, '() { (``promoted_or_t(trec)``) -> %bool } -> ``promote_tuple!(trec)``'
 RDL.type :Array, :reject!, '() -> Enumerator<t>'
@@ -372,7 +407,7 @@ def Array.reverse_output(trec)
     RDL::Globals.parser.scan_str "#T Array<t>"
   end
 end
-RDL.type Array, 'self.reverse_output', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false, effect: [:~, :+]
+RDL.type Array, 'self.reverse_output', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
 RDL.type :Array, :reverse_each, '() { (``promoted_or_t(trec)``) -> %any } -> self'
 RDL.type :Array, :reverse_each, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), promoted_or_t(trec))``'
@@ -383,6 +418,8 @@ RDL.type :Array, :rotate, '(?Integer) -> ``output_type(trec, targs, :rotate, :pr
 RDL.type :Array, :rotate!, '(?Integer) -> ``promote_tuple!(trec)``'
 RDL.type :Array, :sample, '() -> ``promoted_or_t(trec)``'
 RDL.type :Array, :sample, '(Integer) -> ``promote_tuple(trec)``'
+RDL.type :Array, :sample, '({ random: [ rand: () -> Float ] }) -> ``promote_tuple(trec)``'
+RDL.type :Array, :sample, '(Integer, { random: [ rand: () -> Float ] }) -> ``promote_tuple(trec)``'
 RDL.type :Array, :select, '() { (``promoted_or_t(trec)``) -> %bool } -> ``promote_tuple(trec)``'
 RDL.type :Array, :select, '() -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(Enumerator), promoted_or_t(trec))``'
 RDL.type :Array, :select!, '() { (``promoted_or_t(trec)``) -> %bool } -> ``promote_tuple!(trec)``'
@@ -390,7 +427,9 @@ RDL.type :Array, :select!, '() -> ``RDL::Type::GenericType.new(RDL::Type::Nomina
 RDL.type :Array, :shift, '() -> ``promote_tuple!(trec); RDL::Globals.parser.scan_str "#T t"``'
 RDL.type :Array, :shift, '(Integer) -> ``promote_tuple!(trec)``'
 RDL.type :Array, :shuffle, '() -> ``promote_tuple(trec)``'
+RDL.type :Array, :shuffle, '({ random: [ rand: () -> Float ] }) -> ``promote_tuple(trec)``'
 RDL.type :Array, :shuffle!, '() -> ``promote_tuple!(trec)``'
+RDL.type :Array, :shuffle!, '({ random: [ rand: () -> Float ] }) -> ``promote_tuple!(trec)``'
 RDL.rdl_alias :Array, :size, :length
 RDL.rdl_alias :Array, :slice, :[]
 RDL.type :Array, :slice!, '(Range<Integer>) -> ``promote_tuple!(trec)``'
@@ -410,11 +449,13 @@ RDL.type :Array, :to_ary, '() -> self'
 RDL.rdl_alias :Array, :to_s, :inspect
 RDL.type :Array, :transpose, '() -> ``promote_tuple(trec)``'
 RDL.type :Array, :uniq, '() -> ``promote_tuple(trec)``'
+RDL.type :Array, :uniq, '() { (self) -> %any } -> ``promote_tuple(trec)``'
 RDL.type :Array, :uniq!, '() -> ``promote_tuple!(trec)``'
+RDL.type :Array, :uniq!, '() { (self) -> %any } -> ``promote_tuple!(trec)``'
 RDL.type :Array, :unshift, '(``any_or_t(trec, true)``) -> ``promote_tuple!(trec)``'
 RDL.type :Array, :values_at, '(*Integer) -> ``output_type(trec, targs, :values_at, :promoted_array, "Array<t>")``'
 RDL.type :Array, :values_at, '(Range<Integer>) -> ``promote_tuple(trec)``'
-RDL.type :Array, :zip, '(*Array<u>) -> ``RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::UnionType.new(promoted_or_t(trec), RDL::Globals.parser.scan_str("#T u"))))``'
+#RDL.type :Array, :zip, '(*Array<z>) -> ``RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::UnionType.new(promoted_or_t(trec), RDL::Globals.parser.scan_str("#T z"))))``'
 RDL.type :Array, :|, '(*Array<u>) -> ``RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Type::UnionType.new(promoted_or_t(trec), RDL::Globals.parser.scan_str("#T u")))``'
 
 
@@ -423,31 +464,31 @@ RDL.type :Array, :|, '(*Array<u>) -> ``RDL::Type::GenericType.new(RDL::Globals.t
 
 ######### Non-dependet types below #########
 
-RDL.type :Array, :<<, '(t) -> Array<t>', effect: [:-, :+]
-RDL.type :Array, :[], '(Range<Integer>) -> Array<t>', effect: [:+, :+]
-RDL.type :Array, :[], '(Integer or Float) -> t', effect: [:+, :+]
-RDL.type :Array, :[], '(Integer, Integer) -> Array<t>', effect: [:+, :+]
+RDL.type :Array, :<<, '(t) -> Array<t>'
+RDL.type :Array, :[], '(Range<Integer>) -> Array<t>'
+RDL.type :Array, :[], '(Integer or Float) -> t'
+RDL.type :Array, :[], '(Integer, Integer) -> Array<t>'
 RDL.type :Array, :&, '(Array<u>) -> Array<t>'
 RDL.type :Array, :*, '(Integer) -> Array<t>'
 RDL.type :Array, :*, '(String) -> String'
-RDL.type :Array, :+, '(Enumerable<u>) -> Array<u or t>', effect: [:+, :+]
-RDL.type :Array, :+, '(Array<u>) -> Array<u or t>', effect: [:+, :+]
+RDL.type :Array, :+, '(Enumerable<u>) -> Array<u or t>'
+RDL.type :Array, :+, '(Array<u>) -> Array<u or t>'
 RDL.type :Array, :-, '(Array<u>) -> Array<u or t>'
 RDL.type :Array, :slice, '(Range<Integer>) -> Array<t>'
 RDL.type :Array, :slice, '(Integer) -> t'
 RDL.type :Array, :slice, '(Integer, Integer) -> Array<t>'
-RDL.type :Array, :[]=, '(Integer, t) -> t', effect: [:-, :+] 
-RDL.type :Array, :[]=, '(Integer, Integer, t) -> t', effect: [:-, :+]
+RDL.type :Array, :[]=, '(Integer, t) -> t'
+RDL.type :Array, :[]=, '(Integer, Integer, t) -> t'
 # RDL.type :Array, :[]=, '(Integer, Integer, Array<t>) -> Array<t>'
 # RDL.type :Array, :[]=, '(Range, Array<t>) -> Array<t>'
-RDL.type :Array, :[]=, '(Range<Integer>, t) -> t', effect: [:-, :+]
+RDL.type :Array, :[]=, '(Range<Integer>, t) -> t'
 RDL.type :Array, :assoc, '(t) -> Array<t>'
 RDL.type :Array, :at, '(Integer) -> t'
 RDL.type :Array, :clear, '() -> Array<t>'
-RDL.type :Array, :map, '() {(t) -> u} -> Array<u>', effect: [:blockdep, :blockdep]
-RDL.type :Array, :map, '() -> Enumerator<t>', effect: [:blockdep, :blockdep]
-RDL.type :Array, :map!, '() {(t) -> u} -> Array<u>', effect: [:-, :blockdep]
-RDL.type :Array, :map!, '() -> Enumerator<t>', effect: [:-, :blockdep]
+RDL.type :Array, :map, '() {(t) -> u} -> Array<u>'
+RDL.type :Array, :map, '() -> Enumerator<t>'
+RDL.type :Array, :map!, '() {(t) -> u} -> Array<u>'
+RDL.type :Array, :map!, '() -> Enumerator<t>'
 RDL.type :Array, :collect, '() { (t) -> u } -> Array<u>'
 RDL.type :Array, :collect, '() -> Enumerator<t>'
 RDL.type :Array, :combination, '(Integer) { (Array<t>) -> %any } -> Array<t>'
@@ -469,8 +510,8 @@ RDL.type :Array, :delete_if, '() -> Enumerator<t>'
 RDL.type :Array, :drop, '(Integer) -> Array<t>'
 RDL.type :Array, :drop_while, '() { (t) -> %bool } -> Array<t>'
 RDL.type :Array, :drop_while, '() -> Enumerator<t>'
-RDL.type :Array, :each, '() -> Enumerator<t>', effect: [:-, :blockdep]
-RDL.type :Array, :each, '() { (t) -> %any } -> Array<t>', effect: [:-, :blockdep]
+RDL.type :Array, :each, '() -> Enumerator<t>'
+RDL.type :Array, :each, '() { (t) -> %any } -> Array<t>'
 RDL.type :Array, :each_index, '() { (Integer) -> %any } -> Array<t>'
 RDL.type :Array, :each_index, '() -> Enumerator<t>'
 RDL.type :Array, :empty?, '() -> %bool'
@@ -489,26 +530,28 @@ RDL.type :Array, :index, '() { (t) -> %bool } -> Integer'
 RDL.type :Array, :index, '() -> Enumerator<t>'
 RDL.type :Array, :first, '() -> t'
 RDL.type :Array, :first, '(Integer) -> Array<t>'
-RDL.type :Array, :include?, '(u) -> %bool', effect: [:+, :+]
+RDL.type :Array, :include?, '(u) -> %bool'
 RDL.type :Array, :initialize, '() -> self'
 RDL.type :Array, :initialize, '(Integer) -> self'
 RDL.type :Array, :initialize, '(Integer, t) -> self<t>'
 RDL.type :Array, :initialize, '(Array<k>) -> self<k>'
+RDL.type :Array, :initialize, '(Integer) { (?Integer) -> t } -> self<t>'
 RDL.type :Array, :insert, '(Integer, *t) -> Array<t>'
 RDL.type :Array, :inspect, '() -> String'
 RDL.type :Array, :join, '(?String) -> String'
 RDL.type :Array, :keep_if, '() { (t) -> %bool } -> Array<t>'
 RDL.type :Array, :last, '() -> t'
 RDL.type :Array, :last, '(Integer) -> Array<t>'
-RDL.type :Array, :member?, '(u) -> %bool', effect: [:+, :+]
-RDL.type :Array, :length, '() -> Integer', effect: [:+, :+]
+RDL.type :Array, :member?, '(u) -> %bool'
+RDL.type :Array, :length, '() -> Integer'
+RDL.type :Array, :pack, "(String) -> String"
 RDL.type :Array, :permutation, '(?Integer) -> Enumerator<t>'
 RDL.type :Array, :permutation, '(?Integer) { (Array<t>) -> %any } -> Array<t>'
 RDL.type :Array, :pop, '(Integer) -> Array<t>'
 RDL.type :Array, :pop, '() -> t'
 RDL.type :Array, :product, '(*Array<u>) -> Array<Array<t or u>>'
 RDL.type :Array, :rassoc, '(u) -> t'
-RDL.type :Array, :reject, '() { (t) -> %bool } -> Array<t>', effect: [:+, :blockdep]
+RDL.type :Array, :reject, '() { (t) -> %bool } -> Array<t>'
 RDL.type :Array, :reject, '() -> Enumerator<t>'
 RDL.type :Array, :reject!, '() { (t) -> %bool } -> Array<t>'
 RDL.type :Array, :reject!, '() -> Enumerator<t>'
@@ -516,7 +559,7 @@ RDL.type :Array, :repeated_combination, '(Integer) { (Array<t>) -> %any } -> Arr
 RDL.type :Array, :repeated_combination, '(Integer) -> Enumerator<t>'
 RDL.type :Array, :repeated_permutation, '(Integer) { (Array<t>) -> %any } -> Array<t>'
 RDL.type :Array, :repeated_permutation, '(Integer) -> Enumerator<t>'
-RDL.type :Array, :reverse, '() -> Array<t>', effect: [:+, :+]
+RDL.type :Array, :reverse, '() -> Array<t>'
 RDL.type :Array, :reverse!, '() -> Array<t>'
 RDL.type :Array, :reverse_each, '() { (t) -> %any } -> Array<t>'
 RDL.type :Array, :reverse_each, '() -> Enumerator<t>'

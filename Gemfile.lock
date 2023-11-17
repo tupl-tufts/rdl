@@ -1,0 +1,47 @@
+PATH
+  remote: .
+  specs:
+    rdl (2.2.0)
+      colorize (~> 0.8, >= 0.8.1)
+      method_source
+      parlour (~> 2.1.0, >= 2.1.0)
+      parser (~> 3.2, >= 3.2.2.4)
+      sql-parser (~> 0.0.2)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    ast (2.4.2)
+    coderay (1.1.3)
+    colorize (0.8.1)
+    commander (4.6.0)
+      highline (~> 2.0.0)
+    highline (2.0.3)
+    method_source (1.0.0)
+    minitest (5.20.0)
+    parlour (2.1.0)
+      commander (~> 4.5)
+      parser
+      rainbow (~> 3.0)
+      sorbet-runtime (>= 0.5)
+    parser (3.2.2.4)
+      ast (~> 2.4.1)
+      racc
+    racc (1.7.3)
+    rainbow (3.1.1)
+    rake (13.0.6)
+    sorbet-runtime (0.5.11132)
+    sql-parser (0.0.2)
+      racc
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  coderay (~> 1.1, >= 1.1.2)
+  minitest (~> 5.10)
+  rake (~> 13.0.1)
+  rdl!
+
+BUNDLED WITH
+   2.3.22
