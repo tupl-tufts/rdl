@@ -41,6 +41,8 @@ module RDL::Type
       return self
     end
 
+    # Path Sensitivity: canonicalizing types should be done in an empty path,
+    #                   so here pi=[]
     def canonicalize!
       return if @canonicalized
       @types.map! { |t| t.canonical }
@@ -49,8 +51,8 @@ module RDL::Type
         for j in (i+1)..(@types.length-1)
           next if (@types[j].nil?) || (@types[i].nil?) || @types[i].is_a?(ChoiceType) || @types[j].is_a?(ChoiceType) || @types[i].is_a?(VarType) || @types[j].is_a?(VarType)#(@types[i].is_a?(VarType) && (@types[i].to_infer || @types[j].is_a?(VarType))) || (@types[j].is_a?(VarType) && @types[j].to_infer)## now that we're doing inference, don't want to just treat VarType as a subtype of others in Union
           #next if (@types[j].nil?) || (@types[i].nil?) || (@types[i].is_a?(VarType)) || (@types[j].is_a?(VarType)) ## now that we're doing inference, don't want to just treat VarType as a subtype of others in Union
-          (@types[i] = nil; break) if Type.leq(@types[i], @types[j], {}, true, [])
-          (@types[j] = nil) if Type.leq(@types[j], @types[i], {}, true, [])
+          (@types[i] = nil; break) if Type.leq(@types[i], @types[j], [], {}, true, [])
+          (@types[j] = nil) if Type.leq(@types[j], @types[i], [], {}, true, [])
         end
       end
       @types.delete(nil) # eliminate any "deleted" elements

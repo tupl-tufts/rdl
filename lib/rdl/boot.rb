@@ -168,6 +168,8 @@ require 'rdl/types/choice.rb' ## depends on var.rb
 require	'rdl/types/vararg.rb'
 require 'rdl/types/wild_query.rb'
 require	'rdl/types/string.rb'
+require 'rdl/types/path.rb'
+require 'rdl/types/multi.rb'
 
 require 'rdl/contracts/contract.rb'
 require 'rdl/contracts/and.rb'

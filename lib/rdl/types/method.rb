@@ -51,6 +51,9 @@ module RDL::Type
       end
       @block = block
 
+      if !ret.is_a? Type
+        puts "we have a winner"
+      end
       raise "Attempt to create method type with non-type ret #{ret} of class #{ret.class}" unless ret.is_a? Type
       @ret = ret
 

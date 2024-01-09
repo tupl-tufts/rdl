@@ -56,6 +56,13 @@ module RDL::Type
       return (other.instance_of? PreciseStringType) && (other.vals == @vals)
     end
 
+    def match(other, type_var_table = {})
+      other = other.canonical
+      other = other.type if other.instance_of? AnnotatedArgType
+      return true if other.instance_of? WildQuery
+      return self == other
+    end
+
     def member?(obj, *args)
       return false unless obj.is_a?(String)
       raise "Checking membership of PreciseStringType not currently supported for interpolated strings." unless @vals.all? { |v| v.is_a?(String) }
@@ -69,7 +76,11 @@ module RDL::Type
     end
 
     def check_bounds(no_promote=false)
-      return (@lbounds.all? { |lbound| lbound.<=(self, no_promote) }) && (@ubounds.all? { |ubound| self.<=(ubound, no_promote) } )
+      # Path Sensitivity: when dealing with precise string types, the
+      #                   comparisons with bounds should occur in the empty
+      #                   path.
+      #                   Store path along with bounds.
+      return (@lbounds.all? { |lbound| RDL::Type::Type.leq(lbound, self, [], no_promote) }) && (@ubounds.all? { |ubound| RDL::Type::Type.leq(self, ubound, [], no_promote) } )
     end
 
     def cant_promote!

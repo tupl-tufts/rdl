@@ -1107,7 +1107,13 @@ module RDL
             if nt.instance_of? RDL::Type::GenericType # require o to be instantiated
               t_o = RDL::Util.rdl_type(o)
               raise RDL::Type::TypeError, "Expecting element of type #{nt.to_s}, but got uninstantiated object #{o.inspect}" unless t_o
-              raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got type #{t_o.to_s}" unless t_o <= nt
+              # Path Sensitivity: instantiation is a type-*checking* feature. 
+              #                   Unrelated to path sensitive type *inference*
+              #                   because it is not called naturally anywhere
+              #                   in RDL itself. We cannot expect users to
+              #                   annotate their own paths, so we leave this
+              #                   `leq` done in the empty path.
+              raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got type #{t_o.to_s}" unless RDL::Type::Type.leq(t_o, nt, [])
             else
               raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got #{o.inspect}" unless nt.member? o
             end

@@ -73,7 +73,7 @@ module RDL::Type
     # [+ other +] is a Type
     # [+ inst +] is a Hash<Symbol, Type> representing an instantiation
     # [+ ileft +] is a %bool
-    # [+ deferred_constraints +] is an Array<[Type, Type]>. When provided, instead of applying
+    # [+ deferred_constraints +] is an Array<[Type, Type, Array<Path>]>. When provided, instead of applying
     # constraints to VarTypes, we simply defer them by putting them in this array.
     # [+ no_constraint +] is a %bool indicating whether or not we should add to tuple/FHT constraints
     # [+ ast +] is a parser expression, used for printing error messages when VarType constraints are violated.
@@ -85,7 +85,9 @@ module RDL::Type
     # if inst is nil, returns self <= other
     # if inst is non-nil and ileft, returns inst(self) <= other, possibly mutating inst to make this true
     # if inst is non-nil and !ileft, returns self <= inst(other), again possibly mutating inst
-    def self.leq(left, right, inst=nil, ileft=true, deferred_constraints=nil, no_constraint: false, ast: nil, propagate: false, new_cons: {}, removed_choices: {})
+    def self.leq(left, right, pi, inst=nil, ileft=true, deferred_constraints=nil, no_constraint: false, ast: nil, propagate: false, new_cons: {}, removed_choices: {})
+      raise RuntimeError, "leq :: pi is not an array, it is #{pi.inspect}" if !pi.is_a? Array
+
       left = inst[left.name] if inst && ileft && left.is_a?(VarType) && !left.to_infer && inst[left.name]
       right = inst[right.name] if inst && !ileft && right.is_a?(VarType) && !right.to_infer && inst[right.name]
       left = left.type if left.is_a?(DependentArgType) || left.is_a?(AnnotatedArgType)
@@ -115,14 +117,14 @@ module RDL::Type
           left.add_ubound(right, ast, new_cons, propagate: propagate) unless (left.ubounds.any? { |t, loc| t == right || t.hash == right.hash } || left.equal?(right)) ## Added this last one for ChoiceTypes, because the ChoiceType can change but the hash does not.
           right.add_lbound(left, ast, new_cons, propagate: propagate) unless (right.lbounds.any? { |t, loc| t == left || t.hash == left.hash } || right.equal?(left))
         else
-          deferred_constraints << [left, right]
+          deferred_constraints << [left, right, pi]
         end
         return true
       elsif left.is_a?(VarType) && left.to_infer
         if deferred_constraints.nil?
           left.add_ubound(right, ast, new_cons, propagate: propagate) unless (left.ubounds.any? { |t, loc| t == right || t.hash == right.hash } || left.equal?(right))
         else
-          deferred_constraints << [left, right]
+          deferred_constraints << [left, right, pi]
         end
         return true
       elsif right.is_a?(VarType) && right.to_infer
@@ -134,7 +136,7 @@ module RDL::Type
           right.add_lbound(left, ast, new_cons, propagate: propagate) unless (right.lbounds.any? { |t, loc| t == left || t.hash == left.hash } || right.equal?(left))
         else
           RDL::Logging.log :typecheck, :trace, 'deferred_constraints:'
-          deferred_constraints << [left, right]
+          deferred_constraints << [left, right, pi]
           deferred_constraints.each { |k, v| if v.is_a?(Array) then v.each { |v| RDL::Logging.log(:typecheck, :trace, "#{k} <= #{v[1] || v}") } else RDL::Logging.log(:typecheck, :trace, "#{k} <= #{v}") end }
         end
         return true
@@ -185,7 +187,7 @@ module RDL::Type
         lb_var_choices = Hash.new { |h, k| h[k] = {} } # same as above, but values are lower bounds on keys.
         main_ct.choices.each { |num, t|
           new_dcs = []
-          check = lct ? Type.leq(t, right, inst, ileft, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) : Type.leq(left, t, inst, ileft, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+          check = lct ? Type.leq(t, right, pi, inst, ileft, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) : Type.leq(left, t, pi, inst, ileft, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
           if check
             new_dcs.each { |t1, t2|
               ub_var_choices[t1][num] = RDL::Type::UnionType.new(ub_var_choices[t1][num], t2).canonical if t1.is_a?(VarType)
@@ -204,10 +206,10 @@ module RDL::Type
             all_cts = []
             ub_var_choices.each { |vartype, choice_hash|
               if choice_hash.values.uniq.size == 1
-                RDL::Type::Type.leq(vartype, choice_hash.values[0], nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+                RDL::Type::Type.leq(vartype, choice_hash.values[0], pi, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
               else
                 t = RDL::Type::ChoiceType.new(choice_hash)
-                RDL::Type::Type.leq(vartype, t, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+                RDL::Type::Type.leq(vartype, t, pi, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                 all_cts << t
               end
             }
@@ -215,10 +217,10 @@ module RDL::Type
             lb_var_choices.each { |vartype, choice_hash|
               RDL::Logging.log :typecheck, :trace, vartype.to_s
               if choice_hash.values.uniq.size == 1
-                RDL::Type::Type.leq(choice_hash.values[0], vartype, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+                RDL::Type::Type.leq(choice_hash.values[0], vartype, pi, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
               else
                 t = RDL::Type::ChoiceType.new(choice_hash)
-                RDL::Type::Type.leq(t, vartype, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+                RDL::Type::Type.leq(t, vartype, pi, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                 all_cts << t
               end
             }
@@ -229,13 +231,13 @@ module RDL::Type
       end
 
       # union
-      return left.types.all? { |t| leq(t, right, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) } if left.is_a?(UnionType)
+      return left.types.all? { |t| leq(t, right, pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) } if left.is_a?(UnionType)
       if right.instance_of?(UnionType)
         right.types.each { |t|
           # return true at first match, updating inst accordingly to first succeessful match
           new_inst = inst.dup unless inst.nil?
           #new_rc = {}
-          if leq(left, t, new_inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)#new_rc)
+          if leq(left, t, pi, new_inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)#new_rc)
             inst.update(new_inst) unless inst.nil?
             return true
           else
@@ -247,8 +249,8 @@ module RDL::Type
       end
 
       # intersection
-      return right.types.all? { |t| leq(left, t, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) } if right.instance_of?(IntersectionType)
-      return left.types.any? { |t| leq(t, right, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) } if left.is_a?(IntersectionType)
+      return right.types.all? { |t| leq(left, t, pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) } if right.instance_of?(IntersectionType)
+      return left.types.any? { |t| leq(t, right, pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) } if left.is_a?(IntersectionType)
 
 
       # nominal
@@ -323,7 +325,7 @@ module RDL::Type
                 tlm = RDL::Typecheck.compute_types(tlm, lklass, left, t.args)
               end
               new_dcs = []
-              if leq(tlm.instantiate(base_inst), t, nil, true, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+              if leq(tlm.instantiate(base_inst), t, pi, nil, true, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                 ret = true
                 if types.size > 1 && !new_dcs.empty? ## method has intersection type, and vartype constraints were created
                   new_dcs.each { |t1, t2|
@@ -331,7 +333,7 @@ module RDL::Type
                     lb_var_choices[t2][choice_num] = RDL::Type::UnionType.new(lb_var_choices[t2][choice_num], t1).canonical if t2.is_a?(VarType)
                   }
                 else
-                  new_dcs.each { |t1, t2| RDL::Type::Type.leq(t1, t2, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) }
+                  new_dcs.each { |t1, t2| RDL::Type::Type.leq(t1, t2, pi, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) }
                 end
               end
             }
@@ -340,20 +342,20 @@ module RDL::Type
               all_cts = []
               ub_var_choices.each { |vartype, choice_hash|
                 if choice_hash.values.uniq.size == 1
-                  RDL::Type::Type.leq(vartype, choice_hash.values[0], nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+                  RDL::Type::Type.leq(vartype, choice_hash.values[0], pi, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                 else
                   t = RDL::Type::ChoiceType.new(choice_hash)
-                  RDL::Type::Type.leq(vartype, t, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+                  RDL::Type::Type.leq(vartype, t, pi, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                   all_cts << t
                 end
               }
 
               lb_var_choices.each { |vartype, choice_hash|
                 if choice_hash.values.uniq.size == 1
-                  RDL::Type::Type.leq(choice_hash.values[0], vartype, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+                  RDL::Type::Type.leq(choice_hash.values[0], vartype, pi, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                 else
                   t = RDL::Type::ChoiceType.new(choice_hash)
-                  RDL::Type::Type.leq(t, vartype, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+                  RDL::Type::Type.leq(t, vartype, pi, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                   all_cts << t
                 end
               }
@@ -369,7 +371,7 @@ module RDL::Type
       # singleton
       return left.val == right.val if left.is_a?(SingletonType) && right.is_a?(SingletonType)
       return true if left.is_a?(SingletonType) && left.val.nil? # right cannot be a SingletonType due to above conditional
-      return leq(left.nominal, right, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) if left.is_a?(SingletonType) # fall through case---use nominal type for reasoning
+      return leq(left.nominal, right, pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) if left.is_a?(SingletonType) # fall through case---use nominal type for reasoning
 
       # generic
       if left.is_a?(GenericType) && right.is_a?(GenericType)
@@ -384,11 +386,11 @@ module RDL::Type
         return variance.zip(left.params, right.params).all? { |v, tl, tr|
           case v
           when :+
-            leq(tl, tr, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+            leq(tl, tr, pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
           when :-
-            leq(tr, tl, inst, !ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+            leq(tr, tl, pi, inst, !ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
           when :~
-            leq(tl, tr, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) && leq(tr, tl, inst, !ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+            leq(tl, tr, pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) && leq(tr, tl, pi, inst, !ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
           else
             raise RuntimeError, "Unexpected variance #{v}" # shouldn't happen
           end
@@ -430,7 +432,7 @@ module RDL::Type
               blk_typ = tlm.block.is_a?(RDL::Type::MethodType) ? tlm.block.args + [tlm.block.ret] : [tlm.block]
               tlm = RDL::Typecheck.compute_types(tlm, klass, left, t.args) if (tlm.args + blk_typ + [tlm.ret]).any? { |t| t.is_a? ComputedType }
               new_dcs = []
-              if leq(tlm.instantiate(base_inst.merge({ self: left})), t, nil, true, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+              if leq(tlm.instantiate(base_inst.merge({ self: left})), t, pi, nil, true, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                 ret = true
                 if types.size > 1 && !new_dcs.empty? ## method has intersection type, and vartype constraints were
                   new_dcs.each { |t1, t2|
@@ -438,7 +440,7 @@ module RDL::Type
                     lb_var_choices[t2][choice_num] = RDL::Type::UnionType.new(lb_var_choices[t2][choice_num], t1).canonical if t2.is_a?(VarType)
                   }
                 else
-                  new_dcs.each { |t1, t2| RDL::Type::Type.leq(t1, t2, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) }
+                  new_dcs.each { |t1, t2| RDL::Type::Type.leq(t1, t2, pi, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) }
                 end
               end
             }
@@ -446,20 +448,20 @@ module RDL::Type
               all_cts = []
               ub_var_choices.each { |vartype, choice_hash|
                 if choice_hash.values.uniq.size == 1
-                  RDL::Type::Type.leq(vartype, choice_hash.values[0], nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+                  RDL::Type::Type.leq(vartype, choice_hash.values[0], pi, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                 else
                   t = RDL::Type::ChoiceType.new(choice_hash)
-                  RDL::Type::Type.leq(vartype, t, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+                  RDL::Type::Type.leq(vartype, t, pi, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                   all_cts << t
                 end
               }
 
               lb_var_choices.each { |vartype, choice_hash|
                 if choice_hash.values.uniq.size == 1
-                  RDL::Type::Type.leq(choice_hash.values[0], vartype, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+                  RDL::Type::Type.leq(choice_hash.values[0], vartype, pi, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                 else
                   t = RDL::Type::ChoiceType.new(choice_hash)
-                  RDL::Type::Type.leq(t, vartype, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+                  RDL::Type::Type.leq(t, vartype, pi, nil, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
                   all_cts << t
                 end
               }
@@ -512,6 +514,7 @@ module RDL::Type
           leq(
             tr.instantiate(inst),
             tl.instantiate(inst),
+            pi,
             inst,
             !ileft,
             deferred_constraints,
@@ -522,14 +525,14 @@ module RDL::Type
             removed_choices: removed_choices
           )
         } # contravariance
-        #return false unless left.args.zip(right.args).all? { |tl, tr| leq(tr.instantiate(inst), tl.instantiate(inst), inst, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons) } # contravariance
+        #return false unless left.args.zip(right.args).all? { |tl, tr| leq(tr.instantiate(inst), tl.instantiate(inst), pi, inst, false, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons) } # contravariance
 
         if left.block && right.block
-          return false unless leq(right.block.instantiate(inst), left.block.instantiate(inst), inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) # contravariance
+          return false unless leq(right.block.instantiate(inst), left.block.instantiate(inst), pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) # contravariance
         elsif (left.block && !left.block.is_a?(VarType) && !right.block) || (right.block && !right.block.is_a?(VarType) && !left.block)
           return false # one has a block and the other doesn't
         end
-        return leq(left.ret.instantiate(inst), right.ret.instantiate(inst), inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) # covariance
+        return leq(left.ret.instantiate(inst), right.ret.instantiate(inst), pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) # covariance
 
       end
       return true if left.is_a?(MethodType) && right.is_a?(NominalType) && right.name == 'Proc'
@@ -549,7 +552,7 @@ module RDL::Type
         # allow width subtyping - methods of right have to be in left, but not vice-versa
         return right.methods.all? { |m, t|
           # in recursive call set inst to nil since those method types have implicit quantifier
-          left.methods.has_key?(m) && leq(left.methods[m], t, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+          left.methods.has_key?(m) && leq(left.methods[m], t, pi, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
         }
       end
       # Note we do not allow a structural type to be a subtype of a nominal type or generic type,
@@ -559,7 +562,7 @@ module RDL::Type
       if left.is_a?(TupleType) && right.is_a?(TupleType)
         # Tuples are immutable, so covariant subtyping allowed
         return false unless left.params.length == right.params.length
-        return false unless left.params.zip(right.params).all? { |lt, rt| leq(lt, rt, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) }
+        return false unless left.params.zip(right.params).all? { |lt, rt| leq(lt, rt, pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) }
         # subyping check passed
         left.ubounds << right unless no_constraint
         right.lbounds << left unless no_constraint
@@ -568,7 +571,7 @@ module RDL::Type
       if left.is_a?(TupleType) && right.is_a?(GenericType) && right.base == RDL::Globals.types[:array]
         # TODO !ileft and right carries a free variable
         return false unless left.promote!
-        return leq(left, right, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) # recheck for promoted type
+        return leq(left, right, pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) # recheck for promoted type
       end
 
       # finite hash
@@ -584,11 +587,11 @@ module RDL::Type
             tl = tl.type if tl.is_a? OptionalType
             tr = tr.type if tr.is_a? OptionalType
             puts "leq: k=#{k} tl=#{tl} tr=#{tr}"
-            return false unless leq(tl, tr, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+            return false unless leq(tl, tr, pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
             puts "leq: we didn't return"
             right_elts.delete k
           else
-            return false unless right.rest && leq(tl, right.rest, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+            return false unless right.rest && leq(tl, right.rest, pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
           end
         }
         right_elts.each_pair { |k, t|
@@ -596,7 +599,7 @@ module RDL::Type
         }
         unless left.rest.nil?
           # If left has optional stuff, right needs to accept it
-          return false unless !(right.rest.nil?) && leq(left.rest, right.rest, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+          return false unless !(right.rest.nil?) && leq(left.rest, right.rest, pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
         end
         left.ubounds << right unless no_constraint
         right.lbounds << left unless no_constraint
@@ -605,7 +608,7 @@ module RDL::Type
       if left.is_a?(FiniteHashType) && right.is_a?(GenericType) && right.base == RDL::Globals.types[:hash]
         # TODO !ileft and right carries a free variable
         return false unless left.promote!
-        return leq(left, right, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) # recheck for promoted type
+        return leq(left, right, pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) # recheck for promoted type
       end
 
       ## precise string

@@ -54,6 +54,8 @@ module RDL::Type
     # [+ typ +] is the Type to add as upper bound.
     # [+ ast +] is the AST where the bound originates from, used for error messages.
     # [+ new_cons +] is a Hash<VarType, Array<[:upper or :lower, Type, AST]>>. When provided, can be used to roll back constraints in case an error pops up.
+    # Path Sensitivity: bounds propagation should happen in an empty path,
+    #                   so here pi=[]
     def add_and_propagate_upper_bound(typ, ast, new_cons = {})
       # Self = Type variable T
 
@@ -83,7 +85,7 @@ module RDL::Type
           if typ.is_a?(VarType) && !typ.lbounds.any? { |t, _| t == lower_t }
             new_cons[typ] = new_cons[typ] ? new_cons[typ] | [[:lower, lower_t, ast]] : [[:lower, lower_t, ast]]
           end
-          unless RDL::Type::Type.leq(lower_t, typ, {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons)
+          unless RDL::Type::Type.leq(lower_t, typ, [], {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons)
             d1 = a.nil? ? "" : (Diagnostic.new :note, :infer_constraint_error, [lower_t.to_s], a.loc.expression).render.join("\n")
             d2 = ast.nil? ? "" : (Diagnostic.new :note, :infer_constraint_error, [typ.to_s], ast.loc.expression).render.join("\n")
             raise RDL::Typecheck::StaticTypeError, ("Inconsistent type constraint #{lower_t} <= #{typ} generated during inference.\n #{d1}\n #{d2}")
@@ -123,7 +125,7 @@ module RDL::Type
 
           #RDL::Util.each_leq_constraints(new_cons) { |a, b| RDL::Logging.log(:typecheck, :trace, "#{a} <= #{b}") }
 
-          unless RDL::Type::Type.leq(typ, upper_t, {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons)
+          unless RDL::Type::Type.leq(typ, upper_t, [], {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons)
             d1 = ast.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [typ.to_s], ast.loc.expression).render.join("\n")
             d2 = a.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [upper_t.to_s], a.loc.expression).render.join("\n")
             raise RDL::Typecheck::StaticTypeError, ("Inconsistent type constraint #{typ} <= #{upper_t} generated during inference.\n #{d1}\n #{d2}")

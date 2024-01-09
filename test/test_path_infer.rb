@@ -252,6 +252,131 @@ class TestPathInfer < Minitest::Test
   #end
   #should_have_type :MP_ret2, '%any -> Integer or String'
 
+  #############################################################################
+  # Integration tests.                                                        #
+  # These are for complex type system features in RDL that had to be modified  #
+  # to work with path sensitivity.                                            #
+  #############################################################################
+  # Precise Strings.
+  def MP_precise_str_1(x)
+    if x.is_a? String
+      x + " World"
+    else
+      x
+    end
+  end
+  should_have_type :MP_precise_str_1, '("Hello" or Integer) -> Path{$0.is_a? String, True => "Hello World", False => Integer}'
+
+  # Array splat.
+  def MP_array_splat_1(array)
+    if array[0].is_a? Integer
+      [0, *array, 10]
+    else
+      ["hello", *array, "world"]
+    end
+  end
+  should_have_type :MP_array_splat_1, '() -> nil'
+
+  # irange. (e.g. 1..3)
+  def MP_irange_1(int_or_string)
+    if int_or_string.is_a? Integer
+      [0..int_or_string]
+    else
+      ["a"..int_or_string]
+    end
+    
+  end
+  should_have_type :MP_irange_1, '(Integer or String) -> Path<$0.is_a? Integer, True => IRange<Integer>, False => IRange<String>>'
+
+  # erange. (e.g. 1...3)
+  def MP_erange_1(int_or_string)
+    if int_or_string.is_a? Integer
+      [0...int_or_string]
+    else
+      ["a"...int_or_string]
+    end
+    
+  end
+  should_have_type :MP_erange_1, '(Integer or String) -> Path<$0.is_a? Integer, True => ERange<Integer>, False => ERange<String>>'
+
+  # Array assign. From test_array_types.rb:assign_test4
+  def MP_array_assign_1(flag)
+    array = [1, "hello", 2, "world"]
+    if flag
+      array[0] = 1
+    else
+      array[1] = "hello"
+    end
+  end
+  should_have_type :MP_array_assign_1, '(%bool) -> Path<$0, True => 1, False => "hello">'
+
+  # Case statements skip typechecking on impossible branches of typetests.
+  def MP_case_stmt_type_test_1(x)
+    # y :: Path<x.is_a? Integer, True => Integer, False => String>
+    y = if x.is_a? Integer
+      x + 1
+    else 
+      "Hello World"
+    end
+
+    # This should NEVER return "Error!" because Hash !<=_p y for any p
+    case y
+    when Hash
+      "Error!"
+    else
+      true
+    end
+  end
+  should_have_type :MP_case_stmt_type_test_1, '(%any) -> true'
+
+  # This should have the same effect if the type test in question
+  # came from an assignment.
+  def MP_case_stmt_type_test_2(x)
+    # y :: Path<x.is_a? Integer, True => Integer, False => String>
+    y = "Hello World"
+    if x.is_a? Integer
+      y = x + 1
+    end
+
+    # This should NEVER return "Error!" because Hash !<=_p y for any p
+    case y
+    when Hash
+      "Error!"
+    else
+      true
+    end
+  end
+  should_have_type :MP_case_stmt_type_test_2, '(%any) -> true'
+
+
+  # Refining the type of a generic.
+  def MP_case_generic(bool)
+    # Start with Array<String>
+    obj = Array.new
+
+    # Possibly turn it into Hash<String, String>
+    if bool == true
+      obj = Hash.new
+    end
+
+    case obj
+    when Integer
+      'Integer'
+    when Hash
+      'Hash'
+    when Array
+      'Array'
+    end
+  end
+  #should_have_type :MP_case_generic, '() -> Path<$0, TrueClass => "Array", Else => "Hash">'
+  should_have_type :MP_case_generic, '() -> Integer'
+
+
+  #############################################################################
+  # Pattern tests.                                                            #
+  # These are path-sensitive patterns I found in Ruby on Rails REST APIs.     #
+  #############################################################################
+
   # ---------------------------------------------------------------------------
   # Pattern #1: Session state.
   # ---------------------------------------------------------------------------
@@ -520,5 +645,34 @@ class TestPathInfer < Minitest::Test
   # Not concerned with specific inferred types here.
   # Want to test that constraint resolution does not fail when using Hash#merge's type,
   # which includes type variables
+
+  # NOTE(Mark): I tried for hours to write a test that covers "TEST_MARKER_3"
+  #             in `typecheck.rb`. This is what ended up working. I'm not sure
+  #             what this test does, but it seems to trigger an edge case
+  #             in the typechecking logic that involves the combination
+  #             of optional parameters with named parameters.
+  def SP_tc_arg_types_fht_test(a1, a2 = 2, a3: 3, a4: 4)
+    a1
+  end
+  def SP_tc_arg_types_fht
+    SP_tc_arg_types_fht_test(1, a3: 1, a4: 2)
+  end
+  should_have_type :SP_tc_arg_types_fht, '() -> Integer', depends_on: [:SP_tc_arg_types_fht_test]
+
+  # NOTE(Mark): Similar to tc_arg_types_fht, but includes a comp type.
+  #             Activates "TEST_MARKER_4" in `typecheck.rb`.
+  #             I Couldn't get this to work, so I'm commenting this out 
+  #             for now (forever).
+  # def SP_tc_bind_arg_types_fht_test(a1, a2 = 2, a3: 3, a4: 4)
+  #   1
+  # end
+  # def self.tc_bind_arg_types_fht_test_output
+  #   RDL::Globals.types[:integer]
+  # end
+  # RDL.type TestPathInfer, :SP_tc_bind_arg_types_fht_test, "(Integer, ?%any, a3: Integer, a4: Integer) -> ``tc_bind_arg_types_fht_test_output()``"
+  # def SP_tc_bind_arg_types_fht
+  #   SP_tc_bind_arg_types_fht_test(1, a3: 3, a4: 4)
+  # end
+  # should_have_type :SP_tc_bind_arg_types_fht, '() -> Integer'
   
 end

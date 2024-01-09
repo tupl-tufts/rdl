@@ -61,9 +61,10 @@ module RDL::Type
       return Type.leq(self, other)
     end
 
+    # Path Sensitivity: `pi` here is empty. 
     def member?(obj, *args)
       t = RDL::Util.rdl_type obj
-      return t <= self if t
+      return RDL::Type::Type.leq(t, self, []) if t
       return true if obj.nil?
       obj.equal?(@val)
     end
