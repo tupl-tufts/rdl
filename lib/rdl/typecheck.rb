@@ -707,7 +707,7 @@ module RDL::Typecheck
   # Returns [env', t], where env' is the type environment at the end of the expression
   # and t is the type of the expression. t is always canonical.
   def self._tc(scope, env, e)
-    require 'debug/open'
+    #require 'debug/open'
     puts "_tc :: scope #{scope}"
     puts
     case e.type
