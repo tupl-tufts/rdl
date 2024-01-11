@@ -12,6 +12,7 @@ module RDL::Type
         def initialize(tguard, tmatch, loc, str)
             @tguard = tguard
             @tmatch = tmatch
+
             @loc = loc
             @str = str
         end
@@ -22,6 +23,22 @@ module RDL::Type
         alias_method :inspect, :to_s
 
     end
+
+    ## NOTE(Mark): This is temporary.
+    #class Equality < RDL::Type::SingletonType
+    #    attr_accessor :lhs
+    #    attr_accessor :rhs
+    #    attr_accessor :loc
+
+    #    # lhs = 
+    #    # rhs = 
+    #    # loc = 
+    #    def initialize(lhs, rhs, loc)
+    #        @lhs = lhs
+    #        @rhs = rhs
+    #        @loc = loc
+    #    end
+    #end
 
     # Represents a conjunction of paths.
     class PathAnd < Path
@@ -44,9 +61,11 @@ module RDL::Type
         # and the type of this object.
         attr_accessor :map
 
-        def initialize(condition, map)
+        def initialize(condition, map, loc, str)
             @condition = condition
             @map = map
+            @loc = loc
+            @str = str
 
             # NOTE(Mark): Once we figure out the format of `condition`,
             #             add a validation here.
@@ -56,7 +75,7 @@ module RDL::Type
         end
 
         def to_s
-            return "#{"PathType".colorize(:blue)}{condition=#{condition.to_s.colorize(:yellow)}, #{map.each_pair.map { |tmatch, v| "#{tmatch.to_s.colorize(:red)} => #{v}"}.join(", ") }}"
+            return "#{"PathType".colorize(:blue)}{condition=#{condition.to_s.colorize(:yellow)}, str=#{str.to_s.colorize(:yellow)}, #{map.each_pair.map { |tmatch, v| "#{tmatch.to_s.colorize(:red)} => #{v}"}.join(", ") }}"
         end
         alias_method :inspect, :to_s
 
