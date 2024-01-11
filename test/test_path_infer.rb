@@ -7,7 +7,6 @@ require 'minitest/autorun'
 $LOAD_PATH << File.dirname(__FILE__) + '/../lib'
 require 'rdl'
 require 'types/core'
-#require 'debug/open'
 
 # Testing Inference (constraint.rb)
 class TestPathInfer < Minitest::Test

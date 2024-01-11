@@ -94,8 +94,8 @@ module RDL::Typecheck
     def initialize(params = nil)
       @env = Hash.new
       unless params.nil?
-        params.each_pair { |var, typ|
-          @env[var] = {type: typ, pi: Env.new, fixed: true}
+        params.each_pair { |var, typ, pi|
+          @env[var] = {type: typ, pi: pi, fixed: true}
         }
       end
     end
@@ -173,7 +173,7 @@ module RDL::Typecheck
             typ.types.each { |t| sings = sings + 1 if t.instance_of?(RDL::Type::SingletonType) }
             typ = typ.widen if sings > RDL::Config.instance.widen_bound
           end
-          result.env[k] = {type: typ, pi: Env.new, fixed: @env[k][:fixed]}
+          result.env[k] = {type: typ, pi: [], fixed: @env[k][:fixed]}
         else
           result.env[k] = v
         end
@@ -219,7 +219,7 @@ module RDL::Typecheck
             typ.types.each { |t| sings = sings + 1 if t.instance_of?(RDL::Type::SingletonType) }
             typ = typ.widen if sings > RDL::Config.instance.widen_bound
           end
-          env.env[var] = {type: typ, pi: Env.new, fixed: false}
+          env.env[var] = {type: typ, pi: [], fixed: false}
         end
       }
       return env
@@ -248,6 +248,8 @@ module RDL::Typecheck
   #             A.k.a. the actual guard
   def self.scope_add_path(scope, path)
     new_scope = scope.clone
+    # Clone the nested array of paths.
+    new_scope[:pi] = scope[:pi].clone
     new_scope[:pi] = [] if !scope.has_key? :pi
     new_scope[:pi].push(path)
 
@@ -707,7 +709,6 @@ module RDL::Typecheck
   # Returns [env', t], where env' is the type environment at the end of the expression
   # and t is the type of the expression. t is always canonical.
   def self._tc(scope, env, e)
-    #require 'debug/open'
     puts "_tc :: scope #{scope}"
     puts
     case e.type
@@ -1187,8 +1188,10 @@ module RDL::Typecheck
       # always type check both sides
 
       ## NOTE(Mark): Scope below must be adjusted to include path constraint info.
-      left_path = RDL::Type::Path.new(tguard, TrueClass, e.children[0].location, e.children[0].location.expression.source)
-      right_path = RDL::Type::Path.new(tguard, FalseClass, e.children[0].location, e.children[0].location.expression.source)
+      loc = e.children[0].location
+      str = loc.expression.source
+      left_path = RDL::Type::Path.new(tguard, TrueClass, loc, str)
+      right_path = RDL::Type::Path.new(tguard, FalseClass, loc, str)
       left_scope = scope_add_path(scope, left_path)
       right_scope = scope_add_path(scope, right_path)
       envleft, tleft = if e.children[1].nil? then [envi, RDL::Globals.types[:nil]] else tc(left_scope, envi, e.children[1]) end # then
@@ -1212,7 +1215,7 @@ module RDL::Typecheck
       else
         #[Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright).canonical]
         #[Env.join(e, envleft, envright), RDL::Type::MultiType.new({envleft => tleft, envright => tright}).canonical]
-        [Env.join(e, envleft, envright), RDL::Type::PathType.new(tguard, {TrueClass => tleft, FalseClass => tright}).canonical]
+        [Env.join(e, envleft, envright), RDL::Type::PathType.new(tguard, {TrueClass => tleft, FalseClass => tright}, loc, str).canonical]
       end
     when :case
       # NOTE(Mark): Here too.
@@ -1235,6 +1238,9 @@ module RDL::Typecheck
         if (tguards.all? { |typ| typ.is_a?(RDL::Type::SingletonType) && (typ.val.is_a?(Class) || typ.val.nil?) }) && (e.children[0].type == :lvar)
           # Special case! We're branching on the type of the guard, which is a local variable.
           # So rebind that local variable to have the union of the guard types
+
+          # TODO(Mark): scope[:pi] needs to be adjusted when typechecking child branches.
+
           var_name = e.children[0].children[0]
           var_type = initial_env[var_name]
           new_typ = RDL::Type::UnionType.new(*(tguards.map { |typ| typ.val.nil? ? typ : RDL::Type::NominalType.new(typ.val) })).canonical

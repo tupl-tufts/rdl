@@ -15,6 +15,22 @@ def Numeric.sing_or_type(trec, targs, meth, type)
 end
 RDL.type Numeric, 'self.sing_or_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, String) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
+## Generates a path type for boolean operations on numeric types.
+##  trec=type of receiver
+## targs=types of arguments
+##  meth=the method being called
+##  type=fallback type
+#def Numeric.path_type(trec, targs, meth, type)
+#  if trec.is_a?(RDL::Type::SingletonType) && (targs.empty? || targs[0].is_a?(RDL::Type::SingletonType))
+#    # Can evaluate statically using singleton types.
+#    Numeric.sing_or_type(trec, targs, meth, type)
+#  else
+#    # Can't run this method statically. Time to construct a PathType.
+#    RDL::Type::PathType.new()
+#  end
+#end
+#RDL.type Numeric, 'self.path_type', "(RDL::Type::Type, Array<RDL::Type::Type>, Symbol, String) -> RDL::Type::Type"
+
 
 RDL.type :Integer, :%, '(Integer x {{ x!=0 }}) -> ``sing_or_type(trec, targs, :%, "Integer")``'
 RDL.type :Integer, :%, '(Float x {{ x!=0 }}) -> ``sing_or_type(trec, targs, :%, "Float")``'
@@ -82,6 +98,10 @@ RDL.type :Integer, :<=>, '(Rational) -> ``sing_or_type(trec, targs, :<=>, "Integ
 RDL.post(:Integer, :<=>) { |r,x| r == -1 || r == 0 || r == 1 }
 RDL.type :Integer, :<=>, '(BigDecimal) -> ``sing_or_type(trec, targs, :<=>, "Integer")``'
 RDL.post(:Integer, :<=>) { |r,x| r == -1 || r == 0 || r == 1 }
+
+## PATH #######################################################################
+#RDL.type :Integer, :==, '(Object) -> ``path_type(trec, targs, :==, "%bool")``'
+## /PATH ######################################################################
 
 RDL.type :Integer, :==, '(Object) -> ``sing_or_type(trec, targs, :==, "%bool")``'
 

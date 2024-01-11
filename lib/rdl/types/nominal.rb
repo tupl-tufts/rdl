@@ -61,7 +61,6 @@ module RDL::Type
     end
 
     def <=(other)
-      #require 'debug/open'
       return Type.leq(self, other)
     end
 
