@@ -1,5 +1,6 @@
 module RDL::Type
     class MultiType < Type
+        # @map maps Paths to Types.
         attr_accessor :map
 
         # TODO(Mark): Add a `self.new` method which can quickly
