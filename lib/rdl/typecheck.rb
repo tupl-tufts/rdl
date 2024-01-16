@@ -709,7 +709,8 @@ module RDL::Typecheck
   # Returns [env', t], where env' is the type environment at the end of the expression
   # and t is the type of the expression. t is always canonical.
   def self._tc(scope, env, e)
-    puts "_tc :: scope #{scope}"
+    #require 'debug/open'
+    puts "_tc :: scope[:pi] => #{scope[:pi]}"
     puts
     case e.type
     when :nil
@@ -1206,8 +1207,8 @@ module RDL::Typecheck
       -> joined  #{Env.join(e, envleft, envright)}
       
       tguard: #{tguard}
-      left_scope: #{left_scope}
-      right_scope: #{right_scope}"
+      left_scope[:pi] => #{left_scope[:pi]}
+      right_scope[:pi] => #{right_scope[:pi]}"
       puts "====================================================================="
       puts ""
       if tguard.is_a? RDL::Type::SingletonType
@@ -1228,6 +1229,12 @@ module RDL::Typecheck
         raise RuntimeError, "Don't know what to do with case clause #{wclause.type}" unless wclause.type == :when
         envguards = []
         tguards = []
+        # ------------------#-#-#-#-#-#-#-#----------------------------
+        # Path Sensitivity: this `scope_body` should be used when typechecking
+        #                   this child clause. It will contain additional type
+        #                   info if this child clause is a simple typetest.
+        # ------------------#-#-#-#-#-#-#-#----------------------------
+        scope_body = scope
         wclause.children[0..-2].each { |guard| # first wclause.length-1 children are the guards
           envi, tguard = tc(scope, envi, guard) # guard type can be anything
           tguards << tguard
@@ -1239,11 +1246,15 @@ module RDL::Typecheck
           # Special case! We're branching on the type of the guard, which is a local variable.
           # So rebind that local variable to have the union of the guard types
 
-          # TODO(Mark): scope[:pi] needs to be adjusted when typechecking child branches.
-
           var_name = e.children[0].children[0]
           var_type = initial_env[var_name]
           new_typ = RDL::Type::UnionType.new(*(tguards.map { |typ| typ.val.nil? ? typ : RDL::Type::NominalType.new(typ.val) })).canonical
+
+          # Path Sensitivity: 
+          # Adjust scope[:pi] to include type test info when typechecking
+          # this child branch.
+          path_body = RDL::Type::Path.new(tcontrol, new_typ, wclause.location.expression, "when " + wclause.children[0..-2].map{|c| c.location.expression.source}.join(", "))
+          scope_body = scope_add_path(scope_body, path_body)
           # TODO adjust following for generics!
           if tcontrol.is_a? RDL::Type::GenericType
             # Path Sensitivity: TODO(Mark) fix this `==`! Maybe add a new operator
@@ -1262,6 +1273,7 @@ module RDL::Typecheck
               error :generic_error, ["general refinement for generics not implemented yet"], wclause
             end
           else
+            # TODO(Mark):
             # Path Sensitivity: use the current path to determine if a branch 
             #                   is impossible. See test 
             #                   test_path_infer:MP_case_stmt_type_test_1.
@@ -1276,9 +1288,10 @@ module RDL::Typecheck
           envbody = initial_env
           tbody = RDL::Globals.types[:nil]
         else
-          envbody, tbody = tc(scope, initial_env, wclause.children[-1]) # last wclause child is body
+          # Path Sensitivity: add typetest to scope
+          envbody, tbody = tc(scope_body, initial_env, wclause.children[-1]) # last wclause child is body
           # reset type of var_name to its original type
-          envbody = envbody.bind(var_name, var_type, fixed: envbody.fixed?(var_name), force: true)
+          envbody = envbody.bind(var_name, var_type, fixed: envbody.fixed?(var_name), force: true) if var_name
         end
 
         tbodies << tbody
