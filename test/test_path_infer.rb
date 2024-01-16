@@ -164,8 +164,10 @@ class TestPathInfer < Minitest::Test
     }
 
     if x + x = x == 3
-      response[:fetched] = Date.now
-      response[:created] = Date.new(2023, 11, 13)
+      #response[:fetched] = Date.now
+      #response[:created] = Date.new(2023, 11, 13)
+      response[:fetched] = 1
+      response[:created] = 1
     end
 
     return response
@@ -370,6 +372,81 @@ class TestPathInfer < Minitest::Test
   #should_have_type :MP_case_generic, '() -> Path<$0, TrueClass => "Array", Else => "Hash">'
   should_have_type :MP_case_generic, '() -> Integer'
 
+  # Side effects inside case statements.
+  # (This is necessary to detect a bug that arose from 
+  #  Talks user.rb#subscribed_talks)
+  def MP_case_side_effect_1(x)
+    ret = nil
+    case x
+    when "t1"
+      ret = 1
+    when "t2"
+      ret = 2
+    end
+
+    ret
+  end
+  should_have_type :MP_case_side_effect_1, '() -> %any'
+
+  def MP_case_side_effect_2(x)
+    ret = nil
+
+    # Returns Integer or String or Array
+    case x
+    when Integer
+      ret = 1
+    when String
+      ret = "test"
+    else
+      ret = []
+    end
+
+    ret
+  end
+  should_have_type :MP_case_side_effect_2, '() -> %any'
+
+
+  # Nested path conditions.
+  def MP_nested_1(x, y)
+    if x
+      if y
+        true
+      else
+        false
+      end
+    else
+      if y
+        false
+      else
+        true
+      end
+    end
+  end
+  should_have_type :MP_nested_1, '(%any, %any) -> %any'
+
+  # Nested path conditions.
+  def MP_nested_2(x, y)
+    ret = nil
+    if x
+      ret = 42 if y
+    end
+
+    ret
+  end
+  should_have_type :MP_nested_2, '(%any, %any) -> %any'
+
+  # Path conditions across blocks.
+  def MP_block_1
+    ret = nil
+
+    arr = [1, 2, 3, 4, 5]
+    arr.each do |n|
+      ret = 5 if n == 5
+    end
+
+    ret
+  end
+  should_have_type :MP_block_1, '() -> %any'
 
   #############################################################################
   # Pattern tests.                                                            #
