@@ -1225,16 +1225,23 @@ module RDL::Typecheck
       # for each guard, invoke guard === control expr, then possibly do body, possibly short-circuiting arbitrary later stuff
       tbodies = []
       envbodies = []
+      pathbodies = [] # Path Sensitivity: pathbodies stores the path for
+                      #                   each body, if applicable.
       e.children[1..-2].each { |wclause|
         raise RuntimeError, "Don't know what to do with case clause #{wclause.type}" unless wclause.type == :when
         envguards = []
         tguards = []
         # ------------------#-#-#-#-#-#-#-#----------------------------
-        # Path Sensitivity: this `scope_body` should be used when typechecking
+        # Path Sensitivity: this `scopebody` should be used when typechecking
         #                   this child clause. It will contain additional type
         #                   info if this child clause is a simple typetest.
         # ------------------#-#-#-#-#-#-#-#----------------------------
-        scope_body = scope
+        scopebody = scope
+
+        # Path Sensitivity: this `pathbody` represents the path to get to this
+        #                   "when" clause, if applicable.
+        pathbody = nil
+
         wclause.children[0..-2].each { |guard| # first wclause.length-1 children are the guards
           envi, tguard = tc(scope, envi, guard) # guard type can be anything
           tguards << tguard
@@ -1253,8 +1260,8 @@ module RDL::Typecheck
           # Path Sensitivity: 
           # Adjust scope[:pi] to include type test info when typechecking
           # this child branch.
-          path_body = RDL::Type::Path.new(tcontrol, new_typ, wclause.location.expression, "when " + wclause.children[0..-2].map{|c| c.location.expression.source}.join(", "))
-          scope_body = scope_add_path(scope_body, path_body)
+          pathbody = RDL::Type::Path.new(tcontrol, new_typ, wclause.location.expression, "when " + wclause.children[0..-2].map{|c| c.location.expression.source}.join(", "))
+          scopebody = scope_add_path(scopebody, pathbody)
           # TODO adjust following for generics!
           if tcontrol.is_a? RDL::Type::GenericType
             # Path Sensitivity: TODO(Mark) fix this `==`! Maybe add a new operator
@@ -1289,7 +1296,7 @@ module RDL::Typecheck
           tbody = RDL::Globals.types[:nil]
         else
           # Path Sensitivity: add typetest to scope
-          envbody, tbody = tc(scope_body, initial_env, wclause.children[-1]) # last wclause child is body
+          envbody, tbody = tc(scopebody, initial_env, wclause.children[-1]) # last wclause child is body
           # reset type of var_name to its original type
           envbody = envbody.bind(var_name, var_type, fixed: envbody.fixed?(var_name), force: true) if var_name
         end
@@ -1297,6 +1304,8 @@ module RDL::Typecheck
         tbodies << tbody
 
         envbodies << envbody
+
+        pathbodies << pathbody
       }
       if e.children[-1].nil?
         # no else clause, might fall through having missed all cases
@@ -1307,11 +1316,31 @@ module RDL::Typecheck
         tbodies << telse
         #envelse = envelse.bind(e.children[0].children[0], tcontrol, force: :true) if e.children[0].type == :lvar
         envbodies << envelse
+        pathbodies << nil
       end
       # before join reset var to original type!
 
-      # TODO(Mark): This needs to be a multitype!
-      [Env.join(e, *envbodies), RDL::Type::UnionType.new(*tbodies).canonical]
+      # -----------------------------------------------------------------------
+
+      # Path Sensitivity:
+      # Create resulting type. If there were special cases for type-testing,
+      # this will be a multitype. If there were no special cases for 
+      # type-testing, the MultiType will automatically disappear, leaving a 
+      # union.
+      multi_map = {}
+
+      pathbodies.zip(tbodies).each { |p, t|
+        existing_type = multi_map[p]
+        if existing_type
+          # If there are 2 tbodies with the same path, union them.
+          multi_map[p] = RDL::Type::UnionType.new(existing_type, t)
+        else
+          multi_map[p] = t
+        end
+      }
+
+      tres = RDL::Type::MultiType.new(multi_map).canonical
+      [Env.join(e, *envbodies), tres]
     when :while, :until
       # break: loop exit, i.e., right after loop guard; may take argument
       # next: before loop guard; argument not allowed

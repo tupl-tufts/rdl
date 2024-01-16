@@ -311,8 +311,20 @@ class TestPathInfer < Minitest::Test
   end
   should_have_type :MP_array_assign_1, '(%bool) -> Path<$0, True => 1, False => "hello">'
 
-  # Case statements skip typechecking on impossible branches of typetests.
   def MP_case_stmt_type_test_1(x)
+    case x
+    when Integer
+      1
+    when String
+      "Hello World"
+    else
+      []
+    end
+  end
+  should_have_type :MP_case_stmt_type_test_1, '(%any) -> %any'
+
+  # Case statements skip typechecking on impossible branches of typetests.
+  def MP_case_stmt_type_test_2(x)
     # y :: Path<x.is_a? Integer, True => Integer, False => String>
     y = if x.is_a? Integer
       x + 1
@@ -328,11 +340,11 @@ class TestPathInfer < Minitest::Test
       true
     end
   end
-  should_have_type :MP_case_stmt_type_test_1, '(%any) -> true'
+  should_have_type :MP_case_stmt_type_test_2, '(%any) -> true'
 
   # This should have the same effect if the type test in question
   # came from an assignment.
-  def MP_case_stmt_type_test_2(x)
+  def MP_case_stmt_type_test_3(x)
     # y :: Path<x.is_a? Integer, True => Integer, False => String>
     y = "Hello World"
     if x.is_a? Integer
@@ -347,7 +359,7 @@ class TestPathInfer < Minitest::Test
       true
     end
   end
-  should_have_type :MP_case_stmt_type_test_2, '(%any) -> true'
+  should_have_type :MP_case_stmt_type_test_3, '(%any) -> true'
 
 
   # Refining the type of a generic.
