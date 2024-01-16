@@ -75,7 +75,7 @@ module RDL::Type
         end
 
         def to_s
-            return "#{"PathType".colorize(:blue)}{condition=#{condition.to_s.colorize(:yellow)}, str=#{str.to_s.colorize(:yellow)}, #{map.each_pair.map { |tmatch, v| "#{tmatch.to_s.colorize(:red)} => #{v}"}.join(", ") }}"
+            return "#{"PathType".colorize(:blue)}{condition=#{@condition.to_s.colorize(:yellow)}, str=#{@str.to_s.colorize(:yellow)}, #{@map.each_pair.map { |tmatch, v| "#{tmatch.to_s.colorize(:red)} => #{v}"}.join(", ") }}"
         end
         alias_method :inspect, :to_s
 
