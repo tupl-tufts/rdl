@@ -2401,7 +2401,7 @@ module RDL::Typecheck
 
   def self.apply_deferred_constraints(deferred_constraints, e, pi)
     puts "TEST_MARKER_2"
-    if deferred_constraints.size > 2 && deferred_constraints.all? { |t1, t2| t1.equal?(deferred_constraints[0][0]) && t2.is_a?(RDL::Type::NominalType) && t2 <= RDL::Globals.types[:numeric] }
+    if deferred_constraints.size > 2 && deferred_constraints.all? { |t1, t2| t1.equal?(deferred_constraints[0][0]) && t2.is_a?(RDL::Type::NominalType) && RDL::Type::Type.leq(t2, RDL::Globals.types[:numeric], pi)}
     ## This is a temporary hack for Numeric types.
     ## If all the LHS types are the same single type, and all the RHS types
     ## are Numeric types (which is the case for almost all arithmetic methods),
