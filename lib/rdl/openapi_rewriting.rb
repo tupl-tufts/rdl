@@ -22,8 +22,8 @@
 #        respond_to do |format|
 #          format.json { render json: @theme.errors, status: :unprocessable_entity }
 #        end
-#   ~~>  __RDL_rendered = render json: @theme.errors, status: :unprocessable_entity
-#   ~~>  return __RDL_rendered
+#  *NEW* __RDL_rendered = render json: @theme.errors, status: :unprocessable_entity
+#  *NEW* return __RDL_rendered
 # 
 #    
 # The result of these two rewriting passes on Rails controllers leads to a 
@@ -44,7 +44,16 @@ module RDL::Typecheck
         rewritten_args = ""
         body_code = (body_node && body_node.location.expression.source) || ""
 
-        if args_node.location.expression == nil # no args
+        if !RDL::Typecheck.is_controller_method(@klass, name) # not an endpoint
+          ap "Not a controller method. No injection."
+          if args_node.location.expression
+            # If there were args defined, use them.
+            rewritten_args = args_node.location.expression.source
+          else
+            # Otherwise, no args.
+            rewritten_args = ""
+          end
+        elsif args_node.location.expression == nil # no args
           rewritten_args = "(params)"
         elsif args_node.location.expression.source.start_with?("|") # lambda
           ap "Lambda. No injection."
@@ -276,6 +285,8 @@ module RDL::Typecheck
     #ap "Klass: "
     #ap klass
 
+    klass = klass.constantize if klass.is_a? String
+
     if klass && defined?(Rails) && (klass.respond_to? :superclass) && (klass.superclass.to_s == "ApplicationController")
       ap "#{klass.name} is a Rails controller"
       return true
@@ -284,7 +295,7 @@ module RDL::Typecheck
   end
 
   def self.is_controller_method(klass, meth)
-    RDL::Typecheck.is_controller(klass) && klass.action_methods.include?(meth)
+    RDL::Typecheck.is_controller(klass) && klass.action_methods.include?(meth.to_s)
   end
 
 end
