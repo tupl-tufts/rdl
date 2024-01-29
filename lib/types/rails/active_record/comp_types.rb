@@ -552,6 +552,7 @@ class DBType
         )
       end
 
+      ap "rec_as_json: Success! Determined type: #{ret_type}"
       return ret_type
     rescue RDL::Typecheck::StaticTypeError => e
       ap "rec_as_json failed to determine a type:"
