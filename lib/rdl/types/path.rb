@@ -17,10 +17,14 @@ module RDL::Type
             @str = str
         end
 
-        def to_s
+        def inspect
             "#{"Path".colorize(:green)}{tguard=#{tguard.to_s.colorize(:yellow)}, tmatch=#{tmatch.to_s.colorize(:red)}, str=#{str.colorize(:grey)}}"
         end
-        alias_method :inspect, :to_s
+
+        # to_s is just like #inspect but without the colors.
+        def to_s
+            "#{"Path"}{tguard=#{tguard.to_s}, tmatch=#{tmatch.to_s}, str=#{str}}"
+        end
 
     end
 
@@ -74,10 +78,14 @@ module RDL::Type
             raise RuntimeError, "Path map must not be empty" if map.values.length < 1
         end
 
-        def to_s
+        def inspect
             return "#{"PathType".colorize(:blue)}{condition=#{@condition.to_s.colorize(:yellow)}, str=#{@str.to_s.colorize(:yellow)}, #{@map.each_pair.map { |tmatch, v| "#{tmatch.to_s.colorize(:red)} => #{v}"}.join(", ") }}"
         end
-        alias_method :inspect, :to_s
+
+        # to_s is just like #inspect but without the colors.
+        def to_s
+            return "#{"PathType"}{condition=#{@condition.to_s}, str=#{@str.to_s}, #{@map.each_pair.map { |tmatch, v| "#{tmatch.to_s} => #{v}"}.join(", ") }}"
+        end
 
         def ==(other)
             return false if other.nil?

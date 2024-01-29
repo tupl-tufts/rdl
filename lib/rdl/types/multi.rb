@@ -29,11 +29,15 @@ module RDL::Type
         end
 
         # TODO: add `is_a?`, with a `pi` component. For `MP_case_generic`
-        
-        def to_s
+
+        def inspect
             return "#{"MultiType".colorize(:blue)}{ " + @map.each_pair.map { |pi, t| "#{t}_{#{pi}}" }.join(", ") + " }"
         end
-        alias_method :inspect, :to_s
+        
+        # to_s is just like #inspect but without the colors.
+        def to_s
+            return "MultiType{ " + @map.each_pair.map { |pi, t| "#{t.to_s}_{#{pi.map(&:to_s).join(", ")}}" }.join(", ") + " }"
+        end
 
     end
 end
