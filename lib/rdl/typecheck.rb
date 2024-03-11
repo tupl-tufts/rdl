@@ -114,6 +114,7 @@ module RDL::Typecheck
     def bind(var, typ, pi: [], fixed: false, force: false)
       raise RuntimeError, "Can't update variable with fixed type" if !force && @env[var] && @env[var][:fixed]
       raise RuntimeError, "Can't fix type of already-bound variable" if !force && fixed && @env[var]
+      puts "Env.bind :: var=#{var}, typ=#{typ}, self=#{self.to_tiny_s}"
       result = Env.new
       result.env = @env.merge(var => {type: typ, pi: pi, fixed: fixed})
       return result
@@ -149,6 +150,8 @@ module RDL::Typecheck
 
     # merges bindings in self with bindings in other, preferring bindings in other if there is a common key
     def merge(other)
+      # TODO(Mark): Remove this debug stmt
+      puts "Env.merge :: self=#{self.to_tiny_s}, other=#{other.to_tiny_s}"
       result = Env.new
       result.env = @env.merge(other.env)
       return result
@@ -181,11 +184,18 @@ module RDL::Typecheck
       return result
     end
 
+    ## TODO(Mark): remove this method
+    def to_tiny_s
+      "{" + (@env.keys.map { |name| "\n    #{name} => #{@env[name][:type].class}_#{@env[name][:pi]}"}.join(",")) + "\n}"
+    end
+
     # [+ envs +] is Array<Env>
     # any elts of envs that are nil are discarded
     # returns new Env where every key is mapped to the union of its bindings in the envs
     # any fixed binding in any env must be fixed in all envs and at the same type
     def self.join(e, *envs)
+      # TODO(Mark): Remove this debug stmt
+      puts "Env.join :: envs=[#{envs.map(&:to_tiny_s).join(",")}]"
       raise RuntimeError, "Expecting AST, got #{e.class}" unless e.is_a? AST::Node
       env = Env.new
       envs.delete(nil)
@@ -1231,13 +1241,12 @@ module RDL::Typecheck
         raise RuntimeError, "Don't know what to do with case clause #{wclause.type}" unless wclause.type == :when
         envguards = []
         tguards = []
-        # ------------------#-#-#-#-#-#-#-#----------------------------
+        # ------------------#-#-#-#-#-#-#-#------------------------------------
         # Path Sensitivity: this `scopebody` should be used when typechecking
         #                   this child clause. It will contain additional type
         #                   info if this child clause is a simple typetest.
-        # ------------------#-#-#-#-#-#-#-#----------------------------
+        # ------------------#-#-#-#-#-#-#-#------------------------------------
         scopebody = scope
-
         # Path Sensitivity: this `pathbody` represents the path to get to this
         #                   "when" clause, if applicable.
         pathbody = nil
@@ -1880,7 +1889,7 @@ module RDL::Typecheck
       trecv = RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Globals.types[:bot])
     elsif (trecv == RDL::Globals.types[:hash])
       trecv = RDL::Type::GenericType.new(RDL::Globals.types[:hash], RDL::Globals.types[:bot], RDL::Globals.types[:bot])
-    elsif trecv.is_a?(RDL::Type::AnnotatedArgType) || trecv.is_a?(RDL::Type::DependentArgType)
+    elsif trecv.is_a?(RDL::Type::AnnotatedArgType) || trecv.is_a?(RDL::Type::DependentArgType) || trecv.is_a?(RDL::Type::OptionalType)
       trecv = trecv.type
     end
     return [env, tc_send_class(trecv, e)] if (meth == :class) && (tactuals.empty?)
@@ -2816,7 +2825,7 @@ module RDL::Typecheck
       ret_vartype = RDL::Globals.parser.scan_str "#T self"
     #ret_vartype = RDL::Type::VarType.new(:self) ## TODO: is this right? Or should it include klass/meth info?
     else
-      ret_vartype = RDL::Type::VarType.new(cls: klass, meth: meth, category: :ret, name: "ret")
+      ret_vartype = RDL::Type::VarType.new(cls: klass, meth: meth, category: :ret, name: "ret", path_sensitive: true)
     end
 
     block_type = RDL::Type::VarType.new(cls: klass, meth: meth, category: :block, name: "block")
