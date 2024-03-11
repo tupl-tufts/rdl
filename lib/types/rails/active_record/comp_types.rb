@@ -358,6 +358,25 @@ class DBType
     end
   end
 
+  ## Determines if a given Hash<k, v> is an empty hash.
+  ## I.e. `{}` gets a type of Hash<k, v> with no bounds
+  ## on `k` or `v`. If we want to `render json: {}`,
+  ## we need to determine if a given `Hash` is `{}`.
+  def self.is_empty_hash(hash_type)
+    # Is `hash_type` a GenericType<Hash, k, v> with no bounds on
+    # k or v?
+    return (
+      hash_type.is_a?(RDL::Type::GenericType) &&
+      hash_type.base.is_a?(RDL::Type::NominalType) &&
+      hash_type.base.name == "Hash" &&
+      hash_type.params[0].is_a?(RDL::Type::VarType) &&
+      hash_type.params[0].lbounds.empty? &&
+      hash_type.params[0].ubounds.empty? &&
+      hash_type.params[1].is_a?(RDL::Type::VarType) &&
+      hash_type.params[1].lbounds.empty? &&
+      hash_type.params[1].ubounds.empty?
+      )
+  end
 
   ## Determines the output type for a call to `render`.
   ## Given: `targs` from the `render` call.
@@ -379,6 +398,16 @@ class DBType
       return RDL::Type::GenericType.new(
         RDL::Type::NominalType.new("JSON"), # Base
         targs[0].elts[:json] # Generic parameter
+      )
+    end
+
+    # If the call is `render json: {}`, return
+    # JSON<{}>.
+    #require 'debug/open'
+    if self.is_empty_hash(targs[0].elts[:json])
+      return RDL::Type::GenericType.new(
+        RDL::Type::NominalType.new("JSON"),
+        RDL::Type::FiniteHashType.new({}, nil)
       )
     end
 
