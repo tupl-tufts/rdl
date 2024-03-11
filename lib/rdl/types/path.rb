@@ -4,10 +4,10 @@ module RDL::Type
     # Represents the actual path condition 
     # (a single constraint in Delta in the formalism)
     class Path
-        attr_accessor :tguard
-        attr_accessor :tmatch
-        attr_accessor :loc
-        attr_accessor :str
+        attr_accessor :tguard # the type we are typetesting
+        attr_accessor :tmatch # the type we have matched it to
+        attr_accessor :loc    # src location
+        attr_accessor :str    # string representation
 
         def initialize(tguard, tmatch, loc, str)
             @tguard = tguard
@@ -54,6 +54,7 @@ module RDL::Type
     end
 
     class PathType < Type
+        # :condition is a RDL::Type
         # Pi = Path Condition
         # This should be an "interpretable" expression
         # that evaluates to a *type*.

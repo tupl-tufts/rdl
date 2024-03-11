@@ -1,6 +1,6 @@
 module RDL::Type
     class MultiType < Type
-        # @map maps Paths to Types.
+        # @map Map<Array<Path>, Type>.
         attr_accessor :map
 
         class << self
