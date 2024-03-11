@@ -58,9 +58,10 @@ module RDL::Typecheck
         elsif args_node.location.expression.source.start_with?("|") # lambda
           ap "Lambda. No injection."
           rewritten_args = args_node.location.expression.source
-        elsif args_node.children.none? {|node| node.children[0] == :params}# regular function, with one or more arguments. Requires a comma to be added
+        elsif args_node.children.none? {|node| node.children[0] == :params}# regular function (with parentheses). If it has at least one argument, it requires a comma to be added.
           args_node.children.each {|n| ap "Processing arg:"; ap n.children[0]}
-          rewritten_args = args_node.location.expression.source.insert(-2, ", params")
+          to_insert = if args_node.children.length > 0 then ", params" else "params" end
+          rewritten_args = args_node.location.expression.source.insert(-2, to_insert)
           ap "Arguments defined but no params. Injected."
         else
           ap "Params already defined. No injection."
@@ -231,6 +232,16 @@ module RDL::Typecheck
         align_replace(node.location.expression, @offset, 
           "def #{def_name_ast} #{def_args_code};__RDL_rendered = nil\n    #{def_body_code};return __RDL_rendered;\n  end\n\n")
           #def_code + ";return __RDL_rendered;")
+      end
+    end
+
+    def on_return(node)
+      # If we aren't returning a value,
+      # we need to `return __RDL_rendered` to create a data flow
+      # between any renders on this path and the function return.
+      if node.children.length == 0
+        align_replace(node.location.expression, @offset,
+          ";return __RDL_rendered;")
       end
     end
 
