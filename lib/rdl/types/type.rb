@@ -115,29 +115,29 @@ module RDL::Type
       elsif left.is_a?(VarType) && left.to_infer && right.is_a?(VarType) && right.to_infer
         if deferred_constraints.nil?
           left.add_ubound(right, ast, new_cons, propagate: propagate) unless (left.ubounds.any? { |t, loc| t == right || t.hash == right.hash } || left.equal?(right)) ## Added this last one for ChoiceTypes, because the ChoiceType can change but the hash does not.
-          right.add_lbound(left, ast, new_cons, propagate: propagate) unless (right.lbounds.any? { |t, loc| t == left || t.hash == left.hash } || right.equal?(left))
+          right.add_lbound(left, pi, ast, new_cons, propagate: propagate) unless (right.lbounds.any? { |t, _, loc| t == left || t.hash == left.hash } || right.equal?(left))
         else
           deferred_constraints << [left, right, pi]
         end
         return true
       elsif left.is_a?(VarType) && left.to_infer
         if deferred_constraints.nil?
-          left.add_ubound(right, ast, new_cons, propagate: propagate) unless (left.ubounds.any? { |t, loc| t == right || t.hash == right.hash } || left.equal?(right))
+          left.add_ubound(right, ast, new_cons, propagate: propagate) unless (left.ubounds.any? { |t, _, loc| t == right || t.hash == right.hash } || left.equal?(right))
         else
           deferred_constraints << [left, right, pi]
         end
         return true
       elsif right.is_a?(VarType) && right.to_infer
 
-        RDL::Logging.log :typecheck, :trace, "#{right}.is_a VarType"
-        RDL::Logging.log :typecheck, :trace, "\t#{left} <= #{right}"
+        #RDL::Logging.log :typecheck, :trace, "#{right}.is_a VarType"
+        #RDL::Logging.log :typecheck, :trace, "\t#{left} <= #{right}"
         if deferred_constraints.nil?
           RDL::Logging.log :typecheck, :trace, 'no deferred_constraints'
-          right.add_lbound(left, ast, new_cons, propagate: propagate) unless (right.lbounds.any? { |t, loc| t == left || t.hash == left.hash } || right.equal?(left))
+          right.add_lbound(left, pi, ast, new_cons, propagate: propagate) unless (right.lbounds.any? { |t, _, loc| t == left || t.hash == left.hash } || right.equal?(left))
         else
           RDL::Logging.log :typecheck, :trace, 'deferred_constraints:'
           deferred_constraints << [left, right, pi]
-          deferred_constraints.each { |k, v| if v.is_a?(Array) then v.each { |v| RDL::Logging.log(:typecheck, :trace, "#{k} <= #{v[1] || v}") } else RDL::Logging.log(:typecheck, :trace, "#{k} <= #{v}") end }
+          deferred_constraints.each { |k, v, p| if v.is_a?(Array) then v.each { |v| RDL::Logging.log(:typecheck, :trace, "#{k} <= #{v[1] || v}") } else RDL::Logging.log(:typecheck, :trace, "#{k} <= #{v}") end }
         end
         return true
       end
