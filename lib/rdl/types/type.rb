@@ -88,6 +88,24 @@ module RDL::Type
     def self.leq(left, right, pi, inst=nil, ileft=true, deferred_constraints=nil, no_constraint: false, ast: nil, propagate: false, new_cons: {}, removed_choices: {})
       raise RuntimeError, "leq :: pi is not an array, it is #{pi.inspect}" if !pi.is_a? Array
 
+      # Path Sensitivity: The FIRST thing we want to do is destructure
+      #                   MultiTypes depending on the path. If either the
+      #                   left or the right is a MultiType, we may be able
+      #                   to get more precise type info by leveraging the
+      #                   current path.
+      #require 'debug/open'
+      if left && (left.is_a? MultiType) # TODO(Mark): add PathType here too
+        left = left.index(pi)
+      end
+      if right && (right.is_a? MultiType) # TODO(Mark): add PathType here too
+        right = right.index(pi)
+      end
+
+
+
+      
+
+      # Continue with normal leq.
       left = inst[left.name] if inst && ileft && left.is_a?(VarType) && !left.to_infer && inst[left.name]
       right = inst[right.name] if inst && !ileft && right.is_a?(VarType) && !right.to_infer && inst[right.name]
       left = left.type if left.is_a?(DependentArgType) || left.is_a?(AnnotatedArgType)
