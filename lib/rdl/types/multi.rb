@@ -23,6 +23,14 @@ module RDL::Type
             @map = map
         end
 
+        # Index into this MultiType, assuming `path` holds.
+        def index(path)
+            # If we have this path in our map, index into it.
+            # Otherwise, return self.
+            # TODO(Mark): This needs to be more precise. Consider subpaths.
+            (@map.has_key?(path) && @map[path]) || self
+        end
+
         # placeholder
         def is_complete?
             true
