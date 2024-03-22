@@ -59,25 +59,11 @@ module RDL::Typecheck
       sol = sol.drop_vars.canonical if sol.is_a?(RDL::Type::IntersectionType)  ## could be, e.g., nominal type if only one type used to create intersection.
       #return sol
     elsif category == :ret
-      #require 'debug/open'
-
-      # Path Sensitivity: :ret type vars can be path-sensitive.
-      #                   If this one is, turn its lower bounds
-      #                   into a MultiType.
-      #                   Otherwise, just stick with the union.
-      if var.path_sensitive
-        # First step is to reorganize the 
-        # [Type, Path[], AST][] ~~> Map<Path[], Type>
-        map = {}
-        var.lbounds.each { |t, pi, ast| map[pi] = t }
-        sol = RDL::Type::MultiType.new(map).canonical
-      else
-        # Filter to just the types
-        non_vartype_lbounds = var.lbounds.map { |t, pi, ast| t}.reject { |t| t.instance_of?(RDL::Type::VarType) }
-        sol = RDL::Type::UnionType.new(*non_vartype_lbounds)
-        sol = sol.drop_vars.canonical if sol.is_a?(RDL::Type::UnionType)  ## could be, e.g., nominal type if only one type used to create union.
-      end
-    #return sol
+      # Filter to just the types
+      non_vartype_lbounds = var.lbounds.map { |t, pi, ast| t}.reject { |t| t.instance_of?(RDL::Type::VarType) }
+      sol = RDL::Type::UnionType.new(*non_vartype_lbounds)
+      sol = sol.drop_vars.canonical if sol.is_a?(RDL::Type::UnionType)  ## could be, e.g., nominal type if only one type used to create union.
+      #return sol
     elsif category == :var
       if var.lbounds.empty? || (var.lbounds.size == 1 && var.lbounds[0][0] == RDL::Globals.types[:bot])
         ## use upper bounds in this case.

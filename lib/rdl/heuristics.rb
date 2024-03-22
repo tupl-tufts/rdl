@@ -69,6 +69,23 @@ class RDL::Heuristic
     matching_classes
   end
 
+  def self.path_sensitive(var_type)
+      # Path Sensitivity: :ret type vars can be path-sensitive.
+      #                   If this one is, turn its lower bounds
+      #                   into a MultiType.
+      #                   Otherwise, just stick with the union.
+      #if var.path_sensitive
+      #  ### # Turning into a MultiType, for path sensitivity.
+      #  ### # First step is to reorganize the 
+      #  ### # [Type, Path[], AST][] ~~> Map<Path[], Type>
+      #  ### map = {}
+      #  ### var.lbounds.each { |t, pi, ast| map[pi] = t }
+      #  ### sol = RDL::Type::MultiType.new(map).canonical
+      #else
+      #end
+
+  end
+
   def self.struct_to_nominal(var_type)
     return unless (var_type.category == :arg) || (var_type.category == :var)#(var_type.category == :ivar) || (var_type.category == :cvar) || (var_type.category == :gvar) ## this rule only applies to args and (instance/class/global) variables
     #return unless var_type.ubounds.all? { |t, loc| t.is_a?(RDL::Type::StructuralType) || t.is_a?(RDL::Type::VarType) } ## all upper bounds must be struct types or var types
@@ -138,6 +155,7 @@ if defined? Rails
   RDL::Heuristic.add(:is_pluralized_model) { |var| if var.base_name.is_pluralized_model? then var.base_name.model_set_type end }
 end
 
+RDL::Heuristic.add(:path_sensitive) { |var| RDL::Heuristic.path_sensitive(var)}
 RDL::Heuristic.add(:struct_to_nominal) { |var| t1 = Time.now; g = RDL::Heuristic.struct_to_nominal(var); $stn = $stn + (Time.now - t1); g }
 RDL::Heuristic.add(:int_names) { |var| if var.base_name.end_with?("id") || (var.base_name.end_with? "num") || (var.base_name.end_with? "count") then RDL::Globals.types[:integer] end }
 RDL::Heuristic.add(:int_array_name) { |var| if var.base_name.end_with?("ids") || (var.base_name.end_with? "nums") || (var.base_name.end_with? "counts") then RDL::Globals.parser.scan_str "#T Array<Integer>" end }

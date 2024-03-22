@@ -85,7 +85,7 @@ module RDL::Type
     # if inst is nil, returns self <= other
     # if inst is non-nil and ileft, returns inst(self) <= other, possibly mutating inst to make this true
     # if inst is non-nil and !ileft, returns self <= inst(other), again possibly mutating inst
-    def self.leq(left, right, pi, inst=nil, ileft=true, deferred_constraints=nil, no_constraint: false, ast: nil, propagate: false, new_cons: {}, removed_choices: {})
+    def self.leq(left, right, pi, inst=nil, ileft=true, deferred_constraints=nil, no_constraint: false, ast: nil, propagate: false, new_cons: {}, removed_choices: {}, path_sensitive: false)
       raise RuntimeError, "leq :: pi is not an array, it is #{pi.inspect}" if !pi.is_a? Array
 
       # Path Sensitivity: The FIRST thing we want to do is destructure
@@ -93,19 +93,33 @@ module RDL::Type
       #                   left or the right is a MultiType, we may be able
       #                   to get more precise type info by leveraging the
       #                   current path.
+      #               
+      #                   However, this depends on if this `leq` is 
+      #                   path_sensitive. If it is not, just (conservatively) 
+      #                   treat MultiTypes as unions.
       #require 'debug/open'
       if left && (left.is_a? MultiType) # TODO(Mark): add PathType here too
-        left = left.index(pi)
+        if path_sensitive
+          left = left.index(pi)
+        else
+          left = RDL::Type::UnionType.new(left.map.values)
+        end
       end
       if right && (right.is_a? MultiType) # TODO(Mark): add PathType here too
-        right = right.index(pi)
+        if path_sensitive
+          right = right.index(pi)
+        else
+          right = RDL::Type::UnionType.new(right.map.values)
+        end
       end
 
+      # TODO(Mark): Probably need to recur here, in order to deal with nested
+      #             MultiTypes.
 
 
-      
-
-      # Continue with normal leq.
+      #----------------------------------------------#
+      # Continue with normal (path-insensitive) leq. #
+      #----------------------------------------------#
       left = inst[left.name] if inst && ileft && left.is_a?(VarType) && !left.to_infer && inst[left.name]
       right = inst[right.name] if inst && !ileft && right.is_a?(VarType) && !right.to_infer && inst[right.name]
       left = left.type if left.is_a?(DependentArgType) || left.is_a?(AnnotatedArgType)
