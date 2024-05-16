@@ -62,7 +62,7 @@ class RDL::Info
 
   # eventually replace with Hash#dig
   def get(klass, label, kind)
-    puts "Global type lookup for #{klass}##{label}/#{kind}"
+    RDL::Logging.log :typecheck, :debug, "Global type lookup for #{klass}##{label}/#{kind}"
     klass = klass.to_s
     label = label.to_sym
     t1 = @info[klass]

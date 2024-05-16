@@ -39,13 +39,13 @@ module RDL::Typecheck
       if @klass
         name, args_node, body_node = *node
         args = *args_node
-        ap "ParamsInjector :: on_def -> #{name}(#{args_node})"
+        RDL::Logging.log :openapi_rewriting, :trace, "ParamsInjector :: on_def -> #{name}(#{args_node})"
 
         rewritten_args = ""
         body_code = (body_node && body_node.location.expression.source) || ""
 
-        if !RDL::Typecheck.is_controller_method(@klass, name) # not an endpoint
-          ap "Not a controller method. No injection."
+        if !RDL::Typecheck.is_controller_method?(@klass, name) # not an endpoint
+          RDL::Logging.log :openapi_rewriting, :trace, "Not a controller method. No injection."
           if args_node.location.expression
             # If there were args defined, use them.
             rewritten_args = args_node.location.expression.source
@@ -56,15 +56,15 @@ module RDL::Typecheck
         elsif args_node.location.expression == nil # no args
           rewritten_args = "(params)"
         elsif args_node.location.expression.source.start_with?("|") # lambda
-          ap "Lambda. No injection."
+          RDL::Logging.log :openapi_rewriting, :trace, "Lambda. No injection."
           rewritten_args = args_node.location.expression.source
         elsif args_node.children.none? {|node| node.children[0] == :params}# regular function (with parentheses). If it has at least one argument, it requires a comma to be added.
-          args_node.children.each {|n| ap "Processing arg:"; ap n.children[0]}
+          args_node.children.each {|n| RDL::Logging.log :openapi_rewriting, :trace, "Processing arg:"; RDL::Logging.log :openapi_rewriting, :trace, n.children[0]}
           to_insert = if args_node.children.length > 0 then ", params" else "params" end
           rewritten_args = args_node.location.expression.source.insert(-2, to_insert)
-          ap "Arguments defined but no params. Injected."
+          RDL::Logging.log :openapi_rewriting, :trace, "Arguments defined but no params. Injected."
         else
-          ap "Params already defined. No injection."
+          RDL::Logging.log :openapi_rewriting, :trace, "Params already defined. No injection."
           rewritten_args = args_node.location.expression.source
         end
 
@@ -80,11 +80,11 @@ module RDL::Typecheck
       name_ast, super_ast, body_ast = *node
       name_code = name_ast.location.expression.source
       super_code = (super_ast && super_ast.location.expression.source) || "Object"
-      ap "on_class: #{name_ast} < #{super_ast}"
+      RDL::Logging.log :openapi_rewriting, :trace, "on_class: #{name_ast} < #{super_ast}"
 
       klass = RDL::Typecheck.get_class_from_node(node)
 
-      if RDL::Typecheck.is_controller(klass)
+      if RDL::Typecheck.is_controller?(klass)
         # Rewrite the body
         body_code = ParamsInjector.rewrite(body_ast, klass=klass)
         align_replace(node.location.expression, @offset, "class #{name_code} < #{super_code}\n\n#{body_code}\nend")
@@ -103,7 +103,7 @@ module RDL::Typecheck
       rewriter = ParamsInjector.new(ast.location.expression.begin_pos, klass)
       buffer = Parser::Source::Buffer.new("(ast)")
       buffer.source = ast.location.expression.source
-      puts "Creating buffer of length: #{ast.location.expression.source.length}"
+      RDL::Logging.log :openapi_rewriting, :trace, "Creating buffer of length: #{ast.location.expression.source.length}"
       rewriter.rewrite(buffer, ast)
     end
   end
@@ -111,7 +111,7 @@ module RDL::Typecheck
   class RespondToInjector < Parser::TreeRewriter
 
     def on_block(node)
-      ap "on_block: #{node}"
+      RDL::Logging.log :openapi_rewriting, :trace, "on_block: #{node}"
       
       # E.g. (send nil :respond_to)
       send_ast = node.children[0]
@@ -121,7 +121,7 @@ module RDL::Typecheck
       args_ast = node.children[1]
       return unless args_ast.children[0].children[0] == :format
 
-      ap "We are definitely in a `respond_to` block."
+      RDL::Logging.log :openapi_rewriting, :trace, "We are definitely in a `respond_to` block."
 
       # E.g. (begin (send (lvar :format) :html) 
       #             (block (send (lvar :format) :json)
@@ -146,27 +146,27 @@ module RDL::Typecheck
           node.children[1] == :json
       }
 
-      ap "Identified #{format_json_block_calls.length} block calls to format.json:"
-      ap format_json_block_calls
+      RDL::Logging.log :openapi_rewriting, :trace, "Identified #{format_json_block_calls.length} block calls to format.json:"
+      RDL::Logging.log :openapi_rewriting, :trace, format_json_block_calls
 
-      ap ""
-      ap "Identified #{format_json_empty_calls.length} empty calls to format.json:"
-      ap format_json_empty_calls
+      RDL::Logging.log :openapi_rewriting, :trace, ""
+      RDL::Logging.log :openapi_rewriting, :trace, "Identified #{format_json_empty_calls.length} empty calls to format.json:"
+      RDL::Logging.log :openapi_rewriting, :trace, format_json_empty_calls
       #return unless body_ast.children.
 
       to_inject = ""
-      ap "Here lies the code and source location for each block call to render:"
+      RDL::Logging.log :openapi_rewriting, :trace, "Here lies the code and source location for each block call to render:"
       format_json_block_calls.each { |call_ast| 
           render_src = call_ast.children[2].location.expression.source
-          ap call_ast.children[2].location.expression.source
-          ap "@"
-          ap call_ast.children[2].location.expression
-          ap ""
+          RDL::Logging.log :openapi_rewriting, :trace, call_ast.children[2].location.expression.source
+          RDL::Logging.log :openapi_rewriting, :trace, "@"
+          RDL::Logging.log :openapi_rewriting, :trace, call_ast.children[2].location.expression
+          RDL::Logging.log :openapi_rewriting, :trace, ""
 
           # Inject the following expression after the `respond_to` call:
           # return render ...
 
-          #ap "about to insert `;__RDL_rendered = #{render_src};`"
+          #RDL::Logging.log :openapi_rewriting, :trace, "about to insert `;__RDL_rendered = #{render_src};`"
           to_inject += ";__RDL_rendered = #{render_src};"
           #insert_after(node.location.expression, ";__RDL_rendered = #{render_src};")
           
@@ -177,13 +177,13 @@ module RDL::Typecheck
       block_code = node.location.expression.source
       # Replace the block => block + `__RDL_rendered = ...`
 
-      ap "about to replace block => #{block_code + to_inject}"
+      RDL::Logging.log :openapi_rewriting, :trace, "about to replace block => #{block_code + to_inject}"
       align_replace(node.location.expression, @offset, block_code + to_inject)
 
     end
 
     def on_send(node)
-        ap "on_send: #{node}"
+        RDL::Logging.log :openapi_rewriting, :trace, "on_send: #{node}"
 
         # Don't rewrite unless we're in a Rails controller
         return unless @klass
@@ -193,7 +193,7 @@ module RDL::Typecheck
         args = node.children[2]
 
         if method_name == :render #&& args[] receiver == :format && args[0] == :json 
-            ap "on_send: Identified a call to format.json: #{node}"
+            RDL::Logging.log :openapi_rewriting, :trace, "on_send: Identified a call to format.json: #{node}"
 
             # Assign the result of this call to `__RDL_rendered`
             to_inject = "__RDL_rendered = "
@@ -202,11 +202,11 @@ module RDL::Typecheck
     end
 
     def on_def(node)
-      ap "respond_to on_def: #{node.children[1]}"
+      RDL::Logging.log :openapi_rewriting, :trace, "respond_to on_def: #{node.children[1]}"
 
       # Are we in a Rails controller class?
       if @klass
-        ap "respond_to on_def: we are in Rails controller #{@klass}"
+        RDL::Logging.log :openapi_rewriting, :trace, "respond_to on_def: we are in Rails controller #{@klass}"
 
         
         # If so, rewrite the def.
@@ -215,8 +215,7 @@ module RDL::Typecheck
         def_args_ast = node.children[1]
         def_body_ast = node.children[2]
 
-        ap "respond_to on_def: #{def_name_ast}(#{def_args_ast})"
-        puts
+        RDL::Logging.log :openapi_rewriting, :trace, "respond_to on_def: #{def_name_ast}(#{def_args_ast})"
         return if def_body_ast == nil
 
         
@@ -249,11 +248,11 @@ module RDL::Typecheck
       name_ast, super_ast, body_ast = *node
       name_code = name_ast.location.expression.source
       super_code = (super_ast && super_ast.location.expression.source) || "Object"
-      ap "on_class: #{name_ast} < #{super_ast}"
+      RDL::Logging.log :openapi_rewriting, :trace, "on_class: #{name_ast} < #{super_ast}"
 
       klass = RDL::Typecheck.get_class_from_node(node)
 
-      if RDL::Typecheck.is_controller(klass)
+      if RDL::Typecheck.is_controller?(klass)
         # Rewrite the body
         body_code = RespondToInjector.rewrite(body_ast, klass=klass)
         align_replace(node.location.expression, @offset, "class #{name_code} < #{super_code}\n\n#{body_code}\nend")
@@ -272,7 +271,7 @@ module RDL::Typecheck
       rewriter = RespondToInjector.new(ast.location.expression.begin_pos, klass)
       buffer = Parser::Source::Buffer.new("(ast)")
       buffer.source = ast.location.expression.source
-      puts "Creating buffer of length: #{ast.location.expression.source.length}"
+      RDL::Logging.log :openapi_rewriting, :trace, "Creating buffer of length: #{ast.location.expression.source.length}"
       rewriter.rewrite(buffer, ast)
     end
 
@@ -292,21 +291,23 @@ module RDL::Typecheck
   end
 
   # Is the given Ruby class a Rails controller?
-  def self.is_controller(klass)
-    #ap "Klass: "
-    #ap klass
+  # (Class | String) -> Bool
+  def self.is_controller?(klass)
+    #RDL::Logging.log :openapi_rewriting, :trace, "Klass: "
+    #RDL::Logging.log :openapi_rewriting, :trace, klass
 
-    klass = klass.constantize if klass.is_a? String
+    klass = RDL::Util.to_class(klass)
 
     if klass && defined?(Rails) && (klass.respond_to? :superclass) && (klass.superclass.to_s == "ApplicationController")
-      ap "#{klass.name} is a Rails controller"
+      RDL::Logging.log :openapi_rewriting, :info, "#{klass.name} is a Rails controller"
       return true
     end
     return false
   end
 
-  def self.is_controller_method(klass, meth)
-    RDL::Typecheck.is_controller(klass) && klass.action_methods.include?(meth.to_s)
+  def self.is_controller_method?(klass, meth)
+    klass = RDL::Util.to_class(klass)
+    defined?(Rails) && RDL::Typecheck.is_controller?(klass) && klass.respond_to?(:action_methods) && klass.action_methods.include?(meth.to_s)
   end
 
 end

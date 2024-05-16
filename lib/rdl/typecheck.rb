@@ -25,13 +25,13 @@ module RDL::Typecheck
       # (def name args body)
       name, _, body = *node
 
-      if @klass && RDL::Typecheck.is_controller(@klass)
+      if @klass && RDL::Typecheck.is_controller?(@klass)
         # If we're mapping line #'s from a Rails controller,
         # the file has been rewritten, and we must refer to the
         # original line #'s from Ruby.
         file, line = klass.instance_method(name).source_location
 
-        ap "ASTMapper on #{file}. Rewritten controller method #{name}. Old line number = #{line}, transformed line number = #{node.loc.line}"
+       RDL::Logging.log :typecheck, :trace, "ASTMapper on #{file}. Rewritten controller method #{name}. Old line number = #{line}, transformed line number = #{node.loc.line}"
         loc = line
       else
         # If we're not in a rewritten Rails controller, we can
@@ -114,7 +114,7 @@ module RDL::Typecheck
     def bind(var, typ, pi: [], fixed: false, force: false)
       raise RuntimeError, "Can't update variable with fixed type" if !force && @env[var] && @env[var][:fixed]
       raise RuntimeError, "Can't fix type of already-bound variable" if !force && fixed && @env[var]
-      puts "Env.bind :: var=#{var}, typ=#{typ}, self=#{self.to_tiny_s}"
+      RDL::Logging.log :typecheck, :trace, "Env.bind :: var=#{var}, typ=#{typ}, self=#{self.to_tiny_s}"
       result = Env.new
       result.env = @env.merge(var => {type: typ, pi: pi, fixed: fixed})
       return result
@@ -151,7 +151,7 @@ module RDL::Typecheck
     # merges bindings in self with bindings in other, preferring bindings in other if there is a common key
     def merge(other)
       # TODO(Mark): Remove this debug stmt
-      puts "Env.merge :: self=#{self.to_tiny_s}, other=#{other.to_tiny_s}"
+      RDL::Logging.log :typecheck, :trace, "Env.merge :: self=#{self.to_tiny_s}, other=#{other.to_tiny_s}"
       result = Env.new
       result.env = @env.merge(other.env)
       return result
@@ -194,11 +194,12 @@ module RDL::Typecheck
     # returns new Env where every key is mapped to the union of its bindings in the envs
     # any fixed binding in any env must be fixed in all envs and at the same type
     def self.join(e, *envs)
-      # TODO(Mark): Remove this debug stmt
-      puts "Env.join :: envs=[#{envs.map(&:to_tiny_s).join(",")}]"
       raise RuntimeError, "Expecting AST, got #{e.class}" unless e.is_a? AST::Node
       env = Env.new
       envs.delete(nil)
+      # TODO(Mark): Remove this debug stmt
+      RDL::Logging.log :typecheck, :trace, "Env.join :: envs=[#{envs.map(&:to_tiny_s).join(",")}]"
+
       return env if envs.empty?
       return envs[0] if envs.size == 1
       first = envs[0]
@@ -334,11 +335,9 @@ module RDL::Typecheck
       end
     end
 
-    ap "typecheck.rb :: get_ast(klass=#{klass}, meth=#{meth}).
+   RDL::Logging.log :typecheck, :trace, "typecheck.rb :: get_ast(klass=#{klass}, meth=#{meth}).
     Resolved to #{file}##{line} when asking Rails.
     Parser cache = #{RDL::Globals.parser_cache[file][1][:line_defs].keys}"
-    ap meth
-    puts
     ast = RDL::Globals.parser_cache[file][1][:line_defs][line]
 
     ## If the code was transformed, eval it /after/ setting
@@ -358,17 +357,17 @@ module RDL::Typecheck
     buffer = Parser::Source::Buffer.new "(ast)", source: (File.read file)
     code = nil
 
-    if RDL::Typecheck.is_controller klass
+    if RDL::Typecheck.is_controller? klass
       # Step 1. Inject `params` argument into controller methods.
-      ap "About to inject params into #{file}"
+     RDL::Logging.log :typecheck, :trace, "About to inject params into #{file}"
       code = ParamsInjector.rewrite ast
-      ap "After params injection: #{code}"
+     RDL::Logging.log :typecheck, :trace, "After params injection: #{code}"
       ast = Parser::CurrentRuby.parse code, file
 
       ## Step 2. Inject class fields for calls to `respond_to`.
-      ap "About to inject respond_to into #{file}"
+     RDL::Logging.log :typecheck, :trace, "About to inject respond_to into #{file}"
       code = RespondToInjector.rewrite ast
-      ap "After RespondTo injection: #{code}"
+     RDL::Logging.log :typecheck, :trace, "After RespondTo injection: #{code}"
       ast = Parser::CurrentRuby.parse code, file
     end
 
@@ -393,7 +392,7 @@ module RDL::Typecheck
     RDL::Logging.log_header :inference, :debug, "Infering #{RDL::Util.pp_klass_method(klass, meth)}"
 
     RDL::Config.instance.use_comp_types = true
-    RDL::Config.instance.number_mode = true
+    #RDL::Config.instance.number_mode = true
     @var_cache = {}
     ast = get_ast(klass, meth)
     if ast.nil?
@@ -485,7 +484,6 @@ module RDL::Typecheck
   end
 
   def self.typecheck(klass, meth, ast=nil, types = nil)
-    # puts "Typechecking #{klass}##{meth}"
     ast = get_ast(klass, meth) unless ast
     raise RuntimeError, "Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}" if ast.nil?
     types = RDL::Globals.info.get(klass, meth, :type) unless types
@@ -707,7 +705,7 @@ module RDL::Typecheck
   rescue => exn
     raise exn unless RDL::Config.instance.continue_on_errors
 
-    RDL::Logging.log :typecheck, :debug_error, "#{exn}; returning %dyn"
+    RDL::Logging.log :typecheck, :debug_error, "#{exn}; returning %dyn. Backtrace: #{exn.backtrace}"
 
     [env, RDL::Globals.types[:dyn]]
   end
@@ -719,9 +717,7 @@ module RDL::Typecheck
   # Returns [env', t], where env' is the type environment at the end of the expression
   # and t is the type of the expression. t is always canonical.
   def self._tc(scope, env, e)
-    #require 'debug/open'
-    puts "_tc :: scope[:pi] => #{scope[:pi]}"
-    puts
+    RDL::Logging.log :typecheck. :info, "_tc :: scope[:pi] => #{scope[:pi]}"
     case e.type
     when :nil
       [env, RDL::Globals.types[:nil]]
@@ -1207,10 +1203,10 @@ module RDL::Typecheck
       right_scope = scope_add_path(scope, right_path)
       envleft, tleft = if e.children[1].nil? then [envi, RDL::Globals.types[:nil]] else tc(left_scope, envi, e.children[1]) end # then
       envright, tright = if e.children[2].nil? then [envi, RDL::Globals.types[:nil]] else tc(right_scope, envi, e.children[2]) end # else
-      puts ""
-      puts "====================================================================="
-      ap "Typechecking `if` expression: #{e.children[0].loc.expression}."
-      puts "
+      RDL::Logging.log :typecheck, :debug, ""
+      RDL::Logging.log :typecheck, :debug, "====================================================================="
+      RDL::Logging.log :typecheck, :debug, "Typechecking `if` expression: #{e.children[0].loc.expression}."
+      RDL::Logging.log :typecheck, :debug, "
          env     #{env} 
       -> envi    #{envi} 
       -> envleft #{envleft} & envright #{envright} 
@@ -1219,8 +1215,8 @@ module RDL::Typecheck
       tguard: #{tguard}
       left_scope[:pi] => #{left_scope[:pi]}
       right_scope[:pi] => #{right_scope[:pi]}"
-      puts "====================================================================="
-      puts ""
+      RDL::Logging.log :typecheck, :debug, "====================================================================="
+      RDL::Logging.log :typecheck, :debug, ""
       if tguard.is_a? RDL::Type::SingletonType
         if tguard.val then [envleft, tleft] else [envright, tright] end
       else
@@ -1283,7 +1279,6 @@ module RDL::Typecheck
             # Path Sensitivity: use the current path to determine if this
             #                   generic type is a match.
             elsif !(RDL::Type::Type.leq(tcontrol.base, new_typ, scope[:pi]) && !(RDL::Type::Type.leq(new_typ, tcontrol.base, scope[:pi])))
-              puts "TEST_MARKER_1"
               next # can't possibly match this branch
             else
               error :generic_error, ["general refinement for generics not implemented yet"], wclause
@@ -1880,11 +1875,12 @@ module RDL::Typecheck
   # raises exception if there are no possible valid calls
   def self.tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union)
     raise "Type checking not currently supported for method #{meth}." if [:define_method, :module_exec].include?(meth)
-    puts ""
-    puts "----------------------"
-    ap "Type checking method call: #{trecv}.#{meth} @ #{e.location.expression} and tactuals of size #{tactuals.size}:"
-    #ap tactuals
-    puts "----------------------"
+    RDL::Logging.log :inference, :info, ""
+    RDL::Logging.log :inference, :info, "----------------------"
+    RDL::Logging.log :inference, :info, "Type checking method call: #{trecv}.#{meth} @ #{e.location.expression} and tactuals of size #{tactuals.size}:"
+    RDL::Logging.log :inference, :info, "----------------------"
+    RDL::Logging.log :inference, :info, ""
+
     if (trecv == RDL::Globals.types[:array])
       trecv = RDL::Type::GenericType.new(RDL::Globals.types[:array], RDL::Globals.types[:bot])
     elsif (trecv == RDL::Globals.types[:hash])
@@ -1914,127 +1910,6 @@ module RDL::Typecheck
         end
         ts = lookup(scope, trecv_lookup, meth_lookup, e)
         ts = [RDL::Type::MethodType.new([], nil, RDL::Type::NominalType.new(trecv.val))] if init && (ts.nil?) # there's always a nullary new if initialize is undefined
-        #puts "ts: #{ts}"
-
-        #if meth == :all_recent
-        #  ap "Detected `all_recent`. info about the mysterious `ts`` on next line (vvv)"
-        #  ap "ts.class   -->  #{ts.class}"
-        #  ap "ts.length  -->  #{ts.length}"
-        #  ap "ts[0].class  -->  "
-        #  ap ts[0].class
-        #  ap "ts[0].args  -->  "
-        #  ap ts[0].args
-        #  ap "ts[0].block  -->  "
-        #  ap ts[0].block
-        #  puts
-        #  puts
-        #  ap "ts[0].ret.class  -->  "
-        #  ap ts[0].ret.class
-        #  ap "ts[0].ret.ubounds.class --> "
-        #  ap ts[0].ret.ubounds.class
-        #  ap "ts[0].ret.ubounds.length --> "
-        #  ap ts[0].ret.ubounds.length
-        #  ap "ts[0].ret.ubounds[0].class --> "
-        #  ap ts[0].ret.ubounds[0].class
-        #  if ts[0].ret.ubounds[0] != nil
-        #    ap "ts[0].ret.ubounds[0].length --> "
-        #    ap ts[0].ret.ubounds[0].length
-
-        #    ap "ts[0].ret.ubounds[0][0].class --> "
-        #    ap ts[0].ret.ubounds[0][0].class
-
-        #    # ts[0].ret.ubounds[0][0] => structural type
-        #    ap "ts[0].ret.ubounds[0][0].methods.class --> "
-        #    ap ts[0].ret.ubounds[0][0].methods.class
-
-        #    ap "ts[0].ret.ubounds[0][0].methods.keys --> "
-        #    ap ts[0].ret.ubounds[0][0].methods.keys
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].class --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].class
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.class --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.class
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args.class --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args.class
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args.length --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args.length
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].class --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].class
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds.class --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds.class
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds.length --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds.length
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0].class --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0].class # Array
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods.keys --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods.keys
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].class --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].class # MethodType
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret.class --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret.class # VarType
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret.ubounds[0][0].methods.keys --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret.ubounds[0][0].methods.keys
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret.ubounds[0][0].methods[:<=>].class --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret.ubounds[0][0].methods[:<=>].class
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time].ret
-
-
-
-
-
-        #    ap "ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time] --> "
-        #    ap ts[0].ret.ubounds[0][0].methods[:sort].block.args[0].ubounds[0][0].methods[:start_time]
-
-        #    ap "ts[0].ret.ubounds[0][0] --> "
-        #    ap ts[0].ret.ubounds[0][0]
-
-        #  end
-
-
-        #  ap "ts[0].ret.ubounds --> "
-        #  ap ts[0].ret.ubounds
-
-
-
-
-
-        #  ap "ts[0].ret  -->  "
-        #  ap ts[0].ret
-        #  #ap "ts[0].to_infer --> "
-        #  #ap ts[0].instance_variable_get(:@to_infer)
-        #  #ap "ts[0].lbounds --> "
-        #  #ap ts[0].instance_variable_get(:@lbound)
-        #  #ap "ts[0].ubounds --> "
-        #  #ap ts[0].instance_variable_get(:@ubound)
-        #  #ap "ts[0].solution --> "
-        #  #ap ts[0].instance_variable_get(:@solution)
-        #  #ap "ts[0].cls --> "
-        #  #ap ts[0].instance_variable_get(:@cls)
-        #  #ap "ts[0].meth --> "
-        #  #ap ts[0].instance_variable_get(:@meth)
-
-        #  ap "ts[0]  -->"
-        #  puts ts[0]
-        #  ap "ts         -->  #{ts}"
-
-        #  #exit(1)
-        #end
-        puts "Completed type signature lookup for #{trecv_lookup}##{meth_lookup} ~~> "
-        puts ts[0] if ts
 
         error :no_singleton_method_type, [trecv.val, meth], e unless ts
         inst = {self: self_inst}
@@ -2230,14 +2105,8 @@ module RDL::Typecheck
       ts = filter_comp_types(ts, false)
       error :no_non_dep_types, [trecv, meth], e unless !ts.empty?
     end
-    #puts trecv.inspect
-    #puts "trets"
-    #puts trets.inspect
-    #puts "ancestors"
-    #puts trecv.val.ancestors.inspect if trecv.respond_to?(:val)
 
     RDL::Type.expand_product(tactuals).each { |tactuals_expanded|
-      puts "Checking if expanded product looks right..."#: #{tactuals_expanded}"
       # AT LEAST ONE of the possible intesection arms must match
       trets_tmp = []
       #deferred_constraints = []
@@ -2256,30 +2125,28 @@ module RDL::Typecheck
             inst = trecv.to_inst.merge(self: trecv)
           end
           block_types = (if tmeth.block.is_a?(RDL::Type::MethodType) then tmeth.block.args + [tmeth.block.ret] else [] end)
-          puts "About to determine if any args + ret + block types are comp types..."
+          RDL::Logging.log :typecheck, :debug, "About to determine if any args + ret + block types are comp types..."
           unless (tmeth.args+[tmeth.ret]+block_types).all? { |t| !t.instance_of?(RDL::Type::ComputedType) }
-            puts "We have a comp type!"
+            RDL::Logging.log :typecheck, :debug, "We have a comp type!"
             tmeth_old = tmeth
             trecv_old = trecv.copy
             targs_old = tactuals_expanded.map { |t| t.copy }
             binds = tc_bind_arg_types(tmeth, tactuals_expanded)
             #binds = {} if binds.nil?
             tmeth = tmeth_res = compute_types(tmeth, self_klass, trecv, tactuals_expanded, binds) unless binds.nil?
-            ##########################
-            # INSERT DEBUG STATEMENT #
-            puts ""
-            puts "Computed comp type for #{meth}"
-            puts "    #{tmeth_old}"
-            puts "    ~>"
-            puts "    #{tmeth}"
-            puts ""
+            RDL::Logging.log :typecheck, :debug, ""
+            RDL::Logging.log :typecheck, :debug, "Computed comp type for #{meth}"
+            RDL::Logging.log :typecheck, :debug, "    #{tmeth_old}"
+            RDL::Logging.log :typecheck, :debug, "    ~>"
+            RDL::Logging.log :typecheck, :debug, "    #{tmeth}"
+            RDL::Logging.log :typecheck, :debug, ""
             ##########################
             comp_type = true
           end
           tmeth = tmeth.instantiate(inst) if inst
           tmeth_names << tmeth
           #deferred_constraints = []
-          puts "About to tc arg types:\n  tmeth: #{tmeth}\n  ...with DCs: #{current_dcs}"
+          RDL::Logging.log :typecheck, :debug, "About to tc arg types:\n  tmeth: #{tmeth}\n  ...with DCs: #{current_dcs}"
           tmeth_inst = tc_arg_types(tmeth, tactuals_expanded, current_dcs)
           #apply_deferred_constraints(deferred_constraints, e) unless deferred_constraints.empty?
           if tmeth_inst
@@ -2351,7 +2218,7 @@ module RDL::Typecheck
       }
       if trets_tmp.empty?
         # no arm of the intersection matched this expanded actuals lists, so reset trets to signal error and break loop
-        puts "No arm of the intersection matched this expanded actuals lists. Resetting trets to signal error and break loop."
+        RDL::Logging.log :typecheck, :debug, "No arm of the intersection matched this expanded actuals lists. Resetting trets to signal error and break loop."
         trets = []
         break
       else
@@ -2409,7 +2276,6 @@ module RDL::Typecheck
   end
 
   def self.apply_deferred_constraints(deferred_constraints, e, pi)
-    puts "TEST_MARKER_2"
     if deferred_constraints.size > 2 && deferred_constraints.all? { |t1, t2| t1.equal?(deferred_constraints[0][0]) && t2.is_a?(RDL::Type::NominalType) && RDL::Type::Type.leq(t2, RDL::Globals.types[:numeric], pi)}
     ## This is a temporary hack for Numeric types.
     ## If all the LHS types are the same single type, and all the RHS types

@@ -28,23 +28,20 @@ module RDL::Annotate
 
             # TODO: Support other HTTP verbs.
             route = Rails.application.routes.recognize_path(path)
-            puts
-            puts
-            puts
             RDL::Logging.log :openapi, :error, "Tried to typecheck path #{path} but matching Rails route was not found!" unless route
             kontroller = "#{route[:controller]}_controller".camelize.constantize.new.class
 
             method = route[:action]
 
-            ap "OpenAPI Path: #{path}. Resolved to Rails action: #{kontroller}##{method}"
+            RDL::Logging.log :openapi, :info, "OpenAPI Path: #{path}. Resolved to Rails action: #{kontroller}##{method}"
 
             output_type = translate_path(verbs, openapi)
-            ap "Resolved type: #{output_type}}"
+            RDL::Logging.log :openapi, :info, "Resolved type: #{output_type}}"
             output_type_rdl = RDL::Wrap.type_to_type output_type
-            ap "Resolved RDL type: #{output_type_rdl}}"
+            RDL::Logging.log :openapi, :info, "Resolved RDL type: #{output_type_rdl}}"
 
             # Actually perform the typechecking.
-            ap "Submitting to RDL: RDL.type, #{kontroller}, #{method.to_sym}, #{output_type}"
+            RDL::Logging.log :openapi, :info, "Submitting to RDL: RDL.type, #{kontroller}, #{method.to_sym}, #{output_type}"
             RDL.type kontroller, method.to_sym, output_type, wrap: false, typecheck: :openapi
 
 

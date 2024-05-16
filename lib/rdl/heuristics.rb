@@ -27,7 +27,7 @@ class RDL::Heuristic
       progress = progress + 1
 
       if progress % 100 == 0
-        RDL::Logging.log :heuristic, :trace, "Progress: #{progress}/#{count}. initialized #{c}"
+        RDL::Logging.log :heuristic, :info, "Progress: #{progress}/#{count} (#{(progress.to_f)/(count.to_f)*100}%). initialized #{c_str}"
       end
     end
     RDL::Logging.log :heuristic, :trace, "init_meth_to_cls... done!"

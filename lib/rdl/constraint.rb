@@ -16,13 +16,12 @@ module RDL::Typecheck
         var_types = [typ]
       end
 
-      #require 'debug/open'
       var_types.each { |var_type|
         begin
           if var_type.var_type? || var_type.optional_var_type? || var_type.vararg_var_type?
             var_type = var_type.type if var_type.optional_var_type? || var_type.vararg_var_type?
             var_type.lbounds.each { |lower_t, pi, ast|
-              RDL::Logging.log :typecheck, :trace, "#{lower_t} <=_{#{pi}} #{var_type}"
+              RDL::Logging.log :inference, :trace, "#{lower_t} <=_{#{pi}} #{var_type}"
               var_type.add_and_propagate_lower_bound(lower_t, pi, ast)
             }
             var_type.ubounds.each { |upper_t, pi, ast|
@@ -39,7 +38,8 @@ module RDL::Typecheck
               }
             }
           else
-            raise "Got unexpected type #{var_type}."
+            RDL::Logging.log :inference, :warning, "Found non-vartype belonging to #{klass}##{name} in `constrained_types`. Should be caused by `strict_field_inference`. Moving on..."
+            #raise "Got unexpected type #{var_type}."
           end
         rescue => e
           raise e unless RDL::Config.instance.continue_on_errors
@@ -105,7 +105,7 @@ module RDL::Typecheck
             #     var.ubounds.each { |t, _| puts t }
             #   }
             # }
-            RDL::Logging.log :hueristic, :debug, "Heuristic Applied: #{name}"
+            RDL::Logging.log :heuristic, :debug, "Heuristic Applied: #{name}"
             @new_constraints = true if !new_cons.empty?
             RDL::Logging.log :inference, :trace, "New Constraints branch A" if !new_cons.empty?
             return typ
@@ -118,7 +118,7 @@ module RDL::Typecheck
           ## no new constraints in this case so we'll leave it as is
         ensure
           total_time = Time.now - start_time
-          RDL::Logging.log :hueristic, :debug, "Heuristic #{name} took #{total_time} to evaluate"
+          RDL::Logging.log :heuristic, :debug, "Heuristic #{name} took #{total_time} to evaluate"
         end
       }
 
@@ -388,7 +388,7 @@ module RDL::Typecheck
             typ_sols[[klass.to_s, name.to_sym]] = typ
           end
         rescue => e
-          RDL::Logging.log :inference, :debug_error, "Error while exctracting solution for #{RDL::Util.pp_klass_method(klass, name)}: #{e}: #{e.backtrace}; continuing..."
+          RDL::Logging.log :inference, :critical, "Error while extracting solution for #{RDL::Util.pp_klass_method(klass, name)}: #{e}: #{e.backtrace.join("\n\t")}; continuing..."
           raise e unless RDL::Config.instance.continue_on_errors
          end
       }
