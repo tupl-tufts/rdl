@@ -118,7 +118,7 @@ module RDL::Type
     def check_bounds(no_promote=false)
       # Path Sensitivity: when dealing with FHTs, the comparisons with bounds
       #                   should occur in the empty path.
-      return (@lbounds.all? { |lbound| RDL::Type::Type.leq(lbound, self, [], no_promote) }) && (@ubounds.all? { |ubound| RDL::Type::Type.leq(self, ubound, [], no_promote) })
+      return (@lbounds.all? { |lbound| RDL::Type::Type.leq(lbound, self, Path.new, no_promote) }) && (@ubounds.all? { |ubound| RDL::Type::Type.leq(self, ubound, Path.new, no_promote) })
     end
 
     def <=(other, no_constraint=false, ast: nil)

@@ -1,32 +1,7 @@
 require_relative 'type'
 
 module RDL::Type
-    # Represents the actual path condition 
-    # (a single constraint in Delta in the formalism)
-    class Path
-        attr_accessor :tguard # the type we are typetesting
-        attr_accessor :tmatch # the type we have matched it to
-        attr_accessor :loc    # src location
-        attr_accessor :str    # string representation
 
-        def initialize(tguard, tmatch, loc, str)
-            @tguard = tguard
-            @tmatch = tmatch
-
-            @loc = loc
-            @str = str
-        end
-
-        def inspect
-            "#{"Path".colorize(:green)}{tguard=#{tguard.to_s.colorize(:yellow)}, tmatch=#{tmatch.to_s.colorize(:red)}, str=#{str.colorize(:grey)}}"
-        end
-
-        # to_s is just like #inspect but without the colors.
-        def to_s
-            "#{"Path"}{tguard=#{tguard.to_s}, tmatch=#{tmatch.to_s}, str=#{str}}"
-        end
-
-    end
 
     ## NOTE(Mark): This is temporary.
     #class Equality < RDL::Type::SingletonType
@@ -44,14 +19,14 @@ module RDL::Type
     #    end
     #end
 
-    # Represents a conjunction of paths.
-    class PathAnd < Path
-        attr_accessor :paths
+    ## Represents a conjunction of paths.
+    #class PathAnd < Path
+    #    attr_accessor :paths
 
-        def initialize(paths)
-            @paths = paths
-        end
-    end
+    #    def initialize(paths)
+    #        @paths = paths
+    #    end
+    #end
 
     class PathType < Type
         # :condition is a RDL::Type
@@ -62,8 +37,12 @@ module RDL::Type
         # and the map can contain `TrueClass` and `FalseClass`.
         attr_accessor :condition
 
+        attr_accessor :loc
+        attr_accessor :str
+
         # Map between the result of the condition expression
         # and the type of this object.
+        # Map<Type, Type>
         attr_accessor :map
 
         def initialize(condition, map, loc, str)
@@ -77,6 +56,37 @@ module RDL::Type
             raise RuntimeError, "Path condition must be a type" if !condition.is_a? Type
             raise RuntimeError, "Path map must be a Hash" if !map.is_a? Hash
             raise RuntimeError, "Path map must not be empty" if map.values.length < 1
+        end
+
+        # Returns a Map<Array<Path>, Type>
+        def type_map
+            #Here we need to turn our @condition and @map into a
+            # Map<Array<Path>, Type>
+
+            # @condition : type
+            # @map : Map<Type, Type>
+            tguard = @condition
+            new_map = {}
+            @map.each { |tmatch, tres|
+                pi = PathCondition.new(tguard, tmatch, @loc, @str)
+                new_map[Path.new([pi])] = tres
+            }
+
+            new_map
+        end
+
+        # path : Path[]
+        def index(path)
+            #TODO(Mark): this may not work.
+            # k = Path[]
+            matching_entries = @map.filter { |k, v| path.conds.include?(k) }
+            matching_values = matching_entries.values
+            RDL::Type::UnionType.new(*matching_values)
+        end
+
+        # path : Path
+        def can_index?(path)
+            self.type_map.keys.any? { |p| PathCondition.can_index?(path, p) }
         end
 
         def inspect
@@ -95,6 +105,12 @@ module RDL::Type
         end
 
         alias eql? ==
+
+        def instantiate(inst)
+            canonicalize!
+            return @canonical.instantiate(inst) if @canonical
+            return PathType.new(@condition, @map.transform_values { |v| v.instantiate(inst) }, @loc, @str)
+        end
 
         def canonical
             canonicalize!
@@ -118,6 +134,10 @@ module RDL::Type
             end
 
             @canonicalized = true
+        end
+
+        def copy
+            PathType.new(@condition.copy, @map.clone, @loc, @str)
         end
 
     end

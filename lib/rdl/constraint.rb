@@ -83,25 +83,25 @@ module RDL::Typecheck
 
 
     if category == :arg
-      non_vartype_ubounds = var.ubounds.map { |t, pi, ast| t}.reject { |t| t.instance_of?(RDL::Type::VarType) }
+      non_vartype_ubounds = ubounds.map { |t, pi, ast| t}.reject { |t| t.instance_of?(RDL::Type::VarType) }
       sol = non_vartype_ubounds.size == 1 ? non_vartype_ubounds[0] : RDL::Type::IntersectionType.new(*non_vartype_ubounds).canonical
       sol = sol.drop_vars.canonical if sol.is_a?(RDL::Type::IntersectionType)  ## could be, e.g., nominal type if only one type used to create intersection.
       #return sol
     elsif category == :ret
       # Filter to just the types
-      non_vartype_lbounds = var.lbounds.map { |t, pi, ast| t}.reject { |t| t.instance_of?(RDL::Type::VarType) }
+      non_vartype_lbounds = lbounds.map { |t, pi, ast| t}.reject { |t| t.instance_of?(RDL::Type::VarType) }
       sol = RDL::Type::UnionType.new(*non_vartype_lbounds)
       sol = sol.drop_vars.canonical if sol.is_a?(RDL::Type::UnionType)  ## could be, e.g., nominal type if only one type used to create union.
       #return sol
     elsif category == :var
-      if var.lbounds.empty? || (var.lbounds.size == 1 && var.lbounds[0][0] == RDL::Globals.types[:bot])
+      if lbounds.empty? || (lbounds.size == 1 && lbounds[0][0] == RDL::Globals.types[:bot])
         ## use upper bounds in this case.
-        non_vartype_ubounds = var.ubounds.map { |t, pi, ast| t}.reject { |t| t.instance_of?(RDL::Type::VarType) }
+        non_vartype_ubounds = ubounds.map { |t, pi, ast| t}.reject { |t| t.instance_of?(RDL::Type::VarType) }
         sol = RDL::Type::IntersectionType.new(*non_vartype_ubounds).canonical
         #return sol
       else
         ## use lower bounds
-        non_vartype_lbounds = var.lbounds.map { |t, pi, ast| t}.reject { |t| t.instance_of?(RDL::Type::VarType) }
+        non_vartype_lbounds = lbounds.map { |t, pi, ast| t}.reject { |t| t.instance_of?(RDL::Type::VarType) }
         sol = RDL::Type::UnionType.new(*non_vartype_lbounds)
         sol = sol.drop_vars.canonical if sol.is_a?(RDL::Type::UnionType)  ## could be, e.g., nominal type if only one type used to create union.
         #return sol#RDL::Type::UnionType.new(*non_vartype_lbounds).canonical
@@ -120,7 +120,8 @@ module RDL::Typecheck
       raise "Unexpected VarType category #{category}."
     end
     RDL::Logging.log :heuristic, :debug, "About to determine if heuristics can be applied. Current sol is `#{sol}`"
-    if  sol.is_a?(RDL::Type::UnionType) || (sol == RDL::Globals.types[:bot]) || (sol == RDL::Globals.types[:top]) || (sol == RDL::Globals.types[:nil]) || sol.is_a?(RDL::Type::StructuralType) || sol.is_a?(RDL::Type::IntersectionType) || (sol == RDL::Globals.types[:object])
+    # Try the heuristics anyway.
+    if true# sol.is_a?(RDL::Type::UnionType) || (sol == RDL::Globals.types[:bot]) || (sol == RDL::Globals.types[:top]) || (sol == RDL::Globals.types[:nil]) || sol.is_a?(RDL::Type::StructuralType) || sol.is_a?(RDL::Type::IntersectionType) || (sol == RDL::Globals.types[:object])
       ## Try each rule. Return first non-nil result.
       ## If no non-nil results, return original solution.
       ## TODO: check constraints.
@@ -135,13 +136,13 @@ module RDL::Typecheck
         begin
           if typ
             typ = typ.canonical
-            var.add_and_propagate_upper_bound(typ, nil, new_cons)
-            var.add_and_propagate_lower_bound(typ, nil, new_cons)
+            var.add_and_propagate_upper_bound(typ, Path.new, nil, new_cons)
+            var.add_and_propagate_lower_bound(typ, Path.new, nil, new_cons)
             # new_cons.each { |var, bounds|
             #   bounds.each { |u_or_l, t, _|
             #     puts "1. Added #{u_or_l} bound constraint #{t} of kind #{t.class} to variable #{var}"
             #     puts "It has upper bounds: "
-            #     var.ubounds.each { |t, _| puts t }
+            #     ubounds.each { |t, _| puts t }
             #   }
             # }
             RDL::Logging.log :heuristic, :debug, "Heuristic Applied: #{name}"
@@ -169,13 +170,19 @@ module RDL::Typecheck
     begin
       new_cons = {}
       sol = var if sol == RDL::Globals.types[:bot] # just use var itself when result of solution extraction was %bot.
+
+      if sol.is_a?(RDL::Type::VarType)
+        RDL::Logging.log :solution_extraction, :warning, "Unable to extract solution for vartype: #{var.cls}##{var.meth}/#{var.name}"
+        return sol ## don't add var type as solution
+      end
       return sol if sol.is_a?(RDL::Type::VarType) ## don't add var type as solution
       sol = sol.canonical
       # Path Sensitivity: I made the path empty here, as the extracted
       #                   solution for a var type needs to be valid
       #                   in all paths? Probably?
-      var.add_and_propagate_upper_bound(sol, [], nil, new_cons)
-      var.add_and_propagate_lower_bound(sol, [], nil, new_cons)
+
+      var.add_and_propagate_upper_bound(sol, Path.new, nil, new_cons)
+      var.add_and_propagate_lower_bound(sol, Path.new, nil, new_cons)
       # new_cons.each { |var, bounds|
       #   bounds.each { |u_or_l, t, _|
       #     puts "2. Added #{u_or_l} bound constraint #{t} to variable #{var}"
@@ -185,7 +192,7 @@ module RDL::Typecheck
       RDL::Logging.log :inference, :trace, "New Constraints branch B" if !new_cons.empty?
 
       if sol.is_a?(RDL::Type::GenericType)
-        new_params = sol.params.map { |p| if p.is_a?(RDL::Type::VarType) && !p.to_infer then p else extract_var_sol(p, category) end }
+        new_params = sol.params.map { |p| if p.is_a?(RDL::Type::VarType) && p.to_infer then extract_var_sol(p, category) else p end }
         sol = RDL::Type::GenericType.new(sol.base, *new_params)
       elsif sol.is_a?(RDL::Type::TupleType)
         new_params = sol.params.map { |t| extract_var_sol(t, category) }

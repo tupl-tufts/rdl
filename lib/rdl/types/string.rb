@@ -80,7 +80,7 @@ module RDL::Type
       #                   comparisons with bounds should occur in the empty
       #                   path.
       #                   Store path along with bounds.
-      return (@lbounds.all? { |lbound| RDL::Type::Type.leq(lbound, self, [], no_promote) }) && (@ubounds.all? { |ubound| RDL::Type::Type.leq(self, ubound, [], no_promote) } )
+      return (@lbounds.all? { |lbound| RDL::Type::Type.leq(lbound, self, Path.new, no_promote) }) && (@ubounds.all? { |ubound| RDL::Type::Type.leq(self, ubound, Path.new, no_promote) } )
     end
 
     def cant_promote!

@@ -64,7 +64,7 @@ module RDL::Type
     # Path Sensitivity: `pi` here is empty. 
     def member?(obj, *args)
       t = RDL::Util.rdl_type obj
-      return RDL::Type::Type.leq(t, self, []) if t
+      return RDL::Type::Type.leq(t, self, Path.new) if t
       return true if obj.nil?
       obj.equal?(@val)
     end

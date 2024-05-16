@@ -16,7 +16,11 @@ module RDL::Type
     end
 
     def to_s
-      "#{@base}<#{@params.map { |t| t.to_s }.join(', ')}>"
+      if self.is_empty_hash?
+        "{}"
+      else
+        "#{@base}<#{@params.map { |t| t.to_s }.join(', ')}>"
+      end
     end
 
     def ==(other) # :nodoc:

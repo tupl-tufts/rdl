@@ -10,7 +10,6 @@ class RDL::Heuristic
   # RDL::Util.to_class does not always work adequately for deprecated modules/methods, hence the need for this map.
 
   def self.init_meth_to_cls  # to be called before the first call to struct_to_nominal
-
     # determine how many modules to init
     count = 0
     ObjectSpace.each_object(Module).each do |c|
@@ -18,12 +17,13 @@ class RDL::Heuristic
     end
     RDL::Logging.log :heuristic, :trace, "init_meth_to_cls for #{count} modules..."
 
+    # the actual loop
     progress = 0
     ObjectSpace.each_object(Module).each do |c|
-      @str_to_cls_map[c.to_s] = c
-      class_methods = c.instance_methods | RDL::Globals.info.get_methods_from_class(c.to_s)
-      RDL::Logging.log :heuristic, :trace, "Mapping #{class_methods.length} methods from #{c.to_s}"
-      class_methods.each {|m| @meth_to_cls_map[m] = @meth_to_cls_map[m].add(c.to_s)}
+      c_str = c.to_s
+      @str_to_cls_map[c_str] = c
+      class_methods = c.instance_methods | RDL::Globals.info.get_methods_from_class(c_str)
+      class_methods.each {|m| @meth_to_cls_map[m] = @meth_to_cls_map[m].add(c_str)}
       progress = progress + 1
 
       if progress % 100 == 0
@@ -69,21 +69,83 @@ class RDL::Heuristic
     matching_classes
   end
 
-  def self.path_sensitive(var_type)
-      # Path Sensitivity: :ret type vars can be path-sensitive.
-      #                   If this one is, turn its lower bounds
-      #                   into a MultiType.
-      #                   Otherwise, just stick with the union.
-      #if var.path_sensitive
-      #  ### # Turning into a MultiType, for path sensitivity.
-      #  ### # First step is to reorganize the 
-      #  ### # [Type, Path[], AST][] ~~> Map<Path[], Type>
-      #  ### map = {}
-      #  ### var.lbounds.each { |t, pi, ast| map[pi] = t }
-      #  ### sol = RDL::Type::MultiType.new(map).canonical
-      #else
-      #end
+  def self.multitype_extraction(var)
+    if var.is_a? RDL::Type::VarType
+      if true#var.path_sensitive CLEANUP
+        RDL::Logging.log :heuristic, :info, "MultiType Extraction :: extracting #{var.to_s} (marked path-sensitive)"
+      else
+        RDL::Logging.log :heuristic, :trace, "MultiType Extraction :: NOT extracting #{var.to_s} (not marked path-sensitive)"
+      end
+    end
 
+    # Path Sensitivity: :ret type vars can be path-sensitive.
+    #                   If this one is, turn its lower bounds
+    #                   into a MultiType.
+    #                   Otherwise, just stick with the union.
+
+    return nil unless var.is_a?(RDL::Type::VarType)
+    if true#var.path_sensitive CLEANUP
+
+      # Reorganize the 
+      # [Type, Path, AST][] ~~> Map<Path, Type>
+      map = {}
+      var.lbounds.each { |t, pi, ast| 
+        # Ignore multitype bounds. They should have
+        # all been propagated.
+        next if t.is_a? RDL::Type::MultiType
+
+        # Ignore all vartype bounds.
+        next if t.is_a? RDL::Type::VarType
+
+        if map[pi]
+          map[pi] = RDL::Type::UnionType.new(map[pi], t)
+        else
+          map[pi] = t
+        end
+      }
+      return nil if map.empty?
+      ret = RDL::Type::MultiType.new(map).canonical
+      RDL::Logging.log :heuristic, :info, "MultiType Extraction :: extracted solution #{ret.to_s}"
+      return ret
+    else
+    end
+
+  end
+
+  def self.pathtype_if(var)
+    return nil unless var.is_a?(RDL::Type::VarType)
+    if true#var.path_sensitive # CLEANUP
+      
+      # If-statements
+      # If there exists 2 paths with the same src loc that 
+      # match TrueClass and FalseClass, we can extract
+      # a pathtype.
+
+      # note that if we have nested if-statements, we need
+      # to recursively apply this heuristic.
+
+      # var.lbounds : [Type, Path, AST]
+      # Example: var.lbounds
+      # 1. [St]
+
+
+
+      # Reorganize the 
+      # [Type, Path, AST][] ~~> Map<Path, Type>
+      map = {}
+      var.lbounds.each { |t, pi, ast| 
+        t = RDL::Typecheck.extract_var_sol(t, t.category) if t.is_a? RDL::Type::VarType
+        if map[pi]
+          map[pi] = RDL::Type::UnionType.new(map[pi], t)
+        else
+          map[pi] = t
+        end
+      }
+      ret = RDL::Type::MultiType.new(map).canonical
+      RDL::Logging.log :heuristic, :info, "MultiType Extraction :: extracted solution #{ret.to_s}"
+      return ret
+    else
+    end
   end
 
   def self.struct_to_nominal(var_type)
@@ -151,16 +213,16 @@ class String
 end
 
 if defined? Rails
-  RDL::Heuristic.add(:is_model) { |var| if var.base_name.camelize.is_rails_model? then var.base_name.to_type end }
-  RDL::Heuristic.add(:is_pluralized_model) { |var| if var.base_name.is_pluralized_model? then var.base_name.model_set_type end }
+  RDL::Heuristic.add(:is_model) { |var| if var.base_name && var.base_name.camelize.is_rails_model? then var.base_name.to_type end }
+  RDL::Heuristic.add(:is_pluralized_model) { |var| if var.base_name && var.base_name.is_pluralized_model? then var.base_name.model_set_type end }
 end
 
-RDL::Heuristic.add(:path_sensitive) { |var| RDL::Heuristic.path_sensitive(var)}
+RDL::Heuristic.add(:multitype_extraction) { |var| RDL::Heuristic.multitype_extraction(var)}
 RDL::Heuristic.add(:struct_to_nominal) { |var| t1 = Time.now; g = RDL::Heuristic.struct_to_nominal(var); $stn = $stn + (Time.now - t1); g }
-RDL::Heuristic.add(:int_names) { |var| if var.base_name.end_with?("id") || (var.base_name.end_with? "num") || (var.base_name.end_with? "count") then RDL::Globals.types[:integer] end }
-RDL::Heuristic.add(:int_array_name) { |var| if var.base_name.end_with?("ids") || (var.base_name.end_with? "nums") || (var.base_name.end_with? "counts") then RDL::Globals.parser.scan_str "#T Array<Integer>" end }
-RDL::Heuristic.add(:predicate_method) { |var| if var.base_name.end_with?("?") then RDL::Globals.types[:bool] end }
-RDL::Heuristic.add(:string_name) { |var| if var.base_name.end_with?("name") then RDL::Globals.types[:string] end }
+RDL::Heuristic.add(:int_names) { |var| if var.base_name && (var.base_name.end_with?("id") || (var.base_name.end_with? "num") || (var.base_name.end_with? "count")) then RDL::Globals.types[:integer] end }
+RDL::Heuristic.add(:int_array_name) { |var| if var.base_name && (var.base_name.end_with?("ids") || (var.base_name.end_with? "nums") || (var.base_name.end_with? "counts")) then RDL::Globals.parser.scan_str "#T Array<Integer>" end }
+RDL::Heuristic.add(:predicate_method) { |var| if var.base_name && var.base_name.end_with?("?") then RDL::Globals.types[:bool] end }
+RDL::Heuristic.add(:string_name) { |var| if var.base_name && var.base_name.end_with?("name") then RDL::Globals.types[:string] end }
 RDL::Heuristic.add(:hash_access) { |var|
   old_var = var
   var = var.type if old_var.is_a?(RDL::Type::OptionalType)

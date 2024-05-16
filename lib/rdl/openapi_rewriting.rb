@@ -310,4 +310,39 @@ module RDL::Typecheck
     defined?(Rails) && RDL::Typecheck.is_controller?(klass) && klass.respond_to?(:action_methods) && klass.action_methods.include?(meth.to_s)
   end
 
+  # Is the given Ruby class a Rails model?
+  # (Class | String | Symbol) -> Bool
+  def self.is_model?(klass)
+      klass = RDL::Util.to_class(klass)
+
+      if klass && defined?(Rails) && (klass.respond_to? :superclass) && (klass.superclass.to_s == "ActiveRecord::Base")
+        RDL::Logging.log :typecheck, :trace, "#{klass.name} is a Rails model"
+        return true
+      else
+        return false
+      end
+  rescue
+    return false
+  end
+end
+
+## String methods we need from Rails.
+class String
+    # Taken from Rails: 
+    # activesupport/lib/active_support/inflector/methods.rb, line 68
+    def camelize(uppercase_first_letter = true)
+      string = self
+      if uppercase_first_letter
+        string = string.sub(/^[a-z\d]*/) { |match| match.capitalize }
+      else
+        string = string.sub(/^(?:(?=\b|[A-Z_])|\w)/) { |match| match.downcase }
+      end
+      string.gsub(/(?:_|(\/))([a-z\d]*)/) { "#{$1}#{$2.capitalize}" }.gsub("/", "::")
+    end
+
+    # Taken from Rails:
+    # activesupport/lib/active_support/inflector/methods.rb, line 277
+    def constantize
+        Object.const_get(self)
+    end
 end

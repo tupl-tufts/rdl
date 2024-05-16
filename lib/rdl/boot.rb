@@ -137,6 +137,8 @@ class << RDL::Globals
   attr_reader :contract_switch
 end
 
+require 'rdl/path.rb'
+
 require 'rdl/types/type.rb'
 require 'rdl/types/annotated_arg.rb'
 require 'rdl/types/bound_arg.rb'

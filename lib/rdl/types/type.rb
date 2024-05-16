@@ -21,6 +21,10 @@ module RDL::Type
       #RDL::Logging.log :typecheck, :warning, "Solution written to #{self.class}"
     end
 
+    # Stub. Should do nothing unless this is a VarType of category :comp_type_output
+    def resolve_comp_type_output
+    end
+
     def to_contract
       c = @@contract_cache[self]
       return c if c
@@ -64,6 +68,25 @@ module RDL::Type
     def hash_type?
       is_a?(FiniteHashType) || (is_a?(GenericType) && (base == RDL::Globals.types[:hash])) || (self == RDL::Globals.types[:hash]) || (is_a?(UnionType) && types.all? { |t| t.hash_type? })
     end
+
+    ## Determines if this type is an empty hash.
+    ## I.e. `{}` gets a type of Hash<k, v> with no bounds
+    ## on `k` or `v`.
+    def is_empty_hash?
+      # Is `self` a GenericType<Hash, k, v> with no bounds on
+      # k or v?
+      return (
+        self.is_a?(RDL::Type::GenericType) &&
+        self.base.is_a?(RDL::Type::NominalType) &&
+        self.base.name == "Hash" &&
+        self.params[0].is_a?(RDL::Type::VarType) &&
+        self.params[0].lbounds.empty? &&
+        self.params[0].ubounds.empty? &&
+        self.params[1].is_a?(RDL::Type::VarType) &&
+        self.params[1].lbounds.empty? &&
+        self.params[1].ubounds.empty?
+        )
+    end
         
     # default behavior, override in appropriate subclasses
     def canonical; return self; end
@@ -85,8 +108,8 @@ module RDL::Type
     # if inst is nil, returns self <= other
     # if inst is non-nil and ileft, returns inst(self) <= other, possibly mutating inst to make this true
     # if inst is non-nil and !ileft, returns self <= inst(other), again possibly mutating inst
-    def self.leq(left, right, pi, inst=nil, ileft=true, deferred_constraints=nil, no_constraint: false, ast: nil, propagate: false, new_cons: {}, removed_choices: {}, path_sensitive: false)
-      raise RuntimeError, "leq :: pi is not an array, it is #{pi.inspect}" if !pi.is_a? Array
+    def self.leq(left, right, pi, inst=nil, ileft=true, deferred_constraints=nil, no_constraint: false, ast: nil, propagate: false, new_cons: {}, removed_choices: {}, path_sensitive: true)
+      raise RuntimeError, "leq :: pi is not a Path, it is #{pi.inspect}" if !pi.is_a? Path
 
       # Path Sensitivity: The FIRST thing we want to do is destructure
       #                   MultiTypes depending on the path. If either the
@@ -97,25 +120,70 @@ module RDL::Type
       #                   However, this depends on if this `leq` is 
       #                   path_sensitive. If it is not, just (conservatively) 
       #                   treat MultiTypes as unions.
-      #require 'debug/open'
-      if left && (left.is_a? MultiType) # TODO(Mark): add PathType here too
-        if path_sensitive
-          left = left.index(pi)
-        else
-          left = RDL::Type::UnionType.new(left.map.values)
+
+      if path_sensitive
+        # Apply path-sensitive rules.
+
+
+        ## May not be necessary.
+        ## ## SReflexive
+        ## ## TODO(Mark): Make this rule better. Are the paths the same?
+        ## if left == right
+        ##   return true
+        ## end
+
+        ## SLeft  (use recursion)
+        if (left.is_a?(MultiType) || left.is_a?(PathType)) && left.can_index?(pi)
+          RDL::Logging.log :inference, :trace, "leq: Applying rule SLEFT. #{left.to_s} <=_{#{pi}} #{right.to_s}"
+          return Type.leq(left.index(pi), right, pi, inst, ileft, deferred_constraints, new_cons: new_cons, removed_choices: removed_choices, path_sensitive: path_sensitive)
+        end
+
+        ## SRight (use recursion)
+        if (right.is_a?(MultiType) || right.is_a?(PathType)) && right.can_index?(pi)
+          RDL::Logging.log :inference, :trace, "leq: Applying rule SRIGHT. #{left.to_s} <=_{#{pi}} #{right.to_s}"
+          return Type.leq(left, right.index(pi), pi, inst, ileft, deferred_constraints, new_cons: new_cons, removed_choices: removed_choices, path_sensitive: path_sensitive)
+        end
+
+        ## STree (-Left) (-Multi) (use recursion)
+        if (left.is_a?(MultiType) || left.is_a?(PathType)) && !left.can_index?(pi)
+          RDL::Logging.log :inference, :trace, "leq: Applying rule STREE(-Left)(-Multi). #{left.to_s} <=_{#{pi}} #{right.to_s}"
+          # Go through map entries in left.
+          #TODO(Mark): Path Sensitivity: this should combine p and pi?
+          return left.type_map.keys.all? {|p| Type.leq(left.index(p), right, p, inst, ileft, deferred_constraints, new_cons: new_cons, removed_choices: removed_choices, path_sensitive: path_sensitive)}
+        end
+        if (left.is_a? PathType) && !left.can_index?(pi)
+          RDL::Logging.log :inference, :trace, "leq: Applying rule STREE(-Left)(-Multi). #{left.to_s} <=_{#{pi}} #{right.to_s}"
+          # Go through map entries in left.
+          #TODO(Mark): Path Sensitivity: this should combine p and pi?
+          return left.map.keys.all? {|p| Type.leq(left.index(p), right, p, inst, ileft, deferred_constraints, new_cons: new_cons, removed_choices: removed_choices, path_sensitive: path_sensitive)}
+
+        end
+
+        ## May not be necessary...
+        ## ## STree (-Right) (use recursion)
+        ## if right.is_a? MultiType && !right.can_index?(pi)
+        ##   # Go through map entries in left.
+        ##   #TODO(Mark): Path Sensitivity: this should combine p and pi.
+        ##   #            And MultiType indexing needs to be better.
+        ##   return right.map.keys.all? {|p| Type.leq(left, right.index(p), p, inst, ileft, deferred_constraints, new_cons: new_cons, removed_choices: removed_choices, path_sensitive: path_sensitive)}
+        ## end
+
+        ## STop (don't need, covered later on)
+
+        ## STrans (don't need, covered by bounds propagation)
+      else
+        # Apply conservative, non-path-sensitive rules.
+        if left && (left.is_a? MultiType) # TODO(Mark): add PathType here too
+          old_left = left
+          left = RDL::Type::UnionType.new(*left.map.values)
+          RDL::Logging.log :inference, :trace, "leq: left is Multi but path-sensitive=false. Transforming left into union. #{old_left.to_s} <=_{#{pi}} #{right.to_s}  ~~~~>  #{left.to_s} <=_{#{pi}} #{right.to_s}"
+        end
+        if right && (right.is_a? MultiType) # TODO(Mark): add PathType here too
+          old_right = right
+          right = RDL::Type::UnionType.new(*right.map.values)
+          RDL::Logging.log :inference, :trace, "leq: right is Multi but path-sensitive=false. Transforming left into union. #{left.to_s} <=_{#{pi}} #{old_right.to_s}  ~~~~>  #{left.to_s} <=_{#{pi}} #{right.to_s}"
         end
       end
-      if right && (right.is_a? MultiType) # TODO(Mark): add PathType here too
-        if path_sensitive
-          right = right.index(pi)
-        else
-          right = RDL::Type::UnionType.new(right.map.values)
-        end
-      end
-
-      # TODO(Mark): Probably need to recur here, in order to deal with nested
-      #             MultiTypes.
-
 
       #----------------------------------------------#
       # Continue with normal (path-insensitive) leq. #
@@ -126,9 +194,9 @@ module RDL::Type
       right = right.type if right.is_a?(DependentArgType) || right.is_a?(AnnotatedArgType)
       left = left.type if left.is_a? NonNullType # ignore nullness!
       right = right.type if right.is_a? NonNullType
+
       left = left.canonical
       right = right.canonical
-      #puts "About to try #{left} <= #{right} with #{inst} and #{ileft}"
       return true if left.equal?(right)
 
       # top and bottom
@@ -146,15 +214,15 @@ module RDL::Type
         return left.name == right.name
       elsif left.is_a?(VarType) && left.to_infer && right.is_a?(VarType) && right.to_infer
         if deferred_constraints.nil?
-          left.add_ubound(right, ast, new_cons, propagate: propagate) unless (left.ubounds.any? { |t, loc| t == right || t.hash == right.hash } || left.equal?(right)) ## Added this last one for ChoiceTypes, because the ChoiceType can change but the hash does not.
-          right.add_lbound(left, pi, ast, new_cons, propagate: propagate) unless (right.lbounds.any? { |t, _, loc| t == left || t.hash == left.hash } || right.equal?(left))
+          left.add_ubound(right, pi, ast, new_cons, propagate: propagate) unless (left.ubounds.any? { |t, p, loc| t == right && p == pi })# || left.equal?(right)) ## Added this last one for ChoiceTypes, because the ChoiceType can change but the hash does not.
+          right.add_lbound(left, pi, ast, new_cons, propagate: propagate) unless (right.lbounds.any? { |t, p, loc| (t == left && p == pi) })# || right.equal?(left))
         else
           deferred_constraints << [left, right, pi]
         end
         return true
       elsif left.is_a?(VarType) && left.to_infer
         if deferred_constraints.nil?
-          left.add_ubound(right, ast, new_cons, propagate: propagate) unless (left.ubounds.any? { |t, _, loc| t == right || t.hash == right.hash } || left.equal?(right))
+          left.add_ubound(right, pi, ast, new_cons, propagate: propagate) unless (left.ubounds.any? { |t, _, loc| t == right || t.hash == right.hash } || left.equal?(right))
         else
           deferred_constraints << [left, right, pi]
         end
@@ -350,23 +418,27 @@ module RDL::Type
             types.each { |tlm|
               choice_num += 1
               blk_typ = tlm.block.is_a?(RDL::Type::MethodType) ? tlm.block.args + [tlm.block.ret] : [tlm.block]
-              if (tlm.args + blk_typ + [tlm.ret]).any? { |t| t.is_a? ComputedType }
-                ## In this case, need to actually evaluate the ComputedType.
-                ## Going to do this using the receiver `left` and the args from `t`
-                ## If subtyping holds for this, then we know `left` does indeed have a method of the relevant type.
-                tlm = RDL::Typecheck.compute_types(tlm, lklass, left, t.args)
-              end
-              new_dcs = []
-              if leq(tlm.instantiate(base_inst), t, pi, nil, true, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
-                ret = true
-                if types.size > 1 && !new_dcs.empty? ## method has intersection type, and vartype constraints were created
-                  new_dcs.each { |t1, t2|
-                    ub_var_choices[t1][choice_num] = RDL::Type::UnionType.new(ub_var_choices[t1][choice_num], t2).canonical if t1.is_a?(VarType)
-                    lb_var_choices[t2][choice_num] = RDL::Type::UnionType.new(lb_var_choices[t2][choice_num], t1).canonical if t2.is_a?(VarType)
-                  }
-                else
-                  new_dcs.each { |t1, t2| RDL::Type::Type.leq(t1, t2, pi, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) }
+              begin
+                if (tlm.args + blk_typ + [tlm.ret]).any? { |t| t.is_a? ComputedType }
+                  ## In this case, need to actually evaluate the ComputedType.
+                  ## Going to do this using the receiver `left` and the args from `t`
+                  ## If subtyping holds for this, then we know `left` does indeed have a method of the relevant type.
+                  tlm = RDL::Typecheck.compute_types(tlm, lklass, left, t.args)
                 end
+                new_dcs = []
+                if leq(tlm.instantiate(base_inst), t, pi, nil, true, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)
+                  ret = true
+                  if types.size > 1 && !new_dcs.empty? ## method has intersection type, and vartype constraints were created
+                    new_dcs.each { |t1, t2|
+                      ub_var_choices[t1][choice_num] = RDL::Type::UnionType.new(ub_var_choices[t1][choice_num], t2).canonical if t1.is_a?(VarType)
+                      lb_var_choices[t2][choice_num] = RDL::Type::UnionType.new(lb_var_choices[t2][choice_num], t1).canonical if t2.is_a?(VarType)
+                    }
+                  else
+                    new_dcs.each { |t1, t2| RDL::Type::Type.leq(t1, t2, pi, nil, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) }
+                  end
+                end
+              rescue => exn
+                RDL::Logging.log :inference, :debug, "leq :: Failed to evaluate comp type for #{lklass.to_s}##{m.to_s}."
               end
             }
 
@@ -636,8 +708,9 @@ module RDL::Type
       end
       if left.is_a?(FiniteHashType) && right.is_a?(GenericType) && right.base == RDL::Globals.types[:hash]
         # TODO !ileft and right carries a free variable
-        return false unless left.promote!
-        return leq(left, right, pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) # recheck for promoted type
+        promoted = left.promote
+        return false unless promoted
+        return leq(promoted, right, pi, inst, ileft, deferred_constraints, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices) # recheck for promoted type
       end
 
       ## precise string

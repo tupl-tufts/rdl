@@ -81,14 +81,14 @@ RDL.type :String, :truncate, '(Numeric) -> String'
 def String.plus_output(trec, targs)
   if trec.is_a?(RDL::Type::PreciseStringType) && targs[0].is_a?(RDL::Type::PreciseStringType)
   then RDL::Type::PreciseStringType.new(*(trec.vals+targs[0].vals))
-  else RDL::Globals.types[:string]
+  else RDL::Globals.types[:string] # resort to fallback output
   end
 end
 
 RDL.type String, 'self.plus_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type"
 
 
-RDL.type :String, :+, '(``any_string(targs[0])``) -> ``plus_output(trec, targs)``'
+RDL.type :String, :+, '(``any_string(targs[0])``) -> ``plus_output(trec, targs)``', suspend_comp: true, fallback_output: RDL::Globals.types[:string]
 RDL.type :String, :<<, '(Object) -> ``append_output(trec, targs)``'
 
 def String.append_output(trec, targs)

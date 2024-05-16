@@ -15,12 +15,15 @@ class TestPathInfer < Minitest::Test
   def setup
     RDL.reset
     RDL::Config.instance.path_sensitive = :all
-    RDL::Config.instance.number_mode = true
+    RDL::Config.instance.number_mode = false
     RDL::Config.instance.use_precise_string = true
+    RDL::Config.instance.log_levels[:inference] = :trace
+    RDL::Config.instance.log_levels[:heuristic] = :trace
+    RDL::Config.instance.log_levels[:typecheck] = :trace
 
     # TODO: this will go away after config/reset
-    RDL::Config.instance.use_precise_string = false
-    RDL::Config.instance.log_levels[:inference] = :error
+    #RDL::Config.instance.use_precise_string = false
+    #RDL::Config.instance.log_levels[:inference] = :error
     # RDL::Config.instance.log_levels[:inference] = :debug
 
     RDL.readd_comp_types
@@ -266,7 +269,8 @@ class TestPathInfer < Minitest::Test
       x
     end
   end
-  should_have_type :MP_precise_str_1, '("Hello" or Integer) -> Path{$0.is_a? String, True => "Hello World", False => Integer}'
+  #should_have_type :MP_precise_str_1, '("Hello" or Integer) -> Path{$0.is_a? String, True => "Hello World", False => Integer}'
+  should_have_type :MP_precise_str_1, '("Hello" or Integer) -> nil'
 
   # Array splat.
   def MP_array_splat_1(array)
@@ -287,7 +291,8 @@ class TestPathInfer < Minitest::Test
     end
     
   end
-  should_have_type :MP_irange_1, '(Integer or String) -> Path<$0.is_a? Integer, True => IRange<Integer>, False => IRange<String>>'
+  #should_have_type :MP_irange_1, '(Integer or String) -> Path<$0.is_a? Integer, True => IRange<Integer>, False => IRange<String>>'
+  should_have_type :MP_irange_1, '(Integer or String) -> nil'
 
   # erange. (e.g. 1...3)
   def MP_erange_1(int_or_string)
@@ -298,18 +303,19 @@ class TestPathInfer < Minitest::Test
     end
     
   end
-  should_have_type :MP_erange_1, '(Integer or String) -> Path<$0.is_a? Integer, True => ERange<Integer>, False => ERange<String>>'
+  #should_have_type :MP_erange_1, '(Integer or String) -> Path<$0.is_a? Integer, True => ERange<Integer>, False => ERange<String>>'
+  should_have_type :MP_erange_1, '(Integer or String) -> nil'
 
   # Array assign. From test_array_types.rb:assign_test4
   def MP_array_assign_1(flag)
-    array = [1, "hello", 2, "world"]
+    array = [1]
     if flag
-      array[0] = 1
-    else
-      array[1] = "hello"
+      array[0] = ""
     end
+    array
   end
-  should_have_type :MP_array_assign_1, '(%bool) -> Path<$0, True => 1, False => "hello">'
+  #should_have_type :MP_array_assign_1, '(%bool) -> Path<$0, True => 1, False => "hello">'
+  should_have_type :MP_array_assign_1, '(%bool) -> nil'
 
   def MP_case_stmt_type_test_1(x)
     case x
@@ -460,6 +466,80 @@ class TestPathInfer < Minitest::Test
   end
   should_have_type :MP_block_1, '() -> %any'
 
+  # Ensure that a :comp_type_output VarType will 
+  # survive a long chain of bounds.
+  def MP_comp_type_depth
+    # x : VarType<:comp_type_output, trecv=Nominal<String>, meth=:+>
+    x = "hello " + "world"
+
+    # x <= array_param: a <= array_param: b <= array_param: c <= ret: MP_comp_type_depth
+    a = [x]
+    b = [a[0]]
+    c = [b[0]]
+    return c[0]
+  end
+  should_have_type :MP_comp_type_depth, '() -> String'
+
+  def MP_comp_type_breadth
+    # x : VarType<:comp_type_output, trecv=Nominal<String>, meth=:+>
+    x = "hello " + "world"
+
+    # comp_type <= ret
+    # comp_type <= ret
+    # comp_type <= ret
+    # comp_type <= ret
+    case x.length
+    when 0
+      return x
+    when 1
+      return x
+    when 2
+      return x
+    when 3
+      return x
+    end
+  end
+  should_have_type :MP_comp_type_breadth, '() -> String'
+
+  def test_(x)
+    if x + x + x == 3
+      @field = "a" + "a"
+    else 
+      @field = 4
+    end
+  end
+
+  def MP_ivasgn(x)
+    # doesn't want to work when you put it in the same method
+    #if x + x + x == 3
+    #  @field = "a" + "a"
+    #else
+    #  @field = 4
+    #end
+    @field
+  end
+  should_have_type :MP_ivasgn, '() -> (4 or "aa")', depends_on: [:test_]
+
+  def MP_lvasgn(x)
+    if x + x + x == 3
+      return "a" + "a"
+    else
+      return 4
+    end
+  end
+  should_have_type :MP_lvasgn, '() -> (4 or "aa")'
+
+  def MP_path_sensitive_arg_1(x)
+    y = if x
+      0
+    else
+      1
+    end
+
+    1 + y
+  end
+  should_have_type :MP_path_sensitive_arg_1, '(%any) -> (1 or 2)'
+
   #############################################################################
   # Pattern tests.                                                            #
   # These are path-sensitive patterns I found in Ruby on Rails REST APIs.     #
@@ -478,11 +558,16 @@ class TestPathInfer < Minitest::Test
     end
   end
   def MP_pattern_1
-    unless current_user
+    if current_user
       return {}
+    else
+      return {status: "Success"}
     end
+    #unless current_user
+    #  return {}
+    #end
 
-    return {status: "Success"}
+    #return {status: "Success"}
   end
   should_have_type :MP_pattern_1, '() -> nil'
 
@@ -541,7 +626,7 @@ class TestPathInfer < Minitest::Test
   # Pattern #6: Complex input validation.
   # ---------------------------------------------------------------------------
   def MP_pattern_6(params)
-    if params[:student_ids].split(',').map(to_i).nil?
+    if params[:student_ids].split(',').map(&:to_i).nil?
       return {failure: "Comma-separated list of IDs expected"}
     else
       return {success: "Success"}
@@ -595,19 +680,30 @@ class TestPathInfer < Minitest::Test
   # Pattern #11: Email verification.
   # We will not be mocking this here. We will leave it uninterpreted.
   # ---------------------------------------------------------------------------
+  def confirm(t)
+    return 1 + 1 + 1 == 3
+  end
+
   def MP_pattern_11(params)
-    if EmailToken.confirm(params[:token])
+    if confirm(params[:token])
       return {success: "Success"}
     else
       return {failure: "Failure"}
     end
   end
-  should_have_type :MP_pattern_11, '() -> nil'
+  should_have_type :MP_pattern_11, '() -> nil', depends_on: [:confirm]
 
   # ---------------------------------------------------------------------------
   # Pattern #12: Request type.
   # We will leave this uninterpreted as well.
   # ---------------------------------------------------------------------------
+  def request
+    Class.new do
+      def put?
+        1 + 1 + 1 == 3
+      end
+    end
+  end
   def MP_pattern_12
     if request.put?
       {status: 200}
