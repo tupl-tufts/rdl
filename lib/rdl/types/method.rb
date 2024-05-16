@@ -8,6 +8,15 @@ module RDL::Type
     attr_reader :block
     attr_reader :ret
 
+    # If true, this MethodType represents a comp type whose computation should
+    # be suspended until constraint resolution.
+    # To support this, a comp type may return an "imprecise" type 
+    # (should equal :fallback_output). If it returns anything besides that
+    # fallback output, it will be considered precise and resolved, and that
+    # bound will be propagated.
+    attr_accessor :suspend # : bool
+    attr_accessor :fallback_output # : RDL::Type::Type
+
     @@contract_cache = {}
 
     # Create a new MethodType
@@ -51,11 +60,10 @@ module RDL::Type
       end
       @block = block
 
-      if !ret.is_a? Type
-        puts "we have a winner"
-      end
       raise "Attempt to create method type with non-type ret #{ret} of class #{ret.class}" unless ret.is_a? Type
       @ret = ret
+
+      @suspend = false
 
       super()
     end

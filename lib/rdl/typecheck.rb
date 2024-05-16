@@ -717,7 +717,7 @@ module RDL::Typecheck
   # Returns [env', t], where env' is the type environment at the end of the expression
   # and t is the type of the expression. t is always canonical.
   def self._tc(scope, env, e)
-    RDL::Logging.log :typecheck. :info, "_tc :: scope[:pi] => #{scope[:pi]}"
+    RDL::Logging.log :typecheck, :info, "_tc :: scope[:pi] => #{scope[:pi]}"
     case e.type
     when :nil
       [env, RDL::Globals.types[:nil]]
@@ -1668,18 +1668,11 @@ module RDL::Typecheck
       klass = (if kind == :gvasgn then RDL::Util::GLOBAL_NAME else env[:self].to_s end)
       klass = "Integer" if klass == "Number"
       klass = RDL::Util.remove_singleton_marker klass if RDL::Util.has_singleton_marker klass
+
       if RDL::Globals.info.has?(klass, name, :type)
         tleft = RDL::Globals.info.get(klass, name, :type)
       elsif RDL::Config.instance.assume_dyn_type
         tleft = RDL::Globals.types[:dyn]
-      elsif RDL::Config.instance.strict_field_inference
-        # strict field inference implies that the types of instance variables
-        # does not change. this case represents the first time we see as
-        # assignment to this instance variable, so we assume tright is its
-        # truthful type.
-        tleft = tright
-        RDL::Globals.info.set(klass, name, :type, tright)
-        ap "Strict field inference :: trusting type #{klass}##{name} : #{tright}"
       elsif RDL::Config.instance.use_unknown_types || RDL::Globals.to_infer.values.any? { |set| set.include?([klass, name]) }
         tleft = make_unknown_var_type(klass, name, :var)
       else
@@ -2142,6 +2135,14 @@ module RDL::Typecheck
             RDL::Logging.log :typecheck, :debug, ""
             ##########################
             comp_type = true
+
+            # Comp Type Suspension.
+            if tmeth_old.suspend
+              RDL::Logging.log :typecheck, :trace, "Constructing suspended comp type for #{meth.to_s}"
+              info = {comp_type_meth: tmeth_old, comp_type_tactuals: tactuals_expanded, self_klass: self_klass, trecv: trecv, fallback_output: tmeth_old.fallback_output }
+              var_ret = RDL::Type::VarType.new(cls: scope[:klass], category: :comp_type_output, comp_type_info: info)
+            end
+
           end
           tmeth = tmeth.instantiate(inst) if inst
           tmeth_names << tmeth
@@ -2167,11 +2168,21 @@ module RDL::Typecheck
               else
                 error :bad_initialize_type, [], e unless (tmeth.ret == init_typ) unless ((trecv.val == Hash) && tmeth.ret.is_a?(RDL::Type::FiniteHashType)) || ((trecv.val == Array) && tmeth.ret.is_a?(RDL::Type::TupleType))
               end
-            #trets_tmp << init_typ unless block_mismatch
+              #trets_tmp << init_typ unless block_mismatch
+
               trets_tmp << (current_ret = tmeth.ret.instantiate(tmeth_inst))
               got_match = true
             elsif !block_mismatch
-              trets_tmp << (current_ret = (tmeth.ret.instantiate(tmeth_inst))) # found a match for this subunion; add its return type to trets_tmp
+              # Comp Type Suspension.
+              # If we are suspending this comp type for later, return a VarType
+              # representing the eventual computed return type.
+              if var_ret
+                trets_tmp << (current_ret = var_ret)
+              else
+                # Otherwise, use the actual method return type.
+                trets_tmp << (current_ret = (tmeth.ret.instantiate(tmeth_inst))) # found a match for this subunion; add its return type to trets_tmp
+              end
+              
               got_match = true
               if comp_type && RDL::Config.instance.check_comp_types && !union
                 if (e.type == :op_asgn) && op_asgn
@@ -2772,6 +2783,7 @@ module RDL::Typecheck
     end
     return method_binding.send(:eval, const_string)
   end
+
 end
 
 # Use parser's Diagnostic to output RDL typechecker error messages

@@ -407,7 +407,13 @@ module RDL::Annotate
   # type(klass, meth, type)
   # type(meth, type)
   # type(type)
-  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil)
+  # suspend_comp: when true, this comp type's computation will be "suspended"
+  #               during inference. Comp types normally run during `tc`. When
+  #               suspend_comp is true, they will be run during constraint
+  #               resolution instead.
+  # fallback_output: the output when the comp type fails to produce 
+  #                  a precise output. See VarType category :comp_type_output
+  def type(*args, wrap: RDL::Config.instance.type_defaults[:wrap], typecheck: RDL::Config.instance.type_defaults[:typecheck], version: nil, suspend_comp: false, fallback_output: nil)
     return if version && !(Gem::Requirement.new(version).satisfied_by? Gem.ruby_version)
     klass, meth, type = begin
                           RDL::Wrap.process_type_args(self, *args)
@@ -421,6 +427,14 @@ module RDL::Annotate
                           err.set_backtrace bt
                           raise err
                         end
+
+    # Right here.
+    if suspend_comp
+      raise RuntimeError, "Comp Type Suspension for #{RDL::Util.pp_klass_method(klass, meth)}: to suspend a comp type method's output, you must provide a `fallback_output` type in case the comp type returns nil." unless fallback_output
+      type.suspend = true
+      type.fallback_output = fallback_output
+    end
+
     typs = type.args + [type.ret]
     if type.block
       block_type = type.block.is_a?(RDL::Type::OptionalType) ? type.block.type : type.block

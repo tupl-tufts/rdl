@@ -1,7 +1,16 @@
 module RDL::Type
   class VarType < Type
     attr_reader :name, :cls, :meth, :category, :to_infer, :path_sensitive
-    attr_accessor :lbounds, :ubounds, :solution, :solution_source
+    attr_accessor :lbounds, :ubounds, :solution_source, :solution
+
+    # All of the information needed to re-run this comp type at any time.
+    # This is utilized when a method is defined with a comp type with
+    # `suspend: true`. In this case, the comp type can be re-run at
+    # a later step of inference (constraint resolution/solution extraction)
+    # when more info about its parameters is discovered.
+    # When `comp_type_info` is present, @category = :comp_type_output
+    # Hash<{comp_type_meth: MethodType, comp_type_tactuals: Type[], self_klass: Class, trecv: Type}>
+    attr_reader :comp_type_info
 
     @@cache = {}
     @@print_XXX = false
@@ -45,15 +54,16 @@ module RDL::Type
         ## and false if it was falsy or non-existent.
         @path_sensitive = !!name_or_hash[:path_sensitive] 
 
-        #if @path_sensitive
-        #  require 'debug/open'
-        #end
-
 
         @cls = name_or_hash[:cls]
         @name = name_or_hash[:name] ## might be nil if category is :ret
         @meth = name_or_hash[:meth] ## might be nil if ccategory is :var
         @category = name_or_hash[:category]
+
+        if @category == :comp_type_output
+          @comp_type_info = name_or_hash[:comp_type_info]
+          RDL::Logging.log :inference, :trace, "Creating vartype for comp type output. cls=#{cls}"
+        end
       else
         raise "Unexpected argument #{name_or_hash} to RDL::Type::VarType.new."
       end
@@ -66,7 +76,16 @@ module RDL::Type
     # [+ ast +] is the AST where the bound originates from, used for error messages.
     # [+ new_cons +] is a Hash<VarType, Array<[:upper or :lower, Type, Path, AST]>>. When provided, can be used to roll back constraints in case an error pops up.
     # Path Sensitivity: this bound may have a pi. The bounds we are propagating to also may have pis. We will combine them here when recurring, so that the eventual call to `leq` has all the information.
-    def add_and_propagate_upper_bound(typ, pi, ast, new_cons = {})
+      # Try resolving any comp type output bounds.
+      resolve_comp_type_output()
+      # NOTE(Mark): this could be optimized by caching any comp-type bounds.
+      @lbounds.each { |t, p, a| 
+        t.resolve_comp_type_output()
+      }
+      @ubounds.each { |t, p, a| 
+        t.resolve_comp_type_output()
+      }
+
       # Self = Type variable T
 
       # If we add T <= T, do nothing
@@ -113,7 +132,16 @@ module RDL::Type
     end
 
     ## Similar to above.
-    def add_and_propagate_lower_bound(typ, pi, ast, new_cons = {})
+      # Try resolving any comp type output bounds.
+      resolve_comp_type_output()
+      # NOTE(Mark): this could be optimized by caching any comp-type bounds.
+      @lbounds.each { |t, p, a| 
+        t.resolve_comp_type_output()
+      }
+      @ubounds.each { |t, p, a| 
+        t.resolve_comp_type_output()
+      }
+
       return if self.equal?(typ)
       #RDL::Logging.log :typecheck, :trace,  "#{typ} <=_{#{pi}} #{self}"
       # Path Sensitivity: On the next line, do we need to check path as well?
@@ -236,6 +264,41 @@ module RDL::Type
       # Otherwise, store the other type and return true.
       type_var_table[name_sym] = other
       true
+    end
+
+    # To be called during constraint resolution.
+    # Re-Executes this comp type. If its result is not a string, we will
+    # propagate that as a bound in both directions.
+    def resolve_comp_type_output()
+      # Should probably hash this.
+      return unless @category == :comp_type_output
+      return if @solution
+
+      hash = @comp_type_info
+
+      tactuals = hash[:comp_type_tactuals].map { |t| 
+        if (t.is_a? VarType)
+          # Extract solution if arg is a vartype
+          RDL::Typecheck.extract_var_sol(t, t.category)
+        else
+          t
+        end
+      }
+
+      # Run the Comp Type
+      # hash is Hash<{comp_type_meth: MethodType, comp_type_tactuals: Type[], self_klass: Class, trecv: Type}>
+      fallback_output = comp_type_info[:fallback_output]
+      binds = RDL::Typecheck.tc_bind_arg_types(hash[:comp_type_meth], tactuals)
+      tmeth = RDL::Typecheck.compute_types(hash[:comp_type_meth], hash[:self_klass], hash[:trecv], tactuals, binds) unless binds.nil?
+
+      # [ ] is output different than the fallback output type?
+      #     yes -> add and propagate that as a bound
+      #      no -> move on
+      if !(tmeth.ret.equal?(fallback_output)) && (!@solution)
+        @solution = tmeth.ret
+        add_and_propagate_upper_bound(@solution, Path.new, nil)
+        add_and_propagate_lower_bound(@solution, Path.new, nil)
+      end
     end
 
     def hash # :nodoc:

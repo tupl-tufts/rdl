@@ -53,6 +53,35 @@ module RDL::Typecheck
   def self.extract_var_sol(var, category)
     #raise "Expected VarType, got #{var}." unless var.is_a?(RDL::Type::VarType)
     return var.canonical unless var.is_a?(RDL::Type::VarType)
+
+    # Resolve comp type bounds beforehand. They should be treated as real
+    # bounds, not as vartypes.
+    lbounds = var.lbounds.map { |t, p, a|
+      if (t.is_a? RDL::Type::VarType) && t.category == :comp_type_output
+        t.resolve_comp_type_output
+        if t.solution
+          [t.solution, p, a]
+        else
+          [t.comp_type_info[:fallback_output], p, a]
+        end
+      else
+        [t, p, a]
+      end
+    }
+    ubounds = var.ubounds.map { |t, p, a|
+      if (t.is_a? RDL::Type::VarType) && t.category == :comp_type_output
+        t.resolve_comp_type_output
+        if t.solution
+          [t.solution, p, a]
+        else
+          [t.comp_type_info[:fallback_output], p, a]
+        end
+      else
+        [t, p, a]
+      end
+    }
+
+
     if category == :arg
       non_vartype_ubounds = var.ubounds.map { |t, pi, ast| t}.reject { |t| t.instance_of?(RDL::Type::VarType) }
       sol = non_vartype_ubounds.size == 1 ? non_vartype_ubounds[0] : RDL::Type::IntersectionType.new(*non_vartype_ubounds).canonical
@@ -76,6 +105,16 @@ module RDL::Typecheck
         sol = RDL::Type::UnionType.new(*non_vartype_lbounds)
         sol = sol.drop_vars.canonical if sol.is_a?(RDL::Type::UnionType)  ## could be, e.g., nominal type if only one type used to create union.
         #return sol#RDL::Type::UnionType.new(*non_vartype_lbounds).canonical
+      end
+    elsif category == :comp_type_output
+      # Try to resolve a solution.
+      fallback_output = var.comp_type_info[:fallback_output]
+      var.resolve_comp_type_output
+      if var.solution
+        sol = var.solution
+      else
+        RDL::Logging.log :heuristic, :debug, "Comp Type Output could not be resolved during solution extraction. Utilizing its fallback type: #{fallback_output}"
+        sol = fallback_output
       end
     else
       raise "Unexpected VarType category #{category}."
