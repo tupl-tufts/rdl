@@ -95,7 +95,7 @@ module RDL::Type
             }
 
             if exact_matches.length > 0
-                # Check for exact matches
+                # We have exact matches.
                 return RDL::Type::UnionType.new(*exact_matches)
             else
                 # No exact matches. Return the indexed map as a new MultiType.

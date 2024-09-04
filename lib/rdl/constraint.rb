@@ -87,7 +87,7 @@ module RDL::Typecheck
       sol = non_vartype_ubounds.size == 1 ? non_vartype_ubounds[0] : RDL::Type::IntersectionType.new(*non_vartype_ubounds).canonical
       sol = sol.drop_vars.canonical if sol.is_a?(RDL::Type::IntersectionType)  ## could be, e.g., nominal type if only one type used to create intersection.
       #return sol
-    elsif category == :ret
+    elsif (category == :ret) or (category == :hash_param_key) or (category == :hash_param_val)
       # Filter to just the types
       non_vartype_lbounds = lbounds.map { |t, pi, ast| t}.reject { |t| t.instance_of?(RDL::Type::VarType) }
       sol = RDL::Type::UnionType.new(*non_vartype_lbounds)

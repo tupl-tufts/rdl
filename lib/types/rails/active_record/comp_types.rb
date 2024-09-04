@@ -372,8 +372,8 @@ class DBType
       targs[0].is_a?(RDL::Type::FiniteHashType) &&
       targs[0].elts[:json]
 
-    # If the `x` in `render json: x` is just a Ruby hash
-    # (i.e. FHT), return the serialized type.
+    # If the `x` in `render json: x` is a Ruby FHT,
+    # return the serialized type.
     if targs[0].elts[:json].is_a? RDL::Type::FiniteHashType
       return RDL::Type::GenericType.new(
         RDL::Type::NominalType.new("JSON"), # Base
@@ -387,6 +387,25 @@ class DBType
       return RDL::Type::GenericType.new(
         RDL::Type::NominalType.new("JSON"),
         RDL::Type::FiniteHashType.new({}, nil)
+      )
+    end
+
+    # If the `x` in `render json: x` is a Ruby `Hash` (but not an FHT),
+    # return that.
+    if (targs[0].elts[:json].is_a? RDL::Type::GenericType) && (targs[0].elts[:json].base.is_a? RDL::Type::NominalType) && (targs[0].elts[:json].base.name == "Hash")
+      # Extract var sol for hash key and val
+      key_var, val_var = targs[0].elts[:json].params
+      key_type = RDL::Typecheck.extract_var_sol(key_var, key_var.category)
+      val_type = RDL::Typecheck.extract_var_sol(val_var, val_var.category)
+
+      return RDL::Type::GenericType.new(
+        RDL::Type::NominalType.new("JSON"),
+        RDL::Type::GenericType.new(
+          RDL::Type::NominalType.new("Hash"),
+          key_type,
+          val_type
+        )
+        #targs[0].elts[:json]
       )
     end
 
