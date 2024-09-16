@@ -136,8 +136,8 @@ module RDL::Typecheck
         begin
           if typ
             typ = typ.canonical
-            var.add_and_propagate_upper_bound(typ, Path.new, nil, new_cons)
-            var.add_and_propagate_lower_bound(typ, Path.new, nil, new_cons)
+            var.add_and_propagate_upper_bound(typ, PathTrue.new, nil, new_cons)
+            var.add_and_propagate_lower_bound(typ, PathTrue.new, nil, new_cons)
             # new_cons.each { |var, bounds|
             #   bounds.each { |u_or_l, t, _|
             #     puts "1. Added #{u_or_l} bound constraint #{t} of kind #{t.class} to variable #{var}"
@@ -181,8 +181,8 @@ module RDL::Typecheck
       #                   solution for a var type needs to be valid
       #                   in all paths? Probably?
 
-      var.add_and_propagate_upper_bound(sol, Path.new, nil, new_cons)
-      var.add_and_propagate_lower_bound(sol, Path.new, nil, new_cons)
+      var.add_and_propagate_upper_bound(sol, PathTrue.new, nil, new_cons)
+      var.add_and_propagate_lower_bound(sol, PathTrue.new, nil, new_cons)
       # new_cons.each { |var, bounds|
       #   bounds.each { |u_or_l, t, _|
       #     puts "2. Added #{u_or_l} bound constraint #{t} to variable #{var}"

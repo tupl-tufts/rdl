@@ -1127,7 +1127,7 @@ module RDL
               #                   in RDL itself. We cannot expect users to
               #                   annotate their own paths, so we leave this
               #                   `leq` done in the empty path.
-              raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got type #{t_o.to_s}" unless RDL::Type::Type.leq(t_o, nt, Path.new)
+              raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got type #{t_o.to_s}" unless RDL::Type::Type.leq(t_o, nt, PathTrue.new)
             else
               raise RDL::Type::TypeError, "Expecting type #{nt.to_s}, got #{o.inspect}" unless nt.member? o
             end

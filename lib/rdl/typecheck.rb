@@ -85,7 +85,14 @@ module RDL::Typecheck
   # whether they should be treated flow-insensitively
   # Envs should be immutable
   class Env
+    # the variable type map. VarName -> {type: Type, pi: Path, fixed: Boolean}
     attr_accessor :env
+
+    # Pi here is a *flow-sensitive* path. This is the implied path you need to
+    # be executing a line of code in this environment. For example, if the
+    # previous statement we typechecked was `if x; return "hello world"; end`,
+    # the current statement has flow-sensitive pi of ~x.
+    attr_accessor :pi
 
     # [+ params +] is a map from Symbols to Types. This initial variable mapping
     # is added to the Env, and these initial mappings are fixed. If params
@@ -93,13 +100,14 @@ module RDL::Typecheck
     # the paths are also empty.
     def initialize(params = nil)
       @env = Hash.new
+      @pi = PathTrue.new
       unless params.nil?
         params.each_pair { |var, typ, pi|
           # Path Sensitivity: ignoring pi here for now. I don't believe it is
           # provided by any callee. I believe new Env's are only initialized
           # when beginning to typecheck a function body, so pi would be empty
           # anyway.
-          @env[var] = {type: typ, pi: Path.new, fixed: true}
+          @env[var] = {type: typ, pi: PathTrue.new, fixed: true}
         }
       end
     end
@@ -115,11 +123,12 @@ module RDL::Typecheck
     end
 
     # force should only be used with care! currently only used when type is being refined to a subtype in a lexical scope
-    def bind(var, typ, pi: Path.new, fixed: false, force: false)
+    def bind(var, typ, pi, fixed: false, force: false)
       raise RuntimeError, "Can't update variable with fixed type" if !force && @env[var] && @env[var][:fixed]
       raise RuntimeError, "Can't fix type of already-bound variable" if !force && fixed && @env[var]
       RDL::Logging.log :typecheck, :trace, "Env.bind :: var=#{var}, typ=#{typ}, self=#{self.to_tiny_s}"
       result = Env.new
+      result.pi = @pi # carry over the existing path. Paths are immutable.
       result.env = @env.merge(var => {type: typ, pi: pi, fixed: fixed})
       return result
     end
@@ -128,9 +137,10 @@ module RDL::Typecheck
       return @env.has_key?(var)
     end
 
-    def fix(var, typ, pi: Path.new, force: false)
+    def fix(var, typ, pi, force: false)
       raise RuntimeError, "Can't fix type of already-bound variable" if !force && @env[var]
       result = Env.new
+      result.pi = @pi
       result.env = @env.merge(var => {type: typ, pi: pi, fixed: true})
       return result
     end
@@ -139,8 +149,18 @@ module RDL::Typecheck
       return @env[var] && @env[var][:fixed]
     end
 
-    def pi(var)
-      return @env[var] && @env[var][:pi]
+    # TODO(Mark): trying to factor out this method
+    #def pi(var)
+    #  return @env[var] && @env[var][:pi]
+    #end
+
+    # Returns a new Env with the given pi added to env.pi.
+    def add_pi(new_pi)
+      result = Env.new
+      result.env = @env
+      #result.pi = @pi.join(new_pi)
+      result.pi = PathAnd.new([@pi, new_pi])
+      return result
     end
 
     def ==(other)
@@ -157,6 +177,7 @@ module RDL::Typecheck
       # TODO(Mark): Remove this debug stmt
       RDL::Logging.log :typecheck, :trace, "Env.merge :: self=#{self.to_tiny_s}, other=#{other.to_tiny_s}"
       result = Env.new
+      result.pi = other.pi # prefer path in other.
       result.env = @env.merge(other.env)
       return result
     end
@@ -166,6 +187,7 @@ module RDL::Typecheck
     def merge_block_env(other, arg_names)
       return self if other.nil?
       result = Env.new
+      result.pi = @pi # use caller pi. callee pi is not relevant.
       @env.each { |k, v|
         if (other.env.has_key? k) && (not (arg_names.include? k))
           # weak update
@@ -180,7 +202,7 @@ module RDL::Typecheck
             typ.types.each { |t| sings = sings + 1 if t.instance_of?(RDL::Type::SingletonType) }
             typ = typ.widen if sings > RDL::Config.instance.widen_bound
           end
-          result.env[k] = {type: typ, pi: Path.new, fixed: @env[k][:fixed]}
+          result.env[k] = {type: typ, pi: PathTrue.new, fixed: @env[k][:fixed]}
         else
           result.env[k] = v
         end
@@ -209,6 +231,10 @@ module RDL::Typecheck
       return envs[0] if envs.size == 1
       first = envs[0]
       rest = envs[1..-1]
+      # Need to conjunct (flatten) pis here.
+      # envs.map { |e| e.pi } : Array<Array<PathCondition or PathNegation>>
+      #env.pi = first.pi.join(*rest.map { |e| e.pi })
+      env.pi = PathOr.new(envs.map{ |ee| ee.pi })
       first.env.each_pair { |var, h|
         first_typ = h[:type]
         if h[:fixed]
@@ -222,10 +248,11 @@ module RDL::Typecheck
           env.env[var] = {type: h[:type], pi: h[:pi], fixed: true}
         else
           #typ = RDL::Type::UnionType.new(first_typ, *rest.map { |other| ((other.has_key? var) && other[var]) || RDL::Globals.types[:nil] })
-          multi_map = {h[:pi] => first_typ}
+          #merging = rest.map { |other| other.has_key? var }
+          multi_map = {first.pi => first_typ}
           rest.map { |other| 
             if ((other.has_key? var) && other[var])
-              multi_map[other.pi(var)] = other[var]
+              multi_map[other.pi] = other[var]
             end
           }
           typ = RDL::Type::MultiType.new(multi_map)
@@ -235,7 +262,7 @@ module RDL::Typecheck
             typ.types.each { |t| sings = sings + 1 if t.instance_of?(RDL::Type::SingletonType) }
             typ = typ.widen if sings > RDL::Config.instance.widen_bound
           end
-          env.env[var] = {type: typ, pi: Path.new, fixed: false}
+          env.env[var] = {type: typ, pi: PathTrue.new, fixed: false}
         end
       }
       return env
@@ -253,19 +280,29 @@ module RDL::Typecheck
     return r
   end
 
-  # Adds a path condition to the scope. The idea here when you perform a type test
-  # (could even just be an `if` statement), you gain type info, and this
-  # should be added to the scope. A new scope will be returned.
-  #     - `scope` is the scope we're adding to
-  #     - `path` is the PathCondition we are adding
-  def self.scope_add_path(scope, path_cond)
-    new_scope = scope.clone
-    # Clone the nested array of paths.
-    new_scope[:pi] = scope[:pi].clone
-    new_scope[:pi] = Path.new if !scope.has_key? :pi
-    new_scope[:pi] = new_scope[:pi].join(Path.new [path_cond])
+  ## Adds a path condition to the scope. The idea here when you perform a type test
+  ## (could even just be an `if` statement), you gain type info, and this
+  ## should be added to the scope. A new scope will be returned.
+  ##     - `scope` is the scope we're adding to
+  ##     - `path` is the PathCondition we are adding
+  #def self.scope_add_path(scope, path_cond)
+  #  new_scope = scope.clone
+  #  # Clone the nested array of paths.
+  #  new_scope[:pi] = scope[:pi].clone
+  #  new_scope[:pi] = Path.new if !scope.has_key? :pi
+  #  new_scope[:pi] = new_scope[:pi].join(Path.new [path_cond])
 
-    new_scope
+  #  new_scope
+  #end
+  def self.scope_add_path(scope, path_cond)
+    throw "don't call scope_add_path"
+  end
+
+  #def self.current_pi(scope, env)
+  #  env.pi.join(scope[:pi])
+  #end
+  def self.current_pi(scope, env)
+    throw "don't call current_pi"
   end
 
   # report msg at ast's loc
@@ -455,7 +492,7 @@ module RDL::Typecheck
 
     meth_type = meth_type.instantiate inst
 
-    scope = { task: :infer, klass: klass, meth: meth, tret: meth_type.ret, tblock: meth_type.block, context_types: context_types, pi: Path.new }
+    scope = { task: :infer, klass: klass, meth: meth, tret: meth_type.ret, tblock: meth_type.block, context_types: context_types, pi: PathTrue.new }
     # default args seem to be evaluated in the method body, so same scope
     _, targs = args_hash(scope, Env.new(inst), meth_type, args, ast, 'method')
     targs[:self] = self_type
@@ -473,9 +510,9 @@ module RDL::Typecheck
     #body_type = self_type if meth == :initialize
     body_type = RDL::Globals.parser.scan_str "#T self" if meth == :initialize # JF: Why not inst.self?
     if body_type.is_a?(RDL::Type::UnionType)
-      body_type.types.each { |t| RDL::Type::Type.leq(t, ret_vartype, Path.new, ast: ast) }
+      body_type.types.each { |t| RDL::Type::Type.leq(t, ret_vartype, PathTrue.new, ast: ast) }
     else
-      RDL::Type::Type.leq(body_type, ret_vartype, Path.new, ast: ast)
+      RDL::Type::Type.leq(body_type, ret_vartype, PathTrue.new, ast: ast)
     end
 
     RDL::Globals.info.set(klass, meth, :typechecked, true)
@@ -514,7 +551,7 @@ module RDL::Typecheck
       raise RuntimeError, "Type checking of methods with computed types is not currently supported." unless (type.args + [type.ret]).all? { |t| !t.instance_of?(RDL::Type::ComputedType) }
       inst = {self: self_type}
       type = type.instantiate inst
-      scope = { task: :check, klass: klass, meth: meth, tret: type.ret, tblock: type.block, context_types: context_types, pi: Path.new }
+      scope = { task: :check, klass: klass, meth: meth, tret: type.ret, tblock: type.block, context_types: context_types, pi: PathTrue.new }
       # default args seem to be evaluated in the method body, so same scope
       _, targs = args_hash(scope, Env.new(:self => self_type), type, args, ast, 'method')
       targs[:self] = self_type
@@ -528,7 +565,7 @@ module RDL::Typecheck
         @num_casts = 0
         _, body_type = tc(scope, Env.new(targs_dup), body)
       end
-      error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || meth == :initialize ||RDL::Type::Type.leq(body_type, type.ret, Path.new, ast: ast)
+      error :bad_return_type, [body_type.to_s, type.ret.to_s], body unless body.nil? || meth == :initialize ||RDL::Type::Type.leq(body_type, type.ret, PathTrue.new, ast: ast)
     }
 
     if RDL::Config.instance.check_comp_types
@@ -623,7 +660,7 @@ module RDL::Typecheck
         error :type_arg_kind_mismatch, [kind, 'vararg', 'optional'], arg, block: (kind == 'block') if targ.vararg?
         error :type_arg_kind_mismatch, [kind, 'required', 'optional'], arg, block: (kind == 'block') if !targ.optional?
         env, default_type = tc(scope, env, arg.children[1])
-        error :optional_default_type, [default_type, targ.type], arg.children[1], block: (kind == 'block') unless RDL::Type::Type.leq(default_type, targ.type, scope[:pi], ast: ast)
+        error :optional_default_type, [default_type, targ.type], arg.children[1], block: (kind == 'block') unless RDL::Type::Type.leq(default_type, targ.type, env.pi, ast: ast)
         targs[arg.children[0]] = targ.type
         env = env.merge(Env.new(arg.children[0] => targ.type))
         tpos += 1
@@ -648,7 +685,7 @@ module RDL::Typecheck
         tkw = targ.elts[kw]
         error :type_args_kw_mismatch, [kind, 'required', kw, 'optional'], arg, block: (kind == 'block') if !tkw.is_a?(RDL::Type::OptionalType)
         env, default_type = tc(scope, env, arg.children[1])
-        error :optional_default_kw_type, [kw, default_type, tkw.type], arg.children[1], block: (kind == 'block') unless RDL::Type::Type.leq(default_type, tkw.type, scope[:pi], ast: ast)
+        error :optional_default_kw_type, [kw, default_type, tkw.type], arg.children[1], block: (kind == 'block') unless RDL::Type::Type.leq(default_type, tkw.type, env.pi, ast: ast)
         kw_args_matched << kw
         targs[kw] = tkw.type
         env = env.merge(Env.new(kw => tkw.type))
@@ -700,7 +737,7 @@ module RDL::Typecheck
 
   def self.tc(scope, env, e)
     # Make sure pi is always initialized.
-    scope[:pi] = Path.new unless scope[:pi]
+    #scope[:pi] = Path.new unless scope[:pi]
 
     _tc(scope, env, e)
   rescue => exn
@@ -718,7 +755,8 @@ module RDL::Typecheck
   # Returns [env', t], where env' is the type environment at the end of the expression
   # and t is the type of the expression. t is always canonical.
   def self._tc(scope, env, e)
-    RDL::Logging.log :typecheck, :info, "_tc :: scope[:pi] => #{scope[:pi]}"
+    #RDL::Logging.log :typecheck, :info, "_tc :: env.pi => #{env.pi}, scope[:pi] => #{scope[:pi]}"
+    RDL::Logging.log :typecheck, :info, "_tc :: env.pi => #{env.pi}"
     case e.type
     when :nil
       [env, RDL::Globals.types[:nil]]
@@ -795,10 +833,10 @@ module RDL::Typecheck
             tis << RDL::Type::UnionType.new(*ti.types.map { |t| t.params[0] }).canonical
           elsif ti.is_a?(RDL::Type::VarType)
               new_arr_type = RDL::Type::GenericType.new(RDL::Globals.types[:array], v = make_unknown_var_type(ti, :splat_param, "splat param"))
-              RDL::Type::Type.leq(ti, new_arr_type, scope[:pi], ast: e)
+              RDL::Type::Type.leq(ti, new_arr_type, env.pi, ast: e)
               tis << v
-          elsif RDL::Type::Type.leq(RDL::Globals.types[:array], ti, scope[:pi], ast: e) || RDL::Type::Type.leq(ti, RDL::Globals.types[:array], scope[:pi], ast: e) ||
-                RDL::Type::Type.leq(RDL::Globals.types[:hash], ti, scope[:pi], ast: e) || RDL::Type::Type.leq(ti, RDL::Globals.types[:hash], scope[:pi], ast: e)
+          elsif RDL::Type::Type.leq(RDL::Globals.types[:array], ti, env.pi, ast: e) || RDL::Type::Type.leq(ti, RDL::Globals.types[:array], env.pi, ast: e) ||
+                RDL::Type::Type.leq(RDL::Globals.types[:hash], ti, env.pi, ast: e) || RDL::Type::Type.leq(ti, RDL::Globals.types[:hash], env.pi, ast: e)
             # might or might not be array...can't splat...
             error :cant_splat, [ti], ei
           else
@@ -870,7 +908,7 @@ module RDL::Typecheck
       # promote singleton types to nominal types; safe since Ranges are immutable
       t1 = RDL::Type::NominalType.new(t1.val.class) if t1.is_a? RDL::Type::SingletonType
       t2 = RDL::Type::NominalType.new(t2.val.class) if t2.is_a? RDL::Type::SingletonType
-      error :nonmatching_range_type, [t1, t2], e unless RDL::Type::Type.leq(t1, t2, scope[:pi]) || RDL::Type::Type.leq(t2, t1, scope[:pi])
+      error :nonmatching_range_type, [t1, t2], e unless RDL::Type::Type.leq(t1, t2, env.pi) || RDL::Type::Type.leq(t2, t1, env.pi)
       [env2, RDL::Type::GenericType.new(RDL::Globals.types[:range], t1)]
     when :self
       [env, env[:self]]
@@ -879,7 +917,7 @@ module RDL::Typecheck
     when :lvasgn, :ivasgn, :cvasgn, :gvasgn
       x = e.children[0]
       # if local var, lhs is bound to nil before assignment is executed! only matters in type checking for locals
-      env = env.bind(x, RDL::Globals.types[:nil]) if ((e.type == :lvasgn) && (not (env.has_key? x)))
+      env = env.bind(x, RDL::Globals.types[:nil], env.pi) if ((e.type == :lvasgn) && (not (env.has_key? x)))
       envright, tright = tc(scope, env, e.children[1])
       tc_vasgn(scope, envright, e.type, x, tright, e)
     when :masgn
@@ -1151,7 +1189,7 @@ module RDL::Typecheck
       if scope[:tblock].is_a?(RDL::Type::VarType)
         block_ret_type = RDL::Type::VarType.new(cls: scope[:klass], meth: scope[:meth], category: :block_ret, name: "block_return")
         block_type = RDL::Type::MethodType.new(tactuals, nil, block_ret_type)
-        RDL::Type::Type.leq(scope[:tblock], block_type, scope[:pi], ast: e)
+        RDL::Type::Type.leq(scope[:tblock], block_type, env.pi, ast: e)
         return [envi, block_ret_type]
       else
         unless tc_arg_types(scope[:tblock], tactuals)
@@ -1198,34 +1236,41 @@ module RDL::Typecheck
       ## NOTE(Mark): Scope below must be adjusted to include path constraint info.
       loc = e.children[0].location
       str = loc.expression.source
-      left_path = PathCondition.new(tguard, TrueClass, loc, str)
-      right_path = PathCondition.new(tguard, FalseClass, loc, str)
-      left_scope = scope_add_path(scope, left_path)
-      right_scope = scope_add_path(scope, right_path)
-      envleft, tleft = if e.children[1].nil? then [envi, RDL::Globals.types[:nil]] else tc(left_scope, envi, e.children[1]) end # then
-      envright, tright = if e.children[2].nil? then [envi, RDL::Globals.types[:nil]] else tc(right_scope, envi, e.children[2]) end # else
+      left_path = PathCondition.new(tguard, RDL::Globals.types[:true], loc, str)
+      right_path = PathNot.new(left_path)
+      #left_scope = scope_add_path(scope, left_path)
+      #right_scope = scope_add_path(scope, right_path)
+      envleft_in = env.add_pi(left_path)
+      envright_in = env.add_pi(right_path)
+      envleft_out, tleft = if e.children[1].nil? then [envleft_in, RDL::Globals.types[:nil]] else tc(scope, envleft_in, e.children[1]) end # then
+      envright_out, tright = if e.children[2].nil? then [envright_in, RDL::Globals.types[:nil]] else tc(scope, envright_in, e.children[2]) end # else
       RDL::Logging.log :typecheck, :debug, ""
       RDL::Logging.log :typecheck, :debug, "====================================================================="
       RDL::Logging.log :typecheck, :debug, "Typechecking `if` expression: #{e.children[0].loc.expression}."
       RDL::Logging.log :typecheck, :debug, "
          env     #{env} 
       -> envi    #{envi} 
-      -> envleft #{envleft} & envright #{envright} 
-      -> joined  #{Env.join(e, envleft, envright)}
+      -> envleft_in  #{envleft_in} & envright_in #{envright_in} 
+      -> envleft_out #{envleft_out} & envright_out #{envright_out} 
+      -> joined  #{Env.join(e, envleft_out, envright_out)}
       
       tguard: #{tguard}
-      left_scope[:pi] => #{left_scope[:pi]}
-      right_scope[:pi] => #{right_scope[:pi]}"
+      envleft_out.pi => #{envleft_out.pi}
+      envright_out.pi => #{envright_out.pi}
+      joined.pi => #{Env.join(e, envleft_out, envright_out).pi}"
       RDL::Logging.log :typecheck, :debug, "====================================================================="
       RDL::Logging.log :typecheck, :debug, ""
       if tguard.is_a? RDL::Type::SingletonType
-        if tguard.val then [envleft, tleft] else [envright, tright] end
+        if tguard.val then [envleft_out, tleft] else [envright_out, tright] end
       else
         #[Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright).canonical]
         #[Env.join(e, envleft, envright), RDL::Type::MultiType.new({envleft => tleft, envright => tright}).canonical]
-        [Env.join(e, envleft, envright), RDL::Type::PathType.new(tguard, {TrueClass => tleft, FalseClass => tright}, loc, str).canonical]
+        #[Env.join(e, envleft_out, envright_out), RDL::Type::PathType.new(left_path, tleft, tright).canonical]
+        [Env.join(e, envleft_out, envright_out), RDL::Type::MultiType.new({left_path => tleft, right_path => tright}).canonical]
       end
     when :case
+      # TODO(Mark): implement
+      throw "pls no case atm"
       # NOTE(Mark): Here too.
       envi = env
       envi, tcontrol = tc(scope, envi, e.children[0]) unless e.children[0].nil? # the control expression, which make be nil
@@ -1279,7 +1324,7 @@ module RDL::Typecheck
 
             # Path Sensitivity: use the current path to determine if this
             #                   generic type is a match.
-            elsif !(RDL::Type::Type.leq(tcontrol.base, new_typ, scope[:pi]) && !(RDL::Type::Type.leq(new_typ, tcontrol.base, scope[:pi])))
+            elsif !(RDL::Type::Type.leq(tcontrol.base, new_typ, env.pi) && !(RDL::Type::Type.leq(new_typ, tcontrol.base, env.pi)))
               next # can't possibly match this branch
             else
               error :generic_error, ["general refinement for generics not implemented yet"], wclause
@@ -1289,7 +1334,7 @@ module RDL::Typecheck
             # Path Sensitivity: use the current path to determine if a branch 
             #                   is impossible. See test 
             #                   test_path_infer:MP_case_stmt_type_test_1.
-            next unless tcontrol.is_a?(RDL::Type::VarType) || (RDL::Type::Type.leq(tcontrol, new_typ, scope[:pi]) || RDL::Type::Type.leq(new_typ, tcontrol, scope[:pi])) # If control can't possibly match type, skip this branch
+            next unless tcontrol.is_a?(RDL::Type::VarType) || (RDL::Type::Type.leq(tcontrol, new_typ, env.pi) || RDL::Type::Type.leq(new_typ, tcontrol, env.pi)) # If control can't possibly match type, skip this branch
             initial_env = initial_env.bind(var_name, new_typ, fixed: initial_env.fixed?(var_name), force: true)
             # note force is safe above because the env from this arm will be joined with the other envs
             # (where the type was not refined like this), so after the case the variable will be back to its
@@ -1311,9 +1356,9 @@ module RDL::Typecheck
         envbodies << envbody
 
         if pathbody
-          pathbodies << Path.new([pathbody])
+          pathbodies << pathbody
         else
-          pathbodies << Path.new
+          pathbodies << PathTrue.new
         end
       }
       if e.children[-1].nil?
@@ -1325,7 +1370,7 @@ module RDL::Typecheck
         tbodies << telse
         #envelse = envelse.bind(e.children[0].children[0], tcontrol, force: :true) if e.children[0].type == :lvar
         envbodies << envelse
-        pathbodies << scope[:pi]
+        pathbodies << env.pi
       end
       # before join reset var to original type!
 
@@ -1478,7 +1523,12 @@ module RDL::Typecheck
       else
          env1, t1 = [env, RDL::Globals.types[:nil], [:+, :+]]
       end
-      error :bad_return_type, [t1.to_s, scope[:tret]], e unless RDL::Type::Type.leq(t1, scope[:tret], scope[:pi], ast: e)
+      error :bad_return_type, [t1.to_s, scope[:tret]], e unless RDL::Type::Type.leq(t1, scope[:tret], env.pi, ast: e)
+      # Adjust the env to indicate that further execution in this function implies
+      # the negation of our current scope[:pi].
+
+      # Adjust the env to have a pi of false (i.e. execution has stopped on this flow)
+      env1 = env1.add_pi(PathFalse.new)
       [env1, RDL::Globals.types[:bot]] # return is a void value expression
     when :begin, :kwbegin # sequencing
       envi = env
@@ -1662,12 +1712,12 @@ module RDL::Typecheck
     case kind
     when :lvasgn
       if (env.fixed? name)
-        error :vasgn_incompat, [tright, env[name]], e unless RDL::Type::Type.leq(tright, env[name], scope[:pi], inst={}, true, ast: e)
+        error :vasgn_incompat, [tright, env[name]], e unless RDL::Type::Type.leq(tright, env[name], env.pi, inst={}, true, ast: e)
         tright.instantiate(inst)
         [env, tright.canonical]
       else
         # Variable `name` was bound under the old env
-        [env.bind(name, tright, pi: scope[:pi]), tright.canonical]
+        [env.bind(name, tright, env.pi), tright.canonical]
       end
     when :ivasgn, :cvasgn, :gvasgn
       klass = (if kind == :gvasgn then RDL::Util::GLOBAL_NAME else env[:self].to_s end)
@@ -1683,7 +1733,7 @@ module RDL::Typecheck
       else
         error :untyped_var, [kind_text, name, klass], e
       end
-      error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless RDL::Type::Type.leq(tright, tleft, scope[:pi], inst={}, true, ast: e)
+      error :vasgn_incompat, [tright.to_s, tleft.to_s], e unless RDL::Type::Type.leq(tright, tleft, env.pi, inst={}, true, ast: e)
       tright.instantiate(inst)
       [env, tright.canonical]
     when :send
@@ -1922,6 +1972,7 @@ module RDL::Typecheck
       }
       RDL::Type::MultiType.new(map)
     when RDL::Type::PathType
+      throw "TODO(Mark): implement tc_send for pathtypes"
       map = {}
       trecv.map.each_pair { |tmatch, tres| 
         map[tmatch] = process_trecv.call(tres, false)
@@ -2141,7 +2192,7 @@ module RDL::Typecheck
         meth_type = RDL::Type::MethodType.new(tactuals, nil, ret_type)
       end
 
-      RDL::Type::Type.leq(trecv, RDL::Type::StructuralType.new({ meth => meth_type }), scope[:pi], ast: e)
+      RDL::Type::Type.leq(trecv, RDL::Type::StructuralType.new({ meth => meth_type }), env.pi, ast: e)
       #tmeth_inter = [meth_type]
 
       #self_klass = nil
@@ -2317,7 +2368,7 @@ module RDL::Typecheck
     ## Down here EITHER: apply all deferred constraints, continue with trets OR turn choices into ChoiceTypes, apply those deferred constraints, turn trets into [ret_choice_type]
 
     if arg_choices.empty?
-      apply_deferred_constraints(deferred_constraints, e, scope[:pi]) if !deferred_constraints.empty?
+      apply_deferred_constraints(deferred_constraints, e, env.pi) if !deferred_constraints.empty?
     else
       new_dcs = []
       ct_args = []
@@ -2340,7 +2391,7 @@ module RDL::Typecheck
         (ct_args+[new_ret]).each { |ct| ct.add_connecteds(new_ret, *ct_args) }
       end
       trets = [new_ret]
-      apply_deferred_constraints(new_dcs, e, scope[:pi]) if !new_dcs.empty?
+      apply_deferred_constraints(new_dcs, e, env.pi) if !new_dcs.empty?
     end
 
     if trets.empty? # no possible matching call
@@ -2475,13 +2526,13 @@ module RDL::Typecheck
         t = t.type
         if actual == tactuals.size
           states << [formal+1, actual, inst, deferred_constraints] # skip over optinal formal
-        elsif (not tactuals[actual].is_a?(RDL::Type::VarargType)) && RDL::Type::Type.leq(tactuals[actual], t, Path.new, inst, false, deferred_constraints) #&& (not (tactuals[actual].is_a?(RDL::Type::VarargType)))
+        elsif (not tactuals[actual].is_a?(RDL::Type::VarargType)) && RDL::Type::Type.leq(tactuals[actual], t, PathTrue.new, inst, false, deferred_constraints) #&& (not (tactuals[actual].is_a?(RDL::Type::VarargType)))
           states << [formal+1, actual+1, inst, deferred_constraints] # match
           #states << [formal+1, actual, inst, deferred_constraints] unless tactuals[actual].is_a?(RDL::Type::VarType) && tformals[formal+1].is_a?(RDL::Type::FiniteHashType)# skip
         ## I added the `unless` guard above because of cases like `redirect_to @list, action: 'something'`.
         ## The clear intention of the programmer is for @list to match a non-FHT formal arg, so don't
         ## want to match it with the subsequent FHT.
-        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(RDL::Type::GenericType.new(RDL::Globals.types[:array], tactuals[actual].type), t, Path.new, inst, false, deferred_constraints)
+        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(RDL::Type::GenericType.new(RDL::Globals.types[:array], tactuals[actual].type), t, PathTrue.new, inst, false, deferred_constraints)
           states << [formal+1, actual+1, inst, deferred_constraints] # match
         else
           states << [formal+1, actual, inst, deferred_constraints] # types don't match; must skip this formal
@@ -2489,12 +2540,12 @@ module RDL::Typecheck
       when RDL::Type::VarargType
         if actual == tactuals.size
           states << [formal+1, actual, inst, deferred_constraints] # skip to allow empty vararg at end
-        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t.type, Path.new, inst, false, deferred_constraints)
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t.type, PathTrue.new, inst, false, deferred_constraints)
           states << [formal, actual+1, inst, deferred_constraints] # match, more varargs coming
           states << [formal+1, actual+1, inst, deferred_constraints] # match, no more varargs
           states << [formal+1, actual, inst, deferred_constraints] # skip over even though matches
 
-        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(tactuals[actual].type, t.type, Path.new, inst, false, deferred_constraints) #&& RDL::Type::Type.leq(t.type, tactuals[actual].type, Path.new, inst, true, deferred_constraints)
+        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(tactuals[actual].type, t.type, PathTrue.new, inst, false, deferred_constraints) #&& RDL::Type::Type.leq(t.type, tactuals[actual].type, PathTrue.new, inst, true, deferred_constraints)
           states << [formal+1, actual+1, inst, deferred_constraints] # match, no more varargs; no other choices!
           states << [formal, actual+1, inst, deferred_constraints]
         else
@@ -2505,10 +2556,10 @@ module RDL::Typecheck
           next unless t.instance_of? RDL::Type::FiniteHashType
           # Path Sensitivity: path here is empty. The arg types should match under 
           #                   the empty path.
-          if RDL::Type::Type.leq(@@empty_hash_type, t, Path.new)
+          if RDL::Type::Type.leq(@@empty_hash_type, t, PathTrue.new)
             states << [formal+1, actual, inst, deferred_constraints]
           end
-        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t, Path.new, inst, false, deferred_constraints)
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t, PathTrue.new, inst, false, deferred_constraints)
           states << [formal+1, actual+1, inst, deferred_constraints] # match!
           # no else case; if there is no match, this is a dead end
         end
@@ -2543,7 +2594,7 @@ module RDL::Typecheck
         t = t.type
         if actual == tactuals.size
           states << [formal+1, actual, inst, binds] # skip over optinal formal
-        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t, Path.new, inst, false, [])
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t, PathTrue.new, inst, false, [])
           states << [formal+1, actual+1, inst, binds] # match
           states << [formal+1, actual, inst, binds] # skip
         else
@@ -2552,12 +2603,12 @@ module RDL::Typecheck
       when RDL::Type::VarargType
         if actual == tactuals.size
           states << [formal+1, actual, inst, binds] # skip to allow empty vararg at end
-        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t.type, Path.new, inst, false, [])
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) && RDL::Type::Type.leq(tactuals[actual], t.type, PathTrue.new, inst, false, [])
           states << [formal, actual+1, inst, binds] # match, more varargs coming
           states << [formal+1, actual+1, inst, binds] # match, no more varargs
           states << [formal+1, actual, inst, binds] # skip over even though matches
-        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(tactuals[actual].type, t.type, Path.new, inst, false, []) #&&
-                                                               #RDL::Type::Type.leq(t.type, tactuals[actual].type, Path.new, inst, true, [])
+        elsif tactuals[actual].is_a?(RDL::Type::VarargType) && RDL::Type::Type.leq(tactuals[actual].type, t.type, PathTrue.new, inst, false, []) #&&
+                                                               #RDL::Type::Type.leq(t.type, tactuals[actual].type, PathTrue.new, inst, true, [])
           states << [formal+1, actual+1, inst, binds] # match, no more varargs; no other choices!
           states << [formal, actual+1, inst, binds]
         else
@@ -2583,15 +2634,15 @@ module RDL::Typecheck
           next unless t.instance_of? RDL::Type::FiniteHashType
           # Path Sensitivity: path here is empty. The arg types should match under 
           #                   the empty path.
-          if RDL::Type::Type.leq(@@empty_hash_type, t, Path.new)
+          if RDL::Type::Type.leq(@@empty_hash_type, t, PathTrue.new)
             states << [formal+1, actual, inst, binds]
           end
-        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) #&& RDL::Type::Type.leq(tactuals[actual], t, Path.new, inst, false)
+        elsif (not (tactuals[actual].is_a?(RDL::Type::VarargType))) #&& RDL::Type::Type.leq(tactuals[actual], t, PathTrue.new, inst, false)
           if t.is_a?(RDL::Type::BoundArgType)
             binds[t.name.to_sym] = tactuals[actual]
             t = t.type
           end
-          states << [formal+1, actual+1, inst, binds] if (t.is_a?(RDL::Type::ComputedType) || RDL::Type::Type.leq(tactuals[actual], t, Path.new, inst, false, []))# match!
+          states << [formal+1, actual+1, inst, binds] if (t.is_a?(RDL::Type::ComputedType) || RDL::Type::Type.leq(tactuals[actual], t, PathTrue.new, inst, false, []))# match!
           # no else case; if there is no match, this is a dead end
         end
       end
@@ -2609,7 +2660,7 @@ module RDL::Typecheck
     raise RuntimeError, "block with block arg?" unless tblock.is_a?(RDL::Type::VarType) || tblock.block.nil?
     tblock = tblock.instantiate(inst)
     if block[0].is_a?(RDL::Type::MethodType) || block[0].is_a?(RDL::Type::VarType)
-      error :bad_block_arg_type, [block[0], tblock], block[1], block: true unless RDL::Type::Type.leq(block[0], tblock, scope[:pi], inst, false, ast: block[1])#block[0] <= tblock
+      error :bad_block_arg_type, [block[0], tblock], block[1], block: true unless RDL::Type::Type.leq(block[0], tblock, env.pi, inst, false, ast: block[1])#block[0] <= tblock
       ret_env = env
     elsif block[0].is_a?(RDL::Type::NominalType) && block[0].name == 'Proc'
       error :proc_block_arg_type, [tblock], block[1], block: true
@@ -2624,7 +2675,7 @@ module RDL::Typecheck
       }
       body_env, body_type = if body.nil? then [nil, RDL::Globals.types[:nil]] else tc(scope, env.merge(Env.new(args_hash)), body) end
       block_type = RDL::Type::MethodType.new(arg_vartypes, nil, body_type)
-      RDL::Type::Type.leq(block_type, tblock, scope[:pi], inst, false, ast: body)
+      RDL::Type::Type.leq(block_type, tblock, env.pi, inst, false, ast: body)
       ret_env = env.merge_block_env(body_env, arg_names)
     else # must be [block-args, block-body]
       args, body = block
@@ -2635,7 +2686,7 @@ module RDL::Typecheck
         targs_dup = Hash[targs.map { |k, t| [k, t.copy] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
         env_with_targs = targs_env.merge(Env.new(targs_dup))
         body_env, body_type = if body.nil? then [nil, RDL::Globals.types[:nil]] else tc(bscope, env_with_targs, body) end
-        error :bad_return_type, [body_type, tblock.ret], body, block: true unless body.nil? || RDL::Type::Type.leq(body_type, tblock.ret, scope[:pi], inst, false, ast: body)
+        error :bad_return_type, [body_type, tblock.ret], body, block: true unless body.nil? || RDL::Type::Type.leq(body_type, tblock.ret, env.pi, inst, false, ast: body)
         ret_env = env.merge_block_env(body_env, arg_names)
         error :internal, "empty self", block[1] if ret_env.env[:self].nil?
       }

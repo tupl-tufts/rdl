@@ -66,7 +66,7 @@ module RDL::Type
     def check_bounds(no_promote=false)
       # Path Sensitivity: when dealing with tuples, the comparisons with bounds
       #                   should occur in the empty path
-      return (@lbounds.all? { |lbound|  RDL::Type::Type.leq(lbound, self, Path.new, no_constraint: no_promote )}) && (@ubounds.all? { |ubound| RDL::Type::Type.leq(self, ubound, Path.new, no_constraint: no_promote) })
+      return (@lbounds.all? { |lbound|  RDL::Type::Type.leq(lbound, self, PathTrue.new, no_constraint: no_promote )}) && (@ubounds.all? { |ubound| RDL::Type::Type.leq(self, ubound, PathTrue.new, no_constraint: no_promote) })
     end
 
     def cant_promote!

@@ -13,6 +13,7 @@ class RDL::Config
   attr_accessor :log_levels, :disable_log_colors
   attr_accessor :log_file, :log_file_levels
   attr_accessor :path_sensitive
+  attr_accessor :boolean_algebra
 
   def initialize
     RDL::Config.reset(self)
@@ -59,6 +60,7 @@ class RDL::Config
       reporting: :info
     }
     c.path_sensitive = nil # Options: nil, :json, :all
+    c.boolean_algebra = true # Perform boolean algebra laws to simplify paths during tc time?
   end
 
   def add_nowrap(*klasses)

@@ -56,8 +56,8 @@ module RDL::Type
           next if (@types[j].nil?) || (@types[i].nil?) || (@types[i].is_a?(VarType)) || (@types[j].is_a?(VarType))|| @types[i].is_a?(ChoiceType) || @types[j].is_a?(ChoiceType)
           # Path Sensitivity: canonicalization should happen in an empty pi
           #                   (i.e. pi=[])
-          (@types[j] = nil; break) if Type.leq(@types[i], @types[j], Path.new, nil, true, [])
-          (@types[i] = nil) if Type.leq(@types[j], @types[i], Path.new, nil, true, [])
+          (@types[j] = nil; break) if Type.leq(@types[i], @types[j], PathTrue.new, nil, true, [])
+          (@types[i] = nil) if Type.leq(@types[j], @types[i], PathTrue.new, nil, true, [])
         end
       end
       @types.delete(nil)

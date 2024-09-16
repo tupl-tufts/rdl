@@ -112,7 +112,7 @@ module RDL::Type
         if lower_t.is_a?(VarType) && lower_t.to_infer
           # Path Sensitivity: join paths. Bounds propagation will be terminated
           #                   as soon as the path becomes unsatisfiable.
-          lower_t.add_and_propagate_upper_bound(typ, p.join(pi), ast, new_cons, path_sensitive: path_sensitive) unless lower_t.ubounds.any? { |t, p, _| t == typ }#&& p == pi }
+          lower_t.add_and_propagate_upper_bound(typ, PathAnd.new([p, pi]), ast, new_cons, path_sensitive: path_sensitive) unless lower_t.ubounds.any? { |t, p, _| t == typ }#&& p == pi }
         else
           # Here our lower_t was a REAL type.
           if typ.is_a?(VarType) && !typ.lbounds.any? { |t, p, _| t == lower_t }
@@ -121,7 +121,7 @@ module RDL::Type
 
           # Path Sensitivity: join paths. Bounds propagation will be terminated
           #                   as soon as the path becomes unsatisfiable.
-          unless RDL::Type::Type.leq(lower_t, typ, p.join(pi), {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons, path_sensitive: path_sensitive)
+          unless RDL::Type::Type.leq(lower_t, typ, PathAnd.new([p, pi]), {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons, path_sensitive: path_sensitive)
             d1 = a.nil? ? "" : (Diagnostic.new :note, :infer_constraint_error, [lower_t.to_s], a.loc.expression).render.join("\n")
             d2 = ast.nil? ? "" : (Diagnostic.new :note, :infer_constraint_error, [typ.to_s], ast.loc.expression).render.join("\n")
             raise RDL::Typecheck::StaticTypeError, ("Inconsistent type constraint #{lower_t} <=_{#{p.inspect}} #{typ} generated during inference.\n #{d1}\n #{d2}")
@@ -163,7 +163,7 @@ module RDL::Type
         if upper_t.is_a?(VarType) && upper_t.to_infer 
           # Path Sensitivity: join paths. Bounds propagation will be terminated
           #                   as soon as the path becomes unsatisfiable.
-          upper_t.add_and_propagate_lower_bound(typ, p.join(pi), ast, new_cons, path_sensitive: path_sensitive) unless upper_t.lbounds.any? { |t, p, _| t == typ }#&& p == pi }
+          upper_t.add_and_propagate_lower_bound(typ, PathAnd.new([p, pi]), ast, new_cons, path_sensitive: path_sensitive) unless upper_t.lbounds.any? { |t, p, _| t == typ }#&& p == pi }
         else
           # Here our upper_t was a REAL type.
           if typ.is_a?(VarType) && !typ.ubounds.any? { |t, _, _| t == upper_t }
@@ -175,7 +175,7 @@ module RDL::Type
 
           # Path Sensitivity: join paths. Bounds propagation will be terminated
           #                   as soon as the path becomes unsatisfiable.
-          unless RDL::Type::Type.leq(typ, upper_t, p.join(pi), {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons, path_sensitive: path_sensitive)
+          unless RDL::Type::Type.leq(typ, upper_t, PathAnd.new([p, pi]), {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons, path_sensitive: path_sensitive)
             d1 = ast.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [typ.to_s], ast.loc.expression).render.join("\n")
             d2 = a.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [upper_t.to_s], a.loc.expression).render.join("\n")
             raise RDL::Typecheck::StaticTypeError, ("Inconsistent type constraint #{typ} <=_{#{p.inspect}} #{upper_t} generated during inference.\n #{d1}\n #{d2}")
@@ -193,7 +193,7 @@ module RDL::Type
       if typ.is_a? MultiType
         map = typ.map
         map.each { |upper_path, upper_t|
-          add_ubound(upper_t, pi.join(upper_path), ast, new_cons, propagate: propagate)
+          add_ubound(upper_t, PathAnd.new([pi, upper_path]), ast, new_cons, propagate: propagate)
         }
         # exit
         return
@@ -215,7 +215,7 @@ module RDL::Type
       if typ.is_a? MultiType
         map = typ.map
         map.each { |lower_path, lower_t|
-          add_ubound(lower_t, pi.join(lower_path), ast, new_cons, propagate: propagate)
+          add_ubound(lower_t, PathAnd.new([pi, lower_path]), ast, new_cons, propagate: propagate)
         }
         # exit
         return
@@ -321,8 +321,8 @@ module RDL::Type
       #      no -> move on
       if !(tmeth.ret.equal?(fallback_output)) && (!@solution)
         @solution = tmeth.ret
-        add_and_propagate_upper_bound(@solution, Path.new, nil)
-        add_and_propagate_lower_bound(@solution, Path.new, nil)
+        add_and_propagate_upper_bound(@solution, PathTrue.new, nil)
+        add_and_propagate_lower_bound(@solution, PathTrue.new, nil)
       end
     end
 
