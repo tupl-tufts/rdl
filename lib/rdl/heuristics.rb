@@ -94,8 +94,20 @@ class RDL::Heuristic
         # all been propagated.
         next if t.is_a? RDL::Type::MultiType
 
-        # Ignore all vartype bounds.
-        next if t.is_a? RDL::Type::VarType
+        # Ignore vartype bounds unless:
+        # 1. it is a Comp Type Output VarType, and
+        # 2. the solution for it was never found.
+        if t.is_a? RDL::Type::VarType
+          if (t.category == :comp_type_output) && (t.solution == nil)
+            fallback = t.comp_type_info[:fallback_output]
+            e = t.comp_type_info[:ast]
+            t = fallback
+            RDL::Logging.log :heuristic, :warning, "Unable to resolve comp type for #{ast.location.expression}: '#{ast.location.expression.source}'. Utilizing fallback output: #{fallback}"
+          else
+            # add this to a list of vartypes to have its solution extracted
+            next
+          end
+        end
 
         if map[pi]
           map[pi] = RDL::Type::UnionType.new(map[pi], t)

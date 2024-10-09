@@ -37,6 +37,14 @@ module RDL::Type
       end
     end
 
+    def render
+      if @type.instance_of? UnionType
+        "*(#{@type.render})"
+      else
+        "*#{@type.render}"
+      end
+    end
+
     def ==(other) # :nodoc:
       return false if other.nil?
       other = other.canonical

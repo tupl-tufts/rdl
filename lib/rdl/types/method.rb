@@ -308,6 +308,18 @@ RUBY
       end
     end
 
+    def render  # :nodoc:
+      if @block && @block.is_a?(OptionalType)
+        return "(#{@args.map { |arg| arg.render }.join(', ')}) #{@block.render} -> #{@ret.render}"
+      elsif @block
+        return "(#{@args.map { |arg| arg.render }.join(', ')}) {#{@block.render}} -> #{@ret.render}"
+      elsif @args
+        return "(#{@args.map { |arg| arg.render }.join(', ')}) -> #{@ret.render}"
+      else
+        return "() -> #{@ret.render}"
+      end
+    end
+
     def <=(other)
       return Type.leq(self, other)
     end

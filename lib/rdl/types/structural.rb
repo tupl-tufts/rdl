@@ -33,6 +33,10 @@ module RDL::Type
       "[ " + @methods.each_pair.map { |m, t| "#{m.to_s}: #{t.to_s}" }.sort.join(", ") + " ]"
     end
 
+    def render  # :nodoc:
+      "[ " + @methods.each_pair.map { |m, t| "#{m.to_s}: #{t.render}" }.sort.join(", ") + " ]"
+    end
+
     def <=(other)
       return Type.leq(self, other)
     end

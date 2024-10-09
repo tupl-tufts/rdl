@@ -19,6 +19,10 @@ module RDL::Type
       return "#{@type.to_s} #{@name} {{#{@predicate}}}"
     end
 
+    def render
+      return "#{@type.render} #{@name} {{#{@predicate}}}"
+    end
+
     def ==(other) # :nodoc:
       return false if other.nil?
       other = other.canonical

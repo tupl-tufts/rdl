@@ -900,6 +900,9 @@ module RDL
 
     report = RDL::Typecheck.extract_solutions
 
+    # Solution extraction is complete. reset unsolved vars.
+    RDL::Globals.unsolved_vars.clear
+
     report.to_csv 'infer_data_new.csv' if render_report
     #report.to_sorbet 'infer_data.rbi' if render_report
 
@@ -908,6 +911,14 @@ module RDL
     RDL::Logging.log :inference, :info, "Total time taken: #{time}."
     RDL::Logging.log :inference, :info, "Total number of type casts used: #{num_casts}."
     RDL::Logging.log :inference, :info, "Total amount of time spent on stn: #{$stn}."
+
+    unsolved = RDL::Globals.unsolved_vars
+    RDL::Type::VarType.no_print_XXX!
+    RDL::Logging.log :inference, :info, "#{unsolved.size} vartypes still unsolved."
+    unsolved.each { |vartype|
+      RDL::Logging.log :inference, :info, "\t#{vartype.to_s}"
+    }
+
   end
 
   def self.load_sequel_schema(db)

@@ -19,6 +19,10 @@ module RDL::Type
       "%any"
     end
 
+    def render
+      "%any"
+    end
+
     def ==(other)
       return false if other.nil?
       other = other.canonical

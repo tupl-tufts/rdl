@@ -167,7 +167,7 @@ module RDL::Typecheck
           # return render ...
 
           #RDL::Logging.log :openapi_rewriting, :trace, "about to insert `;__RDL_rendered = #{render_src};`"
-          to_inject += ";__RDL_rendered = #{render_src};"
+          to_inject += ";__RDL_rendered = (#{render_src});return __RDL_rendered;"
           #insert_after(node.location.expression, ";__RDL_rendered = #{render_src};")
           
       }
@@ -178,7 +178,10 @@ module RDL::Typecheck
       # Replace the block => block + `__RDL_rendered = ...`
 
       RDL::Logging.log :openapi_rewriting, :trace, "about to replace block => #{block_code + to_inject}"
-      align_replace(node.location.expression, @offset, block_code + to_inject)
+
+      #align_replace(node.location.expression, @offset, block_code + to_inject)
+      # Experiment: remove the block entirely, and replace it with just the rewritten format.json call. 
+      align_replace(node.location.expression, @offset, to_inject)
 
     end
 
@@ -192,12 +195,13 @@ module RDL::Typecheck
         method_name = node.children[1]
         args = node.children[2]
 
-        if method_name == :render #&& args[] receiver == :format && args[0] == :json 
-            RDL::Logging.log :openapi_rewriting, :trace, "on_send: Identified a call to format.json: #{node}"
+        if RDL::Config.instance.render_methods.include? method_name# == :render #&& args[] receiver == :format && args[0] == :json 
+            RDL::Logging.log :openapi_rewriting, :trace, "on_send: Identified a call to #{method_name}: #{node}"
 
             # Assign the result of this call to `__RDL_rendered`
-            to_inject = "__RDL_rendered = "
-            align_replace(node.location.expression, @offset, to_inject + node.location.expression.source)
+            to_inject_pre = "__RDL_rendered = "
+            to_inject_post = ";return __RDL_rendered;"
+            align_replace(node.location.expression, @offset, to_inject_pre + node.location.expression.source + to_inject_post)
         end
     end
 
@@ -229,7 +233,9 @@ module RDL::Typecheck
         # method body.
         #insert_after(def_body_ast.location.expression, ";return __RDL_rendered;")
         align_replace(node.location.expression, @offset, 
-          "def #{def_name_ast} #{def_args_code};__RDL_rendered = nil\n    #{def_body_code};return __RDL_rendered;\n  end\n\n")
+          #"def #{def_name_ast} #{def_args_code};__RDL_rendered = nil\n    #{def_body_code};return __RDL_rendered;\n  end\n\n")
+          # experiment: trying to not just introduce the unconditional `return __RDL_rendered` at the end.
+          "def #{def_name_ast} #{def_args_code};__RDL_rendered = nil\n    #{def_body_code};\n  end\n\n")
           #def_code + ";return __RDL_rendered;")
       end
     end
@@ -305,9 +311,96 @@ module RDL::Typecheck
     return false
   end
 
+  def self.ensure_rails_controller_cache
+    cache = RDL::Globals.rails_controller_cache
+    if cache.empty?
+      # Populate Rails controller cache 
+      # representing action methods that have valid *routes*.
+      return if !defined?(Rails)
+      Rails.application.routes.routes.each do |route|
+        # Inspired by https://stackoverflow.com/questions/52891080/how-to-verify-controller-actions-are-defined-for-all-routes-in-a-rails-applicati
+        controller, action = route.defaults.slice(:controller, :action).values
+        # Some routes may have the controller assigned as a dynamic segment
+        # We need to skip them since we can't easily find the controller.
+        next if controller.nil?
+
+        # Skip some built in Rails routes
+        next if controller.split('/').first == 'active_storage'
+        next if controller == 'rails/conductor/action_mailbox/inbound_emails'
+
+        controller_name = "#{controller.sub('\/', '::')}_controller".camelcase
+        controller_klass = controller_name.safe_constantize
+
+        cache[controller_klass] = Set.new unless cache.key?(controller_klass)
+        cache[controller_klass].add(action.to_sym)
+
+      end
+    end
+  end
+
+  def self.find_route_for(klass, meth)
+    Rails.application.routes.routes.each do |route|
+      # Inspired by https://stackoverflow.com/questions/52891080/how-to-verify-controller-actions-are-defined-for-all-routes-in-a-rails-applicati
+      controller, action = route.defaults.slice(:controller, :action).values
+      # Some routes may have the controller assigned as a dynamic segment
+      # We need to skip them since we can't easily find the controller.
+      next if controller.nil?
+
+      # Skip some built in Rails routes
+      next if controller.split('/').first == 'active_storage'
+      next if controller == 'rails/conductor/action_mailbox/inbound_emails'
+
+      controller_name = "#{controller.sub('\/', '::')}_controller".camelcase
+      controller_klass = controller_name.safe_constantize
+
+      if controller_klass == klass && meth.to_sym == action.to_sym
+        # we found the route, now extract the URL
+        puts route.path.spec.to_s
+        return route.path.spec.to_s, route
+      end
+    end
+
+    return nil
+  end
+
+  def self.find_all_routes_for(klass)
+    routes = {} # Meth Symbol -> Route
+
+    # Get list of routes for this klass
+    Rails.application.routes.routes.each do |route|
+      # Inspired by https://stackoverflow.com/questions/52891080/how-to-verify-controller-actions-are-defined-for-all-routes-in-a-rails-applicati
+      controller, action = route.defaults.slice(:controller, :action).values
+      # Some routes may have the controller assigned as a dynamic segment
+      # We need to skip them since we can't easily find the controller.
+      next if controller.nil?
+
+      # Skip some built in Rails routes
+      next if controller.split('/').first == 'active_storage'
+      next if controller == 'rails/conductor/action_mailbox/inbound_emails'
+
+      controller_name = "#{controller.sub('\/', '::')}_controller".camelcase
+      controller_klass = controller_name.safe_constantize
+
+      if controller_klass == klass
+        routes[action.to_sym] = route unless routes[action.to_sym]
+      end
+    end
+
+    # Print in correct format
+    routes.each { |meth, route|
+      puts "#{meth} => \"#{route.path.spec.to_s}\""
+    }
+
+    # Return the routes
+    return routes
+  end
+
+  # Klass, Symbol -> Boolean
   def self.is_controller_method?(klass, meth)
     klass = RDL::Util.to_class(klass)
-    defined?(Rails) && RDL::Typecheck.is_controller?(klass) && klass.respond_to?(:action_methods) && klass.action_methods.include?(meth.to_s)
+    RDL::Typecheck.ensure_rails_controller_cache
+    defined?(Rails) && RDL::Globals.rails_controller_cache[klass].include?(meth)
+    #defined?(Rails) && RDL::Typecheck.is_controller?(klass) && klass.respond_to?(:action_methods) && klass.action_methods.include?(meth.to_s)
   end
 
   # Is the given Ruby class a Rails model?

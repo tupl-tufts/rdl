@@ -3,6 +3,7 @@ RDL.type :'ActiveModel::Errors', :clear, '() -> %any'
 RDL.type :'ActiveModel::Errors', :delete, '(%symstr) -> %any'
 RDL.type :'ActiveModel::Errors', :[], '(%symstr) -> Array<String>'
 RDL.type :'ActiveModel::Errors', :each, '() { (%symstr, String) -> %any } -> %any'
+RDL.type :'ActiveModel::Errors', :full_messages, '() -> Array<String>'
 RDL.type :'ActiveModel::Errors', :size, '() -> Integer'
 RDL.rdl_alias :'ActiveModel::Errors', :count, :size
 RDL.type :'ActiveModel::Errors', :values, '() -> Array<String>'

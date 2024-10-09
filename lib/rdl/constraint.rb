@@ -300,6 +300,9 @@ module RDL::Typecheck
     var_types = 0
     typ_sols.each_pair { |km, typ|
       klass, meth = km
+      sol = typ.solution
+      rendered_sol = sol.render
+      
 
       orig_typ = RDL::Globals.info.get(klass, meth, :orig_type)
       if orig_typ.is_a?(Array)
@@ -309,7 +312,7 @@ module RDL::Typecheck
       if orig_typ.nil?
         #puts "Original type not found for #{klass}##{meth}."
         #puts "Inferred type is: #{typ}"
-      elsif orig_typ.to_s == typ.solution.to_s
+      elsif orig_typ.to_s == rendered_sol
         #puts "Type for #{klass}##{meth} was correctly inferred, as: "
         #puts typ
         if orig_typ.is_a?(RDL::Type::MethodType)
@@ -327,7 +330,7 @@ module RDL::Typecheck
         end
       else
         RDL::Logging.log :inference, :debug, "Difference encountered for #{klass}##{meth}."
-        RDL::Logging.log :inference, :debug, "Inferred: #{typ.solution}"
+        RDL::Logging.log :inference, :debug, "Inferred: #{rendered_sol}"
         RDL::Logging.log :inference, :debug, "Original: #{orig_typ}"
         if orig_typ.is_a?(RDL::Type::MethodType)
           total_potential += orig_typ.args.size + 1 ## 1 for ret
@@ -382,6 +385,7 @@ module RDL::Typecheck
   rescue => e
     RDL::Logging.log :inference, :error, "Report Generation Error"
     RDL::Logging.log :inference, :debug_error, "... got #{e}"
+    puts e.backtrace unless RDL::Config.instance.continue_on_errors
     raise e unless RDL::Config.instance.continue_on_errors
   ensure
     return report
@@ -394,6 +398,7 @@ module RDL::Typecheck
     counter = 0;
 
     typ_sols = {}
+    other_typ_sols = {}
     loop do
       counter += 1
       @new_constraints = false
@@ -419,6 +424,9 @@ module RDL::Typecheck
             #meth_sol = RDL::Type::MethodType.new arg_sols, block_sol, ret_sol
 
             typ_sols[[klass.to_s, name.to_sym]] = tmeth
+
+            # Call render on tmeth to populate RDL::Globals.unsolved_vars
+            tmeth.render
           elsif name.to_s == "splat_param"
           else
             ## Instance/Class (also some times splat parameter) variables:
@@ -438,8 +446,52 @@ module RDL::Typecheck
           raise e unless RDL::Config.instance.continue_on_errors
          end
       }
+
+      # After attempting solution extraction on all meths, try rendering them.
+      # This will populate RDL::Globals.unsolved_vars with vartypes that will
+      # appear in the inference report that still don't have solutions.
+      # Then, we attempt to extract solutions for them.
+      # We repeat this process until no more unsolved vars are found.
+
+      num_unsolved = 0
+      until num_unsolved == RDL::Globals.unsolved_vars.size
+        num_unsolved = RDL::Globals.unsolved_vars.size
+        other_typ_sols = {}
+        # create copy of original set
+        RDL::Globals.unsolved_vars.each { |v|
+          begin
+            next if v.category == :block
+            sol = extract_var_sol(v, v.category)
+            other_typ_sols[v] = sol
+
+            # call render to populate unsolved_vars with newly discovered ones
+            sol.render
+          rescue => e
+            RDL::Logging.log :inference, :critical, "Error while extracting solution for #{v}: #{e}: #{e.backtrace.join("\n\t")}; continuing..."
+            raise e unless RDL::Config.instance.continue_on_errors
+          end
+        }
+      end
+
+
     break if !@new_constraints
     end
+
+    # Down here, our solution extraction has reached a fixpoint.
+    # Apply all solutions.
+    #typ_sols.each { |key, sol| 
+    #  klass, name = key
+    #  typ = RDL::Globals.info.get(klass, name, :type)
+    #  if typ.is_a? Array
+
+    #    typ.solution = sol
+    #  else
+    #    RDL::Logging.log :inference, :critical, "Failed to apply solution for #{klass}##{name}: not a vartype! It is #{typ.class}"
+    #  end
+    #}
+    other_typ_sols.each { |var, sol|
+      var.solution = sol
+    }
 
   ensure
     return make_extraction_report(typ_sols)

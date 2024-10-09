@@ -69,6 +69,7 @@ RDL.type :Object, :to_enum, '(?Symbol method, *%any args) -> Enumerator<%any>', 
 RDL.type :Object, :to_enum, '(?Symbol method, *%any args) {(*%any args) -> %any} -> Enumerator<%any>', wrap: false
 # TODO: above alias for enum_for?
 RDL.type :Object, :to_s, '() -> String', wrap: false
+RDL.type :Object, :to_i, '() -> Integer', wrap: false
 RDL.type :Object, :trust, '() -> self', wrap: false
 RDL.type :Object, :untaint, '() -> self', wrap: false
 RDL.type :Object, :untrust, '() -> self', wrap: false

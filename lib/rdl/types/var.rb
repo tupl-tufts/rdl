@@ -3,13 +3,15 @@ module RDL::Type
     attr_reader :name, :cls, :meth, :category, :to_infer, :path_sensitive
     attr_accessor :lbounds, :ubounds, :solution_source, :solution
 
-    # All of the information needed to re-run this comp type at any time.
+    # All of the information needed to re-run a comp type at any time.
     # This is utilized when a method is defined with a comp type with
     # `suspend: true`. In this case, the comp type can be re-run at
     # a later step of inference (constraint resolution/solution extraction)
     # when more info about its parameters is discovered.
+    # If `:comp_type_info` is present on this vartype, this means
+    # this vartype represents the eventual output/solution of a comp type.
     # When `comp_type_info` is present, @category = :comp_type_output
-    # Hash<{comp_type_meth: MethodType, comp_type_tactuals: Type[], self_klass: Class, trecv: Type}>
+    # Hash<{comp_type_meth: MethodType, comp_type_tactuals: Type[], self_klass: Class, trecv: Type, ast: AST}>
     attr_reader :comp_type_info
 
     @@cache = {}
@@ -121,10 +123,12 @@ module RDL::Type
 
           # Path Sensitivity: join paths. Bounds propagation will be terminated
           #                   as soon as the path becomes unsatisfiable.
-          unless RDL::Type::Type.leq(lower_t, typ, PathAnd.new([p, pi]), {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons, path_sensitive: path_sensitive)
+          joined_pi = PathAnd.new([p, pi])
+          next unless joined_pi.satisfiable?
+          unless RDL::Type::Type.leq(lower_t, typ, joined_pi, {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons, path_sensitive: path_sensitive)
             d1 = a.nil? ? "" : (Diagnostic.new :note, :infer_constraint_error, [lower_t.to_s], a.loc.expression).render.join("\n")
             d2 = ast.nil? ? "" : (Diagnostic.new :note, :infer_constraint_error, [typ.to_s], ast.loc.expression).render.join("\n")
-            raise RDL::Typecheck::StaticTypeError, ("Inconsistent type constraint #{lower_t} <=_{#{p.inspect}} #{typ} generated during inference.\n #{d1}\n #{d2}")
+            raise RDL::Typecheck::StaticTypeError, ("Inconsistent type constraint #{lower_t} <=_{#{joined_pi.to_s}} #{typ} generated during inference.\n #{d1}\n #{d2}")
           end
         end
       }
@@ -175,10 +179,12 @@ module RDL::Type
 
           # Path Sensitivity: join paths. Bounds propagation will be terminated
           #                   as soon as the path becomes unsatisfiable.
-          unless RDL::Type::Type.leq(typ, upper_t, PathAnd.new([p, pi]), {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons, path_sensitive: path_sensitive)
+          joined_pi = PathAnd.new([p, pi])
+          next unless joined_pi.satisfiable?
+          unless RDL::Type::Type.leq(typ, upper_t, joined_pi, {}, false, ast: ast, no_constraint: true, propagate: true, new_cons: new_cons, path_sensitive: path_sensitive)
             d1 = ast.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [typ.to_s], ast.loc.expression).render.join("\n")
             d2 = a.nil? ? "" : (Diagnostic.new :error, :infer_constraint_error, [upper_t.to_s], a.loc.expression).render.join("\n")
-            raise RDL::Typecheck::StaticTypeError, ("Inconsistent type constraint #{typ} <=_{#{p.inspect}} #{upper_t} generated during inference.\n #{d1}\n #{d2}")
+            raise RDL::Typecheck::StaticTypeError, ("Inconsistent type constraint #{typ} <=_{#{joined_pi.to_s}} #{upper_t} generated during inference.\n #{d1}\n #{d2}")
           end
           #RDL::Logging.log :typecheck, :trace, "Checked #{typ} <= #{upper_t}".colorize(:green)
         end
@@ -189,15 +195,6 @@ module RDL::Type
       return unless pi.satisfiable?
       #raise "About to add upper bound #{self} <= #{typ}" if typ.is_a?(VarType) && !typ.to_infer
 
-      # If `typ` is a multitype, propagate each bound individually
-      if typ.is_a? MultiType
-        map = typ.map
-        map.each { |upper_path, upper_t|
-          add_ubound(upper_t, PathAnd.new([pi, upper_path]), ast, new_cons, propagate: propagate)
-        }
-        # exit
-        return
-      end
 
       # Here `typ` is our real upper bound
       if propagate
@@ -205,21 +202,20 @@ module RDL::Type
       elsif !@ubounds.any? { |t, p, a| t == typ && p == pi }
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:upper, typ, pi, ast]] : [[:upper, typ, pi, ast]]
         @ubounds << [typ, pi, ast] #unless @ubounds.any? { |t, a| t == typ }
+
+        # If `typ` is a multitype, propagate each bound individually
+        if typ.is_a? MultiType
+          map = typ.map
+          map.each { |upper_path, upper_t|
+            add_ubound(upper_t, PathAnd.new([pi, upper_path]), ast, new_cons, propagate: propagate)
+          }
+        end
       end
     end
 
     def add_lbound(typ, pi, ast, new_cons = {}, propagate: false)
       return unless pi.satisfiable?
 
-      # If `typ` is a multitype, propagate each bound individually
-      if typ.is_a? MultiType
-        map = typ.map
-        map.each { |lower_path, lower_t|
-          add_ubound(lower_t, PathAnd.new([pi, lower_path]), ast, new_cons, propagate: propagate)
-        }
-        # exit
-        return
-      end
 
       # Here `typ` is our real lower bound
 
@@ -231,6 +227,14 @@ module RDL::Type
       elsif !@lbounds.any? { |t, p, a| t == typ && p == pi }
         new_cons[self] = new_cons[self] ? new_cons[self] | [[:lower, typ, pi, ast]] : [[:lower, typ, pi, ast]]
         @lbounds << [typ, pi, ast] #unless @lbounds.any? { |t, a| t == typ }
+
+        # If `typ` is a multitype, propagate each bound individually
+        if typ.is_a? MultiType
+          map = typ.map
+          map.each { |lower_path, lower_t|
+            add_lbound(lower_t, PathAnd.new([pi, lower_path]), ast, new_cons, propagate: propagate)
+          }
+        end
       end
     end
 
@@ -241,6 +245,19 @@ module RDL::Type
         "{ #{@cls}##{@meth} #{@category}: #{@name} }"
       else
         @name.to_s
+      end
+    end
+
+    def render # :nodoc:
+      # render is designed specifically for printing vartypes when inference is complete.
+      # if a solution was found, we render the solution directly.
+      # if no solution was found, we print XXX like normal but add this vartype
+      # to a list of unresolved vartypes that appear in the output CSV.
+      if @solution && !(@solution.is_a?(RDL::Type::VarType))
+        @solution.render
+      else
+        RDL::Globals.unsolved_vars.add(self)
+        'XXX'
       end
     end
 
@@ -263,7 +280,13 @@ module RDL::Type
     def ==(other)
       return false if other.class != self.class
       other = other.canonical
-      return (other.instance_of? self.class) && other.to_s == to_s#(other.name.to_s == @name.to_s)
+      return false if other.category != self.category
+      
+      if self.category == :comp_type_output
+        return self.comp_type_info[:ast] == other.comp_type_info[:ast]
+      else
+        return (other.instance_of? self.class) && other.to_s == to_s#(other.name.to_s == @name.to_s)
+      end
     end
 
     alias eql? ==
@@ -302,9 +325,10 @@ module RDL::Type
       hash = @comp_type_info
 
       tactuals = hash[:comp_type_tactuals].map { |t| 
-        if (t.is_a? VarType)
+        if (t.is_a? VarType) && t.solution
           # Extract solution if arg is a vartype
-          RDL::Typecheck.extract_var_sol(t, t.category)
+          #RDL::Typecheck.extract_var_sol(t, t.category)
+          t.solution
         else
           t
         end

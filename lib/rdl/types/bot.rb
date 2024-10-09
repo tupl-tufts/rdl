@@ -19,6 +19,10 @@ module RDL::Type
       "%bot"
     end
 
+    def render
+      "%bot"
+    end
+
     def ==(other)
       other.instance_of? BotType
     end

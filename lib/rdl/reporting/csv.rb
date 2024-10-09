@@ -4,8 +4,8 @@ module RDL::Reporting::CSV
 
   def meth_to_s(meth)
     RDL::Type::VarType.print_XXX!
-    block_string = meth.block ? " { #{meth.block} }" : nil
-    "(#{meth.args.join(', ')})#{block_string} -> #{meth.ret}"
+    block_string = meth.block ? " { #{meth.block.render} }" : nil
+    "(#{meth.args.map(&:render).join(', ')})#{block_string} -> #{meth.ret.render}"
   end
 
   def to_csv(path, open_file = nil)
@@ -29,7 +29,7 @@ module RDL::Reporting::CSV
         RDL::Logging.warning :inference, "Got a non-method type in type solutions: #{method.type.class}"
 
         RDL::Type::VarType.no_print_XXX!
-        inf_type = method.type.solution.to_s # This would be weird
+        inf_type = method.type.solution.render # This would be weird
       end
 
       csv << [class_str, method.method_name, inf_type,

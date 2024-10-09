@@ -23,6 +23,14 @@ module RDL::Type
       end
     end
 
+    def render
+      if self.is_empty_hash?
+        "{}"
+      else
+        "#{@base}<#{@params.map { |t| t.render }.join(', ')}>"
+      end
+    end
+
     def ==(other) # :nodoc:
       return false if other.nil?
       other = other.canonical

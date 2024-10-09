@@ -1,0 +1,1 @@
+RDL.type :'ActiveModel::Base', :errors, '() -> ActiveModel::Errors', wrap: false

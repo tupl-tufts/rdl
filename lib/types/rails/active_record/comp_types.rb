@@ -270,11 +270,13 @@ module ActiveRecord::Scoping::Named::ClassMethods
 
 end
 
-module ActiveRecord::Persistence
+module ActiveRecord::Persistence::ClassMethods
   extend RDL::Annotate
   type :update!, '(``DBType.rec_to_schema_type(trec, true)``) -> %bool', wrap: false
   type :update, '(``DBType.rec_to_schema_type(trec, true)``) -> %bool', wrap: false
   type :update_attribute, '(Symbol, ``DBType.update_attribute_input(trec, targs)``) -> %bool', wrap: false
+  type :update_attributes, '(``DBType.rec_to_schema_type(trec, true)``) -> %bool', wrap: false
+  type :update_attributes!, '(``DBType.rec_to_schema_type(trec, true)``) -> %bool', wrap: false
 end
 
 module ActiveRecord::Calculations
@@ -331,6 +333,9 @@ module ActiveModel::Serializers::JSON
 
 end
 
+# Stub class used to represent HTTPResponse<:unprocessable_entity> and whatnot.
+class HTTPResponse
+end
 
 class DBType
 
@@ -358,19 +363,87 @@ class DBType
     end
   end
 
+  def self.serializer_as_json(serial_klass_t, model_klass)
+    # serial_klass_t should be a NominalType, with its klass being a descendent of ActiveRecord::Serializer
+    raise "bug" unless serial_klass_t.is_a?(RDL::Type::NominalType)
+    serial_klass_name = serial_klass_t.name
+    serial_klass = serial_klass_name.safe_constantize
+    raise "bug" unless serial_klass < ActiveModel::Serializer
+
+    #model_klass = serial_klass.model_class
+    only = serial_klass._attributes
+    includes = serial_klass._associations
+
+    return rec_as_json(
+      RDL::Type::NominalType.new(model_klass.to_s),
+      [RDL::Type::FiniteHashType.new(
+        {
+          only: RDL::Type::TupleType.new(
+            *only.keys.map {|key| RDL::Type::SingletonType.new(key)}
+          ),
+          include: RDL::Type::FiniteHashType.new(
+            includes.transform_values {|val| RDL::Type::FiniteHashType.new({}, nil)}, nil
+          )
+        }, nil
+      )],
+      serial_klass
+    )
+  end
+
   ## Determines the output type for a call to `render`.
   ## Given: `targs` from the `render` call.
   def self.render_output(targs)
     #ap "Comp type: render_output. Called with #{targs}"
 
+    status = RDL::Type::SingletonType.new :ok
+    # First, determine if the user provided a status code.
+    if targs && targs.length && targs.length > 0 && targs[0].is_a?(RDL::Type::FiniteHashType) && targs[0].elts[:status]
+      status = targs[0].elts[:status]
+    end
+
     # If the call doesn't look like:
     #     render json: ..., ...
-    # 
-    # just return string.
-    return RDL::Globals.types[:string] unless
+    unless 
       targs && targs.length && targs.length > 0 &&
       targs[0].is_a?(RDL::Type::FiniteHashType) &&
-      targs[0].elts[:json]
+      targs[0].elts[:json] then
+
+      # is it render body: X?
+      if targs && targs.length && targs.length > 0 && targs[0].is_a?(RDL::Type::FiniteHashType) && targs[0].elts[:body]
+        # if so, that is just rendering a text response.
+        return RDL::Type::GenericType.new(
+          RDL::Type::NominalType.new("HTTPResponse"),
+          targs[0].elts[:body],
+          status
+        )
+      end
+
+      # it may be trying to render an empty response with an HTTP error code.
+      # See if the user provided an error code.
+      if targs && targs.length && targs.length > 0 && targs[0].is_a?(RDL::Type::FiniteHashType) && targs[0].elts[:status]
+        return RDL::Type::GenericType.new(
+          RDL::Type::NominalType.new("HTTPResponse"),
+          targs[0].elts[:status]
+        )
+      end
+
+      # If there is no status, then just use String as the return type.
+      return RDL::Globals.types[:string]
+    end
+
+    # If the `x` in `render json: x` is ActiveModel::Errors (i.e. from @model.errors),
+    # return `JSON<Array<ErrorMessage>>`.
+    if (targs[0].elts[:json].is_a? RDL::Type::NominalType) && (targs[0].elts[:json].name == "ActiveModel::Errors") then# &&
+       #(targs[0].elts[:json].params.length == 1) && (targs[0].elts[:json].params[0].is_a? RDL::Type::NominalType) && (targs[0].elts[:json].params[0].name == "Error") then
+      return RDL::Type::GenericType.new(
+        RDL::Type::NominalType.new("JSON"),
+        RDL::Type::GenericType.new(
+          RDL::Type::NominalType.new("Hash"),
+          RDL::Type::NominalType.new("Symbol"),
+          RDL::Type::NominalType.new("Error")
+        )
+      )
+    end
 
     # If the `x` in `render json: x` is a Ruby FHT,
     # return the serialized type.
@@ -395,15 +468,18 @@ class DBType
     if (targs[0].elts[:json].is_a? RDL::Type::GenericType) && (targs[0].elts[:json].base.is_a? RDL::Type::NominalType) && (targs[0].elts[:json].base.name == "Hash")
       # Extract var sol for hash key and val
       key_var, val_var = targs[0].elts[:json].params
-      key_type = RDL::Typecheck.extract_var_sol(key_var, key_var.category)
-      val_type = RDL::Typecheck.extract_var_sol(val_var, val_var.category)
+      # actually don't do that. extract_var_sol should only be called in solution extraction.
+      # if this becomes necessary again, add it to the list of constrained types
+      # to extract during solution extraction.
+      #key_type = RDL::Typecheck.extract_var_sol(key_var, key_var.category)
+      #val_type = RDL::Typecheck.extract_var_sol(val_var, val_var.category)
 
       return RDL::Type::GenericType.new(
         RDL::Type::NominalType.new("JSON"),
         RDL::Type::GenericType.new(
           RDL::Type::NominalType.new("Hash"),
-          key_type,
-          val_type
+          key_var,
+          val_var
         )
         #targs[0].elts[:json]
       )
@@ -432,15 +508,18 @@ class DBType
     # If the `x` in `render json: x` is a VarType, try to extract a solution
     # for it, and retry.
     if (targs[0].elts[:json].is_a? RDL::Type::VarType)
+      # another change. just return the fallback output if
+      # we haven't extracted solutions for all of the types yet.
+      return RDL::Globals.types[:string]
 
-      var = targs[0].elts[:json]
+      #var = targs[0].elts[:json]
 
-      extracted = RDL::Typecheck.extract_var_sol(var, var.category)
+      #extracted = RDL::Typecheck.extract_var_sol(var, var.category)
 
-      if extracted != var
-        # We were able to extract a solution. Replace it in targs and retry.
-        return self.render_output([RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: extracted}), nil)])
-      end
+      #if extracted != var
+      #  # We were able to extract a solution. Replace it in targs and retry.
+      #  return self.render_output([RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: extracted}), nil)])
+      #end
     end
 
     # If the `x` in `render json: x` is a UnionType, call `render_output` on
@@ -453,16 +532,18 @@ class DBType
       return RDL::Type::UnionType.new(*rendered)
     end
 
-    ## If the `x` in `render json: x` is a Multi/PathType, call `render_output`
-    ## on its components. Join their outputs with a MultiType.
-    #if (targs[0].elts[:json].is_a? RDL::Type::MultiType) || (targs[0].elts[:json].is_a? RDL::Type::PathType)
-    #  # Map<Path, Type>
-    #  type_map = targs[0].elts[:json].type_map
+    # If the `x` in `render json: x` is a Multi/PathType, call `render_output`
+    # on its components. Join their outputs with a MultiType.
+    if (targs[0].elts[:json].is_a? RDL::Type::MultiType)
+      # Map<Path, Type>
+      type_map = targs[0].elts[:json].type_map
 
-    #  rendered_map = type_map.transform_values { |p, t| DBType.render_output([RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: t}))]) }
+      rendered_map = type_map.each_with_object({}) do |(p, t), h|
+        h[p] = DBType.render_output([RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: t}), nil)])
+      end
 
-    #  return RDL::Type::MultiType.new(rendered_map)
-    #end
+      return RDL::Type::MultiType.new(rendered_map)
+    end
       
     RDL::Logging.log :typecheck, :trace, "Comp type: render_output. trec is an ActiveModel relation. Calling rec_as_json..."
 
@@ -487,7 +568,7 @@ class DBType
   #    https://apidock.com/rails/ActiveModel/Serialization/serializable_hash
   #
   # (RDL::Type::NominalType, Array<RDL::Type>)
-  def self.rec_as_json(trec, options = [RDL::Type::FiniteHashType.new({}, nil)])
+  def self.rec_as_json(trec, options = [RDL::Type::FiniteHashType.new({}, nil)], serializer_klass = nil)
     #puts "rec_as_json: called with: trec='#{trec}' :: #{trec.class}      options='#{options}' :: #{options.class}"
 
     # We will attempt to figure out the precise, JSON type for this call.
@@ -505,12 +586,16 @@ class DBType
       model_type = trec.params[0] if (model_type.is_a? RDL::Type::GenericType) && (model_type.base.name == "Array")
       schema = rec_to_schema_type(model_type, true, include_assocs: false, output: true)
       attribute_names = schema.elts.keys
+      meth_inclusions = {}
 
       # Step 2. Filter by `only` and `except`.
       if options and options[0].elts.key?(:only)
         # Extract attribute names from type
         only = type_to_keys(options[0].elts[:only])
         attribute_names &= only
+
+        # if there are keys in `only` that weren't matched, treat them as method calls for include
+        meth_inclusions = (only - attribute_names).map{ |k| [k, RDL::Type::FiniteHashType.new({}, nil)]}.to_h
       elsif options and options[0].elts.key?(:except)
         # Extract attribute names from type
         except = type_to_keys(options[0].elts[:except])
@@ -528,18 +613,31 @@ class DBType
         case inclusions
         when RDL::Type::FiniteHashType
           # Loop over each included model
-          inclusions.elts.each do |included_symbol, included_options|
-            raise RDL::Typecheck::StaticTypeError, "JSON serialization includes an unknown association: '#{included_symbol}'" unless associated_with?(model_type, included_symbol)
+          inclusions.elts.merge(meth_inclusions).each do |included_symbol, included_options|
+            #raise RDL::Typecheck::StaticTypeError, "JSON serialization includes an unknown association: '#{included_symbol}'" unless associated_with?(model_type, included_symbol)
+            begin
+              if associated_with?(model_type, included_symbol)
+                table_class = Object.const_get(model_type.to_s.to_sym)
+                assoc = table_class.reflect_on_association(included_symbol)
+                included_class_t = RDL::Type::NominalType.new(table_class.reflect_on_association(included_symbol).class_name.to_sym)
+                if assoc.macro == :has_many
+                  included_class_t = RDL::Type::GenericType.new(RDL::Type::NominalType.new("Array"), included_class_t)
+                end
+              else
+                # If it's not an association, it could be a method call.
+                included_class_t = (RDL::Globals.info.get(model_type, included_symbol, :type) || RDL::Globals.info.get(serializer_klass, included_symbol, :type))[0].ret
+                included_class_t = included_class_t.solution if included_class_t.is_a?(RDL::Type::VarType)
+                #included_class_t = RDL::Type::NominalType.new(ret_type.name.to_sym)
+              end
 
-            table_class = Object.const_get(model_type.to_s.to_sym)
-            included_class_name = table_class.reflect_on_association(included_symbol).class_name.to_sym
+              included_options = [RDL::Type::FiniteHashType.new({}, nil)] unless included_options
+              included_options = [included_options] unless included_options.class == Array
 
-            included_options = [RDL::Type::FiniteHashType.new({}, nil)] unless included_options
-            included_options = [included_options] unless included_options.class == Array
-
-            schema.elts[included_symbol] =
-              RDL::Type::GenericType.new(RDL::Globals.types[:array],
-                rec_as_json(RDL::Type::NominalType.new(included_class_name), included_options))
+              schema.elts[included_symbol] = rec_as_json(included_class_t, included_options)
+            rescue => e
+              # if this failed, probably because of a missing method, just put JSON in the elts.
+              schema.elts[included_symbol] = RDL::Type::NominalType.new("JSON")
+            end
           end
             
 
@@ -755,7 +853,10 @@ class DBType
                  [k, RDL::Type::OptionalType.new(RDL::Globals.types[:top])]
                end
              }]
-    if include_assocs
+
+    # If this type is being used for the input to a Rails function, the user
+    # is allowed to specify associated objects, not just their IDs.
+    if include_assocs || (!output)
       ## include associations in schema hash
       table_class = Object.const_get(tname)
       assoc_hash = {}

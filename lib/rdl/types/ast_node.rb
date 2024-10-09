@@ -58,6 +58,10 @@ module RDL::Type
       self.pretty_inspect
     end
 
+    def render
+      self.pretty_inspect
+    end
+
     def <=(other)
       return Type.leq(self, other)
     end

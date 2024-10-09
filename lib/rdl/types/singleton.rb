@@ -57,6 +57,10 @@ module RDL::Type
       end
     end
 
+    def render
+      to_s
+    end
+
     def <=(other)
       return Type.leq(self, other)
     end

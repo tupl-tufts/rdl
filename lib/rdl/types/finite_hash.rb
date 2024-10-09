@@ -16,6 +16,10 @@ module RDL::Type
 
     # [+ elts +] is a map from keys to types
     def initialize(elts, rest, default: nil)
+      #if default.nil?
+      #  default = RDL::Globals.types[:nil]
+      #end
+
       elts.each { |k, t|
         raise RuntimeError, "Got #{t.inspect} for key #{k} where Type expected" unless t.is_a? Type
         raise RuntimeError, "Type may not be annotated or vararg" if (t.instance_of? AnnotatedArgType) || (t.instance_of? VarargType)
@@ -43,6 +47,16 @@ module RDL::Type
         k_str = if k.is_a? String then "\"#{k}\"" else "#{k.to_s}" end
         k_str + ": " + t.to_s 
       }.join(', ') + (if @rest then ", **" + @rest.to_s else "" end) + " }"
+    end
+
+    def render
+      return @the_hash.to_s if @the_hash
+      return "{ " + @elts.map { |k, t| 
+        # Key string. To disambiguate symbol keys vs. string keys. 
+        # Strings are surrounded by "" when printed as keys
+        k_str = if k.is_a? String then "\"#{k}\"" else "#{k.to_s}" end
+        k_str + ": " + t.render
+      }.join(', ') + (if @rest then ", **" + @rest.render else "" end) + " }"
     end
 
     def ==(other) # :nodoc:

@@ -50,6 +50,14 @@ module RDL::Type
       "<< " + typs.join(", ") + " >>"
     end
 
+    def render
+      typs = []
+      @choices.each { |choice, typ|
+        typs << (choice.render + " => " + typ.render)
+      }
+      "<< " + typs.join(", ") + " >>"
+    end
+
     def ==(other) # :nodoc:
       return false if other.nil?
       return (other.instance_of? ChoiceType) && (other.choices == @choices) ## include connecteds here?

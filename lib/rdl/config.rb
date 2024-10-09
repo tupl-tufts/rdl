@@ -13,6 +13,7 @@ class RDL::Config
   attr_accessor :log_levels, :disable_log_colors
   attr_accessor :log_file, :log_file_levels
   attr_accessor :path_sensitive
+  attr_accessor :render_methods
   attr_accessor :boolean_algebra
 
   def initialize
@@ -41,7 +42,7 @@ class RDL::Config
     c.bool_singletons = false
     c.number_mode = false
     c.use_unknown_types = false
-    c.infer_empties = true ## if [] and {} should be typed as Array<var> and Hash<var, var>
+    c.infer_empties = false ## if [] and {} should be typed as Array<var> and Hash<var, var>
     c.continue_on_errors = false
     c.disable_log_colors = false
     c.log_levels = {
@@ -60,6 +61,7 @@ class RDL::Config
       reporting: :info
     }
     c.path_sensitive = nil # Options: nil, :json, :all
+    c.render_methods = [:render]
     c.boolean_algebra = true # Perform boolean algebra laws to simplify paths during tc time?
   end
 

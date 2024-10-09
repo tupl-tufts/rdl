@@ -49,6 +49,10 @@ module RDL::Type
       return printed_vals.join
     end
 
+    def render
+      to_s
+    end
+
     def ==(other)
       return false if other.nil?
       return RDL::Globals.types[:string] == other if @promoted

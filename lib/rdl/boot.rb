@@ -99,6 +99,11 @@ module RDL::Globals
   # Map from module names k to pairs [class/module v, :include/:extend] indicating the module
   # k was included/extended in v
   @module_mixees = Hash.new
+
+  # Cached list of Rails controller methods. A Rails controller will only be
+  # added to this list if it has a valid *route*.
+  # Hash<Class, Set<Symbol>>
+  @rails_controller_cache = Hash.new
 end
 
 class << RDL::Globals # add accessors and readers for module variables
@@ -121,6 +126,8 @@ class << RDL::Globals # add accessors and readers for module variables
   attr_accessor :infer_added
   attr_accessor :infer_added_filter_dirs
   attr_accessor :module_mixees
+  attr_accessor :rails_controller_cache
+  attr_reader :unsolved_vars # vartypes that are still unsolved even though they appear in the CSV output.
 end
 
 # Create switches to control whether wrapping happens and whether
@@ -229,6 +236,9 @@ module RDL
       #  :ast to the AST
       #  :line_defs maps linenumber to AST for def at that line
       @parser_cache = Hash.new
+
+      @rails_controller_cache = Hash.new
+      @unsolved_vars = Set.new
 
       # Some generally useful types; not really a big deal to do this since
       # NominalTypes are cached, but these names are shorter to type

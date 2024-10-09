@@ -1,1 +1,2 @@
-RDL.type_params :JSON, [:t], :all?
+RDL.type_params :JSON, [:schema], :all?
+RDL.type_params :HTTPResponse, [:t], :all?

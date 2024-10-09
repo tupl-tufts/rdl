@@ -34,7 +34,13 @@ def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_de
         if trec.default then
           return assign_output(trec, targs + [trec.default])
         else
-          return trec.promote.params[1]
+          # attempted fix: if the FHT is empty, just return nil
+          # to make {}[:example] have type nil
+          if trec.elts.empty?
+            return RDL::Globals.types[:nil]
+          else
+            return trec.promote.params[1]
+          end
         end
       else
         RDL::Globals.parser.scan_str "#T #{default1}"
@@ -209,6 +215,8 @@ def Hash.assign_output(trec, targs)
   end
 end
 RDL.type Hash, 'self.assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
+
+RDL.type Hash, :as_json, '() -> self', wrap: false
 
 RDL.type Hash, :initialize, "(*%any) -> ``RDL::Type::FiniteHashType.new({}, nil, default: targs[0])``"
 RDL.type Hash, :initialize, "() { (Hash<a, b>, x) -> y } -> ``RDL::Type::GenericType.new(RDL::Globals.types[:hash], RDL::Globals.types[:top], RDL::Globals.types[:top])``"

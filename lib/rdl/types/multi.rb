@@ -8,7 +8,6 @@ module RDL::Type
         end
 
         def self.new(map)
-            # Two important things to do here.
             # 1. If any cases have a pi of `false`, that means they were 
             #    assigned (likely bottom) under an empty path (likely the 
             #    result of a return stmt).
@@ -16,6 +15,9 @@ module RDL::Type
             #    
             # 2. If there are no keys left in the multimap, simply return 
             #    bottom.
+            #
+            # 3. If there is only one unique type in the multimap, simply
+            #    return it.
 
             map = map.filter { |p, t| !(p.class <= PathFalse) }
             if map.keys.size == 0
@@ -47,6 +49,7 @@ module RDL::Type
             keys = map.keys
             #return RDL::Globals.types[:bot] if keys.size == 0
             return map[keys[0]] if (keys.size == 1) && (keys[0] == PathTrue.new)
+            return map[keys[0]] if (map.values.uniq.size == 1)
 
             return MultiType.__new__(new_map)
         end
@@ -150,7 +153,11 @@ module RDL::Type
         
         # to_s is just like #inspect but without the colors.
         def to_s
-            return "#{"MultiType"}{\n" + @map.each_pair.map { |pi, t| "\t#{t}\n\t_{#{pi.to_s}}" }.join(",\n") + " }"
+            return "#{"MultiType"}{\n" + @map.each_pair.map { |pi, t| "\t#{t.to_s}\n\t_{#{pi.to_s}}" }.join(",\n") + " }"
+        end
+
+        def render
+            return "#{"MultiType"}{\n" + @map.each_pair.map { |pi, t| "\t#{t.render}\n\t_{#{pi.to_s}}" }.join(",\n") + " }"
         end
 
         def ==(other)
@@ -158,7 +165,7 @@ module RDL::Type
         end
 
         def copy
-            MultiType.new(@map.clone)
+            MultiType.new(@map.transform_values {|t| t.copy})
         end
 
         def instantiate(inst)

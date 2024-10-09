@@ -94,6 +94,11 @@ module RDL::Type
       return "(#{@types.map { |t| t.to_s }.sort.join(' or ')})"
     end
 
+    def render  # :nodoc:
+      return @canonical.to_s if @canonical
+      return "(#{@types.map { |t| t.render }.sort.join(' or ')})"
+    end
+
     def ==(other)  # :nodoc:
       return false if other.nil?
       canonicalize!

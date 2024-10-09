@@ -22,6 +22,16 @@ module RDL::Type
       end
     end
 
+    def render
+      if @type.is_a? UnionType
+        "?(#{@type.render})"
+      elsif @type.is_a? MethodType
+        "?{ #{@type.render} }"
+      else
+        "?#{@type.render}"
+      end
+    end
+
     def ==(other) # :nodoc:
       return false if other.nil?
       other = other.canonical

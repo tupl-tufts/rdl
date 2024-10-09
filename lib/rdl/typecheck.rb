@@ -4,7 +4,7 @@ module RDL::Typecheck
   class StaticTypeError < StandardError; end
   class BlockTypeError < StaticTypeError; end
 
-  @@empty_hash_type = RDL::Type::FiniteHashType.new(Hash.new, nil)
+  @@empty_hash_type = RDL::Type::FiniteHashType.new(Hash.new, nil, default: RDL::Type::SingletonType.new(NilClass))
   @@asgn_to_var = { lvasgn: :lvar, ivasgn: :ivar, cvasgn: :cvar, gvasgn: :gvar }
 
   # Create mapping from file/line numbers to the def that appears at that location
@@ -29,7 +29,7 @@ module RDL::Typecheck
         # If we're mapping line #'s from a Rails controller,
         # the file has been rewritten, and we must refer to the
         # original line #'s from Ruby.
-        file, line = klass.instance_method(name).source_location
+        file, line = @klass.instance_method(name).source_location
 
        RDL::Logging.log :typecheck, :trace, "ASTMapper on #{file}. Rewritten controller method #{name}. Old line number = #{line}, transformed line number = #{node.loc.line}"
         loc = line
@@ -117,9 +117,17 @@ module RDL::Typecheck
       return @env[var][:type]
     end
 
-    def clone
-      result = Hash.new
-      result.env = @env.clone
+    #def clone
+    #  result = Hash.new
+    #  result.env = @env.clone
+    #end
+
+    def deep_copy
+      result = Env.new
+      result.pi = @pi
+      result.env = @env.transform_values {|h| {type: h[:type].copy, pi: h[:pi], fixed: h[:fixed]}}
+
+      result
     end
 
     # force should only be used with care! currently only used when type is being refined to a subtype in a lexical scope
@@ -1166,6 +1174,15 @@ module RDL::Typecheck
             tactuals << ti
           end
         }
+
+        if e.children[1] == :merge! || e.children[1] == :[]=
+          # Hardcoded: these Hash methods, Hash#merge! and Hash#[]=
+          #            mutate the receiver. We need to deep copy
+          #            the env to avoid changing the FHT in other
+          #            envs.
+          envi = envi.deep_copy
+        end
+
         envi, trecv = if e.children[0].nil? then [envi, envi[:self]] else tc(sscope, envi, e.children[0]) end # if no receiver, self is receiver
 
         if map_case && trecv.is_a?(RDL::Type::GenericType)
@@ -1240,8 +1257,8 @@ module RDL::Typecheck
       right_path = PathNot.new(left_path)
       #left_scope = scope_add_path(scope, left_path)
       #right_scope = scope_add_path(scope, right_path)
-      envleft_in = env.add_pi(left_path)
-      envright_in = env.add_pi(right_path)
+      envleft_in = envi.add_pi(left_path)
+      envright_in = envi.add_pi(right_path)
       envleft_out, tleft = if e.children[1].nil? then [envleft_in, RDL::Globals.types[:nil]] else tc(scope, envleft_in, e.children[1]) end # then
       envright_out, tright = if e.children[2].nil? then [envright_in, RDL::Globals.types[:nil]] else tc(scope, envright_in, e.children[2]) end # else
       RDL::Logging.log :typecheck, :debug, ""
@@ -1523,7 +1540,14 @@ module RDL::Typecheck
       else
          env1, t1 = [env, RDL::Globals.types[:nil], [:+, :+]]
       end
-      error :bad_return_type, [t1.to_s, scope[:tret]], e unless RDL::Type::Type.leq(t1, scope[:tret], env.pi, ast: e)
+
+      # If we are returning from a `rescue` block (as indicated by scope[:exceptional]),
+      # replace the current path with `PathExceptional`
+      if scope[:exceptional]
+        error :bad_return_type, [t1.to_s, scope[:tret]], e unless RDL::Type::Type.leq(t1, scope[:tret], PathException.new, ast: e)
+      else
+        error :bad_return_type, [t1.to_s, scope[:tret]], e unless RDL::Type::Type.leq(t1, scope[:tret], env.pi, ast: e)
+      end
       # Adjust the env to indicate that further execution in this function implies
       # the negation of our current scope[:pi].
 
@@ -1572,6 +1596,8 @@ module RDL::Typecheck
       }
     when :resbody
       # (resbody (array exns) (lvasgn var) rescue-body)
+      resbody_scope = scope.clone
+      resbody_scope[:exceptional] = true
       envi = env
       texns = []
       if e.children[0]
@@ -1586,7 +1612,7 @@ module RDL::Typecheck
       if e.children[1]
         envi, _ = tc_vasgn(scope, envi, :lvasgn, e.children[1].children[0], RDL::Type::UnionType.new(*texns), e.children[1])
       end
-      env_fin, t_fin = if e.children[2].nil? then [envi, RDL::Globals.types[:nil]] else tc(scope, envi, e.children[2]) end
+      env_fin, t_fin = if e.children[2].nil? then [envi, RDL::Globals.types[:nil]] else tc(resbody_scope, envi, e.children[2]) end
       [env_fin, t_fin]
     when :super
       envi = env
@@ -1705,6 +1731,7 @@ module RDL::Typecheck
   # Same arguments as tc_var except
   # [+ tright +] is type of right-hand side
   def self.tc_vasgn(scope, env, kind, name, tright, e)
+
     error :empty_env, [name], e if env.nil?
     kind_text = (if kind == :ivasgn then "instance variable"
                 elsif kind == :cvasgn then "class variable"
@@ -1950,27 +1977,36 @@ module RDL::Typecheck
         else
           ts = [RDL::Type::ChoiceType.new(choice_hash, [trecv] + trecv.connecteds)]
         end
+        new_env = env
       else
-        env, ts = tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union) ### XXX fix
+        new_env, ts = tc_send_one_recv(scope, env, trecv, meth, tactuals, block, e, op_asgn, union) ### XXX fix
       end
 
       ts.map! {|t| (t.is_a?(RDL::Type::AnnotatedArgType) || t.is_a?(RDL::Type::BoundArgType)) ? t.type : t}
-      RDL::Type::UnionType.new(*ts).canonical
+      [new_env, RDL::Type::UnionType.new(*ts).canonical]
     }
 
     #trets = []
 
-    tret = case trecv
+    env, tret = case trecv
     when RDL::Type::UnionType
+      envs = []
       trets = []
-      trecv.types.each { |t| trets.append(process_trecv.call(t, true)) }
-      RDL::Type::UnionType.new(*trets)
+      trecv.types.each { |t| 
+        new_env, new_tret = process_trecv.call(t, true)
+        envs.append new_env
+        trets.append new_tret
+      }
+      [Env.join(e, *envs), RDL::Type::UnionType.new(*trets)]
     when RDL::Type::MultiType
       map = {}
+      envs = []
       trecv.map.each_pair { |p, t| 
-        map[p] = process_trecv.call(t, false)
+        new_env, new_tret = process_trecv.call(t, false)
+        map[p] = new_tret
+        envs.append new_env
       }
-      RDL::Type::MultiType.new(map)
+      [Env.join(e, *envs), RDL::Type::MultiType.new(map)]
     when RDL::Type::PathType
       throw "TODO(Mark): implement tc_send for pathtypes"
       map = {}
@@ -2090,6 +2126,7 @@ module RDL::Typecheck
       if ts.nil? && (trecv.base.name == "ActiveRecord_Relation") && defined? DBType
         ## ActiveRecord_Relation methods that don't exist are delegated to underlying scoped class.
         ## Maybe there's a way not to bake this in to typechecker, but I can't think of one.
+        RDL::Logging.log :inference, :trace, "Delegating ActiveRecord_Relation##{meth.to_s} type signature lookup to [s]#{DBType.rec_to_nominal(trecv).name}##{meth.to_s}"
         ts = lookup(scope, "[s]"+DBType.rec_to_nominal(trecv).name, meth, e)
         error :no_instance_method_type, [trecv.base.name, meth], e unless ts
         ts = ts.map { |t| RDL::Type::MethodType.new(t.args, t.block, trecv) }
@@ -2267,7 +2304,7 @@ module RDL::Typecheck
             # Comp Type Suspension.
             if tmeth_old.suspend
               RDL::Logging.log :typecheck, :trace, "Constructing suspended comp type for #{meth.to_s}"
-              info = {comp_type_meth: tmeth_old, comp_type_tactuals: tactuals_expanded, self_klass: self_klass, trecv: trecv, fallback_output: tmeth_old.fallback_output }
+              info = {comp_type_meth: tmeth_old, comp_type_tactuals: tactuals_expanded, self_klass: self_klass, trecv: trecv, fallback_output: tmeth_old.fallback_output, ast: e}
               var_ret = RDL::Type::VarType.new(cls: scope[:klass], category: :comp_type_output, comp_type_info: info)
             end
 

@@ -21,6 +21,10 @@ module RDL::Type
       "%dyn"
     end
 
+    def render
+      "%dyn"
+    end
+
     def ==(other)
       return false if other.nil?
       other = other.canonical

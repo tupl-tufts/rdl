@@ -55,6 +55,10 @@ module RDL::Type
       end
     end
 
+    def render
+      to_s
+    end
+
     def klass
       @klass = RDL::Util.to_class(name) unless defined? @klass
       return @klass

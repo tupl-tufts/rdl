@@ -19,6 +19,10 @@ module RDL::Type
       "``#{@code}``"
     end
 
+    def render
+      "``#{@code}``"
+    end
+
     ### TODO:: Figure out how to fill in the below methods.
     ### I believe a ComputedType will always be evaluated to
     ### another RDL type before any of these methods would be called.

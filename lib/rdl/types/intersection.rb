@@ -96,6 +96,10 @@ module RDL::Type
       return "(#{@types.map { |t| t.to_s }.sort.join(' and ')})"
     end
 
+    def render  # :nodoc:
+      return "(#{@types.map { |t| t.render }.sort.join(' and ')})"
+    end
+
     def ==(other)  # :nodoc:
       return false if other.nil?
       other = other.type if other.is_a? DependentArgType
