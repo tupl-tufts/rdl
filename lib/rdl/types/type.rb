@@ -149,15 +149,15 @@ module RDL::Type
           RDL::Logging.log :inference, :trace, "leq: Applying rule STREE(-Left)(-Multi). #{left.to_s} <=_{#{pi}} #{right.to_s}"
           # Go through map entries in left.
           #TODO(Mark): Path Sensitivity: this should combine p and pi?
-          return left.type_map.keys.all? {|p| Type.leq(left.index(p), right, p, inst, ileft, deferred_constraints, new_cons: new_cons, removed_choices: removed_choices, path_sensitive: path_sensitive)}
+          return left.type_map.keys.all? {|p| Type.leq(left.index(p), right, PathAnd.new([p, pi]), inst, ileft, deferred_constraints, new_cons: new_cons, removed_choices: removed_choices, path_sensitive: path_sensitive)}
         end
-        if (left.is_a? PathType) && !left.can_index?(pi)
-          RDL::Logging.log :inference, :trace, "leq: Applying rule STREE(-Left)(-Multi). #{left.to_s} <=_{#{pi}} #{right.to_s}"
-          # Go through map entries in left.
-          #TODO(Mark): Path Sensitivity: this should combine p and pi?
-          return left.map.keys.all? {|p| Type.leq(left.index(p), right, p, inst, ileft, deferred_constraints, new_cons: new_cons, removed_choices: removed_choices, path_sensitive: path_sensitive)}
+        #if (left.is_a? PathType) && !left.can_index?(pi)
+        #  RDL::Logging.log :inference, :trace, "leq: Applying rule STREE(-Left)(-Multi). #{left.to_s} <=_{#{pi}} #{right.to_s}"
+        #  # Go through map entries in left.
+        #  #TODO(Mark): Path Sensitivity: this should combine p and pi?
+        #  return left.map.keys.all? {|p| Type.leq(left.index(p), right, p, inst, ileft, deferred_constraints, new_cons: new_cons, removed_choices: removed_choices, path_sensitive: path_sensitive)}
 
-        end
+        #end
 
         ## May not be necessary...
         ## ## STree (-Right) (use recursion)

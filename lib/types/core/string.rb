@@ -11,7 +11,7 @@ def String.output_type(trec, targs, meth, type)
       when RDL::Type::SingletonType
         res = trec.vals[0].send(meth, targs[0].val)
       when RDL::Type::PreciseStringType
-        res = trec.vals[0].send(meth, targs.vals[0])
+        res = trec.vals[0].send(meth, targs[0].vals[0])
       else
         return RDL::Globals.parser.scan_str "#T #{type}"
       end

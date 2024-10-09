@@ -53,7 +53,7 @@ module RDL::Type
     def render
       typs = []
       @choices.each { |choice, typ|
-        typs << (choice.render + " => " + typ.render)
+        typs << (choice.to_s + " => " + typ.render)
       }
       "<< " + typs.join(", ") + " >>"
     end

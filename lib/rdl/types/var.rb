@@ -351,7 +351,13 @@ module RDL::Type
     end
 
     def hash # :nodoc:
-      return to_s.hash#@name.to_s.hash
+      #return to_s.hash#@name.to_s.hash
+      val = (@cls.hash+1)*(@meth.hash+2)*(@category.hash+3)*(@name.hash+4)
+      if @comp_type_info
+        val = val * (@comp_type_info[:ast].hash+5)
+      end
+
+      return val
     end
 
     def member?(obj, vars_wild: false)

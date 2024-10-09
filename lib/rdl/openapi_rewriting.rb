@@ -246,7 +246,7 @@ module RDL::Typecheck
       # between any renders on this path and the function return.
       if node.children.length == 0
         align_replace(node.location.expression, @offset,
-          ";return __RDL_rendered;")
+          ";return __RDL_rendered ")
       end
     end
 
@@ -287,7 +287,11 @@ module RDL::Typecheck
   def self.get_class_from_node(class_node)
     name_node, zuper, body = *class_node
     name_nodee = *name_node
-    name = name_nodee[1]
+    name = name_nodee[1].to_s
+    until name_nodee[0].nil?
+      name_nodee = *(name_nodee[0])
+      name = name_nodee[1].to_s + '::' + name
+    end
 
     begin
       return RDL::Util.to_class(name)

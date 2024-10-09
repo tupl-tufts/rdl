@@ -460,7 +460,7 @@ module RDL::Typecheck
         # create copy of original set
         RDL::Globals.unsolved_vars.each { |v|
           begin
-            next if v.category == :block
+            next if [:block, :block_arg, :block_ret].include? v.category
             sol = extract_var_sol(v, v.category)
             other_typ_sols[v] = sol
 
@@ -492,6 +492,18 @@ module RDL::Typecheck
     other_typ_sols.each { |var, sol|
       var.solution = sol
     }
+
+
+    # Now that we have finished extracting solutions, we are going to
+    # apply the solutions in RDL::Globals.info, as well as clear
+    # RDL::Globals.constrained_types.
+    typ_sols.each_pair { |km, typ|
+      klass, meth = km
+      sol = typ.solution
+      sol = [sol] if sol.is_a?(RDL::Type::MethodType)
+      RDL::Globals.info.set(klass, meth, :type, sol, force: true)
+    }
+    RDL::Globals.constrained_types.clear
 
   ensure
     return make_extraction_report(typ_sols)

@@ -305,7 +305,7 @@ class PathAnd < Path
 
     # Define `eql?` and `hash` so this can be used a hash key
     def ==(other)
-        (other.is_a? PathAnd) && @paths == other.paths
+        (other.is_a? PathAnd) && Set.new(@paths) == Set.new(other.paths)
     end
     alias :eql? :==
     def hash
