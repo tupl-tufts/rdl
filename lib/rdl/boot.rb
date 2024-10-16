@@ -128,6 +128,8 @@ class << RDL::Globals # add accessors and readers for module variables
   attr_accessor :module_mixees
   attr_accessor :rails_controller_cache
   attr_reader :unsolved_vars # vartypes that are still unsolved even though they appear in the CSV output.
+  attr_accessor :num_ctrl_flow_splits
+  attr_accessor :ctrl_flow_splits
 end
 
 # Create switches to control whether wrapping happens and whether
@@ -239,6 +241,8 @@ module RDL
 
       @rails_controller_cache = Hash.new
       @unsolved_vars = Set.new
+      @num_ctrl_flow_splits = 0
+      @ctrl_flow_splits = {} # {km: num}
 
       # Some generally useful types; not really a big deal to do this since
       # NominalTypes are cached, but these names are shorter to type
@@ -264,6 +268,7 @@ module RDL
       @types[:regexp] = RDL::Type::NominalType.new Regexp
       @types[:standard_error] = RDL::Type::NominalType.new StandardError
       @types[:proc] = RDL::Type::NominalType.new Proc
+      @types[:json_fallback] = RDL::Type::GenericType.new(RDL::Type::NominalType.new("HTTPResponse"), @types[:integer], RDL::Type::NominalType.new("JSONFallback"))
 
       # Hash from special type names to their values
       @special_types = {'%any' => @types[:top],

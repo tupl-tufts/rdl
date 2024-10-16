@@ -1,5 +1,8 @@
 require_relative 'nominal'
 
+class JSONFallback
+end
+
 module RDL::Type
   # A type that represents serialized JSON. It is a subtype of string, but
   # the typed structure of the JSON.

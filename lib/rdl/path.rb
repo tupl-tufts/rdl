@@ -222,6 +222,8 @@ class PathAnd < Path
                 return paths[0]
             end
 
+            paths = paths.uniq
+
 
             ## Complement (A ∧ ¬A) = false
             complements = paths.any? { |p1|

@@ -88,6 +88,8 @@ module RDL::Typecheck
       sol = sol.drop_vars.canonical if sol.is_a?(RDL::Type::IntersectionType)  ## could be, e.g., nominal type if only one type used to create intersection.
       #return sol
     elsif (category == :ret) or (category == :hash_param_key) or (category == :hash_param_val)
+      ## if we have comp_type_output lbounds without solutions, 
+      #unresolved_comp_type_lbounds = lbounds.map {|t, pi, ast| t}.filter {|t| t.is_a?(RDL::Type::VarType) && t.category == :comp_type_output}
       # Filter to just the types
       non_vartype_lbounds = lbounds.map { |t, pi, ast| t}.reject { |t| t.instance_of?(RDL::Type::VarType) }
       sol = RDL::Type::UnionType.new(*non_vartype_lbounds)
@@ -136,6 +138,10 @@ module RDL::Typecheck
         begin
           if typ
             typ = typ.canonical
+            if name == :multitype_extraction
+              return typ
+            end
+            #if name == :
             var.add_and_propagate_upper_bound(typ, PathTrue.new, nil, new_cons)
             var.add_and_propagate_lower_bound(typ, PathTrue.new, nil, new_cons)
             # new_cons.each { |var, bounds|
@@ -388,7 +394,7 @@ module RDL::Typecheck
     puts e.backtrace unless RDL::Config.instance.continue_on_errors
     raise e unless RDL::Config.instance.continue_on_errors
   ensure
-    return report
+    return report, typ_sols
   end
 
   def self.extract_solutions()
@@ -458,7 +464,7 @@ module RDL::Typecheck
         num_unsolved = RDL::Globals.unsolved_vars.size
         other_typ_sols = {}
         # create copy of original set
-        RDL::Globals.unsolved_vars.each { |v|
+        RDL::Globals.unsolved_vars.clone.each { |v|
           begin
             next if [:block, :block_arg, :block_ret].include? v.category
             sol = extract_var_sol(v, v.category)

@@ -85,6 +85,10 @@ module RDL::Type
         self.params[1].is_a?(RDL::Type::VarType) &&
         self.params[1].lbounds.empty? &&
         self.params[1].ubounds.empty?
+        ) || (
+          self.is_a?(RDL::Type::FiniteHashType) &&
+          self.elts == {} &&
+          self.the_hash == nil
         )
     end
         

@@ -1,0 +1,28 @@
+{
+  "C": {
+    "matches": 0,
+    "param": 0,
+    "gottype": 0,
+    "struct": 0,
+    "notype": 0,
+    "compared_meths": 0,
+    "compared_ret_types": 0,
+    "compared_arg_types": 0,
+    "compared_var_types": 0,
+    "compared_meths_lines": 0,
+    "compared_meths_casts": 0,
+    "noncomp_meths": 1,
+    "noncomp_args": 1,
+    "noncomp_rets": 1,
+    "noncomp_vars": 0,
+    "noncomp_usable": 0,
+    "noncomp_og": 1,
+    "noncomp_no_type": 1,
+    "noncomp_meths_lines": 0,
+    "noncomp_meths_casts": 0,
+    "library_guesses_by_twin": 0,
+    "library_matches_by_twin": 0,
+    "num_casts": 0,
+    "time": 0.014651238
+  }
+}

@@ -11,5 +11,7 @@ RDL.type :'ActiveModel::Errors', :keys, '() -> Array<Symbol>'
 RDL.type :'ActiveModel::Errors', :empty?, '() -> %bool'
 RDL.rdl_alias :'ActiveModel::Errors', :blank?, :empty?
 RDL.type :'ActiveModel::Errors', :hash, '(?%bool full_messages) -> Hash<Symbol, String>'
+RDL.type :'ActiveModel::Errors', :to_json, '() -> Hash<Symbol, String>'
+RDL.type :'ActiveModel::Errors', :to_xml, '() -> String'
 RDL.type :'ActiveModel::Errors', :add, '(%symstr, %symstr, ?Hash<Symbol, %any>) -> Array<String>'
 RDL.type :'ActiveModel::Errors', :add, '(%symstr, { () -> String }, Hash<Symbol, %any>) -> Array<String>' # TODO: combine with prev with union once supported

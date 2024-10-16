@@ -195,6 +195,9 @@ module RDL::Type
       return unless pi.satisfiable?
       #raise "About to add upper bound #{self} <= #{typ}" if typ.is_a?(VarType) && !typ.to_infer
 
+      if pi == PathTrue.new && typ.is_a?(RDL::Type::NominalType) && typ.name == "Invite"
+        puts "CLEANUP"
+      end
 
       # Here `typ` is our real upper bound
       if propagate
@@ -216,6 +219,10 @@ module RDL::Type
     def add_lbound(typ, pi, ast, new_cons = {}, propagate: false)
       return unless pi.satisfiable?
 
+
+      if self.category == :ret && self.meth == :update_activation_email && pi.is_a?(PathTrue)
+        puts "CLEANUP"
+      end
 
       # Here `typ` is our real lower bound
 
@@ -258,6 +265,11 @@ module RDL::Type
       else
         RDL::Globals.unsolved_vars.add(self)
         'XXX'
+        #if @category == :comp_type_output
+        #  resolve_comp_type_output(force_render: true)
+        #else
+        #  'XXX'
+        #end
       end
     end
 
@@ -283,7 +295,7 @@ module RDL::Type
       return false if other.category != self.category
       
       if self.category == :comp_type_output
-        return self.comp_type_info[:ast] == other.comp_type_info[:ast]
+        return self.comp_type_info[:ast] == other.comp_type_info[:ast] && self.comp_type_info[:comp_type_tactuals] == other.comp_type_info[:comp_type_tactuals]
       else
         return (other.instance_of? self.class) && other.to_s == to_s#(other.name.to_s == @name.to_s)
       end
@@ -317,7 +329,7 @@ module RDL::Type
     # To be called during constraint resolution.
     # Re-Executes this comp type. If its result is not a string, we will
     # propagate that as a bound in both directions.
-    def resolve_comp_type_output()
+    def resolve_comp_type_output(force_render: false)
       # Should probably hash this.
       return unless @category == :comp_type_output
       return if @solution
@@ -338,16 +350,17 @@ module RDL::Type
       # hash is Hash<{comp_type_meth: MethodType, comp_type_tactuals: Type[], self_klass: Class, trecv: Type}>
       fallback_output = comp_type_info[:fallback_output]
       binds = RDL::Typecheck.tc_bind_arg_types(hash[:comp_type_meth], tactuals)
-      tmeth = RDL::Typecheck.compute_types(hash[:comp_type_meth], hash[:self_klass], hash[:trecv], tactuals, binds) unless binds.nil?
+      tmeth = RDL::Typecheck.compute_types(hash[:comp_type_meth], hash[:self_klass], hash[:trecv], tactuals, binds, force_render: force_render) unless binds.nil?
 
       # [ ] is output different than the fallback output type?
       #     yes -> add and propagate that as a bound
       #      no -> move on
-      if !(tmeth.ret.equal?(fallback_output)) && (!@solution)
+      if !(RDL::Type::Type.leq(tmeth.ret, fallback_output, PathTrue.new)) && (!@solution)
         @solution = tmeth.ret
         add_and_propagate_upper_bound(@solution, PathTrue.new, nil)
         add_and_propagate_lower_bound(@solution, PathTrue.new, nil)
       end
+      #tmeth.ret
     end
 
     def hash # :nodoc:

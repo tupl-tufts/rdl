@@ -1,0 +1,4 @@
+RDL.type :'ActionController::Head', :head, '(Symbol) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new("HTTPResponse"), targs[0])``'
+RDL.type :'ActionController::Head', :head, '(:created, location: ?String, format: ?Symbol) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new("HTTPResponse"), targs[0])``'
+RDL.type :'ActionController::Head', :head, '(Integer) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new("HTTPResponse"), targs[0])``'
+RDL.type :'ActionController::Head', :head, '({status: Symbol}) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new("HTTPResponse"), targs[0].elts[:status])``'

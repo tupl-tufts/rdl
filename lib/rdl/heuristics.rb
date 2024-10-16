@@ -102,14 +102,15 @@ class RDL::Heuristic
             fallback = t.comp_type_info[:fallback_output]
             e = t.comp_type_info[:ast]
             t = fallback
-            RDL::Logging.log :heuristic, :warning, "Unable to resolve comp type for #{ast.location.expression}: '#{ast.location.expression.source}'. Utilizing fallback output: #{fallback}"
+            RDL::Logging.log :heuristic, :warning, "Unable to resolve comp type for #{e.location.expression}: '#{e.location.expression.source}'. Utilizing fallback output: #{fallback}"
           else
             # add this to a list of vartypes to have its solution extracted
-            next
+
+            #next
           end
         end
 
-        if map[pi]
+        if map[pi] && !(map[pi].is_a?(RDL::Type::VarType))
           map[pi] = RDL::Type::UnionType.new(map[pi], t)
         else
           map[pi] = t

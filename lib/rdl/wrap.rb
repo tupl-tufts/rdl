@@ -883,7 +883,9 @@ module RDL
 
     RDL::Globals.to_infer[sym].each { |klass, meth|
       begin
+        RDL::Globals.num_ctrl_flow_splits = 0
         RDL::Typecheck.infer klass, meth
+        RDL::Globals.ctrl_flow_splits[[klass, meth]] = RDL::Globals.num_ctrl_flow_splits
         num_casts += RDL::Typecheck.get_num_casts if RDL::Typecheck.get_num_casts
       rescue Exception => e
         if RDL::Config.instance.continue_on_errors
@@ -898,7 +900,7 @@ module RDL
     RDL::Globals.to_infer[sym] = Set.new
     RDL::Typecheck.resolve_constraints
 
-    report = RDL::Typecheck.extract_solutions
+    report, typ_sols = RDL::Typecheck.extract_solutions
 
     # Solution extraction is complete. reset unsolved vars.
     RDL::Globals.unsolved_vars.clear
@@ -918,6 +920,8 @@ module RDL
     unsolved.each { |vartype|
       RDL::Logging.log :inference, :info, "\t#{vartype.to_s}"
     }
+
+    return report, typ_sols
 
   end
 

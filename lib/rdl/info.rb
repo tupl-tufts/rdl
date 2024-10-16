@@ -69,7 +69,19 @@ class RDL::Info
     return t1 if t1.nil?
     t2 = t1[label]
     return t2 if t2.nil?
-    return t2[kind]
+
+    obj = t2[kind]
+
+    # Special case here: if we are looking up the type for a method
+    # whose return type is an FHT, we want to deep_copy it before 
+    # returning it. This is because callers can use comp types to 
+    # modify the underlying FHT and change the return type of this 
+    # method.
+    if kind == :type && obj.is_a?(Array) && obj.length == 1 && obj[0].is_a?(RDL::Type::MethodType) && obj[0].ret && obj[0].ret.is_a?(RDL::Type::FiniteHashType)
+      return [obj[0].copy]
+    else
+      return obj
+    end
 #    return @info[klass][label][kind]
   end
 

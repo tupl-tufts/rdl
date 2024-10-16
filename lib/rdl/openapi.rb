@@ -2,6 +2,61 @@
 # into RDL types, to typecheck against Rails API code.
 
 module RDL::Annotate
+
+    def openapi_from_path(path_to_openapi_spec)
+        # Step 1. Read in JSON file.
+        file = File.read(path_to_openapi_spec)
+
+        # Step 2. Parse JSON string to Ruby hash.
+        openapi = JSON.parse(file)
+
+        return openapi
+    end
+
+    # JSON -> Array<[Class, Symbol]>
+    def routes_from_openapi(openapi)
+        RDL::Typecheck.ensure_rails_controller_cache
+        kms = []
+
+        #RDL::Globals.rails_controller_cache.each_pair {|klass, routes|
+        #    routes.each_pair { |meth, route|
+        #        openapi["paths"].each_pair {|url, verbs|
+        #            next if url.include?("/admin/site_settings")
+        #            verbs.each_pair { |verb, contents| 
+        #                next unless verb.downcase == route.verb.downcase
+        #                url = url.gsub("{id}", "1").gsub("/-/", "/slug/").gsub("{username}", "username").gsub("{period}", "daily").gsub("{order}", "post_count").gsub("{tag}","tag")
+        #                if route.path.match(url)
+        #                    puts "Found match: #{verb} #{url} -> #{klass.to_s}##{meth.to_s}"
+        #                end
+        #            }
+        #        }
+        #    }
+        #}
+
+        openapi["paths"].each_pair {|path, verbs|
+            next if path.include?("/admin/")
+            og_path = path
+            # sub out path params with actual ones, so we can route it like an actual req
+            path = path.gsub("{id}", "1").gsub("/-/", "/slug/").gsub("{username}", "username").gsub("{period}", "daily").gsub("{order}", "post_count").gsub("{tag}","tag").gsub("{group_id}", "1").gsub("{flag}", "all").gsub("{group_name}", "group_name").gsub("{token}", "token").gsub("{action}", "sent")
+            # get verbs
+            verbs = verbs.keys
+
+            verbs.each { |verb|
+                # Get associated controller function for VERB /url
+                puts "About to find #{og_path} -> #{path}"
+
+
+
+                route = Rails.application.routes.recognize_path(path, {method: verb})
+                kontroller = "#{route[:controller]}_controller".camelize.constantize.new.class
+                method = route[:action]
+                kms << [kontroller, method, og_path, verb]
+            }
+        }
+
+        kms
+    end
+
     # Typecheck this Rails project against an OpenAPI spec.
     def openapi(path_to_openapi_spec)
         # Step 1. Read in JSON file.
@@ -57,40 +112,51 @@ module RDL::Annotate
     # Translates an OpenAPI path to an RDL type.
     # Currently, only supports GET endpoints with a 200 response.
     def translate_path(endpoint, openapi)
-        input_type = "{}"
-        input_type = "{#{translate_parameters(endpoint['get']['parameters'], openapi)}}" if endpoint['get'].has_key?('parameters')
+        verbs = endpoint.keys.filter{|verb| ["get", "put", "post", "delete", "update"].include?(verb)}
 
-        output_type = translate_responses(endpoint['get']['responses'], openapi)
+        translated = {}
+        verbs.each {|verb| 
+            input_type = {}
+            input_type = translate_parameters(endpoint[verb]['parameters'], openapi)
 
-        "(#{input_type}) -> #{output_type}"
+            output_type = translate_responses(endpoint[verb]['responses'], openapi)
+            translated[verb] = [input_type, output_type]
+        }
+
+        #"(#{input_type}) -> #{output_type}"
+        return translated
     end
 
     # Translates an OpenAPI `parameters` field to an RDL type,
     # representing the endpoint's input type.
     def translate_parameters(parameters, openapi)
         # Map each parameter type to its RDL type, then concatenate them and join with ", ".
+        return {} unless parameters
+        params = {}
         parameters.map {|p| 
             # Symbol to add, if the parameter is optional
             opt = "?"
             opt = "" if p.has_key?('required') && (p['required'] == true)
-            "#{p['name']}: #{opt}#{translate_schema(p['schema'], openapi)}"
-        }.join(', ')
+            #typ = p.has_key?("schema") ? p['schema'] : p['type']
+            params[opt + p['name']] = translate_schema(p, openapi)
+        }
     end
 
     # Translates an OpenAPI `responses` field to an RDL type, 
     # representing the endpoint's output type.
     # Currently, only supports a 200 response.
     def translate_responses(responses, openapi)
+        return "literally an empty response" unless responses && responses['200'] && responses['200']['schema']
         RDL::Logging.log :openapi, :error, "OpenAPI spec doesn't have a 200 response: #{responses}" if !responses.has_key?('200')
 
-        response_content = responses['200']['content']
+        response_content = responses['200']#['content']
 
         # Check if response_content has a key that starts with `application/json`. If so, extract the `schema` from within that, and pass it to `translate_schema`.
         # Otherwise, return `nil`.
-        json_content = response_content.keys.find {|k| k.start_with?('application/json')}
+        #json_content = response_content.keys.find {|k| k.start_with?('application/json')}
 
-        if json_content != nil
-            translate_schema(response_content[json_content]['schema'], openapi)
+        if response_content != nil
+            translate_schema(response_content['schema'], openapi)
         else
             nil
         end
@@ -103,9 +169,12 @@ module RDL::Annotate
     # schema: OpenAPI schema (in JSON)
     # openapi: the entire OpenAPI spec (in JSON, used for #ref's)
     def translate_schema(schema, openapi)
+        return "%any" unless schema
         case schema['type']
         # Primitives
         when 'integer'
+            'Integer'
+        when 'number'
             'Integer'
         when 'float', 'double'
             if RDL::Config.instance.number_mode
@@ -115,33 +184,43 @@ module RDL::Annotate
             end
         when 'string'
             'String'
+        when 'boolean'
+            'Boolean'
 
         # Arrays
         when 'array'
-            throw "Array schema missing `items` field: #{schema}" unless schema['items']
-            "Array<#{translate_schema(schema['items'], openapi)}>"
+            if schema.has_key?('items')
+                [translate_schema(schema['items'].merge({"type" => "object"}), openapi)]
+            else
+                ["%any"]
+            end
+            #throw "Array schema missing `items` field: #{schema}" unless schema['items']
 
         # Objects
         when 'object'
-            throw "Object schema missing `properties` field: #{schema}" unless schema['properties']
+            if !(schema.has_key?('properties'))
+                return "%any"
+            end
+            #throw "Object schema missing `properties` field: #{schema}" unless schema['properties']
+            response = {}
 
-            fields = schema['properties'].map {|k, v| 
+            schema['properties'].each_pair {|k, v| 
                 # Symbol to add, if the property is optional
                 opt = "?"
-                opt = "" if schema.has_key?('required') && schema['required'].include?(k)
-                "#{k}: #{opt}#{translate_schema(v, openapi)}"
-            }.join(', ')
+                opt = "" if (schema.has_key?('required') && schema['required'].include?(k)) || (v && v.has_key?('type') && ((v['type'] == 'string' && v.has_key?('minLength')) || v['type'] == 'array' && v.has_key?('minItems') && v['minItems'] == 1))
+                response[opt + k] = translate_schema(v, openapi)
+            }
 
-            "JSON<{#{fields}}>"
-
-        
+            response
 
         # Here is where we deal with special cases. These types have no "type"
         # field.
         # Refs (reference to a schema defined elsewhere in the spec) have "$ref"
         # and `oneOf` has "oneOf"
         when nil
-            if schema["$ref"] != nil
+            if schema["schema"] != nil
+                translate_schema(schema["schema"], openapi)
+            elsif schema["$ref"] != nil
                 translate_schema(resolve_ref(schema["$ref"], openapi), openapi)
 
             elsif schema["oneOf"] != nil
@@ -158,8 +237,9 @@ module RDL::Annotate
                 translated_children.join(" or ")
 
             else
-                RDL::Logging.log :openapi, :error, "Schema missing 'type', '$ref', or 'oneOf': #{schema}"
-                throw ""
+                #RDL::Logging.log :openapi, :error, "Schema missing 'type', '$ref', or 'oneOf': #{schema}"
+                #throw ""
+                "%any"
 
             end
 

@@ -110,27 +110,10 @@ module RDL::Typecheck
 
   class RespondToInjector < Parser::TreeRewriter
 
-    def on_block(node)
-      RDL::Logging.log :openapi_rewriting, :trace, "on_block: #{node}"
-      
-      # E.g. (send nil :respond_to)
-      send_ast = node.children[0]
-      return unless send_ast.children[1] == :respond_to
-
-      # E.g. (args (arg :format))
-      args_ast = node.children[1]
-      return unless args_ast.children[0].children[0] == :format
-
-      RDL::Logging.log :openapi_rewriting, :trace, "We are definitely in a `respond_to` block."
-
-      # E.g. (begin (send (lvar :format) :html) 
-      #             (block (send (lvar :format) :json)
-      #                    (args)
-      #                    (send nil :render (hash (pair (sym :json) (ivar :@talk))))))
-      body_ast = node.children[2]
-
-      possible_calls = body_ast.children
-      possible_calls = [body_ast] unless body_ast.type == :begin
+    def find_render_calls(node)
+      return [] unless node
+      possible_calls = node.children
+      possible_calls = [node] unless node.type == :begin
       # Find calls that look like `format.json { ... }`
       format_json_block_calls = possible_calls.filter { |node|
           node.type == :block &&
@@ -146,31 +129,110 @@ module RDL::Typecheck
           node.children[1] == :json
       }
 
-      RDL::Logging.log :openapi_rewriting, :trace, "Identified #{format_json_block_calls.length} block calls to format.json:"
-      RDL::Logging.log :openapi_rewriting, :trace, format_json_block_calls
+      return format_json_block_calls
+    end
 
-      RDL::Logging.log :openapi_rewriting, :trace, ""
-      RDL::Logging.log :openapi_rewriting, :trace, "Identified #{format_json_empty_calls.length} empty calls to format.json:"
-      RDL::Logging.log :openapi_rewriting, :trace, format_json_empty_calls
+    def on_block(node)
+      RDL::Logging.log :openapi_rewriting, :trace, "on_block: #{node}"
+      
+      # E.g. (send nil :respond_to)
+      send_ast = node.children[0]
+      # E.g. (args (arg :format))
+      args_ast = node.children[1]
+
+      # If this isn't a respond_to call/block, just rewrite the body
+      # as usual.
+      unless send_ast.children[1] == :respond_to && args_ast.children[0].children[0] == :format
+        rec_ast, args_ast, body_ast = *node
+        rec_code = rec_ast.location.expression.source
+        args_code = if args_ast.location.expression then args_ast.location.expression.source else "||" end
+        body_code = RespondToInjector.rewrite(body_ast, klass=@klass)
+        align_replace(node.location.expression, @offset, "#{rec_code} do #{args_code} #{body_code}; end")
+        return
+      end
+
+      RDL::Logging.log :openapi_rewriting, :trace, "We are definitely in a `respond_to` block."
+
+      # E.g. (begin (send (lvar :format) :html) 
+      #             (block (send (lvar :format) :json)
+      #                    (args)
+      #                    (send nil :render (hash (pair (sym :json) (ivar :@talk))))))
+      body_ast = node.children[2]
+
+      #possible_calls = body_ast.children
+      #if possible_calls
+
+      if body_ast.type == :if
+        # will look like
+        # (if e1
+        #     (send nil :render (...))
+        #     (send nil :render (...)))
+        format_json_block_calls_then = find_render_calls(body_ast.children[1])
+        format_json_block_calls_else = find_render_calls(body_ast.children[2])
+
+        to_inject = "if " + body_ast.children[0].location.expression.source + " then\n"
+        format_json_block_calls_then.each { |call_ast|
+          render_src = call_ast.children[2].location.expression.source
+          to_inject += "__RDL_rendered = (#{render_src});return __RDL_rendered;\n"
+        }
+        to_inject += "else\n"
+        format_json_block_calls_else.each { |call_ast|
+          render_src = call_ast.children[2].location.expression.source
+          to_inject += "__RDL_rendered = (#{render_src});return __RDL_rendered;\n"
+        }
+        to_inject += "end"
+      else
+        format_json_block_calls = find_render_calls(body_ast)
+
+        to_inject = ""
+        format_json_block_calls.each { |call_ast| 
+            render_src = call_ast.children[2].location.expression.source
+            to_inject += ";__RDL_rendered = (#{render_src});return __RDL_rendered;"
+        }
+      end
+
+
+      #possible_calls = [body_ast] unless body_ast.type == :begin
+      ## Find calls that look like `format.json { ... }`
+      #format_json_block_calls = possible_calls.filter { |node|
+      #    node.type == :block &&
+      #    node.children[0].type == :send &&
+      #    node.children[0].children[0].children[0] == :format &&
+      #    node.children[0].children[1] == :json
+      #}
+
+      ## Find calls that look like `format.json`
+      #format_json_empty_calls = possible_calls.filter { |node|
+      #    node.type == :send &&
+      #    node.children[0].children[0] == :format &&
+      #    node.children[1] == :json
+      #}
+
+      #RDL::Logging.log :openapi_rewriting, :trace, "Identified #{format_json_block_calls.length} block calls to format.json:"
+      #RDL::Logging.log :openapi_rewriting, :trace, format_json_block_calls
+
+      #RDL::Logging.log :openapi_rewriting, :trace, ""
+      #RDL::Logging.log :openapi_rewriting, :trace, "Identified #{format_json_empty_calls.length} empty calls to format.json:"
+      #RDL::Logging.log :openapi_rewriting, :trace, format_json_empty_calls
       #return unless body_ast.children.
 
-      to_inject = ""
-      RDL::Logging.log :openapi_rewriting, :trace, "Here lies the code and source location for each block call to render:"
-      format_json_block_calls.each { |call_ast| 
-          render_src = call_ast.children[2].location.expression.source
-          RDL::Logging.log :openapi_rewriting, :trace, call_ast.children[2].location.expression.source
-          RDL::Logging.log :openapi_rewriting, :trace, "@"
-          RDL::Logging.log :openapi_rewriting, :trace, call_ast.children[2].location.expression
-          RDL::Logging.log :openapi_rewriting, :trace, ""
+      #to_inject = ""
+      #RDL::Logging.log :openapi_rewriting, :trace, "Here lies the code and source location for each block call to render:"
+      #format_json_block_calls.each { |call_ast| 
+      #    render_src = call_ast.children[2].location.expression.source
+      #    RDL::Logging.log :openapi_rewriting, :trace, call_ast.children[2].location.expression.source
+      #    RDL::Logging.log :openapi_rewriting, :trace, "@"
+      #    RDL::Logging.log :openapi_rewriting, :trace, call_ast.children[2].location.expression
+      #    RDL::Logging.log :openapi_rewriting, :trace, ""
 
-          # Inject the following expression after the `respond_to` call:
-          # return render ...
+      #    # Inject the following expression after the `respond_to` call:
+      #    # return render ...
 
-          #RDL::Logging.log :openapi_rewriting, :trace, "about to insert `;__RDL_rendered = #{render_src};`"
-          to_inject += ";__RDL_rendered = (#{render_src});return __RDL_rendered;"
-          #insert_after(node.location.expression, ";__RDL_rendered = #{render_src};")
-          
-      }
+      #    #RDL::Logging.log :openapi_rewriting, :trace, "about to insert `;__RDL_rendered = #{render_src};`"
+      #    to_inject += ";__RDL_rendered = (#{render_src});return __RDL_rendered;"
+      #    #insert_after(node.location.expression, ";__RDL_rendered = #{render_src};")
+      #    
+      #}
 
       # Rewrite the block.
       #block_code = RespondToInjector.rewrite(node)
@@ -199,8 +261,8 @@ module RDL::Typecheck
             RDL::Logging.log :openapi_rewriting, :trace, "on_send: Identified a call to #{method_name}: #{node}"
 
             # Assign the result of this call to `__RDL_rendered`
-            to_inject_pre = "__RDL_rendered = "
-            to_inject_post = ";return __RDL_rendered;"
+            to_inject_pre = " __RDL_rendered = "
+            to_inject_post = ";return __RDL_rendered "
             align_replace(node.location.expression, @offset, to_inject_pre + node.location.expression.source + to_inject_post)
         end
     end
@@ -235,7 +297,7 @@ module RDL::Typecheck
         align_replace(node.location.expression, @offset, 
           #"def #{def_name_ast} #{def_args_code};__RDL_rendered = nil\n    #{def_body_code};return __RDL_rendered;\n  end\n\n")
           # experiment: trying to not just introduce the unconditional `return __RDL_rendered` at the end.
-          "def #{def_name_ast} #{def_args_code};__RDL_rendered = nil\n    #{def_body_code};\n  end\n\n")
+          "def #{def_name_ast} #{def_args_code};__RDL_rendered = nil\n    #{def_body_code};\n  end\n\n\n\n\n\n")
           #def_code + ";return __RDL_rendered;")
       end
     end
@@ -335,14 +397,15 @@ module RDL::Typecheck
         controller_name = "#{controller.sub('\/', '::')}_controller".camelcase
         controller_klass = controller_name.safe_constantize
 
-        cache[controller_klass] = Set.new unless cache.key?(controller_klass)
-        cache[controller_klass].add(action.to_sym)
+        cache[controller_klass] = {} unless cache.key?(controller_klass)
+        cache[controller_klass][action.to_sym] = route
 
       end
     end
   end
 
   def self.find_route_for(klass, meth)
+    routes = []
     Rails.application.routes.routes.each do |route|
       # Inspired by https://stackoverflow.com/questions/52891080/how-to-verify-controller-actions-are-defined-for-all-routes-in-a-rails-applicati
       controller, action = route.defaults.slice(:controller, :action).values
@@ -360,11 +423,11 @@ module RDL::Typecheck
       if controller_klass == klass && meth.to_sym == action.to_sym
         # we found the route, now extract the URL
         puts route.path.spec.to_s
-        return route.path.spec.to_s, route
+        routes << [route.path.spec.to_s, route]
       end
     end
 
-    return nil
+    return routes
   end
 
   def self.find_all_routes_for(klass)
@@ -403,7 +466,7 @@ module RDL::Typecheck
   def self.is_controller_method?(klass, meth)
     klass = RDL::Util.to_class(klass)
     RDL::Typecheck.ensure_rails_controller_cache
-    defined?(Rails) && RDL::Globals.rails_controller_cache[klass].include?(meth)
+    defined?(Rails) && RDL::Globals.rails_controller_cache[klass] && RDL::Globals.rails_controller_cache[klass].keys.include?(meth)
     #defined?(Rails) && RDL::Typecheck.is_controller?(klass) && klass.respond_to?(:action_methods) && klass.action_methods.include?(meth.to_s)
   end
 

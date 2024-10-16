@@ -18,7 +18,13 @@ def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_de
           if trec.default then
             return assign_output(trec, targs + [trec.default])
           else
-            return trec.promote.params[1]
+            # attempted fix: if the FHT is empty, just return nil
+            # to make {}[:example] have type nil
+            if trec.elts.empty?
+              return RDL::Globals.types[:nil]
+            else
+              return trec.promote.params[1]
+            end
           end
         else
           return RDL::Globals.parser.scan_str "#T #{default1}"
@@ -115,6 +121,14 @@ end
 RDL.type Hash, 'self.any_or_v', "(RDL::Type::Type) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
 def Hash.promoted_or_v(trec)
+  # this meth is used for enumerators on Hash.
+  # if this is an empty hash, the enumerators won't run.
+  # so just return %dyn
+  if trec.is_empty_hash?
+    # if this is an empty hash, 
+    return RDL::Globals.types[:dyn]
+  end
+
   case trec
   when RDL::Type::FiniteHashType
     trec.promote.params[1]
@@ -333,6 +347,9 @@ RDL.type Hash, 'self.merge_input', "(RDL::Type::Type, Array<RDL::Type::Type>, ?%
 
 
 def Hash.merge_output(trec, targs, mutate=false)
+  if trec.elts.keys.size == 1 && trec.elts[:success]
+    puts "CLEANUP"
+  end
   case trec
   when RDL::Type::NominalType
     return RDL::Globals.types[:hash]
@@ -513,7 +530,7 @@ RDL.type :Hash, :delete, '(k) -> v'
 RDL.type :Hash, :delete, '(k) { (k) -> u } -> u or v'
 RDL.type :Hash, :delete_if, '() { (k,v) -> %bool } -> Hash<k,v>'
 RDL.type :Hash, :delete_if, '() -> Enumerator<[k, v]>'
-RDL.type :Hash, :each, '() { (k,v) -> %any } -> Hash<k,v>'
+#RDL.type :Hash, :each, '() { (k,v) -> %any } -> Hash<k,v>'
 RDL.type :Hash, :each, '() -> Enumerator<[k, v]>'
 RDL.type :Hash, :each_pair, '() { (k,v) -> %any } -> Hash<k,v>'
 RDL.type :Hash, :each_pair, '() -> Enumerator<[k, v]>'

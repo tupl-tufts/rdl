@@ -195,7 +195,7 @@ module RDL::Typecheck
     def merge_block_env(other, arg_names)
       return self if other.nil?
       result = Env.new
-      result.pi = @pi # use caller pi. callee pi is not relevant.
+      result.pi = other.pi # that was a mistake #@pi # use caller pi. callee pi is not relevant.
       @env.each { |k, v|
         if (other.env.has_key? k) && (not (arg_names.include? k))
           # weak update
@@ -375,6 +375,7 @@ module RDL::Typecheck
         RDL::Globals.parser_cache[file] = [digest, cache]
       rescue => e
         RDL::Logging.log :typecheck, :error, "Failed to parse #{file}; #{e}"
+        RDL::Logging.log :typecheck, :error, e.full_message
         return nil if RDL::Config.instance.continue_on_errors
 
         raise e
@@ -431,6 +432,7 @@ module RDL::Typecheck
     raise exn unless RDL::Config.instance.continue_on_errors
     RDL::Logging.log :inference, :error, "Error; Skipping inference for #{RDL::Util.pp_klass_method(klass, meth)}"
     RDL::Logging.log :inference, :debug, "... got exception: #{exn}"
+    RDL::Logging.log :inference, :debug, exn.full_message
     # RDL::Globals.info.set(klass, meth, :type, [RDL::Globals.types[:dyn]])
   end
 
@@ -512,15 +514,15 @@ module RDL::Typecheck
     else
       targs_dup = Hash[targs.map { |k, t| [k, t.copy] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
       @num_casts = 0
-      _, body_type = tc(scope, Env.new(targs_dup), body) ## TODO: need separate argument indicating we're performing inference? or is this exactly the same as type checking...
+      body_env, body_type = tc(scope, Env.new(targs_dup), body) ## TODO: need separate argument indicating we're performing inference? or is this exactly the same as type checking...
     end
 
     #body_type = self_type if meth == :initialize
     body_type = RDL::Globals.parser.scan_str "#T self" if meth == :initialize # JF: Why not inst.self?
     if body_type.is_a?(RDL::Type::UnionType)
-      body_type.types.each { |t| RDL::Type::Type.leq(t, ret_vartype, PathTrue.new, ast: ast) }
+      body_type.types.each { |t| RDL::Type::Type.leq(t, ret_vartype, body_env.pi, ast: ast) }
     else
-      RDL::Type::Type.leq(body_type, ret_vartype, PathTrue.new, ast: ast)
+      RDL::Type::Type.leq(body_type, ret_vartype, body_env.pi, ast: ast)
     end
 
     RDL::Globals.info.set(klass, meth, :typechecked, true)
@@ -933,7 +935,7 @@ module RDL::Typecheck
       e.children[0].children.each { |asgn|
         next unless asgn.type == :lvasgn
         x = e.children[0]
-        env = env.bind(x, RDL::Globals.types[:nil]) if (not (env.has_key? x)) # see lvasgn
+        env = env.bind(x, RDL::Globals.types[:nil], env.pi) if (not (env.has_key? x)) # see lvasgn
         # Note don't need to check outer_env here because will be checked by tc_vasgn below
       }
       envi, tright = tc(scope, env, e.children[1])
@@ -1118,6 +1120,9 @@ module RDL::Typecheck
       # children[0] = receiver; if nil, receiver is self
       # children[1] = method name, a symbol
       # children [2..] = actual args
+      if e.children[1] == :raise
+        puts "CLEANUP!"
+      end
       return tc_var_type(scope, env, e) if (e.children[0].nil? || is_RDL(e.children[0])) && e.children[1] == :var_type
       return tc_type_cast(scope, env, e) if is_RDL(e.children[0]) && e.children[1] == :type_cast && scope[:block].nil?
       return tc_note_type(scope, env, e)  if is_RDL(e.children[0]) && e.children[1] == :note_type
@@ -1127,7 +1132,7 @@ module RDL::Typecheck
       block = scope[:block]
       map_case = false
       e_map_case = ti_map_case = nil
-      scope_merge(scope, block: nil, break: env, next: env) { |sscope|
+      scope_merge(scope, block: nil, break: env, next: env, __RDL_each_with_object_ret: nil) { |sscope|
         e.children[2..-1].each { |ei|
           if ei.type == :splat
             envi, ti = tc(sscope, envi, ei.children[0])
@@ -1175,12 +1180,24 @@ module RDL::Typecheck
           end
         }
 
-        if e.children[1] == :merge! || e.children[1] == :[]=
+        if scope[:block]
+          puts "CLEANUP"
+        end
+
+        #    note this is checking the OUTER scope, not the inner scope (sscope)
+        #    vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+        if (!scope.has_key?(:__RDL_each_with_object_ret) || scope[:__RDL_each_with_object_ret] == nil) && (e.children[1] == :merge! || e.children[1] == :[]=)
           # Hardcoded: these Hash methods, Hash#merge! and Hash#[]=
           #            mutate the receiver. We need to deep copy
           #            the env to avoid changing the FHT in other
           #            envs.
+          # Special note to NOT DO THIS IN BLOCKS because we may want
+          # the block to mutate its arg types.
           envi = envi.deep_copy
+        end
+
+        if (e.children[1] == :each_with_object)
+          sscope[:__RDL_each_with_object_ret] = "yes"
         end
 
         envi, trecv = if e.children[0].nil? then [envi, envi[:self]] else tc(sscope, envi, e.children[0]) end # if no receiver, self is receiver
@@ -1193,6 +1210,21 @@ module RDL::Typecheck
           block = [map_block_type, e_map_case]
         end
         envres, tres = tc_send(sscope, envi, trecv, e.children[1], tactuals, block, e)
+
+        if e.children[1] == :raise
+          # execution stops after a raise
+          #RDL::Globals.num_ctrl_flow_splits += 1
+          envres = envres.add_pi(PathFalse.new)
+        end
+
+        if sscope[:__RDL_each_with_object_ret].is_a?(RDL::Type::Type)
+          # we are typechecking each_with_object. this method is very special,
+          # and its return value is set in a special environment binding.
+          # here, we will use it.
+          #tres = envres[:__RDL_each_with_object_ret].canonical
+          tres = sscope[:__RDL_each_with_object_ret].canonical
+        end
+
         [envres, tres.canonical]
       }
     when :yield
@@ -1246,6 +1278,7 @@ module RDL::Typecheck
     #     [a1, RDL::Globals.types[:bool]]
     #   end
     when :if
+      RDL::Globals.num_ctrl_flow_splits += 1
       envi, tguard = tc(scope, env, e.children[0]) # guard; any type allowed
 
       # always type check both sides
@@ -1261,6 +1294,7 @@ module RDL::Typecheck
       envright_in = envi.add_pi(right_path)
       envleft_out, tleft = if e.children[1].nil? then [envleft_in, RDL::Globals.types[:nil]] else tc(scope, envleft_in, e.children[1]) end # then
       envright_out, tright = if e.children[2].nil? then [envright_in, RDL::Globals.types[:nil]] else tc(scope, envright_in, e.children[2]) end # else
+      joined_env = Env.join(e, envleft_out, envright_out)
       RDL::Logging.log :typecheck, :debug, ""
       RDL::Logging.log :typecheck, :debug, "====================================================================="
       RDL::Logging.log :typecheck, :debug, "Typechecking `if` expression: #{e.children[0].loc.expression}."
@@ -1269,12 +1303,12 @@ module RDL::Typecheck
       -> envi    #{envi} 
       -> envleft_in  #{envleft_in} & envright_in #{envright_in} 
       -> envleft_out #{envleft_out} & envright_out #{envright_out} 
-      -> joined  #{Env.join(e, envleft_out, envright_out)}
+      -> joined  #{joined_env}
       
       tguard: #{tguard}
       envleft_out.pi => #{envleft_out.pi}
       envright_out.pi => #{envright_out.pi}
-      joined.pi => #{Env.join(e, envleft_out, envright_out).pi}"
+      joined.pi => #{joined_env.pi}"
       RDL::Logging.log :typecheck, :debug, "====================================================================="
       RDL::Logging.log :typecheck, :debug, ""
       if tguard.is_a? RDL::Type::SingletonType
@@ -1283,7 +1317,7 @@ module RDL::Typecheck
         #[Env.join(e, envleft, envright), RDL::Type::UnionType.new(tleft, tright).canonical]
         #[Env.join(e, envleft, envright), RDL::Type::MultiType.new({envleft => tleft, envright => tright}).canonical]
         #[Env.join(e, envleft_out, envright_out), RDL::Type::PathType.new(left_path, tleft, tright).canonical]
-        [Env.join(e, envleft_out, envright_out), RDL::Type::MultiType.new({left_path => tleft, right_path => tright}).canonical]
+        [joined_env, RDL::Type::MultiType.new({left_path => tleft, right_path => tright}).canonical]
       end
     when :case
       # TODO(Mark): implement
@@ -1552,12 +1586,17 @@ module RDL::Typecheck
       # the negation of our current scope[:pi].
 
       # Adjust the env to have a pi of false (i.e. execution has stopped on this flow)
+      #RDL::Globals.num_ctrl_flow_splits += 1
       env1 = env1.add_pi(PathFalse.new)
       [env1, RDL::Globals.types[:bot]] # return is a void value expression
     when :begin, :kwbegin # sequencing
       envi = env
       ti = nil
       e.children.each { |ei| envi, ti = tc(scope, envi, ei) }
+
+      if scope.has_key?(:__RDL_each_with_object_ret)
+        #scope[:__RDL_each_with_object_ret] == ti
+      end
       [envi, ti]
     when :ensure
       # (ensure main-body ensure-body)
@@ -1595,6 +1634,7 @@ module RDL::Typecheck
         [Env.join(e, *env_res), RDL::Type::UnionType.new(*tres).canonical]
       }
     when :resbody
+      RDL::Globals.num_ctrl_flow_splits += 1
       # (resbody (array exns) (lvasgn var) rescue-body)
       resbody_scope = scope.clone
       resbody_scope[:exceptional] = true
@@ -1898,6 +1938,9 @@ module RDL::Typecheck
   # [+ e +] is the expression at which location to report an error
   # [+ op_asgn +] is a bool telling us that we are type checking the mutation method for an op_asgn node. used for ast rewriting.
   def self.tc_send(scope, env, trecv, meth, tactuals, block, e, op_asgn=false)
+    if meth == :[]=
+      puts "CLEANUP"
+    end
     # Path-Sensitivity:
     # If we have path-sensitive arguments, we need to map tc_send over
     # the different possible types.
@@ -2002,7 +2045,7 @@ module RDL::Typecheck
       map = {}
       envs = []
       trecv.map.each_pair { |p, t| 
-        new_env, new_tret = process_trecv.call(t, false)
+        new_env, new_tret = tc_send(scope, env, t, meth, tactuals, block, e, op_asgn)#process_trecv.call(t, false)
         map[p] = new_tret
         envs.append new_env
       }
@@ -2088,6 +2131,9 @@ module RDL::Typecheck
       else
         klass = trecv.val.class.to_s
         ts = lookup(scope, klass, meth, e)
+        if !ts
+          puts "CLEANUP"
+        end
         error :no_instance_method_type, [klass, meth], e unless ts
         inst = {self: trecv}
         self_klass = trecv.val.class
@@ -2270,6 +2316,18 @@ module RDL::Typecheck
       #deferred_constraints = []
       choice_num = 0
       ts.each_with_index { |tmeth, ind| # MethodType
+        if meth == :wordpress
+          puts "CLEANUP"
+        end
+
+        if tactuals_expanded.length == 0 && env.has_key?(:params) && tmeth.args && tmeth.args.length && tmeth.args.length == 1 && tmeth.args[0].is_a?(RDL::Type::VarType) && tmeth.args[0].name == :params
+          # Special case: we are in a function that has been rewritten to
+          # include `params`, AND we are calling a function that has been 
+          # rewritten to include `params`. However, the caller does not
+          # know this. Here, we pass our own params in.
+          tactuals_expanded.append(env[:params])
+        end
+
         got_match = false
         current_dcs = []
         comp_type = false
@@ -2319,7 +2377,7 @@ module RDL::Typecheck
             begin
               old_env = env
               env = tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
-            rescue BlockTypeError => _
+            rescue BlockTypeError => bte
               block_mismatch = true
               env = old_env
             end
@@ -2471,7 +2529,7 @@ module RDL::Typecheck
   # [+ tactuals +] is a list Array<Type> of types of the input to a method call
   # [+ binds +] is a Hash<Symbol, Type> mapping bound type names to the corresponding actual type.
   # Returns a new MethodType where all ComputedTypes in tmeth have been evaluated
-  def self.compute_types(tmeth, self_klass, trecv, tactuals, binds={})
+  def self.compute_types(tmeth, self_klass, trecv, tactuals, binds={}, force_render: false)
     bind = nil
     self_klass.class_eval { bind = binding() }
     bind.local_variable_set(:trec, trecv)
@@ -2721,8 +2779,15 @@ module RDL::Typecheck
         arg_names = args.children.map { |a| a.children[0] }
         # note: okay if outer_env shadows, since nested scope will include outer scope by next line
         targs_dup = Hash[targs.map { |k, t| [k, t.copy] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
+        #targs_dup = Hash[targs.map { |k, t| [k, t] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
         env_with_targs = targs_env.merge(Env.new(targs_dup))
         body_env, body_type = if body.nil? then [nil, RDL::Globals.types[:nil]] else tc(bscope, env_with_targs, body) end
+        if scope.has_key?(:__RDL_each_with_object_ret) && scope[:__RDL_each_with_object_ret] != nil
+          # propagate each_with_object return value. It is the modified version of
+          # its second argument.
+          bscope[:__RDL_each_with_object_ret] = targs_dup[arg_names[1]]
+        end
+
         error :bad_return_type, [body_type, tblock.ret], body, block: true unless body.nil? || RDL::Type::Type.leq(body_type, tblock.ret, env.pi, inst, false, ast: body)
         ret_env = env.merge_block_env(body_env, arg_names)
         error :internal, "empty self", block[1] if ret_env.env[:self].nil?

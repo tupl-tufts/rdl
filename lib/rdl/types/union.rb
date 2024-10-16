@@ -10,6 +10,10 @@ module RDL::Type
       return RDL::Globals.types[:bot] if types.size == 0
       return types[0] if types.size == 1 && types[0]
 
+      if types.any? {|t| t == RDL::Globals.types[:json_fallback]}
+        puts "CLEANUP"
+      end
+
       ts = []
       # flatten nested unions, check that all args are types
       types.each { |t|
