@@ -1,3 +1,9 @@
+RestPi implementation.
+
+The rest of this document is RDL's regular readme.
+To find the parts of this implementation related to path-sensitivity, a grep for "path" will return lots of good results.
+
+
 [![Gem Version](https://badge.fury.io/rb/rdl.svg)](https://badge.fury.io/rb/rdl) [![Build Status](https://travis-ci.org/tupl-tufts/rdl.svg?branch=master)](https://travis-ci.org/tupl-tufts/rdl)
 
 # Table of Contents

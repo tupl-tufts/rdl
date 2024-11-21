@@ -13,7 +13,8 @@ class ActiveRecord::Base
   type 'self.new', '() -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type 'self.create!', '() -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type :attribute_names, "() -> Array<String>", wrap: false
-  type :to_json, "(?{ only: Array<String> }) -> String", wrap: false
+  #type :to_json, "(?{ only: Array<String> }) -> String", wrap: false
+  type :to_json, "(?%any) -> ``DBType.rec_as_json(trec, targs)``", wrap: false
   type :update_column, '(``uc_first_arg(trec)``, ``uc_second_arg(trec, targs)``) -> %bool', wrap: false
   type :[], '(Symbol) -> ``access_output(trec, targs)``', wrap: false
   type :[], '(String) -> ``access_output(trec, targs)``', wrap: false
@@ -350,7 +351,8 @@ class ActiveRecord_Relation
   type :valid, "() -> self", wrap: false
   type :sort, "() { (t, t) -> Integer } -> Array<t>", wrap: false
 
-  type :as_json, "(?%any) -> ``DBType.rec_as_json(trec, targs)``", wrap: false
+  type :as_json, "(?%any) -> ``DBType.rec_as_json(trec)``", wrap: false
+  type :to_json, "(?%any) -> ``DBType.rec_as_json(trec)``", wrap: false
 end
 
 module ActiveModel::Serializers::JSON
@@ -395,6 +397,14 @@ class DBType
 
     only = serial_klass._attributes
     includes = serial_klass._associations
+
+    if only.is_a?(Array)
+      only_array = only
+      only = {}
+      only_array.each {|key|
+        only[key] = nil
+      }
+    end
 
     serialized = rec_as_json(
       RDL::Type::NominalType.new(model_klass.to_s),
@@ -472,8 +482,8 @@ class DBType
       if http_response
         return RDL::Type::GenericType.new(
           RDL::Type::NominalType.new("HTTPResponse"),
-          ret,
           status,
+          ret,
         )
       else
         return ret
@@ -650,6 +660,11 @@ class DBType
       # we haven't extracted solutions for all of the types yet.
       #return RDL::Globals.types[:string]
       #if force_render
+      var = targs[0].elts[:json]
+      #if var.solution
+      #  # recur with solution
+      #  return DBType.render_output([RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: var.solution}), nil)], default_status: default_status, serial_klass: serial_klass, model_klass: model_klass, plural: plural, http_response: http_response)
+      #else
         return RDL::Type::GenericType.new(
           RDL::Type::NominalType.new("HTTPResponse"),
           status,
@@ -658,6 +673,7 @@ class DBType
             targs[0].elts[:json]
           )
         )
+      #end
       #else
       #  return RDL::Globals.types[:string]
       #end
@@ -818,9 +834,13 @@ class DBType
             # it is optional.
             # it took me so long to figure out how todo this, but it is
             # quite neat.
-            meth = serializer_klass.instance_method("include_#{included_symbol}?")
-            if meth && !meth.source_location[0].include?("lib/active_model/serializer.rb")
-              sym_as_json = RDL::Type::OptionalType.new(sym_as_json)
+            begin
+              meth = serializer_klass.instance_method("include_#{included_symbol}?")
+              if meth && !meth.source_location[0].include?("lib/active_model/serializer.rb")
+                sym_as_json = RDL::Type::OptionalType.new(sym_as_json)
+              end
+            rescue => e
+              # the serializer did not define that method.
             end
 
             schema.elts[included_symbol] = sym_as_json

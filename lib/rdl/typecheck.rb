@@ -33,6 +33,7 @@ module RDL::Typecheck
 
        RDL::Logging.log :typecheck, :trace, "ASTMapper on #{file}. Rewritten controller method #{name}. Old line number = #{line}, transformed line number = #{node.loc.line}"
         loc = line
+        #loc = node.loc.line
       else
         # If we're not in a rewritten Rails controller, we can
         # use the location from the parser.
@@ -445,6 +446,10 @@ module RDL::Typecheck
     ast = get_ast(klass, meth)
     if ast.nil?
       RDL::Logging.log :inference, :warning, "Warning: Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}; skipping method"
+      #the_meth = RDL::Util.to_class(klass).instance_method(meth)
+      #RDL::Logging.log :inference, :warning, "Location according to Ruby: #{the_meth.source_location}"
+      #RDL::Logging.log :inference, :warning, "Location in RDL::Globals: #{RDL::Globals.info.get(klass, meth, :source_location)}"
+      #RDL::Logging.log :inference, :warning, "Parser cache: #{RDL::Globals.parser_cache["/project/app/controllers/pages_controller.rb"]}"
 
       # if RDL::Config.instance.continue_on_errors
       #   puts "#{warning_text} recording %dyn" if RDL::Config.instance.convert_to_dyn_verbose

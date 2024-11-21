@@ -491,6 +491,13 @@ module RDL::Type
         return false unless (left.base == right.base ||
                              (left.base.klass.ancestors.member?(right.base.klass) &&
                               left.params.length == right.params.length))
+
+        # Sanity check: the number of type parameters on `left` and `right`
+        # should match the number of formal type parameters.
+        unless formals.length == left.params.length && formals.length == right.params.length
+          raise TypeError, "Mismatch between formal type parameters and actual type parameters. Formal type parameters for #{left.base.name}: #{formals}. left.params=#{left.params}, right.params=#{right.params}."
+        end
+
         return variance.zip(left.params, right.params).all? { |v, tl, tr|
           case v
           when :+
