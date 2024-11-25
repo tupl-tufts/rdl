@@ -346,7 +346,7 @@ module RDL::Typecheck
   end
 
   # Get the actual Ruby class from a class definition AST node.
-  def self.get_class_from_node(class_node)
+  def self.get_class_from_node(class_node, mod="")
     name_node, zuper, body = *class_node
     name_nodee = *name_node
     name = name_nodee[1].to_s
@@ -356,7 +356,7 @@ module RDL::Typecheck
     end
 
     begin
-      return RDL::Util.to_class(name)
+      return RDL::Util.to_class(mod + name)
     rescue NameError
       return nil
     end
@@ -370,7 +370,7 @@ module RDL::Typecheck
 
     klass = RDL::Util.to_class(klass)
 
-    if klass && defined?(Rails) && (klass.respond_to? :superclass) && (klass.superclass.to_s == "ApplicationController")
+    if klass && defined?(Rails) && (klass.respond_to? :ancestors) && (klass.ancestors.include?(ApplicationController))
       RDL::Logging.log :openapi_rewriting, :info, "#{klass.name} is a Rails controller"
       return true
     end

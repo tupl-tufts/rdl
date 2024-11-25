@@ -9,12 +9,13 @@ module RDL::Typecheck
 
   # Create mapping from file/line numbers to the def that appears at that location
   class ASTMapper < AST::Processor
-    attr_accessor :line_defs, :klass
+    attr_accessor :line_defs, :klass, :mod
 
-    def initialize(file, klass=nil)
+    def initialize(file, klass=nil, mod="")
       @file = file
       @line_defs = Hash.new # map from line numbers to defs
       @klass = klass
+      @mod = mod
     end
 
     def handler_missing(node)
@@ -62,18 +63,29 @@ module RDL::Typecheck
     def on_class(node)
       name_ast, super_ast, body_ast = *node
       
-      klass = RDL::Typecheck.get_class_from_node(node)
+      klass = RDL::Typecheck.get_class_from_node(node, mod=@mod)
 
-      nested_line_defs = ASTMapper.process(body_ast, @file, klass=klass)
+      nested_line_defs = ASTMapper.process(body_ast, @file, klass=klass, mod=@mod)
+      @line_defs = @line_defs.merge nested_line_defs
+    end
+
+    def on_module(node)
+      # (module (const nil :Foo) (nil))
+      name_node, body = *node
+      name = *name_node
+
+      mod = @mod + "::" + name[1].to_s
+
+      nested_line_defs = ASTMapper.process(body, @file, klass=klass, mod=mod)
       @line_defs = @line_defs.merge nested_line_defs
     end
 
     # Recursively process a class within this file.
     # This is used so that the ASTProcessor knows we're inside a class def.
     # Returns: the line defs from the subtree
-    def self.process(ast, file, klass=nil)
+    def self.process(ast, file, klass=nil, mod="")
       return Hash.new unless ast != nil
-      processor = ASTMapper.new(file, klass=klass)
+      processor = ASTMapper.new(file, klass=klass, mod=mod)
       processor.process ast
 
       processor.line_defs
@@ -1598,10 +1610,6 @@ module RDL::Typecheck
       envi = env
       ti = nil
       e.children.each { |ei| envi, ti = tc(scope, envi, ei) }
-
-      if scope.has_key?(:__RDL_each_with_object_ret)
-        #scope[:__RDL_each_with_object_ret] == ti
-      end
       [envi, ti]
     when :ensure
       # (ensure main-body ensure-body)
