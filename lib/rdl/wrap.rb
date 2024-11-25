@@ -1236,7 +1236,8 @@ end
 
 class Class
   def ===(x)
-    if x.method(:is_a?).owner == SimpleDelegator then super(x.__getobj__) else super(x) end
+    meth = x.method(:is_a?)
+    if (meth.is_a?(Method) && meth.owner == SimpleDelegator) then super(x.__getobj__) else super(x) end
   end
 end
 
