@@ -185,6 +185,8 @@ module ActiveRecord::Querying
   extend RDL::Annotate
   ## Types from this module are used when receiver is ActiveRecord::Base
 
+  type :any?, '() -> (true or false)', wrap: false
+
   type :first, '() -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type :first!, '() -> ``DBType.rec_to_nominal(trec)``', wrap: false
   type :first, '(Integer) -> ``DBType.rec_to_array(trec)``', wrap: false
@@ -204,7 +206,7 @@ module ActiveRecord::Querying
   type :joins, '(``DBType.joins_one_input_type(trec, targs)``) -> ``DBType.joins_output(trec, targs)``', wrap: false
   type :joins, '(``DBType.joins_multi_input_type(trec, targs)``, %any, *%any) -> ``DBType.joins_output(trec, targs)``', wrap: false
   type :group, '(*Symbol or String) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), DBType.rec_to_nominal(trec))``', wrap: false
-  type :select, '(Symbol or String or Array<String>, *Symbol or String or Array<String>) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), DBType.rec_to_nominal(trec))``', wrap: false
+  type :select, '(Symbol or String or Array<String> or Array<Symbol>, *Symbol or String or Array<String> or Array<Symbol>) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), DBType.rec_to_nominal(trec))``', wrap: false
   type :select, '() { (self) -> %bool } -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), DBType.rec_to_nominal(trec))``', wrap: false
   type :order, '(%any) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), DBType.rec_to_nominal(trec))``', wrap: false
   type :includes, '(``DBType.joins_one_input_type(trec, targs)``) -> ``DBType.joins_output(trec, targs)``', wrap: false
@@ -434,7 +436,7 @@ class DBType
   ## Determines the output type for a call to `render`.
   ## Given: `targs` from the `render` call.
   # force: if we can't determine the output, include vartypes in the response
-  def self.render_output(targs, default_status: 200, serial_klass: nil, model_klass: nil, plural: false, http_response: true, force_render: false)
+  def self.render_output(trecv, targs, default_status: 200, serial_klass: nil, model_klass: nil, plural: false, http_response: true, force_render: false)
     #ap "Comp type: render_output. Called with #{targs}"
 
     status = default_status
@@ -442,6 +444,10 @@ class DBType
     # First, determine if the user provided a status code.
     if targs && targs.length && targs.length > 0 && targs[0].is_a?(RDL::Type::FiniteHashType) && targs[0].elts[:status]
       status = targs[0].elts[:status]
+    end
+    if targs && targs.length && targs.length > 1 && targs[1].is_a?(RDL::Type::FiniteHashType) && targs[1].elts[:status]
+      # this is for `render "show", status: :created`
+      status = targs[1].elts[:status]
     end
 
     # If the serial_klass and model_klass are defined, delegate to serializer_as_json.
@@ -516,12 +522,35 @@ class DBType
         )
       end
 
+      # it may be trying to render another action in the same controller.
+      if trecv && targs && targs.length && targs.length > 0 && ((targs[0].is_a?(RDL::Type::PreciseStringType) && targs[0].vals.length == 1) || (targs[0].is_a?(RDL::Type::SingletonType) && targs[0].val.is_a?(Symbol)))
+        meth_name = targs[0].is_a?(RDL::Type::PreciseStringType) ? targs[0].vals[0] : targs[0].val
+        meth_types = RDL::Typecheck.lookup({}, trecv.klass.to_s, meth_name, nil, make_unknown: false)#RDL::Globals.info.get(klass, targs[0].val, :type)
+        #meth_types = meth_types[0] if meth_types
+        if meth_types
+          #RDL::Type::UnionType.new(*meth_types.map { |mt| mt.ret } ).canonical
+          ret_types = meth_types.map { |mt| mt.ret }.map { |ret| 
+            if ret.is_a?(RDL::Type::ComputedType)
+              bind = nil
+              trecv.klass.class_eval { bind = binding() }
+              ret.compute(bind)
+            else 
+              ret 
+            end
+          }
+          return RDL::Type::UnionType.new(*ret_types).canonical
+        else
+          return RDL::Type::NominalType.new("JSONFallback")
+        end
+      end
+
       # it may be trying to render an empty response with an HTTP error code.
       # See if the user provided an error code.
       if targs && targs.length && targs.length > 0 && targs[0].is_a?(RDL::Type::FiniteHashType) && targs[0].elts[:status]
         return RDL::Type::GenericType.new(
           RDL::Type::NominalType.new("HTTPResponse"),
-          targs[0].elts[:status]
+          targs[0].elts[:status],
+          RDL::Type::SingletonType.new(nil)
         )
       end
 
@@ -633,12 +662,13 @@ class DBType
     # recur.
     if (targs[0].elts[:json].is_a? RDL::Type::GenericType) &&
       (targs[0].elts[:json].base.name == "Array")
+      # TODO(MARK): probably need to check if the result is JSONFallback here.
       return RDL::Type::GenericType.new(
         RDL::Type::NominalType.new("HTTPResponse"),
         status,
         RDL::Type::GenericType.new(
           RDL::Type::NominalType.new("Array"),
-          DBType.render_output([RDL::Type::FiniteHashType.new({json: targs[0].elts[:json].params[0]}, nil)], default_status: status, serial_klass: serial_klass, model_klass: model_klass, plural: plural, http_response: http_response)
+          DBType.render_output(trecv, [RDL::Type::FiniteHashType.new({json: targs[0].elts[:json].params[0]}, nil)], default_status: status, serial_klass: serial_klass, model_klass: model_klass, plural: plural, http_response: http_response)
         )
       )
     end
@@ -661,19 +691,16 @@ class DBType
       #return RDL::Globals.types[:string]
       #if force_render
       var = targs[0].elts[:json]
-      #if var.solution
-      #  # recur with solution
-      #  return DBType.render_output([RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: var.solution}), nil)], default_status: default_status, serial_klass: serial_klass, model_klass: model_klass, plural: plural, http_response: http_response)
-      #else
+      if var.solution
+        # recur with solution
+        # DON'T need to check if it's JSONFallback, because we're not wrapping the result anyway.
+        return DBType.render_output(trecv, [RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: var.solution}), nil)], default_status: default_status, serial_klass: serial_klass, model_klass: model_klass, plural: plural, http_response: http_response, force_render: force_render)
+      else
         return RDL::Type::GenericType.new(
-          RDL::Type::NominalType.new("HTTPResponse"),
-          status,
-          RDL::Type::GenericType.new(
-            RDL::Type::NominalType.new("JSONFallback"),
-            targs[0].elts[:json]
-          )
+          RDL::Type::NominalType.new("JSONFallback"),
+          targs[0].elts[:json]
         )
-      #end
+      end
       #else
       #  return RDL::Globals.types[:string]
       #end
@@ -684,7 +711,7 @@ class DBType
 
       #if extracted != var
       #  # We were able to extract a solution. Replace it in targs and retry.
-      #  return self.render_output([RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: extracted}), nil)])
+      #  return self.render_output(trecv, [RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: extracted}), nil)])
       #end
     end
 
@@ -693,9 +720,19 @@ class DBType
     if (targs[0].elts[:json].is_a? RDL::Type::UnionType)
       union = targs[0].elts[:json]
 
-      rendered = union.types.map { |t| DBType.render_output([RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: t}), nil)], default_status: status, serial_klass: serial_klass, model_klass: model_klass, plural: plural, http_response: http_response) }
+      rendered = union.types.map { |t| DBType.render_output(trecv, [RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: t}), nil)], default_status: status, serial_klass: serial_klass, model_klass: model_klass, plural: plural, http_response: http_response) }
 
-      return RDL::Type::UnionType.new(*rendered).canonical
+      result = RDL::Type::UnionType.new(*rendered).canonical
+
+      failed = result.types.any? {|t| t.is_json_fallback? }
+      if failed
+        return RDL::Type::GenericType.new(
+          RDL::Type::NominalType.new("JSONFallback"),
+          result
+        )
+      else
+        return result
+      end
     end
 
     # If the `x` in `render json: x` is a Multi/PathType, call `render_output`
@@ -705,10 +742,20 @@ class DBType
       type_map = targs[0].elts[:json].type_map
 
       rendered_map = type_map.each_with_object({}) do |(p, t), h|
-        h[p] = DBType.render_output([RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: t}), nil)])
+        h[p] = DBType.render_output(trecv, [RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: t}), nil)])
       end
 
-      return RDL::Type::MultiType.new(rendered_map)
+      result = RDL::Type::MultiType.new(rendered_map)
+
+      failed = result.map.keys.any? {|t| t.is_json_fallback? }
+      if failed
+        return RDL::Type::GenericType.new(
+          RDL::Type::NominalType.new("JSONFallback"),
+          result
+        )
+      else
+        return result
+      end
     end
       
     RDL::Logging.log :typecheck, :trace, "Comp type: render_output. trec is an ActiveModel relation. Calling rec_as_json..."

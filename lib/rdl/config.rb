@@ -13,6 +13,10 @@ class RDL::Config
   attr_accessor :log_levels, :disable_log_colors
   attr_accessor :log_file, :log_file_levels
   attr_accessor :path_sensitive
+  attr_accessor :rest # options: :tc (default: use typechecker to add params arg 
+                      #                        and render result)
+                      #          :rewrite (rewrite controller source code to add
+                      #                    params arg and render result)
   attr_accessor :render_methods
   attr_accessor :boolean_algebra
 
@@ -61,6 +65,7 @@ class RDL::Config
       reporting: :info
     }
     c.path_sensitive = nil # Options: nil, :json, :all
+    c.rest = :tc # options: :tc, :rewrite
     c.render_methods = [:render]
     c.boolean_algebra = true # Perform boolean algebra laws to simplify paths during tc time?
   end

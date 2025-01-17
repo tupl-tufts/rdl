@@ -69,6 +69,14 @@ module RDL::Type
       is_a?(FiniteHashType) || (is_a?(GenericType) && (base == RDL::Globals.types[:hash])) || (self == RDL::Globals.types[:hash]) || (is_a?(UnionType) && types.all? { |t| t.hash_type? })
     end
 
+    def is_json_fallback?
+      return (
+        is_a?(NominalType) && name == "JSONFallback"
+      ) || (
+        is_a?(GenericType) && base.is_a?(NominalType) && base.name == "JSONFallback"
+      )
+    end
+
     ## Determines if this type is an empty hash.
     ## I.e. `{}` gets a type of Hash<k, v> with no bounds
     ## on `k` or `v`.

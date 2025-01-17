@@ -18,6 +18,14 @@ def RDL.config
 end
 require 'rdl/info.rb'
 
+VERSION_STRING = RUBY_VERSION
+if VERSION_STRING.start_with? "3"
+  VERSION_STRING = VERSION_STRING.colorize(:green)
+else
+  VERSION_STRING = VERSION_STRING.colorize(:orange)
+end
+puts "RDL running on Ruby #{VERSION_STRING}."
+
 module RDL::Globals
   FIXBIG_VERSIONS = ['>= 2.0.0', '< 2.4.0']
 
@@ -268,7 +276,7 @@ module RDL
       @types[:regexp] = RDL::Type::NominalType.new Regexp
       @types[:standard_error] = RDL::Type::NominalType.new StandardError
       @types[:proc] = RDL::Type::NominalType.new Proc
-      @types[:json_fallback] = RDL::Type::GenericType.new(RDL::Type::NominalType.new("HTTPResponse"), @types[:integer], RDL::Type::NominalType.new("JSONFallback"))
+      @types[:json_fallback] = RDL::Type::GenericType.new(RDL::Type::NominalType.new("JSONFallback"), @types[:top])
 
       # Hash from special type names to their values
       @special_types = {'%any' => @types[:top],

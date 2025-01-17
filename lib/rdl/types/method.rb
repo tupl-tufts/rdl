@@ -16,6 +16,7 @@ module RDL::Type
     # bound will be propagated.
     attr_accessor :suspend # : bool
     attr_accessor :fallback_output # : RDL::Type::Type
+    attr_accessor :tparams # : RDL::Type::Type
 
     @@contract_cache = {}
 
@@ -72,10 +73,13 @@ module RDL::Type
     # its parts.
     def solution
       arg_sols  = @args.map(&:solution)
+      tparams_sol = if @tparams then @tparams.solution else nil end
       block_sol = @block.solution
       ret_sol   = @ret.solution
 
-      self.class.new arg_sols, block_sol, ret_sol, true
+      sol = self.class.new arg_sols, block_sol, ret_sol, true
+      sol.tparams = tparams_sol if tparams_sol
+      sol
     end
 
     # TODO: Check blk
@@ -297,26 +301,30 @@ RUBY
     end
 
     def to_s  # :nodoc:
+      params_string = ""
+      params_string = "{params: #{@tparams.to_s}} " if @tparams
       if @block && @block.is_a?(OptionalType)
-        return "(#{@args.map { |arg| arg.to_s }.join(', ')}) #{@block.to_s} -> #{@ret.to_s}"
+        return "#{params_string}(#{@args.map { |arg| arg.to_s }.join(', ')}) #{@block.to_s} -> #{@ret.to_s}"
       elsif @block
-        return "(#{@args.map { |arg| arg.to_s }.join(', ')}) {#{@block.to_s}} -> #{@ret.to_s}"
+        return "#{params_string}(#{@args.map { |arg| arg.to_s }.join(', ')}) {#{@block.to_s}} -> #{@ret.to_s}"
       elsif @args
-        return "(#{@args.map { |arg| arg.to_s }.join(', ')}) -> #{@ret.to_s}"
+        return "#{params_string}(#{@args.map { |arg| arg.to_s }.join(', ')}) -> #{@ret.to_s}"
       else
-        return "() -> #{@ret.to_s}"
+        return "#{params_string}() -> #{@ret.to_s}"
       end
     end
 
     def render  # :nodoc:
+      params_string = ""
+      params_string = "{params: #{@tparams.render}} " if @tparams
       if @block && @block.is_a?(OptionalType)
-        return "(#{@args.map { |arg| arg.render }.join(', ')}) #{@block.render} -> #{@ret.render}"
+        return "#{params_string}(#{@args.map { |arg| arg.render }.join(', ')}) #{@block.render} -> #{@ret.render}"
       elsif @block
-        return "(#{@args.map { |arg| arg.render }.join(', ')}) {#{@block.render}} -> #{@ret.render}"
+        return "#{params_string}(#{@args.map { |arg| arg.render }.join(', ')}) {#{@block.render}} -> #{@ret.render}"
       elsif @args
-        return "(#{@args.map { |arg| arg.render }.join(', ')}) -> #{@ret.render}"
+        return "#{params_string}(#{@args.map { |arg| arg.render }.join(', ')}) -> #{@ret.render}"
       else
-        return "() -> #{@ret.render}"
+        return "#{params_string}() -> #{@ret.render}"
       end
     end
 

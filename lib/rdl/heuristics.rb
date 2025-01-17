@@ -99,14 +99,12 @@ class RDL::Heuristic
         # 2. the solution for it was never found.
         if t.is_a? RDL::Type::VarType
           if (t.category == :comp_type_output) && (t.solution == nil)
-            fallback = t.comp_type_info[:fallback_output]
-            e = t.comp_type_info[:ast]
-            t = fallback
-            RDL::Logging.log :heuristic, :warning, "Unable to resolve comp type for #{e.location.expression}: '#{e.location.expression.source}'. Utilizing fallback output: #{fallback}"
+            #fallback = t.comp_type_info[:fallback_output]
+            #e = t.comp_type_info[:ast]
+            #t = fallback
+            #RDL::Logging.log :heuristic, :warning, "Unable to resolve comp type for #{e.location.expression}: '#{e.location.expression.source}'. Utilizing fallback output: #{fallback}"
           else
-            # add this to a list of vartypes to have its solution extracted
-
-            #next
+            next
           end
         end
 

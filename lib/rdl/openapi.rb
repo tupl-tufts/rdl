@@ -37,7 +37,7 @@ module RDL::Annotate
             next if path.include?("/admin/")
             og_path = path
             # sub out path params with actual ones, so we can route it like an actual req
-            path = path.gsub("{id}", "1").gsub("/-/", "/slug/").gsub("{username}", "username").gsub("{period}", "daily").gsub("{order}", "post_count").gsub("{tag}","tag").gsub("{group_id}", "1").gsub("{flag}", "all").gsub("{group_name}", "group_name").gsub("{token}", "token").gsub("{action}", "sent")
+            path = path.gsub("{id}", "1").gsub("/-/", "/slug/").gsub("{slug}", "slug").gsub("{username}", "username").gsub("{period}", "daily").gsub("{order}", "post_count").gsub("{tag}","tag").gsub("{group_id}", "1").gsub("{flag}", "all").gsub("{group_name}", "group_name").gsub("{token}", "token").gsub("{action}", "sent").gsub("{organization_id_or_username}", "1")
             # get verbs
             verbs = verbs.keys
 
@@ -134,12 +134,30 @@ module RDL::Annotate
         return {} unless parameters
         params = {}
         parameters.map {|p| 
+            # resolve ref if necessary
+            if p['$ref']
+                p = resolve_ref(p['$ref'], openapi)
+            end
+
             # Symbol to add, if the parameter is optional
             opt = "?"
             opt = "" if p.has_key?('required') && (p['required'] == true)
             #typ = p.has_key?("schema") ? p['schema'] : p['type']
             params[opt + p['name']] = translate_schema(p, openapi)
         }
+    end
+
+    def get_parameter_name(parameter, openapi)
+        # Two cases:
+        # (1) {"name"=>"..."}
+        # (2) {"$ref"=>"#/components/parameters/..."} which resolves to {"name"=>"..."}
+        if parameter['name']
+            parameter['name']
+        elsif parameter['$ref']
+            resolve_ref(parameter['$ref'], openapi)['name']
+        else
+            raise "what? #{parameter}"
+        end
     end
 
     # Translates an OpenAPI `responses` field to an RDL type, 

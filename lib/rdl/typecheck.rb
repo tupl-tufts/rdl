@@ -395,7 +395,7 @@ module RDL::Typecheck
       end
     end
 
-   RDL::Logging.log :typecheck, :trace, "typecheck.rb :: get_ast(klass=#{klass}, meth=#{meth}).
+    RDL::Logging.log :typecheck, :trace, "typecheck.rb :: get_ast(klass=#{klass}, meth=#{meth}).
     Resolved to #{file}##{line} when asking Rails.
     Parser cache = #{RDL::Globals.parser_cache[file][1][:line_defs].keys}"
     ast = RDL::Globals.parser_cache[file][1][:line_defs][line]
@@ -417,7 +417,7 @@ module RDL::Typecheck
     buffer = Parser::Source::Buffer.new "(ast)", source: (File.read file)
     code = nil
 
-    if RDL::Typecheck.is_controller? klass
+    if RDL::Config.instance.rest == :rewrite && RDL::Typecheck.is_controller?(klass)
       # Step 1. Inject `params` argument into controller methods.
      RDL::Logging.log :typecheck, :trace, "About to inject params into #{file}"
       code = ParamsInjector.rewrite ast
@@ -458,6 +458,7 @@ module RDL::Typecheck
     ast = get_ast(klass, meth)
     if ast.nil?
       RDL::Logging.log :inference, :warning, "Warning: Can't find source for class #{RDL::Util.pp_klass_method(klass, meth)}; skipping method"
+      raise unless RDL::Config.instance.continue_on_errors
       #the_meth = RDL::Util.to_class(klass).instance_method(meth)
       #RDL::Logging.log :inference, :warning, "Location according to Ruby: #{the_meth.source_location}"
       #RDL::Logging.log :inference, :warning, "Location in RDL::Globals: #{RDL::Globals.info.get(klass, meth, :source_location)}"
@@ -523,6 +524,15 @@ module RDL::Typecheck
     # default args seem to be evaluated in the method body, so same scope
     _, targs = args_hash(scope, Env.new(inst), meth_type, args, ast, 'method')
     targs[:self] = self_type
+
+    # Inject params if necessary
+    if RDL::Config.instance.rest == :tc && RDL::Typecheck.is_controller_method?(klass, meth) && !targs.include?(:params)
+      RDL::Logging.log :inference, :trace, "#{klass}##{meth} is a Rails controller method. Injecting params."
+      tparams = RDL::Type::VarType.new(cls: klass, meth: meth, category: :arg, name: :params)
+      targs[:params] = tparams
+      RDL::Globals.info.get(klass, meth, :type)[0].tparams = tparams
+      scope[:rest] = true
+    end
 
     # TODO: Compute captured?
 
@@ -1137,7 +1147,7 @@ module RDL::Typecheck
       # children[0] = receiver; if nil, receiver is self
       # children[1] = method name, a symbol
       # children [2..] = actual args
-      if e.children[1] == :raise
+      if e.children[1] == :find
         puts "CLEANUP!"
       end
       return tc_var_type(scope, env, e) if (e.children[0].nil? || is_RDL(e.children[0])) && e.children[1] == :var_type
@@ -1197,10 +1207,6 @@ module RDL::Typecheck
           end
         }
 
-        if scope[:block]
-          puts "CLEANUP"
-        end
-
         #    note this is checking the OUTER scope, not the inner scope (sscope)
         #    vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
         if (!scope.has_key?(:__RDL_each_with_object_ret) || scope[:__RDL_each_with_object_ret] == nil) && (e.children[1] == :merge! || e.children[1] == :[]=)
@@ -1231,6 +1237,18 @@ module RDL::Typecheck
         if e.children[1] == :raise
           # execution stops after a raise
           #RDL::Globals.num_ctrl_flow_splits += 1
+          envres = envres.add_pi(PathFalse.new)
+        end
+
+        # if this is a call to render, and we didn't rewrite the source code,
+        # we must treat this send like a return.
+        if RDL::Config.instance.rest == :tc && RDL::Config.instance.render_methods.include?(e.children[1])
+          RDL::Logging.log :typecheck, :trace, "Treating call to #{e.children[1]} as a render/return."
+          if scope[:exceptional]
+            error :bad_return_type, [tres.to_s, scope[:tret]], e unless RDL::Type::Type.leq(tres, scope[:tret], PathException.new, ast: e)
+          else
+            error :bad_return_type, [tres.to_s, scope[:tret]], e unless RDL::Type::Type.leq(tres, scope[:tret], env.pi, ast: e)
+          end
           envres = envres.add_pi(PathFalse.new)
         end
 
@@ -1593,7 +1611,7 @@ module RDL::Typecheck
       end
 
       # If we are returning from a `rescue` block (as indicated by scope[:exceptional]),
-      # replace the current path with `PathExceptional`
+      # replace the current path with `PathException`
       if scope[:exceptional]
         error :bad_return_type, [t1.to_s, scope[:tret]], e unless RDL::Type::Type.leq(t1, scope[:tret], PathException.new, ast: e)
       else
@@ -1951,9 +1969,15 @@ module RDL::Typecheck
   # [+ e +] is the expression at which location to report an error
   # [+ op_asgn +] is a bool telling us that we are type checking the mutation method for an op_asgn node. used for ast rewriting.
   def self.tc_send(scope, env, trecv, meth, tactuals, block, e, op_asgn=false)
-    if meth == :[]=
+    if meth == :params
       puts "CLEANUP"
     end
+
+    # Params hack
+    if meth == :params && tactuals.length == 0 && scope[:rest]
+      return tc_var(scope, env, :lvar, :params, e)
+    end
+
     # Path-Sensitivity:
     # If we have path-sensitive arguments, we need to map tc_send over
     # the different possible types.
@@ -2926,7 +2950,9 @@ module RDL::Typecheck
       when :block
       ## all method types will be given a variable type for blocks anyway, so no need to add a new param here
       when :keyrest
-        raise "Not currently supported, for method #{meth} of class #{klass}"
+        # attempting to ignore double-splat for now.
+        next
+        #raise "Not currently supported, for method #{meth} of class #{klass}"
       else
         raise "Unexpected parameter type #{param[0]}."
       end

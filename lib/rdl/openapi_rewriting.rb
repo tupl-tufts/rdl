@@ -486,19 +486,26 @@ module RDL::Typecheck
   end
 end
 
-## String methods we need from Rails.
+### String methods we need from Rails.
 class String
+    # COMMENTED OUT. It was causing issues with ActiveSupport code loading.
     # Taken from Rails: 
     # activesupport/lib/active_support/inflector/methods.rb, line 68
-    def camelize(uppercase_first_letter = true)
-      string = self
-      if uppercase_first_letter
-        string = string.sub(/^[a-z\d]*/) { |match| match.capitalize }
-      else
-        string = string.sub(/^(?:(?=\b|[A-Z_])|\w)/) { |match| match.downcase }
-      end
-      string.gsub(/(?:_|(\/))([a-z\d]*)/) { "#{$1}#{$2.capitalize}" }.gsub("/", "::")
-    end
+    #def camelize(uppercase_first_letter = true)
+    #  puts
+    #  puts
+    #  puts "camelize called"
+    #  puts caller
+    #  puts
+    #  puts
+    #  string = self
+    #  if uppercase_first_letter
+    #    string = string.sub(/^[a-z\d]*/) { |match| match.capitalize }
+    #  else
+    #    string = string.sub(/^(?:(?=\b|[A-Z_])|\w)/) { |match| match.downcase }
+    #  end
+    #  string.gsub(/(?:_|(\/))([a-z\d]*)/) { "#{$1}#{$2.capitalize}" }.gsub("/", "::")
+    #end
 
     # Taken from Rails:
     # activesupport/lib/active_support/inflector/methods.rb, line 277

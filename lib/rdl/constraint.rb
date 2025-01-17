@@ -252,6 +252,14 @@ module RDL::Typecheck
       soln
     }
 
+    # If this meth has tparams, extract a solution for that as well
+    if tmeth.tparams
+      raise "tparams should be instance of RDL::Type::VarType, was #{tmeth.tparams.class}" unless tmeth.tparams.is_a?(RDL::Type::VarType)
+
+      tparams_sol = extract_var_sol(tmeth.tparams, :arg)
+      tmeth.tparams.solution = tparams_sol if tparams_sol
+    end
+
     ## BLOCK SOLUTION
     if tmeth.block && !tmeth.block.ubounds.empty?
       non_vartype_ubounds = tmeth.block.ubounds.map { |t, pi, ast| t.canonical }.reject { |t| t.is_a?(RDL::Type::VarType) }
@@ -424,8 +432,9 @@ module RDL::Typecheck
 
             arg_sols, block_sol, ret_sol = extract_meth_sol(tmeth)
 
-            block_string = block_sol ? " { #{block_sol} }" : nil
-            RDL::Logging.log :inference, :trace, "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
+            #block_string = block_sol ? " { #{block_sol} }" : nil
+            #RDL::Logging.log :inference, :trace, "Extracted solution for #{klass}\##{name} is (#{arg_sols.join(',')})#{block_string} -> #{ret_sol}"
+            RDL::Logging.log :inference, :trace, "Extracted solution for #{klass}##{name} is #{tmeth.render}"
 
             #meth_sol = RDL::Type::MethodType.new arg_sols, block_sol, ret_sol
 

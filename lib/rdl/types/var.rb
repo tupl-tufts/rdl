@@ -260,6 +260,12 @@ module RDL::Type
       # if a solution was found, we render the solution directly.
       # if no solution was found, we print XXX like normal but add this vartype
       # to a list of unresolved vartypes that appear in the output CSV.
+
+      if @category == :comp_type_output && !@solution
+        puts "CLEANUP"
+      end
+      resolve_comp_type_output
+
       if @solution && !(@solution.is_a?(RDL::Type::VarType))
         @solution.render
       else
@@ -355,7 +361,18 @@ module RDL::Type
       # [ ] is output different than the fallback output type?
       #     yes -> add and propagate that as a bound
       #      no -> move on
-      if !(RDL::Type::Type.leq(tmeth.ret, fallback_output, PathTrue.new)) && (!@solution)
+
+      # annoying special case for render here
+      if fallback_output.is_a?(RDL::Type::GenericType) && fallback_output.base.name == "JSONFallback"
+        # this is render.
+        # is tmeth.ret the fallback output?
+        if !(tmeth.ret.is_a?(RDL::Type::GenericType) && tmeth.ret.base.name == "JSONFallback")
+          # tmeth.ret is not the fallback output. add this as a solution.
+          @solution = tmeth.ret
+          add_and_propagate_upper_bound(@solution, PathTrue.new, nil)
+          add_and_propagate_lower_bound(@solution, PathTrue.new, nil)
+        end
+      elsif !(RDL::Type::Type.leq(tmeth.ret, fallback_output, PathTrue.new)) && (!@solution)
         @solution = tmeth.ret
         add_and_propagate_upper_bound(@solution, PathTrue.new, nil)
         add_and_propagate_lower_bound(@solution, PathTrue.new, nil)
