@@ -213,8 +213,9 @@ def Hash.assign_output(trec, targs)
   case trec
   when RDL::Type::FiniteHashType
     case targs[0]
-    when RDL::Type::SingletonType ### TODO: adjust for strings
-      argval = RDL.type_cast(targs[0], "RDL::Type::SingletonType", force: true).val
+    when RDL::Type::SingletonType, RDL::Type::PreciseStringType ### TODO: adjust for strings
+      #argval = RDL.type_cast(targs[0], "RDL::Type::SingletonType", force: true).val
+      argval = targs[0].is_a?(RDL::Type::PreciseStringType)? targs[0].to_s : targs[0].val
       trec.elts[argval] = RDL::Type::UnionType.new(trec.elts[argval], targs[1]).canonical
       trec.elts[argval] = weak_promote(trec.elts[argval]) if RDL::Config.instance.weak_update_promote
       raise RDL::Typecheck::StaticTypeError, "Failed to mutate hash: new hash does not match prior type constraints." unless trec.check_bounds(true)
