@@ -54,6 +54,8 @@ module RDL::Typecheck
     #raise "Expected VarType, got #{var}." unless var.is_a?(RDL::Type::VarType)
     return var.canonical unless var.is_a?(RDL::Type::VarType)
 
+    RDL::Logging.log :heuristic, :debug, "Extracting solution for #{var}"
+
     # Resolve comp type bounds beforehand. They should be treated as real
     # bounds, not as vartypes.
     lbounds = var.lbounds.map { |t, p, a|
@@ -115,6 +117,11 @@ module RDL::Typecheck
       if var.solution
         sol = var.solution
       else
+        # will utilize fallback type here.
+        if fallback_output.is_json_fallback?
+          # if the fallback type is JSONFallback, wrap the CTO var in JSONFallback
+          fallback_output = RDL::Type::GenericType.new(RDL::Type::NominalType.new("JSONFallback"), var)
+        end
         RDL::Logging.log :heuristic, :debug, "Comp Type Output could not be resolved during solution extraction. Utilizing its fallback type: #{fallback_output}"
         sol = fallback_output
       end

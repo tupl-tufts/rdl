@@ -3,7 +3,7 @@ require 'csv'
 module RDL::Reporting::CSV
 
   def meth_to_s(meth)
-    RDL::Type::VarType.print_XXX!
+    RDL::Type::VarType.no_print_XXX!
     #block_string = meth.block ? " { #{meth.block.render} }" : nil
     #"(#{meth.args.map(&:render).join(', ')})#{block_string} -> #{meth.ret.render}"
     meth.render

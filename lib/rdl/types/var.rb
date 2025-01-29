@@ -249,7 +249,9 @@ module RDL::Type
       if @to_infer
         return 'XXX' if @@print_XXX
 
-        "{ #{@cls}##{@meth} #{@category}: #{@name} }"
+        cto_s = (@category == :comp_type_output)? "#{@comp_type_info[:ast].location.expression.source} " : ""
+
+        "{ #{@cls}##{@meth} #{@category}: #{@name} #{cto_s}}"
       else
         @name.to_s
       end
@@ -261,21 +263,13 @@ module RDL::Type
       # if no solution was found, we print XXX like normal but add this vartype
       # to a list of unresolved vartypes that appear in the output CSV.
 
-      if @category == :comp_type_output && !@solution
-        puts "CLEANUP"
-      end
       resolve_comp_type_output
 
-      if @solution && !(@solution.is_a?(RDL::Type::VarType))
+      if @solution && !(@solution.is_a?(RDL::Type::VarType)) && !(@solution.is_json_fallback?)
         @solution.render
       else
         RDL::Globals.unsolved_vars.add(self)
-        'XXX'
-        #if @category == :comp_type_output
-        #  resolve_comp_type_output(force_render: true)
-        #else
-        #  'XXX'
-        #end
+        to_s
       end
     end
 
