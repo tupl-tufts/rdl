@@ -123,6 +123,47 @@ module RDL::Type
     def self.leq(left, right, pi, inst=nil, ileft=true, deferred_constraints=nil, no_constraint: false, ast: nil, propagate: false, new_cons: {}, removed_choices: {}, path_sensitive: true)
       raise RuntimeError, "leq :: pi is not a Path, it is #{pi.inspect}" if !pi.is_a? Path
 
+
+
+      # Trial: putting some vartype instantiation stuff BEFORE multitype-rules.
+      left = inst[left.name] if inst && ileft && left.is_a?(VarType) && !left.to_infer && inst[left.name]
+      right = inst[right.name] if inst && !ileft && right.is_a?(VarType) && !right.to_infer && inst[right.name] ## bug
+      left = left.type if left.is_a?(DependentArgType) || left.is_a?(AnnotatedArgType)
+      right = right.type if right.is_a?(DependentArgType) || right.is_a?(AnnotatedArgType)
+      left = left.type if left.is_a? NonNullType # ignore nullness!
+      right = right.type if right.is_a? NonNullType
+
+      left = left.canonical
+      right = right.canonical
+      return true if left.equal?(right)
+
+      # top and bottom
+      return true if left.is_a? BotType
+      return true if right.is_a? TopType
+
+      # dynamic
+      return true if left.is_a? DynamicType
+      return true if right.is_a? DynamicType
+
+      # type variables
+      begin inst.merge!(left.name => right); return true end if inst && ileft && left.is_a?(VarType) && !left.to_infer
+      begin inst.merge!(right.name => left); return true end if inst && !ileft && right.is_a?(VarType) && !right.to_infer
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       # Path Sensitivity: The FIRST thing we want to do is destructure
       #                   MultiTypes depending on the path. If either the
       #                   left or the right is a MultiType, we may be able
@@ -160,7 +201,6 @@ module RDL::Type
         if (left.is_a?(MultiType) || left.is_a?(PathType)) && !left.can_index?(pi)
           RDL::Logging.log :inference, :trace, "leq: Applying rule STREE(-Left)(-Multi). #{left.to_s} <=_{#{pi}} #{right.to_s}"
           # Go through map entries in left.
-          #TODO(Mark): Path Sensitivity: this should combine p and pi?
           return left.type_map.keys.all? {|p| Type.leq(left.index(p), right, PathAnd.new([p, pi]), inst, ileft, deferred_constraints, new_cons: new_cons, removed_choices: removed_choices, path_sensitive: path_sensitive)}
         end
         #if (left.is_a? PathType) && !left.can_index?(pi)
