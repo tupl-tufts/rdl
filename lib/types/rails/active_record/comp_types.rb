@@ -747,7 +747,7 @@ class DBType
 
       result = RDL::Type::MultiType.new(rendered_map)
 
-      failed = result.map.keys.any? {|t| t.is_json_fallback? }
+      failed = result.map.values.any? {|t| t.is_json_fallback? }
       if failed
         return RDL::Type::GenericType.new(
           RDL::Type::NominalType.new("JSONFallback"),
