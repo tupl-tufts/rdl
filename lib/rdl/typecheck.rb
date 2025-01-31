@@ -2817,7 +2817,7 @@ module RDL::Typecheck
         # note: okay if outer_env shadows, since nested scope will include outer scope by next line
         targs_dup = Hash[targs.map { |k, t| [k, t.copy] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
         #targs_dup = Hash[targs.map { |k, t| [k, t] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
-        env_with_targs = targs_env.merge(Env.new(targs_dup))
+        env_with_targs = targs_env.merge(Env.new(targs_dup)).add_pi(env.pi)
         body_env, body_type = if body.nil? then [nil, RDL::Globals.types[:nil]] else tc(bscope, env_with_targs, body) end
         if scope.has_key?(:__RDL_each_with_object_ret) && scope[:__RDL_each_with_object_ret] != nil
           # propagate each_with_object return value. It is the modified version of
