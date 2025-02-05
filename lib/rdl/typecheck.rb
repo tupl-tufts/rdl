@@ -1764,6 +1764,12 @@ module RDL::Typecheck
       fh = val.transform_keys { |k| to_type(k, true) }
       fh = fh.transform_values { |v| to_type(v) }
       RDL::Type::FiniteHashType.new(fh, nil)
+    when String
+      if RDL::Config.instance.use_precise_string
+        RDL::Type::PreciseStringType.new(val)
+      else
+        RDL::Type::NominalType.new(val.class)
+      end
     else
       RDL::Type::NominalType.new(val.class)
     end
