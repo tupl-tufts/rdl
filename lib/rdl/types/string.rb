@@ -53,6 +53,10 @@ module RDL::Type
       to_s
     end
 
+    def to_raw_str
+      @vals.join
+    end
+
     def ==(other)
       return false if other.nil?
       return RDL::Globals.types[:string] == other if @promoted
