@@ -388,7 +388,16 @@ class DBType
     when RDL::Type::SingletonType
       return [type.val]
     when RDL::Type::TupleType
-      return type.params.map { |t| t.val }
+      return type.params.map { |t| 
+        case t
+        when RDL::Type::SingletonType
+          t.val 
+        when RDL::Type::PreciseStringType
+          t.to_raw_str
+        else
+          raise "unknown type #{t}"
+        end
+      }
     else
       raise "Unexpected type encountered when parsing JSON options. Expected SingletonType or TupleType, got #{type}"
     end
@@ -540,7 +549,10 @@ class DBType
           }
           return RDL::Type::UnionType.new(*ret_types).canonical
         else
-          return RDL::Type::NominalType.new("JSONFallback")
+          raise "render \"#{meth_name}\" called, but #{trecv.klass.to_s}##{meth_name} not found."
+          # maybe should perform the same `RDL::Typecheck.lookup` as above,
+          # but with `make_unknown: true`, and use that ret.
+          #return RDL::Type::NominalType.new("JSONFallback")
         end
       end
 
@@ -555,7 +567,9 @@ class DBType
       end
 
       # If there is no status, then just use String as the return type.
-      return RDL::Type::NominalType.new("JSONFallback")
+      raise "malformed call to render"
+      # if this is valid, need to return a Suspend
+      #return RDL::Type::NominalType.new("JSONFallback")
       #return RDL::Globals.types[:string]
     end
 
@@ -662,7 +676,7 @@ class DBType
     # recur.
     if (targs[0].elts[:json].is_a? RDL::Type::GenericType) &&
       (targs[0].elts[:json].base.name == "Array")
-      # TODO(MARK): probably need to check if the result is JSONFallback here.
+      # TODO(MARK): probably need to check if the result is Suspend here.
       return RDL::Type::GenericType.new(
         RDL::Type::NominalType.new("HTTPResponse"),
         status,
@@ -683,8 +697,8 @@ class DBType
       )
     end
 
-    # If the `x` in `render json: x` is a VarType, try to extract a solution
-    # for it, and retry.
+    # If the `x` in `render json: x` is a VarType, check if it has a solution 
+    # and recur.
     if (targs[0].elts[:json].is_a? RDL::Type::VarType)
       # another change. just return the fallback output if
       # we haven't extracted solutions for all of the types yet.
@@ -693,11 +707,11 @@ class DBType
       var = targs[0].elts[:json]
       if var.solution
         # recur with solution
-        # DON'T need to check if it's JSONFallback, because we're not wrapping the result anyway.
+        # DON'T need to check if it's Suspend, because we're not wrapping the result anyway.
         return DBType.render_output(trecv, [RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: var.solution}), nil)], default_status: default_status, serial_klass: serial_klass, model_klass: model_klass, plural: plural, http_response: http_response, force_render: force_render)
       else
         return RDL::Type::GenericType.new(
-          RDL::Type::NominalType.new("JSONFallback"),
+          RDL::Type::NominalType.new("Suspend"),
           targs[0].elts[:json]
         )
       end
@@ -724,11 +738,11 @@ class DBType
 
       result = RDL::Type::UnionType.new(*rendered).canonical
 
-      failed = result.types.any? {|t| t.is_json_fallback? }
-      if failed
+      failed = result.types.filter {|t| t.is_suspend? }
+      if failed.length > 0
         return RDL::Type::GenericType.new(
-          RDL::Type::NominalType.new("JSONFallback"),
-          result
+          RDL::Type::NominalType.new("Suspend"),
+          failed[0]
         )
       else
         return result
@@ -747,11 +761,11 @@ class DBType
 
       result = RDL::Type::MultiType.new(rendered_map)
 
-      failed = result.map.values.any? {|t| t.is_json_fallback? }
-      if failed
+      failed = result.map.values.filter {|t| t.is_suspend? }
+      if failed.length > 0
         return RDL::Type::GenericType.new(
-          RDL::Type::NominalType.new("JSONFallback"),
-          result
+          RDL::Type::NominalType.new("Suspend"),
+          failed[0]
         )
       else
         return result

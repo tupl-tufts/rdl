@@ -64,6 +64,7 @@ module RDL::Type
 
         if @category == :comp_type_output
           @comp_type_info = name_or_hash[:comp_type_info]
+          @suspend_output = name_or_hash[:suspend_output]
           RDL::Logging.log :inference, :trace, "Creating vartype for comp type output. cls=#{cls}"
         end
       else
@@ -219,11 +220,6 @@ module RDL::Type
     def add_lbound(typ, pi, ast, new_cons = {}, propagate: false)
       return unless pi.satisfiable?
 
-
-      if self.category == :ret && self.meth == :update_activation_email && pi.is_a?(PathTrue)
-        puts "CLEANUP"
-      end
-
       # Here `typ` is our real lower bound
 
       #raise "About to add lower bound #{typ} <= #{self}" if typ.is_a?(VarType) && !typ.to_infer
@@ -265,9 +261,13 @@ module RDL::Type
 
       resolve_comp_type_output
 
-      if @solution && !(@solution.is_a?(RDL::Type::VarType)) && !(@solution.is_json_fallback?)
+      if @solution && !(@solution.is_a?(RDL::Type::VarType))# && !(@solution.is_json_fallback?)
         @solution.render
-      else
+      elsif @category == :comp_type_output # unsolved cto var
+        RDL::Globals.unsolved_vars.add(self)
+        cto_s = (@category == :comp_type_output)? "#{@comp_type_info[:ast].location.expression.source} " : ""
+        "Suspend<#{cto_s} #{@suspend_output.params[0].render}>"
+      else # unsolved regular var
         RDL::Globals.unsolved_vars.add(self)
         to_s
       end
@@ -295,7 +295,8 @@ module RDL::Type
       return false if other.category != self.category
       
       if self.category == :comp_type_output
-        return self.comp_type_info[:ast] == other.comp_type_info[:ast] && self.comp_type_info[:comp_type_tactuals] == other.comp_type_info[:comp_type_tactuals]
+        #return self.comp_type_info[:ast] == other.comp_type_info[:ast] && self.comp_type_info[:comp_type_tactuals] == other.comp_type_info[:comp_type_tactuals]
+        return self.comp_type_info == other.comp_type_info
       else
         return (other.instance_of? self.class) && other.to_s == to_s#(other.name.to_s == @name.to_s)
       end
@@ -327,7 +328,7 @@ module RDL::Type
     end
 
     # To be called during constraint resolution.
-    # Re-Executes this comp type. If its result is not a string, we will
+    # Re-Executes this comp type. If it returns a precise type, we will
     # propagate that as a bound in both directions.
     def resolve_comp_type_output(force_render: false)
       # Should probably hash this.
@@ -352,33 +353,24 @@ module RDL::Type
       binds = RDL::Typecheck.tc_bind_arg_types(hash[:comp_type_meth], tactuals)
       tmeth = RDL::Typecheck.compute_types(hash[:comp_type_meth], hash[:self_klass], hash[:trecv], tactuals, binds, force_render: force_render) unless binds.nil?
 
-      # [ ] is output different than the fallback output type?
-      #     yes -> add and propagate that as a bound
-      #      no -> move on
+      # [ ] is output Suspend<?>?
+      #     yes -> record the `Suspend`
+      #      no -> we have a solution, add and propagate that as a bound
 
-      # annoying special case for render here
-      if fallback_output.is_a?(RDL::Type::GenericType) && fallback_output.base.name == "JSONFallback"
-        # this is render.
-        # is tmeth.ret the fallback output?
-        if !(tmeth.ret.is_a?(RDL::Type::GenericType) && tmeth.ret.base.name == "JSONFallback")
-          # tmeth.ret is not the fallback output. add this as a solution.
-          @solution = tmeth.ret
-          add_and_propagate_upper_bound(@solution, PathTrue.new, nil)
-          add_and_propagate_lower_bound(@solution, PathTrue.new, nil)
-        end
-      elsif !(RDL::Type::Type.leq(tmeth.ret, fallback_output, PathTrue.new)) && (!@solution)
+      if tmeth.ret.is_suspend?
+        @suspend_output = tmeth.ret
+      else
         @solution = tmeth.ret
         add_and_propagate_upper_bound(@solution, PathTrue.new, nil)
         add_and_propagate_lower_bound(@solution, PathTrue.new, nil)
       end
-      #tmeth.ret
     end
 
     def hash # :nodoc:
       #return to_s.hash#@name.to_s.hash
       val = (@cls.hash+1)*(@meth.hash+2)*(@category.hash+3)*(@name.hash+4)
       if @comp_type_info
-        val = val * (@comp_type_info[:ast].hash+5)
+        val = val * (@comp_type_info.hash+5)
       end
 
       return val

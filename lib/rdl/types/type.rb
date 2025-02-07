@@ -69,12 +69,16 @@ module RDL::Type
       is_a?(FiniteHashType) || (is_a?(GenericType) && (base == RDL::Globals.types[:hash])) || (self == RDL::Globals.types[:hash]) || (is_a?(UnionType) && types.all? { |t| t.hash_type? })
     end
 
-    def is_json_fallback?
+    def is_suspend?
       return (
-        is_a?(NominalType) && name == "JSONFallback"
+        is_a?(NominalType) && name == "Suspend"
       ) || (
-        is_a?(GenericType) && base.is_a?(NominalType) && base.name == "JSONFallback"
+        is_a?(GenericType) && base.is_a?(NominalType) && base.name == "Suspend"
       )
+    end
+
+    def is_suspended_comp_type?
+      return is_a?(VarType) && @category == :comp_type_output && !@solution
     end
 
     ## Determines if this type is an empty hash.

@@ -101,7 +101,8 @@ def Hash.any_or_k(trec)
     else
       return RDL::Globals.parser.scan_str "#T k"
     end
-  else
+  when RDL::Type::VarType
+    return RDL::Globals.types[:top] if trec.is_suspended_comp_type? || trec.solution
     raise "unexpected, got #{trec}"
   end
 end
@@ -114,7 +115,8 @@ def Hash.any_or_v(trec)
   when RDL::Type::GenericType
   #RDL::Globals.parser.scan_str "#T v"
     trec.params[1] ## equivalent of v in Hash<k, v>
-  else
+  when RDL::Type::VarType
+    return RDL::Globals.types[:top] if trec.is_suspended_comp_type? || trec.solution
     raise "unexpected"
   end
 end
@@ -206,27 +208,47 @@ RDL.type Hash, 'self.hash_create_output', "(Array<RDL::Type::Type>) -> RDL::Type
 
 RDL.type :Hash, :[], '(``any_or_k(trec)``) -> ``output_type(trec, targs, :[], :default_or_promoted_val, "v", nil_default: true)``'
 
-RDL.type :Hash, :[]=, '(``any_or_k(trec)``, ``any_or_v(trec)``) -> ``assign_output(trec, targs)``'
+RDL.type :Hash, :[]=, '(``any_or_k(trec)``, ``any_or_v(trec)``) -> ``assign_output(trec, targs, suspend: true)``', suspend_comp: true, fallback_output: RDL::Globals.types[:hash]
 
 
-def Hash.assign_output(trec, targs)
+def Hash.assign_output(trec, targs, suspend: false)
+  trec = trec.solution if trec.is_a?(RDL::Type::VarType) && trec.solution
   case trec
   when RDL::Type::FiniteHashType
     case targs[0]
-    when RDL::Type::SingletonType, RDL::Type::PreciseStringType ### TODO: adjust for strings
+    when RDL::Type::SingletonType, RDL::Type::PreciseStringType
+      if suspend
+        # Special case here: this was a previously suspended comp type,
+        # and we now have the precise receiver type. Instead of returning
+        # the usual output here (the value), we're going to duplicate the FHT
+        # and return the modified FHT. This is because the result of this
+        # comp type call was already bound in an env, where it represents
+        # the new FHT.
+        trec = trec.copy
+      end
       #argval = RDL.type_cast(targs[0], "RDL::Type::SingletonType", force: true).val
       argval = targs[0].is_a?(RDL::Type::PreciseStringType)? targs[0].to_s : targs[0].val
       trec.elts[argval] = RDL::Type::UnionType.new(trec.elts[argval], targs[1]).canonical
       trec.elts[argval] = weak_promote(trec.elts[argval]) if RDL::Config.instance.weak_update_promote
       raise RDL::Typecheck::StaticTypeError, "Failed to mutate hash: new hash does not match prior type constraints." unless trec.check_bounds(true)
+
+      if suspend
+        return trec
+      end
       return targs[1]
     else
       raise "Unable to promote tuple #{trec} to Hash." unless trec.promote!(targs[0], targs[1])
       return targs[1]
     end
   else
-    #RDL::Globals.parser.scan_str "#T v"
-    trec.params[1]
+    if trec.is_suspended_comp_type? && suspend
+      RDL::Type::GenericType.new(
+        RDL::Type::NominalType.new("Suspend"),
+        trec
+      )
+    else
+      trec.params[1]
+    end
   end
 end
 RDL.type Hash, 'self.assign_output', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false

@@ -1234,6 +1234,14 @@ module RDL::Typecheck
         end
         envres, tres = tc_send(sscope, envi, trecv, e.children[1], tactuals, block, e)
 
+        if e.children[1] == :[]= && e.children[0].type == :lvar && !(trecv.is_a?(RDL::Type::NominalType)) #&& ((trecv.is_suspended_comp_type?) || (trecv.is_a?(RDL::Type::MultiType) && trecv.map.values.any? {|t| t.is_suspended_comp_type?}) || (trecv.is_a?(RDL::Type::PathType) && trecv.map.values.any? { |t| t.is_suspended_comp_type? }))
+          # Special case: the suspended comp type for Hash#[]= will eventually 
+          # return the modified FHT when it figures out the answer. Bind that
+          # in the env here.
+          lvar = e.children[0].children[0]
+          envres.env[lvar][:type] = tres
+        end
+
         if e.children[1] == :raise
           # execution stops after a raise
           #RDL::Globals.num_ctrl_flow_splits += 1
@@ -2274,56 +2282,66 @@ module RDL::Typecheck
         self_klass = RDL::Util.to_class(trecv.name)
       end
     when RDL::Type::VarType
-      ## prevent overfitting
-      tactuals = tactuals.map { |t|
-        if t.is_a?(RDL::Type::PreciseStringType)
-          RDL::Globals.types[:string]
-        elsif t.is_a?(RDL::Type::SingletonType) && !(t.val.class == Symbol) ## Symbol singletons come in handy for reconstructing finite hash types
-          RDL::Type::NominalType.new(t.val.class)
-        else
-          t
-        end }
-
-      if meth == :to_s
-        ret_type = RDL::Globals.types[:string]
-      elsif meth == :to_i
-        ret_type = RDL::Globals.types[:integer]
+      if trecv.is_suspended_comp_type?
+        # Use fallback output for purposes of meth lookup
+        nominal_fallback = trecv.comp_type_info[:fallback_output]
+        ts = lookup(scope, nominal_fallback.name, meth, e)
+        error :no_instance_method_type, [nominal_fallback.name, meth], e unless ts
+        inst = {self: trecv}
+        self_klass = RDL::Util.to_class(nominal_fallback.name)
       else
-        if @var_cache.has_key?(e.object_id) ## cache is based on syntactic location of method call
-          ret_type = @var_cache[e.object_id]
+
+        ## prevent overfitting
+        tactuals = tactuals.map { |t|
+          if t.is_a?(RDL::Type::PreciseStringType)
+            RDL::Globals.types[:string]
+          elsif t.is_a?(RDL::Type::SingletonType) && !(t.val.class == Symbol) ## Symbol singletons come in handy for reconstructing finite hash types
+            RDL::Type::NominalType.new(t.val.class)
+          else
+            t
+          end }
+
+        if meth == :to_s
+          ret_type = RDL::Globals.types[:string]
+        elsif meth == :to_i
+          ret_type = RDL::Globals.types[:integer]
         else
-          ret_type = RDL::Type::VarType.new(cls: trecv, meth: meth, category: :ret, name: "ret")
-          @var_cache[e.object_id] = ret_type
+          if @var_cache.has_key?(e.object_id) ## cache is based on syntactic location of method call
+            ret_type = @var_cache[e.object_id]
+          else
+            ret_type = RDL::Type::VarType.new(cls: trecv, meth: meth, category: :ret, name: "ret")
+            @var_cache[e.object_id] = ret_type
+          end
         end
-      end
 
-      if block
-        if block[0].is_a?(RDL::Type::MethodType) || block[0].is_a?(RDL::Type::VarType)
-          meth_type = RDL::Type::MethodType.new(tactuals, block[0], ret_type)
+        if block
+          if block[0].is_a?(RDL::Type::MethodType) || block[0].is_a?(RDL::Type::VarType)
+            meth_type = RDL::Type::MethodType.new(tactuals, block[0], ret_type)
+          else
+            blk_args = block[0].children.map {|a| a.children[0]}
+            blk_arg_vartypes = blk_args.map { |a|
+              RDL::Type::VarType.new(cls: trecv, meth: meth, category: :block_arg, name: a.to_s ) }#block[0].children[0].to_s) }
+            blk_ret_vartype = RDL::Type::VarType.new(cls: trecv, meth: meth, category: :block_ret, name: "block_ret")
+            block_type = RDL::Type::MethodType.new(blk_arg_vartypes, nil, blk_ret_vartype)
+
+            meth_type = RDL::Type::MethodType.new(tactuals, block_type, ret_type)
+
+            tmeth_inst = tc_arg_types(meth_type, tactuals)
+
+            raise "Expected method to be instantiated." unless tmeth_inst
+            env = tc_block(scope, env, block_type, block, tmeth_inst)
+          end
         else
-          blk_args = block[0].children.map {|a| a.children[0]}
-          blk_arg_vartypes = blk_args.map { |a|
-            RDL::Type::VarType.new(cls: trecv, meth: meth, category: :block_arg, name: a.to_s ) }#block[0].children[0].to_s) }
-          blk_ret_vartype = RDL::Type::VarType.new(cls: trecv, meth: meth, category: :block_ret, name: "block_ret")
-          block_type = RDL::Type::MethodType.new(blk_arg_vartypes, nil, blk_ret_vartype)
-
-          meth_type = RDL::Type::MethodType.new(tactuals, block_type, ret_type)
-
-          tmeth_inst = tc_arg_types(meth_type, tactuals)
-
-          raise "Expected method to be instantiated." unless tmeth_inst
-          env = tc_block(scope, env, block_type, block, tmeth_inst)
+          meth_type = RDL::Type::MethodType.new(tactuals, nil, ret_type)
         end
-      else
-        meth_type = RDL::Type::MethodType.new(tactuals, nil, ret_type)
+
+        RDL::Type::Type.leq(trecv, RDL::Type::StructuralType.new({ meth => meth_type }), env.pi, ast: e)
+        #tmeth_inter = [meth_type]
+
+        #self_klass = nil
+        #error :recv_var_type, [trecv], e
+        return [env, [ret_type]]
       end
-
-      RDL::Type::Type.leq(trecv, RDL::Type::StructuralType.new({ meth => meth_type }), env.pi, ast: e)
-      #tmeth_inter = [meth_type]
-
-      #self_klass = nil
-    #error :recv_var_type, [trecv], e
-      return [env, [ret_type]]
     when RDL::Type::MethodType
       if meth == :call
         # Special case - invokes the Proc
@@ -2403,10 +2421,10 @@ module RDL::Typecheck
             comp_type = true
 
             # Comp Type Suspension.
-            if tmeth_old.suspend
+            if tmeth_old.suspend && tmeth.ret.is_suspend?
               RDL::Logging.log :typecheck, :trace, "Constructing suspended comp type for #{meth.to_s}"
               info = {comp_type_meth: tmeth_old, comp_type_tactuals: tactuals_expanded, self_klass: self_klass, trecv: trecv, fallback_output: tmeth_old.fallback_output, ast: e}
-              var_ret = RDL::Type::VarType.new(cls: scope[:klass], category: :comp_type_output, comp_type_info: info)
+              var_ret = RDL::Type::VarType.new(cls: scope[:klass], category: :comp_type_output, comp_type_info: info, suspend_output: tmeth.ret)
             end
 
           end
