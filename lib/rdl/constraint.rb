@@ -117,13 +117,15 @@ module RDL::Typecheck
       if var.solution
         sol = var.solution
       else
-        # will utilize fallback type here.
-        if fallback_output.is_json_fallback?
-          # if the fallback type is JSONFallback, wrap the CTO var in JSONFallback
-          fallback_output = RDL::Type::GenericType.new(RDL::Type::NominalType.new("JSONFallback"), var)
-        end
-        RDL::Logging.log :heuristic, :debug, "Comp Type Output could not be resolved during solution extraction. Utilizing its fallback type: #{fallback_output}"
-        sol = fallback_output
+        # CTO var is still unsolved. Will stop here and not apply heuristics.
+        return var
+        ## will utilize fallback type here.
+        #if fallback_output.is_json_fallback?
+        #  # if the fallback type is JSONFallback, wrap the CTO var in JSONFallback
+        #  fallback_output = RDL::Type::GenericType.new(RDL::Type::NominalType.new("JSONFallback"), var)
+        #end
+        #RDL::Logging.log :heuristic, :debug, "Comp Type Output could not be resolved during solution extraction. Utilizing its fallback type: #{fallback_output}"
+        #sol = fallback_output
       end
     else
       raise "Unexpected VarType category #{category}."
