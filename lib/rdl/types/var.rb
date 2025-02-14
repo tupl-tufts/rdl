@@ -196,10 +196,6 @@ module RDL::Type
       return unless pi.satisfiable?
       #raise "About to add upper bound #{self} <= #{typ}" if typ.is_a?(VarType) && !typ.to_infer
 
-      if pi == PathTrue.new && typ.is_a?(RDL::Type::NominalType) && typ.name == "Invite"
-        puts "CLEANUP"
-      end
-
       # Here `typ` is our real upper bound
       if propagate
         add_and_propagate_upper_bound(typ, pi, ast, new_cons)

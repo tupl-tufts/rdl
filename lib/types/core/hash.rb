@@ -370,9 +370,6 @@ RDL.type Hash, 'self.merge_input', "(RDL::Type::Type, Array<RDL::Type::Type>, ?%
 
 
 def Hash.merge_output(trec, targs, mutate=false)
-  if trec.elts.keys.size == 1 && trec.elts[:success]
-    puts "CLEANUP"
-  end
   case trec
   when RDL::Type::NominalType
     return RDL::Globals.types[:hash]

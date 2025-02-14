@@ -1102,9 +1102,6 @@ class DBType
   def self.table_name_to_schema_type(tname, check_col, takes_array=false, include_assocs: false, output: false)
     #h = RDL.type_cast({}, "Hash<%any, RDL::Type::Type>", force: true)
     ttype = RDL::Globals.ar_db_schema[tname]
-    if !ttype
-      puts "CLEANUP"
-    end
     raise RDL::Typecheck::StaticTypeError, "No table type for #{tname} found." unless ttype
     tschema = RDL.type_cast(ttype.params[0], "RDL::Type::FiniteHashType", force: true).elts.except(:__associations)
     h = Hash[tschema.map { |k, v|

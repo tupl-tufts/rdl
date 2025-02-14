@@ -1147,9 +1147,6 @@ module RDL::Typecheck
       # children[0] = receiver; if nil, receiver is self
       # children[1] = method name, a symbol
       # children [2..] = actual args
-      if e.children[1] == :find
-        puts "CLEANUP!"
-      end
       return tc_var_type(scope, env, e) if (e.children[0].nil? || is_RDL(e.children[0])) && e.children[1] == :var_type
       return tc_type_cast(scope, env, e) if is_RDL(e.children[0]) && e.children[1] == :type_cast && scope[:block].nil?
       return tc_note_type(scope, env, e)  if is_RDL(e.children[0]) && e.children[1] == :note_type
@@ -1983,9 +1980,6 @@ module RDL::Typecheck
   # [+ e +] is the expression at which location to report an error
   # [+ op_asgn +] is a bool telling us that we are type checking the mutation method for an op_asgn node. used for ast rewriting.
   def self.tc_send(scope, env, trecv, meth, tactuals, block, e, op_asgn=false)
-    if meth == :params
-      puts "CLEANUP"
-    end
 
     # Params hack
     if meth == :params && tactuals.length == 0 && scope[:rest]
@@ -2182,9 +2176,6 @@ module RDL::Typecheck
       else
         klass = trecv.val.class.to_s
         ts = lookup(scope, klass, meth, e)
-        if !ts
-          puts "CLEANUP"
-        end
         error :no_instance_method_type, [klass, meth], e unless ts
         inst = {self: trecv}
         self_klass = trecv.val.class
@@ -2377,10 +2368,6 @@ module RDL::Typecheck
       #deferred_constraints = []
       choice_num = 0
       ts.each_with_index { |tmeth, ind| # MethodType
-        if meth == :wordpress
-          puts "CLEANUP"
-        end
-
         if tactuals_expanded.length == 0 && env.has_key?(:params) && tmeth.args && tmeth.args.length && tmeth.args.length == 1 && tmeth.args[0].is_a?(RDL::Type::VarType) && tmeth.args[0].name == :params
           # Special case: we are in a function that has been rewritten to
           # include `params`, AND we are calling a function that has been 
