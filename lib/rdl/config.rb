@@ -18,6 +18,7 @@ class RDL::Config
                       #          :rewrite (rewrite controller source code to add
                       #                    params arg and render result)
   attr_accessor :render_methods
+  attr_accessor :inline_methods
   attr_accessor :boolean_algebra
 
   def initialize
@@ -67,6 +68,7 @@ class RDL::Config
     c.path_sensitive = nil # Options: nil, :json, :all
     c.rest = :tc # options: :tc, :rewrite
     c.render_methods = [:render]
+    c.inline_methods = []
     c.boolean_algebra = true # Perform boolean algebra laws to simplify paths during tc time?
   end
 

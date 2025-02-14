@@ -736,7 +736,7 @@ class DBType
 
       rendered = union.types.map { |t| DBType.render_output(trecv, [RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: t}), nil)], default_status: status, serial_klass: serial_klass, model_klass: model_klass, plural: plural, http_response: http_response) }
 
-      result = RDL::Type::UnionType.new(*rendered).canonical
+      result = RDL::Type::UnionType.new(*rendered)
 
       failed = result.types.filter {|t| t.is_suspend? }
       if failed.length > 0

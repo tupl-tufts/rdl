@@ -2113,6 +2113,38 @@ module RDL::Typecheck
     #return [env, RDL::Type::UnionType.new(*trets)]
   end
 
+  # Inlines a method call and returns the resulting type.
+  # Can be used in place of `tc_send_one_recv`.
+  def self.tc_send_inline(scope, env, trecv, meth, tactuals, block, e, op_asgn, union)
+    raise "trecv must be nominal for now" unless trecv.is_a?(RDL::Type::NominalType)
+
+    klass = trecv.name
+    klass, meth = resolve_km klass, meth # lookup actual km
+    nested_ast = get_ast(klass, meth)
+    tmeths = lookup(scope, trecv.name, meth, e)
+    raise "?" unless tmeths && tmeths.size == 1
+    tmeth = tmeths[0]
+
+    # construct fake method type
+    # ignore tmeth.args, use tactuals instead.
+    fake = RDL::Type::MethodType.new(tactuals + tmeth.args.drop(tactuals.length), tmeth.block, tmeth.ret)
+    nested_scope = { task: :infer, klass: klass, meth: meth, 
+                     tret: tmeth.ret, tblock: tmeth.block, 
+                     context_types: RDL::Globals.info.get(klass, meth, :context_types), 
+                     pi: PathTrue.new } # using PathTrue
+    nested_name, nested_args, nested_body = *nested_ast
+    inst = {self: RDL::Type::NominalType.new(klass)}
+
+    _, nested_args = args_hash(nested_scope, Env.new(inst), fake, nested_args, nested_ast, 'method')
+    nested_env = Env.new(nested_args.merge(inst))
+
+    # throw away nested env
+    _, nested_ret = _tc(nested_scope, nested_env, nested_body)
+
+    #       Env,  Array<Type>
+    return [env, [nested_ret]]
+  end
+
   # Like tc_send but trecv should never be a union type
   # Returns [env', Array<Type>], where
   # env' is the new environment, which unions together any weak updates from the block
@@ -2345,6 +2377,11 @@ module RDL::Typecheck
       return [env, [trecv]]
     else
       raise RuntimeError, "receiver type #{trecv} of kind #{trecv.class} not supported yet, meth=#{meth}"
+    end
+
+    # Inlining
+    if RDL::Config.instance.inline_methods.include? meth
+      return tc_send_inline(scope, env, trecv, meth, tactuals, block, e, op_asgn, union)
     end
 
     trets = [] # all possible return types
@@ -2842,6 +2879,34 @@ module RDL::Typecheck
       }
     end
     return ret_env
+  end
+
+  # Given a Klass, Meth pair, returns the actual Klass, Meth where the method
+  # is defined. If the method is defined in a mixed-in module, that module is
+  # returned instead of the original class.
+  def self.resolve_km(klass, meth)
+    the_klass = RDL::Util.to_class klass
+    is_singleton = RDL::Util.has_singleton_marker(klass)
+
+    included = RDL::Util.to_class(klass.gsub("[s]", "")).included_modules
+    ancestors = the_klass.ancestors[1..-1]
+    ancestors += [Kernel, BasicObject] if (!ancestors.include?(Kernel) && !ancestors.include?(BasicObject)) # Module#ancestors does not include these, even though all modules inherit their methods.
+
+    return [klass, meth] if the_klass.instance_methods(false).include? meth
+
+    ancestors.each { |ancestor|
+      # assumes ancestors is proper order to walk hierarchy
+      # included modules' instance methods get added as instance methods, so can't be in singleton class
+      next if (ancestor.instance_of? Module) && (included.member? ancestor) && is_singleton && !(ancestor == Kernel)
+      # extended (i.e., not included) modules' instance methods get added as singleton methods, so can't be in class
+      next if (ancestor.instance_of? Module) && (not (included.member? ancestor)) && (not is_singleton) && (ancestor != Kernel) && (ancestor != BasicObject)
+
+      return [ancestor.name, meth] if ancestor.instance_methods(false).include? meth
+
+      # this is missing some stuff from below
+    }
+
+    raise "could not resolve actual km for #{klass}##{meth}"
   end
 
   # [+ klass +] is a string containing the class name
