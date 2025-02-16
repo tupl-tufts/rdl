@@ -2233,7 +2233,7 @@ module RDL::Typecheck
           nts = RDL::Globals.module_mixees[klass].map { |k, kind| if kind == :include then RDL::Type::NominalType.new(k) end }
           return [env, [RDL::Globals.types[:bot]]] if nts.empty? # if module not mixed in, this call can't happen; so %bot
           ut = RDL::Type::UnionType.new(*nts)
-          env, t = tc_send(scope, env, ut, meth, tactuals, block, e, op_asgn)
+          env, t = tc_send(scope.merge(:klass => ut), env, ut, meth, tactuals, block, e, op_asgn)
           return [env, [t]]
         end
         error :no_instance_method_type, [trecv.name, meth], e
