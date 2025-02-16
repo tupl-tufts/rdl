@@ -709,17 +709,17 @@ module RDL::Typecheck
         # Here, an arg was not provided in the actual method send.
         # In this case, we will emulate Ruby semantics by using default values.
         if arg.type == :optarg
-          targ = tmeth.args[tpos]
-          raise unless targ.is_a?(RDL::Type::OptionalType)
-          targ = targ.type
-        elsif arg.type == :restarg
-          # if a rest arg was not provided, use an empty array
-          targ = RDL::Type::TupleType.new([])
+          # here, we will tc the default value and use it as the type.
+          env, default_type = tc(scope, env, arg.children[1])
+          targ = default_type
         elsif arg.type == :kwoptarg
           # here, we will tc the default value and use it as the type.
           kw = arg.children[0]
           env, default_type = tc(scope, env, arg.children[1])
           targ = default_type
+        elsif arg.type == :restarg
+          # if a rest arg was not provided, use an empty array
+          targ = RDL::Type::TupleType.new([])
         elsif arg.type == :kwrestarg
           # here, no additional kwargs were provided, so sub with an empty FHT.
           targ = RDL::Type::FiniteHashType.new([], nil)
