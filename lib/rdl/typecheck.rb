@@ -664,6 +664,86 @@ module RDL::Typecheck
     [e1, e2]
   end
 
+
+  # Like `args_hash`, but for method inlining.
+  def self.args_hash_inline(scope, env, tmeth, tactuals, args, ast, kind)
+    targs = Hash.new
+    tpos = 0 # position in type.args
+    kw_args_matched = []
+    kw_rest_matched = false
+
+    # no need to differentiate between arg types. just map each given arg in the
+    # method type to the positional args.
+    args.children.each_with_index { |arg, index|
+      # First, determine if we are sourcing the type from tactuals or tmeth.
+      if tpos < tactuals.length
+        # Actual arg was provided, just use it.
+        if [:kwarg, :kwoptarg].include? arg.type
+          # tactuals[tpos] should be an FHT with a matching key
+          kw = arg.children[0]
+          kw_args_matched << kw
+          targ = tactuals[tpos].elts[kw]
+        elsif arg.type == :kwrestarg
+          # tactuals[tpos] should be an FHT, and we will remove the kwargs we
+          # already matched
+          raise if kw_rest_matched
+          targ = RDL::Type::FiniteHashType.new(tactuals[tpos].elts.reject {|k| kw_args_matched.include? k}, nil)
+          kw_rest_matched = true
+          tpos += 1
+        elsif arg.type == :restarg
+          if tpos + 1 < args.children.length && args.children[tpos + 1].type == :kwrestarg && tactuals[-1].is_a?(RDL::Type::FiniteHashType)
+            # Here, a kwrest arg is coming next, and kwargs were provided
+            # at the end of tactuals.
+            targ = RDL::Type::TupleType.new(*tactuals[tpos..-2])
+            tpos = tactuals.length - 1 # eat all args except final
+          else
+            targ = RDL::Type::TupleType.new(*tactuals[tpos..-1])
+            tpos = tactuals.length # eat all args
+          end
+
+        else
+          targ = tactuals[tpos]
+          tpos += 1
+        end
+      else
+        # Here, an arg was not provided in the actual method send.
+        # In this case, we will emulate Ruby semantics by using default values.
+        if arg.type == :optarg
+          targ = tmeth.args[tpos]
+          raise unless targ.is_a?(RDL::Type::OptionalType)
+          targ = targ.type
+        elsif arg.type == :restarg
+          # if a rest arg was not provided, use an empty array
+          targ = RDL::Type::TupleType.new([])
+        elsif arg.type == :kwoptarg
+          # here, we will tc the default value and use it as the type.
+          kw = arg.children[0]
+          env, default_type = tc(scope, env, arg.children[1])
+          targ = default_type
+        elsif arg.type == :kwrestarg
+          # here, no additional kwargs were provided, so sub with an empty FHT.
+          targ = RDL::Type::FiniteHashType.new([], nil)
+        else
+          # we only matched on the arg types that have default values above.
+          # if we reach here, a required argument was not provided in the send.
+          raise "argument #{arg.children[0]} of type #{arg.type} was not provided. Should be of type #{tmeth.args[tpos]}"
+        end
+        tpos += 1
+      end
+
+      # Further unwrap type.
+      if targ.is_a?(RDL::Type::AnnotatedArgType) || targ.is_a?(RDL::Type::DependentArgType) || targ.is_a?(RDL::Type::BoundArgType)
+        targ = targ.type
+      end
+
+      # Set it in args hash
+      targs[arg.children[0]] = targ
+      env = env.bind arg.children[0], targ, PathTrue.new, fixed: false
+    }
+
+    return [env, targs]
+  end
+
   # [+ scope +] is used to typecheck default values for optional arguments
   # [+ env +] is used to typecheck default values for optional arguments
   # [+ type +] is a MethodType
@@ -1206,10 +1286,10 @@ module RDL::Typecheck
 
         #    note this is checking the OUTER scope, not the inner scope (sscope)
         #    vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-        if (!scope.has_key?(:__RDL_each_with_object_ret) || scope[:__RDL_each_with_object_ret] == nil) && (e.children[1] == :merge! || e.children[1] == :[]=)
-          # Hardcoded: these Hash methods, Hash#merge! and Hash#[]=
+        if (!scope.has_key?(:__RDL_each_with_object_ret) || scope[:__RDL_each_with_object_ret] == nil) && ([:[]=, :merge!, :append, :push].include? e.children[1])
+          # Hardcoded: these methods, Hash#merge!, Hash#[]=, Array#append, and Array#push
           #            mutate the receiver. We need to deep copy
-          #            the env to avoid changing the FHT in other
+          #            the env to avoid changing the val in other
           #            envs.
           # Special note to NOT DO THIS IN BLOCKS because we may want
           # the block to mutate its arg types.
@@ -2135,8 +2215,7 @@ module RDL::Typecheck
     nested_name, nested_args, nested_body = *nested_ast
     inst = {self: RDL::Type::NominalType.new(klass)}
 
-    _, nested_args = args_hash(nested_scope, Env.new(inst), fake, nested_args, nested_ast, 'method')
-    nested_env = Env.new(nested_args.merge(inst))
+    nested_env, nested_args = args_hash_inline(nested_scope, Env.new(inst), tmeth, tactuals, nested_args, nested_ast, 'method')
 
     # throw away nested env
     _, nested_ret = _tc(nested_scope, nested_env, nested_body)
