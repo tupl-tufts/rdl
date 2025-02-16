@@ -253,6 +253,7 @@ RDL.type :Array, :collect, '() -> ``RDL::Type::GenericType.new(RDL::Type::Nomina
 RDL.type :Array, :combination, '(Integer) { (self) -> %any } -> self'
 RDL.type :Array, :combination, '(Integer) -> Enumerator<self>'
 RDL.type :Array, :push, '(``any_or_t(trec, true)``) -> ``append_push_output(trec, targs, :push)``'
+RDL.rdl_alias :Array, :append, :push
 RDL.type :Array, :compact, '() -> ``RDL::Type::GenericType.new(RDL::Globals.types[:array], promoted_or_t(trec))``'
 RDL.type :Array, :compact!, '() -> ``promote_tuple!(trec)``'
 RDL.type :Array, :concat, '(``promote_tuple(trec)``) -> ``promote_tuple!(trec)``' ## could be more precise here
