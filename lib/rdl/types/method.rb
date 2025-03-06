@@ -10,10 +10,10 @@ module RDL::Type
 
     # If true, this MethodType represents a comp type whose computation should
     # be suspended until constraint resolution.
-    # To support this, a comp type may return an "imprecise" type 
-    # (should equal :fallback_output). If it returns anything besides that
-    # fallback output, it will be considered precise and resolved, and that
-    # bound will be propagated.
+    # To support this, a comp type may return a Suspend<VarType>, indicating
+    # which vartype it needs solved before it can return its precise output.
+    # If it returns anything besides Suspend<VarType>, it will be considered 
+    # precise and resolved, and that bound will be propagated.
     attr_accessor :suspend # : bool
     attr_accessor :fallback_output # : RDL::Type::Type
     attr_accessor :tparams # : RDL::Type::Type

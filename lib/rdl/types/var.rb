@@ -241,13 +241,14 @@ module RDL::Type
       if @to_infer
         return 'XXX' if @@print_XXX
 
-        cto_s = (@category == :comp_type_output)? "#{@comp_type_info[:ast].location.expression.source} " : ""
+        cto_s = (@category == :comp_type_output)? "#{@comp_type_info[:ast].location.expression.source}  #{@suspend_output.params[0].to_s}" : ""
 
         "{ #{@cls}##{@meth} #{@category}: #{@name} #{cto_s}}"
       else
         @name.to_s
       end
     end
+    alias :inspect :to_s
 
     def render # :nodoc:
       # render is designed specifically for printing vartypes when inference is complete.
@@ -257,13 +258,13 @@ module RDL::Type
 
       resolve_comp_type_output
 
-      if @solution && !(@solution.is_a?(RDL::Type::VarType))# && !(@solution.is_json_fallback?)
+      if has_solution?
         @solution.render
       elsif @category == :comp_type_output # unsolved cto var
         RDL::Globals.unsolved_vars.add(self)
         cto_s = (@category == :comp_type_output)? "#{@comp_type_info[:ast].location.expression.source} " : ""
         "Suspend<#{cto_s} #{@suspend_output.params[0].render}>"
-      else # unsolved regular var
+      elsif @to_infer # unsolved regular var
         RDL::Globals.unsolved_vars.add(self)
         to_s
       end
@@ -333,7 +334,10 @@ module RDL::Type
 
       hash = @comp_type_info
 
+      hash[:trecv].resolve_comp_type_output
+
       tactuals = hash[:comp_type_tactuals].map { |t| 
+        t.resolve_comp_type_output
         if (t.is_a? VarType) && t.solution
           # Extract solution if arg is a vartype
           #RDL::Typecheck.extract_var_sol(t, t.category)

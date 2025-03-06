@@ -158,6 +158,7 @@ module RDL::Type
 
         def render
             return "#{"MultiType"}{\n" + @map.each_pair.map { |pi, t| "\t#{t.render}\n\t_{#{pi.to_s}}" }.join(",\n") + " }"
+            #return "#{"MultiType"}{\n" + @map.each_pair.map { |pi, t| "\t#{t.render}}" }.join(",\n") + " }"
         end
 
         def ==(other)

@@ -18,7 +18,7 @@ class ASTVisitor
     schema_type = RDL::Globals.ar_db_schema[table.classify.to_sym].params[0].elts[column.to_sym]
     query_type = query_type.elts[column.to_sym] if query_type.is_a? RDL::Type::FiniteHashType
     # puts query_type, schema_type
-    raise RDL::Typecheck::StaticTypeError, "type error #{query_type} <= #{schema_type}" unless query_type <= schema_type
+    raise RDL::Typecheck::StaticTypeError, "type error #{query_type} <= #{schema_type}" unless RDL::Type::Type.leq(query_type, schema_type, PathTrue.new)
   end
 
   alias_method :visit_Greater, :binary_op
@@ -27,6 +27,16 @@ class ASTVisitor
   alias_method :visit_GreaterOrEquals, :binary_op
 
   def visit_And(o)
+    visit(o.left)
+    visit(o.right)
+  end
+
+  def visit_Or(o)
+    visit(o.left)
+    visit(o.right)
+  end
+
+  def visit_Is(o)
     visit(o.left)
     visit(o.right)
   end
@@ -75,6 +85,10 @@ uts    # IN works with arrays
 
   def visit_Integer(o)
     return o.value
+  end
+
+  def visit_Null(o)
+    return nil
   end
 
   def visit_QualifiedColumn(o)

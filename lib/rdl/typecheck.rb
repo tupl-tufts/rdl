@@ -11,11 +11,12 @@ module RDL::Typecheck
   class ASTMapper < AST::Processor
     attr_accessor :line_defs, :klass, :mod
 
-    def initialize(file, klass=nil, mod="")
+    def initialize(file, klass=nil, mod="", sclass=false)
       @file = file
       @line_defs = Hash.new # map from line numbers to defs
       @klass = klass
       @mod = mod
+      @sclass = sclass
     end
 
     def handler_missing(node)
@@ -30,7 +31,11 @@ module RDL::Typecheck
         # If we're mapping line #'s from a Rails controller,
         # the file has been rewritten, and we must refer to the
         # original line #'s from Ruby.
-        file, line = @klass.instance_method(name).source_location
+        if @sclass
+          file, line = @klass.singleton_method(name).source_location
+        else
+          file, line = @klass.instance_method(name).source_location
+        end
 
        RDL::Logging.log :typecheck, :trace, "ASTMapper on #{file}. Rewritten controller method #{name}. Old line number = #{line}, transformed line number = #{node.loc.line}"
         loc = line
@@ -65,8 +70,19 @@ module RDL::Typecheck
       
       klass = RDL::Typecheck.get_class_from_node(node, mod=@mod)
 
-      nested_line_defs = ASTMapper.process(body_ast, @file, klass=klass, mod=@mod)
+      nested_line_defs = ASTMapper.process(body_ast, @file, klass=klass, mod=@mod, sclass=false)
       @line_defs = @line_defs.merge nested_line_defs
+    end
+
+    def on_sclass(node)
+      name, body_ast = *node
+      if name.type != :self
+        raise "only class << self supported now, given class << #{name}"
+      end
+
+      nested_line_defs = ASTMapper.process(body_ast, @file, klass=@klass, mod=@mod, sclass=true)
+      @line_defs = @line_defs.merge nested_line_defs
+      puts "CLEANUP"
     end
 
     def on_module(node)
@@ -76,16 +92,16 @@ module RDL::Typecheck
 
       mod = @mod + "::" + name[1].to_s
 
-      nested_line_defs = ASTMapper.process(body, @file, klass=klass, mod=mod)
+      nested_line_defs = ASTMapper.process(body, @file, klass=klass, mod=mod, sclass=sclass)
       @line_defs = @line_defs.merge nested_line_defs
     end
 
     # Recursively process a class within this file.
     # This is used so that the ASTProcessor knows we're inside a class def.
     # Returns: the line defs from the subtree
-    def self.process(ast, file, klass=nil, mod="")
+    def self.process(ast, file, klass=nil, mod="", sclass=false)
       return Hash.new unless ast != nil
-      processor = ASTMapper.new(file, klass=klass, mod=mod)
+      processor = ASTMapper.new(file, klass=klass, mod=mod, sclass=sclass)
       processor.process ast
 
       processor.line_defs
@@ -120,7 +136,7 @@ module RDL::Typecheck
           # provided by any callee. I believe new Env's are only initialized
           # when beginning to typecheck a function body, so pi would be empty
           # anyway.
-          @env[var] = {type: typ, pi: PathTrue.new, fixed: true}
+          @env[var] = {type: typ, pi: PathTrue.new, fixed: false} # never fix vars by default
         }
       end
     end
@@ -1175,6 +1191,7 @@ module RDL::Typecheck
         x = e.children[0].children[0] # Note don't need to check outer_env here because will be checked by tc_var below
         env = env.bind(x, RDL::Globals.types[:nil]) if ((e.children[0].type == :lvasgn) && (not (env.has_key? x))) # see :lvasgn
         envleft, tleft = tc_var(scope, env, @@asgn_to_var[e.children[0].type], x, e.children[0]) # var being assigned to
+        trecv = tleft
         envright, tright = tc(scope, envleft, e.children[1])
       end
       envi, trhs = (if tleft.is_a? RDL::Type::SingletonType
@@ -1284,17 +1301,6 @@ module RDL::Typecheck
           end
         }
 
-        #    note this is checking the OUTER scope, not the inner scope (sscope)
-        #    vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-        if (!scope.has_key?(:__RDL_each_with_object_ret) || scope[:__RDL_each_with_object_ret] == nil) && ([:[]=, :merge!, :append, :push].include? e.children[1])
-          # Hardcoded: these methods, Hash#merge!, Hash#[]=, Array#append, and Array#push
-          #            mutate the receiver. We need to deep copy
-          #            the env to avoid changing the val in other
-          #            envs.
-          # Special note to NOT DO THIS IN BLOCKS because we may want
-          # the block to mutate its arg types.
-          envi = envi.deep_copy
-        end
 
         if (e.children[1] == :each_with_object)
           sscope[:__RDL_each_with_object_ret] = "yes"
@@ -1309,9 +1315,118 @@ module RDL::Typecheck
           map_block_type = RDL::Type::MethodType.new([trecv.params[0]], nil, ti_map_case.canonical.ret)
           block = [map_block_type, e_map_case]
         end
-        envres, tres = tc_send(sscope, envi, trecv, e.children[1], tactuals, block, e)
 
-        if e.children[1] == :[]= && e.children[0].type == :lvar && !(trecv.is_a?(RDL::Type::NominalType)) #&& ((trecv.is_suspended_comp_type?) || (trecv.is_a?(RDL::Type::MultiType) && trecv.map.values.any? {|t| t.is_suspended_comp_type?}) || (trecv.is_a?(RDL::Type::PathType) && trecv.map.values.any? { |t| t.is_suspended_comp_type? }))
+        # Conditional send
+        if e.type == :csend && trecv.is_a?(RDL::Type::SingletonType) && trecv.val == nil
+          return [envi, trecv]
+        end
+
+        # For dealing with path-sensitive arguments and/or receivers
+        tactuals_map = {} # Hash<Path, Array<Type>>
+        # initialize with no args
+        tactuals_map[PathTrue.new] = []
+        trecv_map = {} # Hash<Path, Type>
+
+        # V1 (old algo)
+        #if tactuals.any? { |t| t.is_a? RDL::Type::MultiType }
+        #  for i in (0..tactuals.size)
+        #    tactual = tactuals[i]
+        #    
+        #    if tactual.is_a? RDL::Type::MultiType
+        #      type_map = tactual.map
+
+        #      type_map.each { |p, t|
+        #        if tactuals_map[p]
+        #          # add into existing tactuals for this path
+        #          tactuals_map[p][i] = t
+        #        else
+        #          # create new entry for this path
+        #          new_tactuals = tactuals.clone
+        #          new_tactuals[i] = t
+        #          tactuals_map[p] = new_tactuals
+        #        end
+        #      }
+        #    end
+        #  end
+        #else
+        #  tactuals_map[PathTrue.new] = tactuals
+        #end
+
+        # V2 (new algo)
+        if tactuals.any? { |t| t.is_a? RDL::Type::MultiType }
+          for i in (0...tactuals.size)
+            tactual = tactuals[i]
+            tactuals_new = {} # we will be recreating tactuals_expanded for 
+                              # each iteration of this loop
+
+            if tactual.is_a? RDL::Type::MultiType
+              # If tactual is a multitype,
+              tactual.map.each_pair { |p1, t|
+                # We must perform a cross-product with its path-conditions and
+                # the existing path conditions in tactuals_expanded
+                tactuals_map.each_pair { |p2, list|
+                  combo_path = PathAnd.new([p1, p2])
+
+
+                  if tactuals_new[combo_path] && tactuals_new[combo_path][i]
+                    # Here, another cross-product already simplified to this
+                    # combo_path for this tactual. We will union the types 
+                    # together in this case.
+                    tactuals_new[combo_path][i] = RDL::Type::UnionType.new(*[tactuals_new[combo_path][i], t])
+                  else
+                    # Otherwise, this combo_path has not been seen before, and
+                    # we will add our `t` onto the list of tactuals from the
+                    # previous iteration.
+                    tactuals_new[combo_path] = list + [t]
+                  end
+                }
+              }
+              # Replace the old tactuals_map with our new one
+              tactuals_map = tactuals_new
+            else
+              # If tactual is not a multitype, it will be present /as is/ in all
+              # versions of the tactuals
+              tactuals_map.transform_values! { |list|
+                list << tactual
+              }
+            end
+          end
+        else
+          tactuals_map[PathTrue.new] = tactuals
+        end
+
+        if trecv.is_a?(RDL::Type::MultiType)
+          trecv_map = trecv.map
+        else
+          trecv_map[PathTrue.new] = trecv
+        end
+        
+        map = {}
+        envs = []
+        tactuals_map.each_pair { |p_args, tactuals| 
+          trecv_map.each_pair { |p_trecv, _| 
+            # For each path, need to:
+            # (1) Clone the env
+            # (2) Re-lookup the receiver, so that it points to the copy..
+            # (3) TC using this combination of args and receiver
+            p = PathAnd.new([p_args, p_trecv])
+            cenv = envi.deep_copy.add_pi(p)
+            cenv, og_ctrecv = if e.children[0].nil? then [cenv, cenv[:self]] else tc(sscope, cenv, e.children[0]) end
+
+            if og_ctrecv.is_a?(RDL::Type::MultiType)
+              ctrecv = og_ctrecv.map[p_trecv]
+            else
+              ctrecv = og_ctrecv
+            end
+
+            new_env, new_tret = tc_send(sscope, cenv, ctrecv, e.children[1], tactuals, block, e)
+            map[p] = new_tret
+            envs.append new_env
+          }
+        }
+        envres, tres = [Env.join(e, *envs), RDL::Type::MultiType.new(map)]
+
+        if [:[]=, :merge!, :append, :push].include?(e.children[1]) && e.children[0].type == :lvar && !(trecv.is_a?(RDL::Type::NominalType)) #&& ((trecv.is_suspended_comp_type?) || (trecv.is_a?(RDL::Type::MultiType) && trecv.map.values.any? {|t| t.is_suspended_comp_type?}) || (trecv.is_a?(RDL::Type::PathType) && trecv.map.values.any? { |t| t.is_suspended_comp_type? }))
           # Special case: the suspended comp type for Hash#[]= will eventually 
           # return the modified FHT when it figures out the answer. Bind that
           # in the env here.
@@ -1321,7 +1436,6 @@ module RDL::Typecheck
 
         if e.children[1] == :raise
           # execution stops after a raise
-          #RDL::Globals.num_ctrl_flow_splits += 1
           envres = envres.add_pi(PathFalse.new)
         end
 
@@ -1387,6 +1501,8 @@ module RDL::Typecheck
         ## when :and and left is NOT false or a variable, then we always get back tright (or nil, which is a subtype of tright)
         ## no equivalent for :or, because if left is nil, could still get right
         [envleft.merge(envright), tright]
+      elsif e.type == :and && (tright == RDL::Globals.types[:false] || tright == RDL::Globals.types[:nil])
+        [envleft.merge(envright), tright]
       else
         [envleft.merge(envright), RDL::Type::UnionType.new(tleft, tright).canonical]
       end
@@ -1403,17 +1519,24 @@ module RDL::Typecheck
 
       # always type check both sides
 
-      ## NOTE(Mark): Scope below must be adjusted to include path constraint info.
       loc = e.children[0].location
       str = loc.expression.source
+
+      if RDL::Config.instance.symbolic_conditionals && tguard.is_a?(RDL::Type::SingletonType)
+        # will only process one branch of the conditional here, and will not
+        # introduce a path constraint.
+        RDL::Logging.log :inference, :trace, "Symbolic conditional: only inferring #{if tguard.val then "left" else "right" end} branch for conditional #{e.location.expression.source} @ #{e.location.expression}"
+        branch_ast = if tguard.val then e.children[1] else e.children[2] end
+        return (if branch_ast.nil? then [envi, RDL::Globals.types[:nil]] else tc(scope, envi, branch_ast) end)
+      end
+
       left_path = PathCondition.new(tguard, RDL::Globals.types[:true], loc, str)
       right_path = PathNot.new(left_path)
-      #left_scope = scope_add_path(scope, left_path)
-      #right_scope = scope_add_path(scope, right_path)
       envleft_in = envi.add_pi(left_path)
       envright_in = envi.add_pi(right_path)
-      envleft_out, tleft = if e.children[1].nil? then [envleft_in, RDL::Globals.types[:nil]] else tc(scope, envleft_in, e.children[1]) end # then
-      envright_out, tright = if e.children[2].nil? then [envright_in, RDL::Globals.types[:nil]] else tc(scope, envright_in, e.children[2]) end # else
+      # always deep copy envs when adding paths.
+      envleft_out, tleft = if e.children[1].nil? then [envleft_in, RDL::Globals.types[:nil]] else tc(scope, envleft_in.deep_copy, e.children[1]) end # then
+      envright_out, tright = if e.children[2].nil? then [envright_in, RDL::Globals.types[:nil]] else tc(scope, envright_in.deep_copy, e.children[2]) end # else
       joined_env = Env.join(e, envleft_out, envright_out)
       RDL::Logging.log :typecheck, :debug, ""
       RDL::Logging.log :typecheck, :debug, "====================================================================="
@@ -1712,6 +1835,31 @@ module RDL::Typecheck
     when :begin, :kwbegin # sequencing
       envi = env
       ti = nil
+
+      if RDL::Config.instance.rest == :tc && scope.has_key?(:filter_respond_to) && scope[:filter_respond_to]
+        # Here, `e` is the AST of the block given to `respond_to`, and we must
+        # only tc the child that looks like
+        # (block
+        #  (send
+        #   (lvar :format) :json)
+        #   (args)
+        #   ...)
+        format_json_calls = e.children.filter { |node|
+          node.type == :block && 
+          node.children[0].type == :send &&
+          node.children[0].children[0].type == :lvar &&
+          node.children[0].children[0].children[0] == :format &&
+          node.children[0].children[1] == :json
+        }
+        raise "expected only 1 format.json block, found #{format_json_calls.length} @ #{e.location.expression}" if format_json_calls.length > 1
+        if format_json_calls.length == 0
+          return [envi, RDL::Globals.types[:bot]]
+        else
+          # tc the format.json call
+          return tc(scope, envi, format_json_calls[0])
+        end
+      end
+
       e.children.each { |ei| envi, ti = tc(scope, envi, ei) }
       [envi, ti]
     when :ensure
@@ -2070,6 +2218,8 @@ module RDL::Typecheck
     # If we have path-sensitive arguments, we need to map tc_send over
     # the different possible types.
     if tactuals && tactuals.any? { |t| (t.is_a? RDL::Type::MultiType) || (t.is_a? RDL::Type::PathType) }
+      # CLEANUP eventually
+      raise "hopefully impossible, should be handled in tc"
       # Map<Path, Array<Type>> : maps each path to its list of tactuals
       tactuals_map = {}
       # The idea here is this map will have an entry for ANY path
@@ -2101,15 +2251,31 @@ module RDL::Typecheck
 
       # We now have a map between each distinct Path and its list of tactuals.
       # Call tc_send on each, and join their results in a new MultiType.
-      envs = []
-      multi_map = tactuals_map.transform_values { |tactuals| 
-        res = tc_send(scope, env, trecv, meth, tactuals, block, e, op_asgn)
-        envs << res[0] # env
-        res[1] # tret
-      }
 
-      #       env                 tret
-      return [Env.join(e, *envs), RDL::Type::MultiType.new(multi_map)]
+      map = {}
+      envs = []
+      tactuals_map.each_pair { |p, tactuals| 
+        # deep copy the env in case this meth has a mutating comp type.
+        new_env, new_tret = tc_send(scope, env.deep_copy.add_pi(p), trecv, meth, tactuals, block, e, op_asgn)#process_trecv.call(t, false)
+        map[p] = new_tret
+        envs.append new_env
+      }
+      return [Env.join(e, *envs), RDL::Type::MultiType.new(map)]
+
+
+
+
+
+      # CLEANUP old code
+      #envs = []
+      #multi_map = tactuals_map.transform_values { |tactuals| 
+      #  res = tc_send(scope, env.deep_copy, trecv, meth, tactuals, block, e, op_asgn)
+      #  envs << res[0] # env
+      #  res[1] # tret
+      #}
+
+      ##       env                 tret
+      #return [Env.join(e, *envs), RDL::Type::MultiType.new(multi_map)]
     end
 
 
@@ -2167,14 +2333,16 @@ module RDL::Typecheck
       }
       [Env.join(e, *envs), RDL::Type::UnionType.new(*trets)]
     when RDL::Type::MultiType
-      map = {}
-      envs = []
-      trecv.map.each_pair { |p, t| 
-        new_env, new_tret = tc_send(scope, env, t, meth, tactuals, block, e, op_asgn)#process_trecv.call(t, false)
-        map[p] = new_tret
-        envs.append new_env
-      }
-      [Env.join(e, *envs), RDL::Type::MultiType.new(map)]
+      raise "should be impossible, tc should eliminate this case."
+      #map = {}
+      #envs = []
+      #trecv.map.each_pair { |p, t| 
+      #  # deep copy the env in case this meth has a mutating comp type.
+      #  new_env, new_tret = tc_send(scope, env.deep_copy.add_pi(p), t, meth, tactuals, block, e, op_asgn)#process_trecv.call(t, false)
+      #  map[p] = new_tret
+      #  envs.append new_env
+      #}
+      #[Env.join(e, *envs), RDL::Type::MultiType.new(map)]
     when RDL::Type::PathType
       throw "TODO(Mark): implement tc_send for pathtypes"
       map = {}
@@ -2188,7 +2356,7 @@ module RDL::Typecheck
     end
 
     
-
+    RDL::Logging.log :inference, :trace, "Method call #{trecv}##{meth} ~~> #{tret}"
     return [env, tret]
     #return [env, RDL::Type::UnionType.new(*trets)]
   end
@@ -2205,6 +2373,8 @@ module RDL::Typecheck
     raise "?" unless tmeths && tmeths.size == 1
     tmeth = tmeths[0]
 
+    RDL::Logging.log :inference, :trace, "Inlining call to #{meth}"
+
     # construct fake method type
     # ignore tmeth.args, use tactuals instead.
     fake = RDL::Type::MethodType.new(tactuals + tmeth.args.drop(tactuals.length), tmeth.block, tmeth.ret)
@@ -2217,11 +2387,22 @@ module RDL::Typecheck
 
     nested_env, nested_args = args_hash_inline(nested_scope, Env.new(inst), tmeth, tactuals, nested_args, nested_ast, 'method')
 
-    # throw away nested env
-    _, nested_ret = _tc(nested_scope, nested_env, nested_body)
+    # throw away nested env and "return type"
+    nested_env, nested_body_type = _tc(nested_scope, nested_env, nested_body)
+
+    # get actual return vartype from nested_scope
+    return_vartype = nested_scope[:tret]
+
+    # establish dataflow between nested_body_type and the return vartype
+    RDL::Type::Type.leq(nested_body_type, return_vartype, nested_env.pi, ast: e)
+
+    # extract actual return type
+    nested_tret = RDL::Heuristic.multitype_extraction(return_vartype)
+
+    RDL::Logging.log :inference, :trace, "Inlined call to #{meth} ~~> #{nested_tret}"
 
     #       Env,  Array<Type>
-    return [env, [nested_ret]]
+    return [env, [nested_tret]]
   end
 
   # Like tc_send but trecv should never be a union type
@@ -2284,6 +2465,8 @@ module RDL::Typecheck
         ts = filter_comp_types(ts, false) ## no comp types in this case
         error :no_type_for_symbol, [trecv.val.inspect], e if ts.nil?
         return [env, ts]
+      elsif meth == :nil?
+        return [env, [if trecv.val.nil? then RDL::Globals.types[:true] else RDL::Globals.types[:false] end]]
       else
         klass = trecv.val.class.to_s
         ts = lookup(scope, klass, meth, e)
@@ -2309,10 +2492,11 @@ module RDL::Typecheck
           # Module mixin handle
           # Here a module method is calling a non-existent method; check for it in all mixees
           # TODO: Handle :extend
-          nts = RDL::Globals.module_mixees[klass].map { |k, kind| if kind == :include then RDL::Type::NominalType.new(k) end }
+          # filter to mixed in modules that actually have this meth
+          nts = RDL::Globals.module_mixees[klass].map { |k, kind| if kind == :include then k end }.filter {|k| lookup(scope, k.to_s, meth, e) }.map { |k| RDL::Type::NominalType.new(k) }
           return [env, [RDL::Globals.types[:bot]]] if nts.empty? # if module not mixed in, this call can't happen; so %bot
           ut = RDL::Type::UnionType.new(*nts)
-          env, t = tc_send(scope.merge(:klass => ut), env, ut, meth, tactuals, block, e, op_asgn)
+          env, t = tc_send(scope, env, ut, meth, tactuals, block, e, op_asgn)
           return [env, [t]]
         end
         error :no_instance_method_type, [trecv.name, meth], e
@@ -2334,6 +2518,14 @@ module RDL::Typecheck
       inst = trecv.to_inst.merge(self: trecv)
       self_klass = RDL::Util.to_class(trecv.base.name)
     when RDL::Type::TupleType
+      # Special case: if the TupleType is empty, we will not tc block args,
+      #               as they are dead code.
+      if trecv.params.length == 0 && [:map, :filter].include?(meth)
+        # These meths will just return trecv, regardless of if the call
+        # was valid.
+        return [env, [trecv]]
+      end
+
       if RDL::Config.instance.use_comp_types
         ts = lookup(scope, "Array", meth, e)
         error :no_instance_method_type, ["Array", meth], e unless ts
@@ -2540,7 +2732,8 @@ module RDL::Typecheck
           if tmeth_inst
             begin
               old_env = env
-              env = tc_block(scope, env, tmeth.block, block, tmeth_inst) if block
+              respond_to = RDL::Config.instance.rest == :tc && meth == :respond_to
+              env = tc_block(scope, env, tmeth.block, block, tmeth_inst, respond_to=respond_to) if block
             rescue BlockTypeError => bte
               block_mismatch = true
               env = old_env
@@ -2912,9 +3105,12 @@ module RDL::Typecheck
 
   # [+ tblock +] is the type of the block (a MethodType)
   # [+ block +] is a pair [block-args, block-body] from the block AST node OR [block-type, block-arg-AST-node]
-  # returns new environment if the block matches type tblock
-  # otherwise throws an exception with a type error
-  def self.tc_block(scope, env, tblock, block, inst)
+  # returns new environment if the block matches type tblock,
+  # otherwise throws an exception with a type error.
+  # respond_to=true indicates this is the block passed to `respond_to` and 
+  # tc_block is responsible for filtering the block AST to only tc the
+  # `format.json` case.
+  def self.tc_block(scope, env, tblock, block, inst, respond_to=false)
     # TODO self is the same *except* instance_exec or instance_eval
     raise RuntimeError, "block with block arg?" unless tblock.is_a?(RDL::Type::VarType) || tblock.block.nil?
     tblock = tblock.instantiate(inst)
@@ -2939,7 +3135,7 @@ module RDL::Typecheck
     else # must be [block-args, block-body]
       args, body = block
       targs_env, targs = args_hash(scope, env, tblock, args, block[1], 'block')
-      scope_merge(scope, outer_env: env) { |bscope|
+      scope_merge(scope, outer_env: env, filter_respond_to: respond_to) { |bscope|
         arg_names = args.children.map { |a| a.children[0] }
         # note: okay if outer_env shadows, since nested scope will include outer scope by next line
         targs_dup = Hash[targs.map { |k, t| [k, t.copy] }] ## args can be mutated in method body. duplicate to avoid this. TODO: check on this
@@ -2949,7 +3145,8 @@ module RDL::Typecheck
         if scope.has_key?(:__RDL_each_with_object_ret) && scope[:__RDL_each_with_object_ret] != nil
           # propagate each_with_object return value. It is the modified version of
           # its second argument.
-          bscope[:__RDL_each_with_object_ret] = targs_dup[arg_names[1]]
+          # FIX: look up the arg in the body_env, not the targs_dup
+          bscope[:__RDL_each_with_object_ret] = body_env[arg_names[1]]
         end
 
         error :bad_return_type, [body_type, tblock.ret], body, block: true unless body.nil? || RDL::Type::Type.leq(body_type, tblock.ret, env.pi, inst, false, ast: body)

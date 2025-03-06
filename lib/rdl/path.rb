@@ -30,6 +30,10 @@ class Path
     def hash
         13587013857
     end
+
+    def <=>(other)
+        return hash <=> other.hash
+    end
 end
 
 class PathTrue < Path
@@ -50,6 +54,10 @@ class PathTrue < Path
     end
 
     def to_z3
+        "true"
+    end
+
+    def to_sympy
         "true"
     end
 
@@ -85,6 +93,10 @@ class PathFalse < Path
     end
 
     def to_z3
+        "false"
+    end
+
+    def to_sympy
         "false"
     end
 
@@ -132,16 +144,22 @@ class PathCondition < Path
     end
 
     def to_z3
-        "v#{hash}".slice(0,4)
+        "v#{hash.to_s.slice(1,5)}"
+    end
+
+    def to_sympy
+        "v#{hash.to_s.slice(1,5)}"
     end
 
     # Define `eql?` so this can be used a hash key
     def ==(other)
-        (other.is_a? PathCondition) && (other.tguard == @tguard) && (other.tmatch == @tmatch) && (other.loc == @loc) && (other.str == @str)
+        hash == other.hash
+        #(other.is_a? PathCondition) && (other.tguard == @tguard) && (other.tmatch == @tmatch) && (other.loc == @loc) && (other.str == @str)
     end
     alias :eql? :==
     def hash
-        tguard.hash * tmatch.hash * loc.hash * str.hash * 13
+        @hash = tguard.hash * tmatch.hash * loc.hash * str.hash * 13 unless @hash
+        @hash
     end
 end
 
@@ -165,6 +183,10 @@ class PathException < Path
     end
 
     def to_z3
+        "exn"
+    end
+
+    def to_sympy
         "exn"
     end
 
@@ -305,13 +327,18 @@ class PathAnd < Path
         "(and #{paths.map(&:to_z3).join(" ")})"
     end
 
+    def to_sympy
+        "(#{paths.map(&:to_sympy).join(" & ")})"
+    end
+
     # Define `eql?` and `hash` so this can be used a hash key
     def ==(other)
         (other.is_a? PathAnd) && Set.new(@paths) == Set.new(other.paths)
     end
     alias :eql? :==
     def hash
-        @paths.map(&:hash).reduce(:*) * 729
+        @hash = @paths.map(&:hash).reduce(:*) * 729 unless @hash
+        @hash
     end
 end
 
@@ -367,6 +394,8 @@ class PathOr < Path
             end
 
             ## (A ∧ B) ∨ (A ∧ ¬B) = A but for large conjunctions
+            ## i.e. also will simplify
+            ##     (A ∧ B ∧ C) ∨ (A ∧ B ∧ ¬C) = A ∧ B
             if paths.length == 2 && paths[0].is_a?(PathAnd) && paths[1].is_a?(PathAnd)
                 # Make sure they differ by a single element
                 diff = (paths[0].paths + paths[1].paths) - (paths[0].paths & paths[1].paths)
@@ -374,8 +403,77 @@ class PathOr < Path
                     # Return A (except it may be a conjunction of many things)
                     return PathAnd.new(paths[0].paths - diff)
                 end
-
             end
+
+            ## (A ∧ B) ∨ (A ∧ ¬B) ∨ (¬A ∧ B) ∨ (¬A ∧ ¬B) = true
+            if paths.length == 4
+                and_paths = paths.select { |p| p.is_a?(PathAnd) }
+                if and_paths.length == 4
+                    # First, filter out paths that are present in every term
+                    always_present = []
+                    and_paths[0].paths.each { |p|
+                        always_present << p if (and_paths[1..4].all? { |andPath| andPath.paths.include? p })
+                    }
+                    and_paths = and_paths.map { |andPath|
+                        PathAnd.new(andPath.paths - always_present)
+                    }
+
+
+                    all_subterms = and_paths.flat_map(&:paths).uniq
+                    if all_subterms.length == 4 && all_subterms.filter {|p| p.is_a?(PathNot)}.all? { |p| all_subterms.include?(p.path) }
+                        # here, if there no paths that were common to all terms,
+                        # we can simplify to true.
+                        if always_present.empty?
+                            return PathTrue.new
+                        else
+                            # otherwise, we must conjunct the paths we found
+                            # earlier
+                            return PathAnd.new(always_present.uniq)
+                        end
+                    end
+                end
+            end
+
+            ## simplify ((A and B) or (A and not B) or (not A and B) or (not A and not B)) = true, with terms of arbitrary size and order
+            if (paths.all? { |p| p.is_a?(PathAnd)})
+                # First, filter out paths that are present in every term
+                always_present = []
+                paths[0].paths.each { |p|
+                    always_present << p if (paths.drop(1).all? { |andPath| andPath.paths.include? p })
+                }
+                and_paths = paths.map { |andPath|
+                    PathAnd.new(andPath.paths - always_present)
+                }
+                # Group paths by their simplified form, ignoring negations
+                grouped_paths = and_paths.group_by { |path|
+                    # If the path is a conjunction (AND), map its components, ignoring negations, and sort them
+                    path.is_a?(PathAnd) ? path.paths.map { |p| p.is_a?(PathNot) ? p.path : p }.sort : []
+                    # Example: For paths [(A and B), (A and not B), (not A and B), (not A and not B)]
+                    # This would result in groups like { [A, B] => [(A and B), (A and not B), (not A and B), (not A and not B)] }
+                }
+
+                # Iterate over each group of paths
+                grouped_paths.each_value do |group|
+                    # Collect all unique variables from the group
+                    variables = group.flat_map(&:paths).uniq
+                    # Example: For group [(A and B), (A and not B), (not A and B), (not A and not B)]
+                    # This would result in variables like [A, B, not A, not B]
+
+                    # Check if for every variable, its negation is also present in the group
+                    if variables.all? { |v| variables.include?(PathNot.new(v)) || variables.include?(v) }
+                        # If all variables and their negations are present, return true
+                        if always_present.empty?
+                            return PathTrue.new
+                        else
+                            return PathAnd.new(always_present)
+                        end
+                        # Example: Since [A, B, not A, not B] contains both A and not A, B and not B, it returns true
+                    end
+                end
+            end
+
+
+
 
 
             ## (A ∧ B) ∨ (A ∧ ¬B) = A and all variations
@@ -413,6 +511,7 @@ class PathOr < Path
             return paths[0]
         end
 
+        puts "No boolean algebra could be applied, creating PathOr: #{PathOr.__new__(paths)}"
         PathOr.__new__(paths)
     end
 
@@ -432,13 +531,19 @@ class PathOr < Path
         "(or #{paths.map(&:to_z3).join(" ")})"
     end
 
+    def to_sympy
+        "(#{paths.map(&:to_sympy).join(" | ")})"
+    end
+
     # Define `eql?` and `hash` so this can be used a hash key
     def ==(other)
-        (other.is_a? PathOr) && @paths == other.paths
+        hash == other.hash
+        #(other.is_a? PathOr) && @paths == other.paths
     end
     alias :eql? :==
     def hash
-        @paths.map(&:hash).reduce(:*) * 649
+        @hash = @paths.map(&:hash).reduce(:*) * 649 unless @hash
+        @hash
     end
 end
 
@@ -484,12 +589,18 @@ class PathNot < Path
         "(not #{@path.to_z3})"
     end
 
+    def to_sympy
+        "~#{@path.to_sympy}"
+    end
+
     # Define `eql?` and `hash` so this can be used a hash key
     def ==(other)
-        (other.is_a? PathNot) && @path == other.path
+        hash == other.hash
+        #(other.is_a? PathNot) && @path == other.path
     end
     alias :eql? :==
     def hash
-        @path.hash * 5281
+        @hash = @path.hash * 5281 unless @hash
+        @hash
     end
 end

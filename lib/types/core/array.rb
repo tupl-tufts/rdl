@@ -18,7 +18,7 @@ RDL.type Array, 'self.to_type', "(Object) -> RDL::Type::Type", wrap: false, type
 def Array.output_type(trec, targs, meth_name, default1, default2=default1, use_sing_val: true, nil_false_default: false)
   case trec
   when RDL::Type::TupleType
-    if targs.empty? || targs.all? { |t| t.is_a?(RDL::Type::SingletonType) }
+    if targs.empty? || targs.all? { |t| t.is_a?(RDL::Type::SingletonType) || t.is_a?(RDL::Type::PreciseStringType) }
       vals = RDL.type_cast((if use_sing_val then targs.map { |t| RDL.type_cast(t, "RDL::Type::SingletonType").val } else targs end), "Array<%any>", force: true)
       begin
         res = RDL.type_cast(trec.params.send(meth_name, *vals), "Object", force: true)
@@ -26,17 +26,19 @@ def Array.output_type(trec, targs, meth_name, default1, default2=default1, use_s
         puts "GOT ERROR #{e} FOR METHOD #{meth_name} CALLED ON TREC #{trec} AND ARGS #{targs}"
         return RDL::Globals.types[:bot]
       end
-      if !res && nil_false_default
-        if default1 == :promoted_param
-          trec.promote.params[0]
-        elsif default1 == :promoted_array
-          trec.promote
-        else
-          RDL::Globals.parser.scan_str "#T #{default1}"
-        end
-      else
+      # Commenting this block out, as `res` may just return `false` and that's ok.
+      # If the method fails, it should throw an exception.
+      #if !res && nil_false_default
+      #  if default1 == :promoted_param
+      #    trec.promote.params[0]
+      #  elsif default1 == :promoted_array
+      #    trec.promote
+      #  else
+      #    RDL::Globals.parser.scan_str "#T #{default1}"
+      #  end
+      #else
         to_type(res)
-      end        
+      #end        
     else
       if default1 == :promoted_param
         trec.promote.params[0]
@@ -101,7 +103,7 @@ def Array.promote_tuple!(trec)
 end
 RDL.type Array, 'self.promote_tuple!', "(RDL::Type::Type) -> RDL::Type::Type", wrap: false, typecheck: :type_code
 
-RDL.type :Array, :<<, '(``any_or_t(trec)``) -> ``append_push_output(trec, targs, :<<)``'
+RDL.type :Array, :<<, '(``any_or_t(trec)``) -> ``append_push_output(trec, targs, :<<)``', suspend_comp: true, fallback_output: RDL::Globals.parser.scan_str("#T Array<t>")
 
 
 def Array.append_push_output(trec, targs, meth)
@@ -348,8 +350,12 @@ def Array.include_output(trec, targs)
       if trec.params.include?(targs[0])
         RDL::Globals.types[:true]
       else
-        ## in this case, still can't say false because arg may be in tuple, but without singleton type.
-        RDL::Globals.types[:bool]
+        if trec.params.all? {|t| t.is_a?(RDL::Type::SingletonType)}
+          RDL::Globals.types[:false]
+        else
+          ## in this case, still can't say false because arg may be in tuple, but without singleton type.
+          RDL::Globals.types[:bool]
+        end
       end
     else
       RDL::Globals.types[:bool]

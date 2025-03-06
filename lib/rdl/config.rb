@@ -13,12 +13,13 @@ class RDL::Config
   attr_accessor :log_levels, :disable_log_colors
   attr_accessor :log_file, :log_file_levels
   attr_accessor :path_sensitive
+  attr_accessor :symbolic_conditionals
   attr_accessor :rest # options: :tc (default: use typechecker to add params arg 
                       #                        and render result)
                       #          :rewrite (rewrite controller source code to add
                       #                    params arg and render result)
   attr_accessor :render_methods
-  attr_accessor :inline_methods
+  attr_accessor :inline_methods # Set<Symbol>
   attr_accessor :boolean_algebra
 
   def initialize
@@ -66,9 +67,11 @@ class RDL::Config
       reporting: :info
     }
     c.path_sensitive = nil # Options: nil, :json, :all
+    c.symbolic_conditionals = false # Only process one conditional branch
+                                    # if the guard is a singleton type?
     c.rest = :tc # options: :tc, :rewrite
-    c.render_methods = [:render]
-    c.inline_methods = []
+    c.render_methods = Set.new([:render])
+    c.inline_methods = Set.new
     c.boolean_algebra = true # Perform boolean algebra laws to simplify paths during tc time?
   end
 

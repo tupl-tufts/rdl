@@ -81,6 +81,12 @@ module RDL::Type
       return is_a?(VarType) && @category == :comp_type_output && !@solution
     end
 
+    def has_solution?
+      return false unless self.is_a? VarType
+
+      return @solution && (!(@solution.is_a? VarType) || (@solution != self && @solution.has_solution?))
+    end
+
     ## Determines if this type is an empty hash.
     ## I.e. `{}` gets a type of Hash<k, v> with no bounds
     ## on `k` or `v`.
@@ -92,10 +98,15 @@ module RDL::Type
         self.base.is_a?(RDL::Type::NominalType) &&
         self.base.name == "Hash" &&
         self.params[0].is_a?(RDL::Type::VarType) &&
+        self.params[0].lbounds && # must have lbounds present, otherwise this
+                                  # could be Hash<k, v> from a failed promotion
         self.params[0].lbounds.empty? &&
+        self.params[0].ubounds && # same with ubounds
         self.params[0].ubounds.empty? &&
         self.params[1].is_a?(RDL::Type::VarType) &&
+        self.params[1].lbounds &&
         self.params[1].lbounds.empty? &&
+        self.params[1].ubounds &&
         self.params[1].ubounds.empty?
         ) || (
           self.is_a?(RDL::Type::FiniteHashType) &&
@@ -205,7 +216,13 @@ module RDL::Type
         if (left.is_a?(MultiType) || left.is_a?(PathType)) && !left.can_index?(pi)
           RDL::Logging.log :inference, :trace, "leq: Applying rule STREE(-Left)(-Multi). #{left.to_s} <=_{#{pi}} #{right.to_s}"
           # Go through map entries in left.
-          return left.type_map.keys.all? {|p| Type.leq(left.index(p), right, PathAnd.new([p, pi]), inst, ileft, deferred_constraints, new_cons: new_cons, removed_choices: removed_choices, path_sensitive: path_sensitive)}
+          total = left.type_map.keys.length
+          index = 0
+          return left.type_map.keys.all? { |p| 
+            RDL::Logging.log :inference, :trace, "STree-Left-Multi progress #{index}/#{total} (#{index/total*100}%)"
+            index = index + 1
+            Type.leq(left.index(p), right, PathAnd.new([p, pi]), inst, ileft, deferred_constraints, new_cons: new_cons, removed_choices: removed_choices, path_sensitive: path_sensitive)
+          }
         end
         #if (left.is_a? PathType) && !left.can_index?(pi)
         #  RDL::Logging.log :inference, :trace, "leq: Applying rule STREE(-Left)(-Multi). #{left.to_s} <=_{#{pi}} #{right.to_s}"
@@ -479,7 +496,8 @@ module RDL::Type
                   ## In this case, need to actually evaluate the ComputedType.
                   ## Going to do this using the receiver `left` and the args from `t`
                   ## If subtyping holds for this, then we know `left` does indeed have a method of the relevant type.
-                  tlm = RDL::Typecheck.compute_types(tlm, lklass, left, t.args)
+                  # will copy the types here to avoid the side effects of some comp types.  
+                  tlm = RDL::Typecheck.compute_types(tlm, lklass, left.deep_copy, t.args.map(&:deep_copy))
                 end
                 new_dcs = []
                 if leq(tlm.instantiate(base_inst), t, pi, nil, true, new_dcs, no_constraint: no_constraint, ast: ast, propagate: propagate, new_cons: new_cons, removed_choices: removed_choices)

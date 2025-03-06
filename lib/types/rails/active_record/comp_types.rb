@@ -164,6 +164,7 @@ module ActiveRecord::FinderMethods
   extend RDL::Annotate
   ## Types from this module are used when receiver is ActiveRecord_Relation
 
+  type :all?, '() {(t) -> %bool} -> %bool'
   type :find, '(Integer or String) -> ``DBType.find_output_type(trec, targs)``', wrap: false
   type :find, '(Array<Integer>) -> ``DBType.find_output_type(trec, targs)``', wrap: false
   type :find, '(Integer, Integer, *Integer) -> ``DBType.find_output_type(trec, targs)``', wrap: false
@@ -208,7 +209,7 @@ module ActiveRecord::Querying
   type :group, '(*Symbol or String) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), DBType.rec_to_nominal(trec))``', wrap: false
   type :select, '(Symbol or String or Array<String> or Array<Symbol>, *Symbol or String or Array<String> or Array<Symbol>) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), DBType.rec_to_nominal(trec))``', wrap: false
   type :select, '() { (self) -> %bool } -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), DBType.rec_to_nominal(trec))``', wrap: false
-  type :order, '(%any) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), DBType.rec_to_nominal(trec))``', wrap: false
+  type :order, '(*%any) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), DBType.rec_to_nominal(trec))``', wrap: false
   type :includes, '(``DBType.joins_one_input_type(trec, targs)``) -> ``DBType.joins_output(trec, targs)``', wrap: false
   type :includes, '(``DBType.joins_multi_input_type(trec, targs)``, %any, *%any) -> ``DBType.joins_output(trec, targs)``', wrap: false
   type :preload, '(``DBType.joins_one_input_type(trec, targs)``) -> ``DBType.joins_output(trec, targs)``', wrap: false
@@ -239,7 +240,7 @@ module ActiveRecord::Relation::QueryMethods
   type :group, '(*Symbol or String) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), RDL.type_cast(trec, "RDL::Type::GenericType", force: true).params[0])``', wrap: false
   type :select, '(Symbol or String or Array<String>, *Symbol or String or Array<String>) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), RDL.type_cast(trec, "RDL::Type::GenericType", force: true).params[0])``', wrap: false
   type :select, '() { (``RDL.type_cast(trec, "RDL::Type::GenericType", force: true).params[0]``) -> %bool } -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), RDL.type_cast(trec, "RDL::Type::GenericType", force: true).params[0])``', wrap: false
-  type :order, '(%any) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), RDL.type_cast(trec, "RDL::Type::GenericType", force: true).params[0])``', wrap: false
+  type :order, '(*%any) -> ``RDL::Type::GenericType.new(RDL::Type::NominalType.new(ActiveRecord_Relation), RDL.type_cast(trec, "RDL::Type::GenericType", force: true).params[0])``', wrap: false
   type :includes, '(``DBType.joins_one_input_type(trec, targs)``) -> ``DBType.joins_output(trec, targs)``', wrap: false
   type :includes, '(``DBType.joins_multi_input_type(trec, targs)``, %any, *%any) -> ``DBType.joins_output(trec, targs)``', wrap: false
   type :preload, '(``DBType.joins_one_input_type(trec, targs)``) -> ``DBType.joins_output(trec, targs)``', wrap: false
@@ -442,6 +443,18 @@ class DBType
     end
   end
 
+  def self.http_wrap(http_response, status, t)
+    if http_response
+      RDL::Type::GenericType.new(
+        RDL::Type::NominalType.new("HTTPResponse"),
+        status,
+        t
+      )
+    else
+      t
+    end
+  end
+
   ## Determines the output type for a call to `render`.
   ## Given: `targs` from the `render` call.
   # force: if we can't determine the output, include vartypes in the response
@@ -461,11 +474,7 @@ class DBType
 
     # If the serial_klass and model_klass are defined, delegate to serializer_as_json.
     if (serial_klass && model_klass)
-      return RDL::Type::GenericType.new(
-        RDL::Type::NominalType.new("HTTPResponse"),
-        status,
-        serializer_as_json(serial_klass, model_klass, plural: plural)
-      )
+      return http_wrap(http_response, status, serializer_as_json(serial_klass, model_klass, plural: plural))
     end
 
     # If targs has [:serializer], use it.
@@ -494,24 +503,12 @@ class DBType
       end
       
       ret = serializer_as_json(serializer_klass, model_klass, plural: plural)
-      if http_response
-        return RDL::Type::GenericType.new(
-          RDL::Type::NominalType.new("HTTPResponse"),
-          status,
-          ret,
-        )
-      else
-        return ret
-      end
+      return http_wrap(http_response, status, ret)
     end
 
     # If targs has [:each_serializer], use it.
     if (targs && targs.length && targs.length > 0 && targs[0].is_a?(RDL::Type::FiniteHashType) && targs[0].elts[:each_serializer] && targs[0].elts[:each_serializer].is_a?(RDL::Type::NominalType))
-      return RDL::Type::GenericType.new(
-        RDL::Type::NominalType.new("HTTPResponse"),
-        status,
-        serializer_as_json(targs[0].elts[:each_serializer].val, targs[0].elts[:json], plural: true)
-      )
+      return http_wrap(http_response, status, serializer_as_json(targs[0].elts[:each_serializer].val, targs[0].elts[:json], plural: true))
     end
 
     # If the call doesn't look like:
@@ -524,11 +521,7 @@ class DBType
       # is it render body: X?
       if targs && targs.length && targs.length > 0 && targs[0].is_a?(RDL::Type::FiniteHashType) && targs[0].elts[:body]
         # if so, that is just rendering a text response.
-        return RDL::Type::GenericType.new(
-          RDL::Type::NominalType.new("HTTPResponse"),
-          status,
-          targs[0].elts[:body]
-        )
+        return http_wrap(http_response, status, targs[0].elts[:body])
       end
 
       # it may be trying to render another action in the same controller.
@@ -559,11 +552,7 @@ class DBType
       # it may be trying to render an empty response with an HTTP error code.
       # See if the user provided an error code.
       if targs && targs.length && targs.length > 0 && targs[0].is_a?(RDL::Type::FiniteHashType) && targs[0].elts[:status]
-        return RDL::Type::GenericType.new(
-          RDL::Type::NominalType.new("HTTPResponse"),
-          targs[0].elts[:status],
-          RDL::Type::SingletonType.new(nil)
-        )
+        return http_wrap(http_response, targs[0].elts[:status], RDL::Type::SingletonType.new(nil))
       end
 
       # If there is no status, then just use String as the return type.
@@ -577,9 +566,9 @@ class DBType
     # return `JSON<Array<ErrorMessage>>`.
     if (targs[0].elts[:json].is_a? RDL::Type::NominalType) && (targs[0].elts[:json].name == "ActiveModel::Errors") then# &&
        #(targs[0].elts[:json].params.length == 1) && (targs[0].elts[:json].params[0].is_a? RDL::Type::NominalType) && (targs[0].elts[:json].params[0].name == "Error") then
-      return RDL::Type::GenericType.new(
-        RDL::Type::NominalType.new("HTTPResponse"),
-        status,
+      return http_wrap(
+        http_response, 
+        status, 
         RDL::Type::GenericType.new(
           RDL::Type::NominalType.new("JSON"),
           RDL::Type::GenericType.new(
@@ -594,10 +583,9 @@ class DBType
     # If the `x` in `render json: x` is a Ruby FHT,
     # return the serialized type.
     if targs[0].elts[:json].is_a? RDL::Type::FiniteHashType
-      
-      return RDL::Type::GenericType.new(
-        RDL::Type::NominalType.new("HTTPResponse"),
-        status,
+      return http_wrap(
+        http_response, 
+        status, 
         RDL::Type::GenericType.new(
           RDL::Type::NominalType.new("JSON"), # Base
           targs[0].elts[:json] # Generic parameter
@@ -608,8 +596,8 @@ class DBType
     # If the call is `render json: {}`, return
     # JSON<{}>.
     if targs[0].elts[:json].is_empty_hash?
-      return RDL::Type::GenericType.new(
-        RDL::Type::NominalType.new("HTTPResponse"),
+      return http_wrap(
+        http_response,
         status,
         RDL::Type::GenericType.new(
           RDL::Type::NominalType.new("JSON"),
@@ -629,8 +617,8 @@ class DBType
       #key_type = RDL::Typecheck.extract_var_sol(key_var, key_var.category)
       #val_type = RDL::Typecheck.extract_var_sol(val_var, val_var.category)
 
-      return RDL::Type::GenericType.new(
-        RDL::Type::NominalType.new("HTTPResponse"),
+      return http_wrap(
+        http_response,
         status,
         RDL::Type::GenericType.new(
           RDL::Type::NominalType.new("JSON"),
@@ -639,7 +627,6 @@ class DBType
             key_var,
             val_var
           )
-          #targs[0].elts[:json]
         )
       )
     end
@@ -650,11 +637,36 @@ class DBType
       (targs[0].elts[:json].base.name == "JSON") && 
       (targs[0].elts[:json].params[0].is_a? RDL::Type::FiniteHashType) 
       then
-      return RDL::Type::GenericType.new(
-        RDL::Type::NominalType.new("HTTPResponse"),
+      return http_wrap(
+        http_response,
         status,
         targs[0].elts[:json]
       )
+    end
+
+    # If the `x` in `render json: x` is a TupleType, recur on each param.
+    if (targs[0].elts[:json].is_a?(RDL::Type::TupleType))
+      rendered = 
+        targs[0].elts[:json].params.map {|t|
+            DBType.render_output(trecv, [RDL::Type::FiniteHashType.new({json: t}, nil)], default_status: status, serial_klass: serial_klass, model_klass: model_klass, plural: plural, http_response: false)
+        }
+
+      failed = rendered.filter {|t| t.is_suspend?}
+
+      if failed.length > 0
+        return RDL::Type::GenericType.new(
+          RDL::Type::NominalType.new("Suspend"),
+          failed[0]
+        )
+      else
+        return http_wrap(
+          http_response,
+          status,
+          RDL::Type::TupleType.new(
+            *rendered
+          )
+        )
+      end
     end
 
     # If the `x` in `render json: x` is an /array/ of JSON objects,
@@ -665,8 +677,8 @@ class DBType
       (targs[0].elts[:json].params[0].base.name == "JSON") && 
       (targs[0].elts[:json].params[0].params[0].is_a? RDL::Type::FiniteHashType)    
       then
-      return RDL::Type::GenericType.new(
-        RDL::Type::NominalType.new("HTTPResponse"),
+      return http_wrap(
+        http_response,
         status,
         targs[0].elts[:json]
       )
@@ -677,20 +689,31 @@ class DBType
     if (targs[0].elts[:json].is_a? RDL::Type::GenericType) &&
       (targs[0].elts[:json].base.name == "Array")
       # TODO(MARK): probably need to check if the result is Suspend here.
-      return RDL::Type::GenericType.new(
-        RDL::Type::NominalType.new("HTTPResponse"),
-        status,
-        RDL::Type::GenericType.new(
-          RDL::Type::NominalType.new("Array"),
-          DBType.render_output(trecv, [RDL::Type::FiniteHashType.new({json: targs[0].elts[:json].params[0]}, nil)], default_status: status, serial_klass: serial_klass, model_klass: model_klass, plural: plural, http_response: http_response)
+      rendered = DBType.render_output(trecv, [RDL::Type::FiniteHashType.new({json: targs[0].elts[:json].params[0]}, nil)], default_status: status, serial_klass: serial_klass, model_klass: model_klass, plural: plural, http_response: false)
+
+      if rendered.is_suspend?
+        return RDL::Type::GenericType.new(
+          RDL::Type::NominalType.new("Suspend"),
+          rendered
         )
-      )
+      else
+        return http_wrap(
+          http_response,
+          status,
+          RDL::Type::GenericType.new(
+            RDL::Type::NominalType.new("Array"),
+            rendered
+          )
+        )
+      end
     end
 
     # If the `x` in `render json: x` is a String, return that.
     if (targs[0].elts[:json].is_a? RDL::Type::NominalType) &&
       (targs[0].elts[:json].name == "String")
-      return RDL::Type::GenericType.new(
+      return http_wrap(
+        http_response,
+        status,
         RDL::Type::NominalType.new("HTTPResponse"),
         status,
         targs[0].elts[:json]
@@ -756,7 +779,7 @@ class DBType
       type_map = targs[0].elts[:json].type_map
 
       rendered_map = type_map.each_with_object({}) do |(p, t), h|
-        h[p] = DBType.render_output(trecv, [RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: t}), nil)])
+        h[p] = DBType.render_output(trecv, [RDL::Type::FiniteHashType.new(targs[0].elts.merge({json: t}), nil)], default_status: default_status, serial_klass: serial_klass, model_klass: model_klass, plural: plural, http_response: http_response)
       end
 
       result = RDL::Type::MultiType.new(rendered_map)
@@ -1117,7 +1140,7 @@ class DBType
   RDL.type DBType, 'self.table_name_to_schema_type', "(Symbol, %bool, ?%bool) -> RDL::Type::FiniteHashType", wrap: false, typecheck: :type_code
 
   def self.where_input_type(trec, targs)
-    handle_sql_strings(trec, targs) if targs[0].is_a?(RDL::Type::PreciseStringType) && !targs[1].nil? && !targs[1].kind_of_var_input?
+    #handle_sql_strings(trec, targs) if targs[0].is_a?(RDL::Type::PreciseStringType) && !targs[1].nil? && !targs[1].kind_of_var_input?
     tschema = rec_to_schema_type(trec, true, true)
     return RDL::Type::UnionType.new(tschema, RDL::Globals.types[:string], RDL::Globals.types[:array]) ## no indepth checking for string or array cases
   end
@@ -1125,7 +1148,7 @@ class DBType
   RDL.type DBType, 'self.where_input_type', "(RDL::Type::Type, Array<RDL::Type::Type>) -> RDL::Type::UnionType", wrap: false, typecheck: :type_code
 
   def self.find_input_type(trec, targs)
-    handle_sql_strings(trec, targs) if targs[0].is_a? RDL::Type::PreciseStringType
+    #handle_sql_strings(trec, targs) if targs[0].is_a? RDL::Type::PreciseStringType
     rec_to_schema_type(trec, true)
   end
 

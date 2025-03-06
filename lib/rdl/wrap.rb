@@ -26,6 +26,7 @@ class RDL::Wrap
   # Wraps klass#method to check contracts and types. Does not rewrap
   # if already wrapped. Also records source location of method.
   def self.wrap(klass_str, meth)
+    return
     RDL::Globals.wrap_switch.off {
       klass_str = klass_str.to_s
       klass = RDL::Util.to_class klass_str
@@ -918,7 +919,7 @@ module RDL
     RDL::Type::VarType.no_print_XXX!
     RDL::Logging.log :inference, :info, "#{unsolved.size} vartypes still unsolved."
     unsolved.each { |vartype|
-      RDL::Logging.log :inference, :info, "\t#{vartype.to_s}"
+      RDL::Logging.log :inference, :info, "\t#{vartype.render}"
     }
 
     return report, typ_sols
@@ -971,8 +972,10 @@ module RDL
           t_name = "%bool"
           s1[k] = RDL::Globals.types[:bool]
         elsif t_name == "Datetime"
-          t_name = "DateTime or Time"
-          s1[k] = RDL::Type::UnionType.new(RDL::Type::NominalType.new(Time), RDL::Type::NominalType.new(DateTime))
+          #t_name = "DateTime or Time"
+          #s1[k] = RDL::Type::UnionType.new(RDL::Type::NominalType.new(Time), RDL::Type::NominalType.new(DateTime))
+          t_name = "DateTime"
+          s1[k] = RDL::Type::NominalType.new(DateTime)
         elsif t_name == "Text"
           ## difference between `text` and `string` is in the SQL types they're mapped to, not in Ruby types
           t_name = "String"

@@ -61,6 +61,11 @@ module RDL::Type
       to_s
     end
 
+    def to_raw_str
+      raise "to_raw_str only works on SingletonType<Symbol>" unless @val.is_a?(Symbol)
+      @val.to_s
+    end
+
     def <=(other)
       return Type.leq(self, other)
     end

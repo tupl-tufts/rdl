@@ -56,6 +56,7 @@ module RDL::Type
     def to_raw_str
       @vals.join
     end
+    alias :val :to_raw_str
 
     def ==(other)
       return false if other.nil?

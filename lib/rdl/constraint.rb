@@ -84,7 +84,7 @@ module RDL::Typecheck
     }
 
 
-    if category == :arg
+    if (category == :arg) or (category == :block_arg)
       non_vartype_ubounds = ubounds.map { |t, pi, ast| t}.reject { |t| t.instance_of?(RDL::Type::VarType) }
       sol = non_vartype_ubounds.size == 1 ? non_vartype_ubounds[0] : RDL::Type::IntersectionType.new(*non_vartype_ubounds).canonical
       sol = sol.drop_vars.canonical if sol.is_a?(RDL::Type::IntersectionType)  ## could be, e.g., nominal type if only one type used to create intersection.
@@ -405,10 +405,11 @@ module RDL::Typecheck
     RDL::Logging.log :inference, :info, "Total # method types: #{meth_types}"
     RDL::Logging.log :inference, :info, "Total # variable types: #{var_types}"
     RDL::Logging.log :inference, :info, "Total # individual types: #{total_potential}"
-  rescue => e
+  rescue Exception => e
+    # explicitly catch `Exception` to catch EVERYTHING
+    puts e.backtrace unless RDL::Config.instance.continue_on_errors
     RDL::Logging.log :inference, :error, "Report Generation Error"
     RDL::Logging.log :inference, :debug_error, "... got #{e}"
-    puts e.backtrace unless RDL::Config.instance.continue_on_errors
     raise e unless RDL::Config.instance.continue_on_errors
   ensure
     return report, typ_sols
@@ -478,17 +479,28 @@ module RDL::Typecheck
       # We repeat this process until no more unsolved vars are found.
 
       num_unsolved = 0
+      iteration = 0
       until num_unsolved == RDL::Globals.unsolved_vars.size
+        puts "UNSOLVED_CHK: Iteration #{iteration}\tnum_unsolved (i-2)=#{num_unsolved}\tnum_unsolved (i-1)=#{RDL::Globals.unsolved_vars.size}"
+        iteration = iteration + 1
         num_unsolved = RDL::Globals.unsolved_vars.size
         other_typ_sols = {}
         # create copy of original set
-        RDL::Globals.unsolved_vars.clone.each { |v|
+        unsolved = RDL::Globals.unsolved_vars.clone
+        RDL::Globals.unsolved_vars.clear
+        unsolved.each { |v|
           begin
-            next if [:block, :block_arg, :block_ret].include? v.category
+            next if [:block].include? v.category
+            #next if [:block, :block_arg, :block_ret].include? v.category
             sol = extract_var_sol(v, v.category)
             other_typ_sols[v] = sol
 
+            if sol && !(sol.is_a?(RDL::Type::VarType) && !(sol.is_suspend?))
+              v.solution = sol
+            end
+
             # call render to populate unsolved_vars with newly discovered ones
+            v.render
             sol.render
           rescue => e
             RDL::Logging.log :inference, :critical, "Error while extracting solution for #{v}: #{e}: #{e.backtrace.join("\n\t")}; continuing..."
@@ -514,7 +526,7 @@ module RDL::Typecheck
     #  end
     #}
     other_typ_sols.each { |var, sol|
-      var.solution = sol
+      var.solution = sol unless (sol.is_a?(RDL::Type::VarType) || sol.is_suspend?)
     }
 
 

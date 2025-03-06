@@ -1,10 +1,13 @@
 RDL.nowrap :Hash
 
-RDL.type_params :Hash, [:k, :v], :all?
+# Hash keys are invariant 
+#     (i.e. Hash<k1, v1> <= Hash<k2, v2> can only hold when k1 == k2)
+# Hash values are covariant
+#     (i.e. Hash<k1, v1> <= Hash<k2, v2> can only hold when v1 <= v2)
+RDL.type_params :Hash, [:k, :v], :all?, variance: [:~, :+]
 
-def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_default: false, use_sing_val: true)
-  case trec
-  when RDL::Type::FiniteHashType
+def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_default: false, use_sing_val: true, suspend: false)
+  if trec.is_a? RDL::Type::FiniteHashType
     if targs.empty? || targs.all? { |t| t.is_a?(RDL::Type::SingletonType) }
       vals = RDL.type_cast((if use_sing_val then targs.map { |t| RDL.type_cast(t, "RDL::Type::SingletonType").val } else targs end), "Array<%any>", force: true)
       res = RDL.type_cast(trec.elts.send(meth_name, *vals), "Object", force: true)
@@ -18,13 +21,13 @@ def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_de
           if trec.default then
             return assign_output(trec, targs + [trec.default])
           else
-            # attempted fix: if the FHT is empty, just return nil
-            # to make {}[:example] have type nil
-            if trec.elts.empty?
-              return RDL::Globals.types[:nil]
-            else
-              return trec.promote.params[1]
-            end
+            # attempted fix: just return nil
+            return RDL::Globals.types[:nil]
+            #if trec.elts.empty?
+            #  return RDL::Globals.types[:nil]
+            #else
+            #  return trec.promote.params[1]
+            #end
           end
         else
           return RDL::Globals.parser.scan_str "#T #{default1}"
@@ -52,6 +55,11 @@ def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_de
         RDL::Globals.parser.scan_str "#T #{default1}"
       end
     end
+  elsif suspend && trec.is_a?(RDL::Type::VarType)
+    return RDL::Type::GenericType.new(
+      RDL::Type::NominalType.new("Suspend"),
+      trec
+    )
   else
     if default2 == "k"
       trec.params[0] ## equivalent of k in Hash<k, v>
@@ -206,7 +214,7 @@ def Hash.hash_create_output(targs)
 end
 RDL.type Hash, 'self.hash_create_output', "(Array<RDL::Type::Type>) -> RDL::Type::Type", typecheck: :type_code, wrap: false
 
-RDL.type :Hash, :[], '(``any_or_k(trec)``) -> ``output_type(trec, targs, :[], :default_or_promoted_val, "v", nil_default: true)``'
+RDL.type :Hash, :[], '(``any_or_k(trec)``) -> ``output_type(trec, targs, :[], :default_or_promoted_val, "v", nil_default: true, suspend: true)``', suspend_comp: true, fallback_output: RDL::Globals.types[:top]
 
 RDL.type :Hash, :[]=, '(``any_or_k(trec)``, ``any_or_v(trec)``) -> ``assign_output(trec, targs, suspend: true)``', suspend_comp: true, fallback_output: RDL::Globals.types[:hash]
 
@@ -313,6 +321,7 @@ RDL.type :Hash, :fetch, '(``any_or_k(trec)``, ``targs[1] ? targs[1] : RDL::Globa
 RDL.type :Hash, :fetch, '(``any_or_k(trec)``) { (``any_or_k(trec)``) -> u } -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("#T u"), output_type(trec, targs, :fetch, :promoted_val, "v", nil_default: true))``'
 RDL.type :Hash, :fetch, '(``any_or_k(trec)``) { () -> u } -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("#T u"), output_type(trec, targs, :fetch, :promoted_val, "v", nil_default: true))``'
 RDL.type :Hash, :first, '() -> ``output_type(trec, targs, :first, "[k, v]", nil_default: true)``'
+RDL.type :Hash, :include?, '() -> ``output_type(trec, targs, :include?, "%bool")``'
 RDL.type :Hash, :member?, '(%any) -> ``output_type(trec, targs, :member?, "%bool")``'
 RDL.type :Hash, :has_key?, '(%any) -> ``output_type(trec, targs, :has_key?, "%bool")``'
 RDL.type :Hash, :key?, '(%any) -> ``output_type(trec, targs, :key?, "%bool")``'
@@ -342,8 +351,10 @@ RDL.type :Hash, :key, '(%any) -> ``output_type(trec, targs, :key, :promoted_key,
 RDL.type :Hash, :keys, '() -> ``output_type(trec, targs, :keys, "Array<k>")``'
 RDL.type :Hash, :length, '() -> ``output_type(trec, targs, :length, "Integer")``'
 RDL.type :Hash, :size, '() -> ``output_type(trec, targs, :size, "Integer")``'
-RDL.type :Hash, :merge, '(``merge_input(trec, targs)``) -> ``merge_output(trec, targs)``'
-RDL.type :Hash, :merge!, '(``merge_input(trec, targs, true)``) -> ``merge_output(trec, targs, true)``'
+RDL.type :Hash, :merge, '(``merge_input(trec, targs)``) -> ``merge_output(trec, targs)``', suspend_comp: true, fallback_output: RDL::Globals.types[:hash]
+RDL.type :Hash, :merge!, '(``merge_input(trec, targs, true)``) -> ``merge_output(trec, targs, true)``', suspend_comp: true, fallback_output: RDL::Globals.types[:hash]
+RDL.type :Hash, :reverse_merge, '(``merge_input(trec, targs)``) -> ``reverse_merge_output(trec, targs)``', suspend_comp: true, fallback_output: RDL::Globals.types[:hash]
+RDL.type :Hash, :reverse_merge!, '(``merge_input(trec, targs)``) -> ``reverse_merge_output(trec, targs, true)``', suspend_comp: true, fallback_output: RDL::Globals.types[:hash]
 
 
 def Hash.merge_input(trec, targs, mutate=false)
@@ -433,10 +444,53 @@ def Hash.merge_output(trec, targs, mutate=false)
       return RDL::Globals.types[:hash]
       #return RDL::Globals.parser.scan_str "#T Hash<k, v>"
     end
+  when RDL::Type::VarType
+      if trec.solution
+        return merge_output(trec.solution, targs, mutate)
+      else
+        return RDL::Type::GenericType.new(
+          RDL::Type::NominalType.new("Suspend"),
+          trec
+        ) 
+      end
   end
-
 end
 RDL.type Hash, 'self.merge_output', "(RDL::Type::Type, Array<RDL::Type::Type>, ?%bool) -> RDL::Type::Type", typecheck: :type_code, wrap: false
+
+def Hash.reverse_merge_output(trec, targs, mutate=false)
+  case trec
+  when RDL::Type::FiniteHashType
+    if mutate
+      # reverse_merge! cannot be simplified to merge!, so we will implement it
+      # separately here
+      case targs[0]
+      when RDL::Type::FiniteHashType
+        targs[0].elts.each_pair { |k, t|
+          if !trec.elts.has_key?(k)
+            trec.elts[k] = t
+          end
+        }
+        return trec
+      when RDL::Type::VarType
+        raise
+      end
+    else
+      # reverse_merge is the same as merge but the receiver and argument is swapped.
+      # only one argument is allowed for reverse_merge.
+      return merge_output(targs[0], trec, mutate)
+    end
+  when RDL::Type::VarType
+    if trec.solution
+      return reverse_merge_output(trec.solution, targs, mutate)
+    else
+      raise
+      return RDL::Type::GenericType.new(
+        RDL::Type::NominalType.new("Suspend"),
+        trec
+      )
+    end
+  end
+end
 
 RDL.type :Hash, :merge, '(Hash<a,b>) { (k,v,b) -> v or b } -> Hash<a or k, b or v>'
 RDL.type :Hash, :rassoc, '(``any_or_v(trec)``) -> ``RDL::Type::TupleType.new(output_type(trec, targs, :key, :promoted_key, "k", nil_default: true, use_sing_val: false),targs[0])``'
