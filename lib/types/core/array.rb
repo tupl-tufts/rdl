@@ -166,6 +166,8 @@ def Array.plus_output(trec, targs)
       promoted = trec.promote
       param_union = RDL::Type::UnionType.new(promoted.params[0], RDL.type_cast(targs[0], "RDL::Type::GenericType", force: true).params[0] )
       return RDL::Type::GenericType.new(RDL::Globals.types[:array], param_union)
+    when RDL::Type::VarType
+      raise "Missing type info for #{targs[0]}"
     else
       ## targs[0] should just be Array here
       return RDL::Globals.types[:array]

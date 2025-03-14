@@ -193,5 +193,88 @@ module RDL::Type
       # note don't change hash value if @the_hash becomes non-nil
       return 229 * @elts.hash * @rest.hash
     end
+
+    ### value-merged FHT ~~> MultiType (FHT#fht_value_unmerge)
+    def fht_value_unmerge
+        expanded = {} # Map<Path, Map<Symbol, Type>> (not FHT yet)
+        expanded[PathTrue.new] = {}
+        # Example #1
+        # FHT{key1: MultiType{val1_p1, val2_!p1}}
+        # ~~>
+        # Multi{
+        #   FHT{key1: val1}_p1
+        #   FHT{key1: val2}_p2
+        # }
+        #
+        # Example #2 (cross-product shiii)
+        # FHT{key1: MultiType{val1_p1, val2_!p1},
+        #     key2: MultiType{val3_p2, val4_!p2}}
+        # ~~>
+        # Multi{
+        #   FHT{key1: val1, key2: val3}_( p1 &  p2)
+        #   FHT{key1: val1, key2: val4}_( p1 & !p2)
+        #   FHT{key1: val2, key2: val3}_(!p1 &  p2)
+        #   FHT{key1: val2, key2: val4}_(!p1 & !p2)
+        # }
+
+        @elts.each_pair {|k, val|
+            new_expanded = {}
+            case val
+            when RDL::Type::MultiType
+                # val is a multitype, 
+                val.map.each_pair {|p1, t|
+                    expanded.each_pair {|p2, map|
+                        combo_path = PathAnd.new([p1, p2])
+
+                        # skip if paths are conflicting or key is not present
+                        # for this path.
+                        next if combo_path.is_a?(PathFalse)
+                        next if t.nil?
+                        next if t.is_a?(RDL::Type::BotType)
+                        
+                        unless new_expanded.has_key? combo_path
+                            ## We need to initialize new_expanded[combo_path].
+                            ## If the path is satisfiable, we will use the value
+                            # from `map`. (being careful to clone the map,
+                            # to avoid mutating the map in `expanded`)
+                            new_expanded[combo_path] = map.clone
+                        end
+
+                        if new_expanded[combo_path].has_key? k
+                            # Here, another cross-product already simplified to
+                            # this combo_path for this key. 
+                            # We will union the types together in this case.
+                            new_expanded[combo_path][k] = RDL::Type::UnionType.new(new_expanded[combo_path][k], t)
+                        else
+                            # Otherwise, this combo_path has not been seen 
+                            # before for this key, and we will add our `t` into
+                            # the map.
+                            new_expanded[combo_path][k] = t
+                        end
+                    }
+                }
+            else
+                # val was not a multitype, will be present in all FHTs
+                new_expanded = expanded
+                new_expanded.values.each {|sub_elts|
+                    sub_elts[k] = val
+                }
+            end
+
+            expanded = new_expanded
+        }
+
+        # Convert expanded val's from Map<Symbol, Type> to FHTs
+        expanded.transform_values! {|map|
+            RDL::Type::FiniteHashType.new(map, nil)
+        }
+
+        # Convert expanded into a multitype
+        RDL::Type::MultiType.new(expanded).canonical
+    end
+
+    def fht_value_merge
+        self
+    end
   end
 end

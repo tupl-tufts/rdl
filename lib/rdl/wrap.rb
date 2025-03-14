@@ -884,9 +884,9 @@ module RDL
 
     RDL::Globals.to_infer[sym].each { |klass, meth|
       begin
-        RDL::Globals.num_ctrl_flow_splits = 0
+        RDL::Globals.ctrl_flow_splits = Set.new
         RDL::Typecheck.infer klass, meth
-        RDL::Globals.ctrl_flow_splits[[klass, meth]] = RDL::Globals.num_ctrl_flow_splits
+        RDL::Globals.all_ctrl_flow_splits[[klass, meth]] = RDL::Globals.ctrl_flow_splits
         num_casts += RDL::Typecheck.get_num_casts if RDL::Typecheck.get_num_casts
       rescue Exception => e
         if RDL::Config.instance.continue_on_errors
@@ -966,30 +966,44 @@ module RDL
       next if model.to_s == "GroupManager"
       RDL.nowrap model
       s1 = {}
-      model.columns_hash.each { |k, v| t_name = v.type.to_s.camelize
+      model.columns_hash.each { |k, v| 
+        t_name = v.type.to_s.camelize
         ## Map SQL column types to the corresponding RDL type
-        if t_name == "Boolean"
+        if k.to_s == "time_zone"
+          t_name = "ActiveSupport::TimeZone"
+          t_input = t_name
+          s1[k] = RDL::Type::NominalType.new(t_name)
+        elsif t_name == "Boolean"
           t_name = "%bool"
+          t_input = t_name
           s1[k] = RDL::Globals.types[:bool]
         elsif t_name == "Datetime"
           #t_name = "DateTime or Time"
           #s1[k] = RDL::Type::UnionType.new(RDL::Type::NominalType.new(Time), RDL::Type::NominalType.new(DateTime))
           t_name = "DateTime"
+          t_input = "(DateTime or Time or ActiveSupport::TimeWithZone)"
           s1[k] = RDL::Type::NominalType.new(DateTime)
         elsif t_name == "Text"
           ## difference between `text` and `string` is in the SQL types they're mapped to, not in Ruby types
           t_name = "String"
+          t_input = t_name
           s1[k] = RDL::Globals.types[:string]
         elsif t_name == "Binary"
           ## ActiveRecord accepts any value as a binary type.
           ## It's intended to be a string value, but non-string
           ## values are coerced into strings with their `to_s` method.
           t_name = "%any"
+          t_input = t_name
           s1[k] = RDL::Globals.special_types["%any"]
+        elsif t_name == "Jsonb"
+          t_name = "Hash"
+          t_input = t_name
+          s1[k] = RDL::Type::NominalType.new(t_name)
         else
           s1[k] = RDL::Type::NominalType.new(t_name)
+          t_input = t_name
         end
-        RDL.type model, (k+"=").to_sym, "(#{t_name}) -> #{t_name}", wrap: false ## create method type for column setter
+        RDL.type model, (k+"=").to_sym, "(#{t_input}) -> #{t_name}", wrap: false ## create method type for column setter
         RDL.type model, (k).to_sym, "() -> #{t_name}", wrap: false ## create method type for column getter
         RDL.type model, (k+"?").to_sym, "() -> %bool", wrap: false if t_name == "%bool" ## boolean column attributes get automatic `?` method
       }
@@ -1187,6 +1201,25 @@ module RDL
       RDL::Globals.to_wrap << [klass, old_name]
     end
     nil
+  end
+
+  # There are cases where RDL loads after the code that mixes a module in,
+  # and we do not catch it happening. If this happens, call this method
+  # to properly initialize `RDL::Globals.module_mixees[module]`.
+  def self.initialize_mixees_for(mod)
+    raise "module_mixees already initialized" if RDL::Globals.module_mixees[mod]
+    raise "initialize_mixees_for given a non-module #{mod}" unless mod.is_a?(Module)
+
+    RDL::Globals.module_mixees[mod] = []
+
+    ObjectSpace.each_object(Class) do |klass|
+      if klass.ancestors.include?(mod)
+        RDL::Globals.module_mixees[mod] << [klass, :include]
+      end
+      if klass.singleton_class.ancestors.include?(mod)
+        RDL::Globals.module_mixees[mod] << [klass, :extend]
+      end
+    end
   end
 
 

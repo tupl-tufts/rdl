@@ -136,8 +136,10 @@ class << RDL::Globals # add accessors and readers for module variables
   attr_accessor :module_mixees
   attr_accessor :rails_controller_cache
   attr_reader :unsolved_vars # vartypes that are still unsolved even though they appear in the CSV output.
-  attr_accessor :num_ctrl_flow_splits
+  attr_accessor :inline_stack
   attr_accessor :ctrl_flow_splits
+  attr_accessor :all_ctrl_flow_splits
+  attr_accessor :all_lines_tcd
 end
 
 # Create switches to control whether wrapping happens and whether
@@ -249,8 +251,10 @@ module RDL
 
       @rails_controller_cache = Hash.new
       @unsolved_vars = Set.new
-      @num_ctrl_flow_splits = 0
-      @ctrl_flow_splits = {} # {km: num}
+      @inline_stack = [] # Array<Symbol>: stack of methods that are currently being inlined
+      @ctrl_flow_splits = {} # Set<ASTNode> the set of ctrl flow splits tc'd
+      @all_ctrl_flow_splits = {} # Map<[Klass, Meth], Set<ASTNode>>
+      @all_lines_tcd = Set.new # Set<"filename.rb:line_number">, all the files and lines we have tc'd
 
       # Some generally useful types; not really a big deal to do this since
       # NominalTypes are cached, but these names are shorter to type

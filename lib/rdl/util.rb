@@ -12,9 +12,14 @@ class RDL::Util
       klass = remove_singleton_marker(klass)
       sing = true
     end
-    c = klass.to_s.split("::").inject(Object) { |base, name| base.const_get(name) }
-    c = c.singleton_class if sing
-    return c
+    begin
+      c = klass.to_s.split("::").inject(Object) { |base, name| base.const_get(name) }
+      c = c.singleton_class if sing
+      return c
+    rescue Exception => e
+      puts "to_class failed for #{klass}"
+      raise e
+    end
   end
 
   def self.singleton_class_to_class(cls)

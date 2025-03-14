@@ -9,6 +9,7 @@ module RDL::Type
     def self.new(*types)
       return RDL::Globals.types[:bot] if types.size == 0
       return types[0] if types.size == 1 && types[0]
+      return types[0] if types.uniq.size == 1 && types[0]
 
       ts = []
       # flatten nested unions, check that all args are types
@@ -17,12 +18,24 @@ module RDL::Type
           ts.concat t.types
         else
           raise RuntimeError, "Attempt to create union type with non-type #{t}" unless t.is_a?(Type) || t.nil?
-          raise RuntimeError, "Attempt to create union with optional type" if t.is_a? OptionalType
-          raise RuntimeError, "Attempt to create union with vararg type" if t.is_a? VarargType
-          raise RuntimeError, "Attempt to create union with annotated type" if t.is_a? AnnotatedArgType
+          raise RuntimeError, "Attempt to create union with optional type #{t}" if t.is_a? OptionalType
+          raise RuntimeError, "Attempt to create union with vararg type #{t}" if t.is_a? VarargType
+          raise RuntimeError, "Attempt to create union with annotated type #{t}" if t.is_a? AnnotatedArgType
           ts << t if t
         end
       }
+
+      if (RDL::Config.instance.value_merge.include? :union) && ts.all? {|t| t.is_a? RDL::Type::FiniteHashType}
+        elts = {}
+        ts.each {|t|
+          elts.merge!(t.elts) {|k, t1, t2|
+            RDL::Type::UnionType.new(t1, t2).canonical
+          }
+        }
+
+        return RDL::Type::FiniteHashType.new(elts, nil)
+      end
+
       return UnionType.__new__(ts)
     end
 

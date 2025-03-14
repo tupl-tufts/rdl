@@ -114,6 +114,14 @@ module RDL::Type
           self.the_hash == nil
         )
     end
+
+    def fht_value_merge
+      self
+    end
+
+    def fht_value_unmerge
+      self
+    end
         
     # default behavior, override in appropriate subclasses
     def canonical; return self; end
@@ -295,7 +303,7 @@ module RDL::Type
         return true
       elsif left.is_a?(VarType) && left.to_infer
         if deferred_constraints.nil?
-          left.add_ubound(right, pi, ast, new_cons, propagate: propagate) unless (left.ubounds.any? { |t, _, loc| t == right || t.hash == right.hash } || left.equal?(right))
+          left.add_ubound(right, pi, ast, new_cons, propagate: propagate) unless (left.ubounds.any? { |t, p, loc| (t == right || t.hash == right.hash) && (p == pi) } || left.equal?(right))
         else
           deferred_constraints << [left, right, pi]
         end
@@ -306,7 +314,7 @@ module RDL::Type
         #RDL::Logging.log :typecheck, :trace, "\t#{left} <= #{right}"
         if deferred_constraints.nil?
           RDL::Logging.log :typecheck, :trace, 'no deferred_constraints'
-          right.add_lbound(left, pi, ast, new_cons, propagate: propagate) unless (right.lbounds.any? { |t, _, loc| t == left || t.hash == left.hash } || right.equal?(left))
+          right.add_lbound(left, pi, ast, new_cons, propagate: propagate) unless (right.lbounds.any? { |t, p, loc| (t == left || t.hash == left.hash) && (p == pi) } || right.equal?(left))
         else
           RDL::Logging.log :typecheck, :trace, 'deferred_constraints:'
           deferred_constraints << [left, right, pi]
@@ -803,7 +811,7 @@ module RDL::Type
             if v.is_a?(String) && right.vals[i].is_a?(String)
               return false unless v == right.vals[i]
             elsif v.is_a?(Type) && right.vals[i].is_a?(Type)
-              return false unless v <= right.vals[i]
+              return false unless leq(v, right.vals[i], pi)
             else
               return false
             end

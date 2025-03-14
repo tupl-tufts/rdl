@@ -87,34 +87,41 @@ class RDL::Heuristic
     if true#var.path_sensitive CLEANUP
 
       # Reorganize the 
-      # [Type, Path, AST][] ~~> Map<Path, Type>
+      # [Type, Path, AST][] ~~> Map<Path, List<Type>>
       map = {}
       var.lbounds.each { |t, pi, ast| 
         # Ignore multitype bounds. They should have
         # all been propagated.
         next if t.is_a? RDL::Type::MultiType
 
-        # Ignore vartype bounds unless:
-        # 1. it is a Comp Type Output VarType, and
-        # 2. the solution for it was never found.
         if t.is_a? RDL::Type::VarType
-          if (t.category == :comp_type_output) && (t.solution == nil)
-            #fallback = t.comp_type_info[:fallback_output]
-            #e = t.comp_type_info[:ast]
-            #t = fallback
-            #RDL::Logging.log :heuristic, :warning, "Unable to resolve comp type for #{e.location.expression}: '#{e.location.expression.source}'. Utilizing fallback output: #{fallback}"
-          else
-            next
-          end
+          t.render # add to unsolved_vars
         end
 
-        if map[pi] && !(map[pi].is_a?(RDL::Type::VarType))
-          map[pi] = RDL::Type::UnionType.new(map[pi], t)
+        map[pi] = [] unless map[pi]
+        map[pi] << t
+        #if map[pi]
+        #  map[pi] = RDL::Type::UnionType.new(map[pi], t)
+        #else
+        #  map[pi] = t
+        #end
+      }
+      return if map.empty? # if no bounds, we cannot use this heuristic
+
+      # Convert the Map<Path, List<Type>> to a MultiType.
+      # For each path, there are 2 cases:
+      # 1. The List<Type> has some non-vartypes in it. Union the non-vars in 
+      #    this case.
+      # 2. The List<Type> is only vartypes. Union all types in this case.
+      map.transform_values! {|tlist|
+        non_vartypes = tlist.filter {|t| !(t.is_a?(RDL::Type::VarType))}
+        if non_vartypes.empty?
+          RDL::Type::UnionType.new(*tlist)
         else
-          map[pi] = t
+          RDL::Type::UnionType.new(*non_vartypes)
         end
       }
-      return nil if map.empty?
+
       ret = RDL::Type::MultiType.new(map).canonical
       RDL::Logging.log :heuristic, :info, "MultiType Extraction :: extracted solution #{ret.to_s}"
       return ret

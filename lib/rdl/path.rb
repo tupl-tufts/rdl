@@ -312,7 +312,7 @@ class PathAnd < Path
     end
 
     def initialize(paths)
-        @paths = paths
+        @paths = paths.sort_by(&:object_id)
     end
 
     def inspect
@@ -333,11 +333,12 @@ class PathAnd < Path
 
     # Define `eql?` and `hash` so this can be used a hash key
     def ==(other)
-        (other.is_a? PathAnd) && Set.new(@paths) == Set.new(other.paths)
+        #(other.is_a? PathAnd) && Set.new(@paths) == Set.new(other.paths) # this was very slow.
+        hash == other.hash
     end
     alias :eql? :==
     def hash
-        @hash = @paths.map(&:hash).reduce(:*) * 729 unless @hash
+        @hash = @paths.each_with_index.map{|p, i| p.hash + i}.reduce(:*) * 729 unless @hash
         @hash
     end
 end
@@ -418,8 +419,7 @@ class PathOr < Path
                         PathAnd.new(andPath.paths - always_present)
                     }
 
-
-                    all_subterms = and_paths.flat_map(&:paths).uniq
+                    all_subterms = and_paths.flat_map {|p| if p.is_a?(PathAnd) then p.paths else [p] end}.uniq
                     if all_subterms.length == 4 && all_subterms.filter {|p| p.is_a?(PathNot)}.all? { |p| all_subterms.include?(p.path) }
                         # here, if there no paths that were common to all terms,
                         # we can simplify to true.
@@ -442,7 +442,11 @@ class PathOr < Path
                     always_present << p if (paths.drop(1).all? { |andPath| andPath.paths.include? p })
                 }
                 and_paths = paths.map { |andPath|
-                    PathAnd.new(andPath.paths - always_present)
+                    if andPath.paths - always_present == []
+                        PathTrue.new
+                    else
+                        PathAnd.new(andPath.paths - always_present)
+                    end
                 }
                 # Group paths by their simplified form, ignoring negations
                 grouped_paths = and_paths.group_by { |path|
@@ -454,13 +458,15 @@ class PathOr < Path
 
                 # Iterate over each group of paths
                 grouped_paths.each_value do |group|
+                    next unless group.all? {|p| p.is_a?(PathAnd)}
+
                     # Collect all unique variables from the group
                     variables = group.flat_map(&:paths).uniq
                     # Example: For group [(A and B), (A and not B), (not A and B), (not A and not B)]
                     # This would result in variables like [A, B, not A, not B]
 
                     # Check if for every variable, its negation is also present in the group
-                    if variables.all? { |v| variables.include?(PathNot.new(v)) || variables.include?(v) }
+                    if variables.all? { |v| variables.include?(PathNot.new(v)) && variables.include?(v) }
                         # If all variables and their negations are present, return true
                         if always_present.empty?
                             return PathTrue.new
@@ -473,7 +479,143 @@ class PathOr < Path
             end
 
 
+            ## A ∨ (¬A ∧ B) = A ∨ B and all variations
+            if paths.none? {|p| p.is_a?(PathOr)}
+                subterms = paths.map {|p|
+                    if p.is_a?(PathAnd)
+                        p.paths
+                    else
+                        [p]
+                    end
+                }
 
+                always_present = []
+                subterms[0].each { |p|
+                    always_present << p if (subterms.drop(1).all? { |term| term.include? p })
+                }
+
+                subterms = subterms.map { |term|
+                    term - always_present
+                }
+
+                if subterms.length == 2
+                    # should just be present with its negation
+                    present_with_negation = subterms[0].filter {|p| 
+                        (p.is_a?(PathNot) && subterms[1].include?(p.path)) || (subterms[1].include?(PathNot.new(p)))
+                    }
+
+                    if present_with_negation.length > 0
+                        # present_with_negation only holds the PathNots.
+                        # need to also add the non-negated form here too
+                        present_with_negation = present_with_negation.flat_map {|pnot|
+                            [pnot, PathNot.new(pnot)]
+                        }
+
+                        always_present_term = if always_present.length > 0
+                            PathAnd.new(always_present)
+                        else
+                            PathFalse.new
+                        end
+
+                        # filter out terms that simplified to nothing
+                        subterms.filter! {|term|
+                            (term - present_with_negation) != []
+                        }
+
+                        # Here, we know that:
+                        # - some terms from subterms[0] were found negated
+                        #   in subterms[1], or vice versa
+                        # - additionally, some paths may be common to both
+                        #   subterms.
+                        return PathOr.new([always_present_term] + subterms.map {|term|
+                            PathAnd.new(term - present_with_negation)
+                        })
+                    end
+                end
+
+            end
+
+            ## Simplify 
+            # (a & b & c)  ∨  (a & b & ¬c & d)  ∨  (a & b & ¬c & ¬d)
+            # ==> (a & b)
+            # by checking all satisfying assignments.
+            if paths.all? { |p| p.is_a?(PathAnd) }
+                # 1. Identify the "common" literals in every disjunct
+                common_literals = paths[0].paths.clone
+                paths[1..].each do |p|
+                    common_literals = common_literals.select { |lit| p.paths.include?(lit) }
+                end
+
+                # If the common part is empty, it's still possible we can do other simplifications,
+                # so we keep going. Now let's find the difference-literals for each AND.
+                difference_sets = paths.map { |p| p.paths - common_literals }
+
+                # 2. Identify the base variables in all difference sets (ignoring negation).
+                #    We'll define small helpers to handle that.
+
+                # A helper to see if something is negated or not.
+                # Here, we treat "p is a PathNot" as negated. Otherwise, it's "positive".
+                # We also define "baseVar" so that baseVar(PathNot.new(X)) = X, else = p.
+                get_base_var = ->(p) {
+                    if p.is_a?(PathNot) then p.path else p end
+                }
+
+                # Collect all unique "base variables" from the difference sets
+                difference_vars = difference_sets.flat_map { |dset|
+                    dset.map { |lit| get_base_var[lit] }
+                }.uniq
+
+                # If there are no difference variables, that means every subterm has the
+                # same intersection plus no extras. We might have other rules that catch
+                # that, but let's just skip if difference_vars is empty.
+                if difference_vars.size > 0
+                    # 3. We'll attempt a naive "check coverage of all assignments for difference_vars".
+                    #    Build all possible true/false assignments.
+                    all_assignments = []
+                    (0...(1 << difference_vars.size)).each do |bits|
+                    assignment = {}
+                    difference_vars.each_with_index do |var, i|
+                        assignment[var] = (bits & (1 << i)) != 0  # true/false
+                    end
+                    all_assignments << assignment
+                    end
+
+                    # We'll define a small helper to check if a difference set "matches" a given assignment.
+                    # A difference set is something like [c, PathNot.new(d)] => c must be true, d must be false.
+                    difference_set_matches = ->(diffset, assign) {
+                        diffset.all? do |lit|
+                            if lit.is_a?(PathNot)
+                                assign[get_base_var[lit]] == false
+                            else
+                                assign[get_base_var[lit]] == true
+                            end
+                        end
+                    }
+
+                    # 4. For each possible assignment of difference variables, do we have at least one subterm
+                    #    whose difference set is consistent with that assignment?
+                    fully_covered = all_assignments.all? do |assign|
+                        difference_sets.any? { |dset| difference_set_matches[dset, assign] }
+                    end
+
+                    # If we discovered "yes, every assignment is covered," that means we can remove all difference
+                    # variables entirely. The entire OR just collapses to the common part.
+                    if fully_covered
+                        # If the common part has more than one literal, we wrap them in PathAnd;
+                        # if there's just one, we can return that single literal; and if none, maybe PathTrue.
+                        if common_literals.empty?
+                            return PathTrue.new
+                        elsif common_literals.size == 1
+                            return common_literals[0]
+                        else
+                            return PathAnd.new(common_literals)
+                        end
+                    end
+                end
+
+                # If "fully_covered" wasn’t true, or difference_vars was empty, or we decided not to attempt it,
+                # we just keep going with your other rules
+                end
 
 
             ## (A ∧ B) ∨ (A ∧ ¬B) = A and all variations
@@ -516,7 +658,7 @@ class PathOr < Path
     end
 
     def initialize(paths)
-        @paths = paths
+        @paths = paths.sort_by(&:object_id)
     end
 
     def inspect
@@ -542,7 +684,8 @@ class PathOr < Path
     end
     alias :eql? :==
     def hash
-        @hash = @paths.map(&:hash).reduce(:*) * 649 unless @hash
+        #@hash = @paths.sort_by(&:object_id).map(&:hash).reduce(:*) * 649 unless @hash
+        @hash = @paths.each_with_index.map{|p, i| p.hash + i}.reduce(:*) * 649 unless @hash
         @hash
     end
 end
@@ -563,6 +706,11 @@ class PathNot < Path
             end
             if path.class <= PathFalse
                 return PathTrue.new
+            end
+
+            ## !!p => p
+            if path.class <= PathNot
+                return path.path
             end
         end
 

@@ -8,8 +8,8 @@ RDL.type_params :Hash, [:k, :v], :all?, variance: [:~, :+]
 
 def Hash.output_type(trec, targs, meth_name, default1, default2=default1, nil_default: false, use_sing_val: true, suspend: false)
   if trec.is_a? RDL::Type::FiniteHashType
-    if targs.empty? || targs.all? { |t| t.is_a?(RDL::Type::SingletonType) }
-      vals = RDL.type_cast((if use_sing_val then targs.map { |t| RDL.type_cast(t, "RDL::Type::SingletonType").val } else targs end), "Array<%any>", force: true)
+    if targs.empty? || targs.all? { |t| t.is_a?(RDL::Type::SingletonType) || t.is_a?(RDL::Type::PreciseStringType) }
+      vals = RDL.type_cast((if use_sing_val then targs.map { |t| t.val.to_sym } else targs end), "Array<%any>", force: true)
       res = RDL.type_cast(trec.elts.send(meth_name, *vals), "Object", force: true)
       if nil_default && res.nil?
         if default1 == :promoted_val
@@ -235,8 +235,12 @@ def Hash.assign_output(trec, targs, suspend: false)
         trec = trec.copy
       end
       #argval = RDL.type_cast(targs[0], "RDL::Type::SingletonType", force: true).val
-      argval = targs[0].is_a?(RDL::Type::PreciseStringType)? targs[0].to_s : targs[0].val
-      trec.elts[argval] = RDL::Type::UnionType.new(trec.elts[argval], targs[1]).canonical
+      #argval = targs[0].is_a?(RDL::Type::PreciseStringType)? targs[0].to_s : targs[0].val
+      argval = targs[0].val.to_sym
+      # Specifically for Hash#assign, ignore existing optional type.
+      existing_val = trec.elts[argval]
+      existing_val = existing_val.type if existing_val.is_a?(RDL::Type::OptionalType)
+      trec.elts[argval] = RDL::Type::UnionType.new(existing_val, targs[1]).canonical
       trec.elts[argval] = weak_promote(trec.elts[argval]) if RDL::Config.instance.weak_update_promote
       raise RDL::Typecheck::StaticTypeError, "Failed to mutate hash: new hash does not match prior type constraints." unless trec.check_bounds(true)
 
@@ -321,7 +325,7 @@ RDL.type :Hash, :fetch, '(``any_or_k(trec)``, ``targs[1] ? targs[1] : RDL::Globa
 RDL.type :Hash, :fetch, '(``any_or_k(trec)``) { (``any_or_k(trec)``) -> u } -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("#T u"), output_type(trec, targs, :fetch, :promoted_val, "v", nil_default: true))``'
 RDL.type :Hash, :fetch, '(``any_or_k(trec)``) { () -> u } -> ``RDL::Type::UnionType.new(RDL::Globals.parser.scan_str("#T u"), output_type(trec, targs, :fetch, :promoted_val, "v", nil_default: true))``'
 RDL.type :Hash, :first, '() -> ``output_type(trec, targs, :first, "[k, v]", nil_default: true)``'
-RDL.type :Hash, :include?, '() -> ``output_type(trec, targs, :include?, "%bool")``'
+RDL.type :Hash, :include?, '(%any) -> ``output_type(trec, targs, :include?, "%bool")``'
 RDL.type :Hash, :member?, '(%any) -> ``output_type(trec, targs, :member?, "%bool")``'
 RDL.type :Hash, :has_key?, '(%any) -> ``output_type(trec, targs, :has_key?, "%bool")``'
 RDL.type :Hash, :key?, '(%any) -> ``output_type(trec, targs, :key?, "%bool")``'
@@ -418,7 +422,8 @@ def Hash.merge_output(trec, targs, mutate=false)
           raise "Unable to promote tuple #{trec} to Hash." unless trec.promote!(arg_key, arg_val)
           return trec
         end
-        trec.elts = RDL.type_cast(Hash[trec.elts.map { |k, v| if arg.elts.has_key?(k) then [k, RDL::Type::UnionType.new(arg.elts[k], v).canonical] else [k, v] end } ].merge(arg.elts), "Hash<%any, RDL::Type::Type>", force: true)
+        #trec.elts = RDL.type_cast(Hash[trec.elts.map { |k, v| if arg.elts.has_key?(k) then [k, RDL::Type::UnionType.new(arg.elts[k], v).canonical] else [k, v] end } ].merge(arg.elts), "Hash<%any, RDL::Type::Type>", force: true)
+        trec.elts.merge!(arg.elts)
         raise RDL::Typecheck::StaticTypeError, "Failed to mutate hash: new hash does not match prior type constraints." unless trec.check_bounds(true)
         return trec
       else

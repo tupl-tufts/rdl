@@ -27,7 +27,7 @@ class ActiveRecord::Base
   type String, :pluralize, "() -> String", wrap: false
   type String, :underscore, "() -> String", wrap: false
 
-  type Object, :try, "(Symbol) -> ``try_output(trec, targs)``", wrap: false
+  type Object, :try, "(Symbol, *%any) -> ``try_output(trec, targs)``", wrap: false
 
   def Object.try_output(trec, targs)
     case trec
@@ -404,7 +404,32 @@ class DBType
     end
   end
 
+  def self.slice_output(trecv, targs)
+    schema = rec_as_json(trecv, [RDL::Type::FiniteHashType.new({only: RDL::Type::TupleType.new(*targs)}, nil)])
+    # this returns JSON<FHT>, we just want the FHT
+    return schema.params[0]
+  end
+
   def self.serializer_as_json(serial_klass, model_klass, plural: false)
+    if serial_klass.is_a?(RDL::Type::GenericType)
+      raise unless serial_klass.params.length == 3
+      # This should be a Serializer<serial_klass, model_klass, opts>
+      tmp = serial_klass
+      serial_klass = tmp.params[0].name.constantize
+      model_klass = tmp.params[1].name.constantize
+      opts = tmp.params[2]
+
+      if serial_klass < ActiveModel::ArraySerializer
+        plural = true
+        serial_klass = opts.elts[:each_serializer].val
+      end
+
+      raise "should handle the default case for missing opts[:root]" unless opts.elts[:root].is_a?(RDL::Type::SingletonType)
+      root = opts.elts[:root].val
+    else
+      root = false # old behavior, to support Discourse probably. Should check if this is how Discourse works.
+    end
+
     raise "bug" unless serial_klass < ActiveModel::Serializer
 
     only = serial_klass._attributes
@@ -434,12 +459,28 @@ class DBType
     )
 
     if plural
-      return RDL::Type::GenericType.new(
-        RDL::Type::NominalType.new("Array"),
-        serialized
-      )
+      if root
+        return RDL::Type::FiniteHashType.new({
+            root =>
+            RDL::Type::GenericType.new(
+              RDL::Type::NominalType.new("Array"),
+              serialized
+            )
+        }, nil)
+      else
+        return RDL::Type::GenericType.new(
+          RDL::Type::NominalType.new("Array"),
+          serialized
+        )
+      end
     else
-      return serialized
+      if root
+        return RDL::Type::FiniteHashType.new({
+            root => serialized
+        }, nil)
+      else
+        return serialized
+      end
     end
   end
 
@@ -905,49 +946,51 @@ class DBType
             raise "rec_as_json: `include` key has unknown type #{inclusions}"
           end
         end
+      else
+        inclusions = RDL::Type::FiniteHashType.new({}, nil)
+      end
         
-        # Loop over each inclusion
-        inclusions.elts.merge(meth_inclusions).each do |included_symbol, included_options|
-          #raise RDL::Typecheck::StaticTypeError, "JSON serialization includes an unknown association: '#{included_symbol}'" unless associated_with?(model_type, included_symbol)
-          begin
-            if associated_with?(model_type, included_symbol)
-              table_class = Object.const_get(model_type.to_s.to_sym)
-              assoc = table_class.reflect_on_association(included_symbol)
-              included_class_t = RDL::Type::NominalType.new(table_class.reflect_on_association(included_symbol).class_name.to_sym)
-              if assoc.macro == :has_many
-                included_class_t = RDL::Type::GenericType.new(RDL::Type::NominalType.new("Array"), included_class_t)
-              end
-            else
-              # If it's not an association, it could be a method call.
-              included_class_t = (RDL::Globals.info.get(model_type, included_symbol, :type) || RDL::Globals.info.get(serializer_klass, included_symbol, :type))[0].ret
-              included_class_t = included_class_t.solution if included_class_t.is_a?(RDL::Type::VarType)
-              #included_class_t = RDL::Type::NominalType.new(ret_type.name.to_sym)
+      # Loop over each inclusion
+      inclusions.elts.merge(meth_inclusions).each do |included_symbol, included_options|
+        #raise RDL::Typecheck::StaticTypeError, "JSON serialization includes an unknown association: '#{included_symbol}'" unless associated_with?(model_type, included_symbol)
+        begin
+          if associated_with?(model_type, included_symbol)
+            table_class = Object.const_get(model_type.to_s.to_sym)
+            assoc = table_class.reflect_on_association(included_symbol)
+            included_class_t = RDL::Type::NominalType.new(table_class.reflect_on_association(included_symbol).class_name.to_sym)
+            if assoc.macro == :has_many
+              included_class_t = RDL::Type::GenericType.new(RDL::Type::NominalType.new("Array"), included_class_t)
             end
-
-            included_options = [RDL::Type::FiniteHashType.new({}, nil)] unless included_options
-            included_options = [included_options] unless included_options.class == Array
-
-            sym_as_json = rec_as_json(included_class_t, included_options)
-          rescue => e
-            # if this failed, probably because of a missing method, just put JSON in the elts.
-            sym_as_json = RDL::Type::NominalType.new("JSON<missing #{included_symbol} on #{model_type.to_s} or #{serializer_klass.to_s}>")
+          else
+            # If it's not an association, it could be a method call.
+            included_class_t = (RDL::Globals.info.get(model_type, included_symbol, :type) || RDL::Globals.info.get(serializer_klass, included_symbol, :type))[0].ret
+            included_class_t = included_class_t.solution if included_class_t.is_a?(RDL::Type::VarType)
+            #included_class_t = RDL::Type::NominalType.new(ret_type.name.to_sym)
           end
 
-          # if the serializer itself defines a method called `include_<sym>?`,
-          # it is optional.
-          # it took me so long to figure out how todo this, but it is
-          # quite neat.
-          begin
-            meth = serializer_klass.instance_method("include_#{included_symbol}?")
-            if meth && !meth.source_location[0].include?("lib/active_model/serializer.rb")
-              sym_as_json = RDL::Type::OptionalType.new(sym_as_json)
-            end
-          rescue => e
-            # the serializer did not define that method.
-          end
+          included_options = [RDL::Type::FiniteHashType.new({}, nil)] unless included_options
+          included_options = [included_options] unless included_options.class == Array
 
-          schema.elts[included_symbol] = sym_as_json
+          sym_as_json = rec_as_json(included_class_t, included_options)
+        rescue => e
+          # if this failed, probably because of a missing method, just put JSON in the elts.
+          sym_as_json = RDL::Type::NominalType.new("JSON<missing #{included_symbol} on #{model_type.to_s} or #{serializer_klass.to_s}>")
         end
+
+        # if the serializer itself defines a method called `include_<sym>?`,
+        # it is optional.
+        # it took me so long to figure out how todo this, but it is
+        # quite neat.
+        begin
+          meth = serializer_klass.instance_method("include_#{included_symbol}?")
+          if meth && !meth.source_location[0].include?("lib/active_model/serializer.rb")
+            sym_as_json = RDL::Type::OptionalType.new(sym_as_json)
+          end
+        rescue => e
+          # the serializer did not define that method.
+        end
+
+        schema.elts[included_symbol] = sym_as_json
       end
 
       ret_type = RDL::Type::GenericType.new(
@@ -1090,6 +1133,7 @@ class DBType
   #               accurate with respect to the ActiveModel schema. E.g.,
   #               fields are marked optional unless they have a 
   #               PresenceValidator, and strings are just strings.
+  # [+ stringify_keys +] set to true if you want the FHT to have PreciseStringType keys
   def self.table_name_to_schema_type(tname, check_col, takes_array=false, include_assocs: false, output: false)
     #h = RDL.type_cast({}, "Hash<%any, RDL::Type::Type>", force: true)
     ttype = RDL::Globals.ar_db_schema[tname]

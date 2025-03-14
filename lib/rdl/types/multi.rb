@@ -36,6 +36,7 @@ module RDL::Type
                 nested_multitypes.each { |outer_p, mt| 
                     # Merge paths and put the MultiType entries directly in new_map
                     nested_map = mt.map.transform_keys { |inner_p| PathAnd.new([outer_p, inner_p]) }
+                    nested_map.reject! {|p, _| p.is_a?(PathFalse)}
                     #new_map.merge!(nested_map)
                     new_map.merge!(nested_map) { |merged_p, outer_t, inner_t|
                         UnionType.new(outer_t, inner_t).canonical
@@ -79,6 +80,27 @@ module RDL::Type
             #elsif keys.size == 1
             #    @canonical = map[keys[0]]
             #end
+
+            # New idea: flip the multitype on its head, and map
+            # values to paths. If we can OR all the paths together
+            # that make a single value, and we end up with something
+            # that's not a PathOr, we were able to make the path smaller.
+            multi_inverted = {} # Map<Type, List<Path>>
+            @map.each_pair {|p, t|
+                multi_inverted[t] = [] unless multi_inverted.has_key? t
+                multi_inverted[t] << p
+            }
+
+            new_map = {}
+            multi_inverted.each_pair {|t, paths|
+                ord = PathOr.new(paths)
+
+                return if ord.is_a?(PathOr)
+
+                new_map[ord] = t
+            }
+
+            @canonical = RDL::Type::MultiType.new(new_map)
         end
 
         # Returns a Map<Array<Path>, Type>
@@ -148,21 +170,26 @@ module RDL::Type
         # TODO: add `is_a?`, with a `pi` component. For `MP_case_generic`
 
         def inspect
-            return "#{"MultiType".colorize(:blue)}{\\n" + @map.each_pair.map { |pi, t| "\t#{t}\n\t_{#{pi.inspect}}" }.join(",\n") + " }"
+            return "#{"MultiType".colorize(:blue)}{\\n" + @map.each_pair.map { |pi, t| "\t#{if t.nil? then "<<empty>>" else t.to_s end}\n\t_{#{pi.inspect}}" }.join(",\n") + " }"
         end
         
         # to_s is just like #inspect but without the colors.
         def to_s
-            return "#{"MultiType"}{\n" + @map.each_pair.map { |pi, t| "\t#{t.to_s}\n\t_{#{pi.to_s}}" }.join(",\n") + " }"
+            return "#{"MultiType"}{\n" + @map.each_pair.map { |pi, t| "\t#{if t.nil? then "<<empty>>" else t.to_s end}\n\t_{#{pi.to_s}}" }.join(",\n") + " }"
         end
 
         def render
-            return "#{"MultiType"}{\n" + @map.each_pair.map { |pi, t| "\t#{t.render}\n\t_{#{pi.to_s}}" }.join(",\n") + " }"
+            return "#{"MultiType"}{\n" + @map.each_pair.map { |pi, t| "\t#{if t.nil? then "<<empty>>" else t.render end}\n\t_{#{pi.to_s}}" }.join(",\n") + " }"
             #return "#{"MultiType"}{\n" + @map.each_pair.map { |pi, t| "\t#{t.render}}" }.join(",\n") + " }"
         end
 
         def ==(other)
             (other.is_a? MultiType) && (other.map == @map)
+        end
+        alias :eql? :==
+
+        def hash
+            @map.hash * 321
         end
 
         def copy
@@ -171,6 +198,48 @@ module RDL::Type
 
         def instantiate(inst)
             return MultiType.new(@map.transform_values {|t| t.instantiate(inst)})
+        end
+
+        ### Multitype ~~> value-merged FHT
+        def fht_value_merge
+            return self unless @map.values.count {|t| t.is_a?(RDL::Type::FiniteHashType)} > 1
+
+            non_fht_entries = @map.filter {|_, t| !t.is_a?(RDL::Type::FiniteHashType)}
+            fht_entries =     @map.filter {|_, t|  t.is_a?(RDL::Type::FiniteHashType)}
+
+            fht_elts = {} # Map<Key, Map<Path, Type>> (not multitype yet)
+
+            # Initialize fht_elts with maps from all paths to %bot
+            all_paths = fht_entries.keys
+            initial_mapping = {}
+            all_paths.each {|p|
+                initial_mapping[p] = RDL::Type::BotType.new
+            }
+
+            # All t's are FHTs
+            fht_entries.each_pair {|p, fht|
+                fht.elts.each_pair {|key, t|
+                    fht_elts[key] = initial_mapping.clone unless fht_elts.has_key? key
+                    fht_elts[key][p] = t
+                }
+            }
+
+            # Convert fht_elts's vals from Map<Path, Type> to MultiType
+            fht_elts.transform_values! {|map|
+                RDL::Type::MultiType.new(map).canonical
+            }
+
+            # Construct final FHT.
+            RDL::Type::MultiType.new(non_fht_entries.merge({PathOr.new(all_paths) => RDL::Type::FiniteHashType.new(fht_elts, nil)})).canonical
+        end
+        
+        def fht_value_unmerge
+            fht_entries = @map.filter {|p, t| t.is_a?(RDL::Type::FiniteHashType)}
+            return self unless fht_entries.length > 0
+            non_fht_entries = @map.filter {|p, t| !t.is_a?(RDL::Type::FiniteHashType)}
+
+            fht_entries.transform_values!(&:fht_value_unmerge)
+            RDL::Type::MultiType.new(fht_entries.merge(non_fht_entries))
         end
 
     end

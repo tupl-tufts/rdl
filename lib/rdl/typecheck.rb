@@ -82,7 +82,6 @@ module RDL::Typecheck
 
       nested_line_defs = ASTMapper.process(body_ast, @file, klass=@klass, mod=@mod, sclass=true)
       @line_defs = @line_defs.merge nested_line_defs
-      puts "CLEANUP"
     end
 
     def on_module(node)
@@ -224,7 +223,8 @@ module RDL::Typecheck
     def merge_block_env(other, arg_names)
       return self if other.nil?
       result = Env.new
-      result.pi = other.pi # that was a mistake #@pi # use caller pi. callee pi is not relevant.
+      result.pi = @pi # I think that was a mistake again! We're merging back into the caller's env, it doesn't matter what the pi of the block was when it finished executing.
+      # other.pi # that was a mistake #@pi # use caller pi. callee pi is not relevant.
       @env.each { |k, v|
         if (other.env.has_key? k) && (not (arg_names.include? k))
           # weak update
@@ -275,6 +275,7 @@ module RDL::Typecheck
       first.env.each_pair { |var, h|
         first_typ = h[:type]
         if h[:fixed]
+          raise "Fixed vars no longer supported"
           RDL::Typecheck.error :inconsistent_var_type, [var.to_s], e unless rest.all? { |other| (other.fixed? var) || (not (other.has_key? var)) }
           neq = []
           rest.each { |other|
@@ -289,11 +290,20 @@ module RDL::Typecheck
           multi_map = {first.pi => first_typ}
           rest.map { |other| 
             if ((other.has_key? var) && other[var])
-              multi_map[other.pi] = other[var]
+              if multi_map[other.pi]
+                multi_map[other.pi] = RDL::Type::UnionType.new(multi_map[other.pi], other[var])
+              else
+                multi_map[other.pi] = other[var]
+              end
             end
           }
-          typ = RDL::Type::MultiType.new(multi_map)
-          typ = typ.canonical
+          typ = RDL::Type::MultiType.new(multi_map).canonical
+          if RDL::Config.instance.value_merge.include? :multi
+            typ = typ.fht_value_merge.canonical
+            if typ.is_a?(RDL::Type::MultiType)
+              RDL::Logging.log :inference, :trace, "Value-merging was unsuccessful for #{var} ~~> #{typ}"
+            end
+          end
           if typ.instance_of?(RDL::Type::UnionType)
             sings = 0
             typ.types.each { |t| sings = sings + 1 if t.instance_of?(RDL::Type::SingletonType) }
@@ -375,6 +385,10 @@ module RDL::Typecheck
 
   def self.get_ast(klass, meth)
     file, line = RDL::Globals.info.get(klass, meth, :source_location)
+
+    if file.nil?
+      file, line = klass.constantize.instance_method(meth).source_location
+    end
 
     return nil if file.nil?
 
@@ -888,6 +902,12 @@ module RDL::Typecheck
   # Returns [env', t], where env' is the type environment at the end of the expression
   # and t is the type of the expression. t is always canonical.
   def self._tc(scope, env, e)
+    # Record that we tc'd this line
+    first_line = e.location.expression.line
+    last_line = e.location.expression.last_line
+    filename = e.location.expression.source_buffer.name
+    RDL::Globals.all_lines_tcd.merge (first_line...last_line).map {|n| filename + "#L" + n.to_s}
+
     #RDL::Logging.log :typecheck, :info, "_tc :: env.pi => #{env.pi}, scope[:pi] => #{scope[:pi]}"
     RDL::Logging.log :typecheck, :info, "_tc :: env.pi => #{env.pi}"
     case e.type
@@ -1000,7 +1020,7 @@ module RDL::Typecheck
           tlefts << tleft
           envi, tright = tc(scope, envi, p.children[1])
           trights << tright
-          is_fh = false unless tleft.is_a?(RDL::Type::SingletonType)
+          is_fh = false unless tleft.is_a?(RDL::Type::SingletonType) || tleft.is_a?(RDL::Type::PreciseStringType)
         elsif p.type == :kwsplat
           envi, tkwsplat = tc(scope, envi, p.children[0])
 
@@ -1200,6 +1220,13 @@ module RDL::Typecheck
                       else # e.type == :or_asgn
                         if tleft.val then [envleft, tleft] else [envright, tright] end
                       end
+                    elsif tleft.is_a?(RDL::Type::MultiType) && (tleft.map.values.any? {|t| t == RDL::Globals.types[:bot] || t == RDL::Globals.types[:nil]}) && e.type == :or_asgn
+                      # special case: we're or_asgn'ing a MultiType that has a %bot or nil case, so just replace it in the multitype
+                      # NOTE: this is safe to do, because
+                      # 1. in other paths, this type is dup'd
+                      # 2. MultiType hashes are not cached
+                      tleft.map.transform_values! {|t| if (t == RDL::Globals.types[:bot] || t == RDL::Globals.types[:nil]) then tright else t end}
+                      [envright, tleft]
                     else
                       if trecv.is_a?(RDL::Type::VarType)
                         ## we get no new information from including VarType in union of return type. In fact, we can lose info due to promotion. So, leave it out.
@@ -1212,6 +1239,15 @@ module RDL::Typecheck
         mutation_meth = (meth.to_s + '=').to_sym
         rhs_array = [*largs, trhs]
         envres, tres = tc_send(scope, envi, trecv, mutation_meth, rhs_array, nil, e)
+
+        # Special casing here, just like tc_send.
+        if [:[]=].include?(mutation_meth) && e.children[0].children[0].type == :lvar
+          unless trecv.is_a?(RDL::Type::FiniteHashType)
+            raise "something seems really wrong here"
+          end
+          envres.env[e.children[0].children[0].children[0]][:type] = tres
+        end
+
         [envres, tres]
       else
         tc_vasgn(scope, envi, e.children[0].type, x, trhs, e)
@@ -1316,11 +1352,6 @@ module RDL::Typecheck
           block = [map_block_type, e_map_case]
         end
 
-        # Conditional send
-        if e.type == :csend && trecv.is_a?(RDL::Type::SingletonType) && trecv.val == nil
-          return [envi, trecv]
-        end
-
         # For dealing with path-sensitive arguments and/or receivers
         tactuals_map = {} # Hash<Path, Array<Type>>
         # initialize with no args
@@ -1403,14 +1434,20 @@ module RDL::Typecheck
         
         map = {}
         envs = []
+        total = tactuals_map.keys.length * trecv_map.keys.length
+        progress = 0
+        results = {} # Hash<[tactuals, trecv], [new_env, new_tret]>
         tactuals_map.each_pair { |p_args, tactuals| 
           trecv_map.each_pair { |p_trecv, _| 
+            RDL::Logging.log :inference, :trace, "tc_send progress #{progress}/#{total}"
+            progress = progress + 1
+
             # For each path, need to:
             # (1) Clone the env
             # (2) Re-lookup the receiver, so that it points to the copy..
             # (3) TC using this combination of args and receiver
             p = PathAnd.new([p_args, p_trecv])
-            cenv = envi.deep_copy.add_pi(p)
+            cenv = envi.deep_copy
             cenv, og_ctrecv = if e.children[0].nil? then [cenv, cenv[:self]] else tc(sscope, cenv, e.children[0]) end
 
             if og_ctrecv.is_a?(RDL::Type::MultiType)
@@ -1419,9 +1456,32 @@ module RDL::Typecheck
               ctrecv = og_ctrecv
             end
 
-            new_env, new_tret = tc_send(sscope, cenv, ctrecv, e.children[1], tactuals, block, e)
-            map[p] = new_tret
-            envs.append new_env
+            # Conditional send
+            if e.type == :csend && ((ctrecv.is_a?(RDL::Type::SingletonType) && trecv.val == nil) || (ctrecv.is_a?(RDL::Type::BotType)))
+              #return [envi, trecv]
+              map[p] = trecv
+              envs.append cenv
+            elsif results.has_key? [tactuals, ctrecv]
+              RDL::Logging.log :inference, :trace, "Re-using cached send results"
+              # re-use existing result
+              new_env, new_tret = results[[tactuals, ctrecv]]
+              map[p] = new_tret.copy
+
+              # clone the existing env, but change its pi
+              new_env = new_env.clone
+
+              # TODO(mark): this is probably not 100% correct
+              # The send may have changed the pi, and we may not be able to
+              # re-use it exactly.
+              new_env = new_env.add_pi(p)
+              envs.append new_env
+            else
+              new_env, new_tret = tc_send(sscope, cenv, ctrecv, e.children[1], tactuals, block, e)
+              results[[tactuals, ctrecv]] = [new_env, new_tret]
+              new_env = new_env.add_pi(p)
+              map[p] = new_tret
+              envs.append new_env
+            end
           }
         }
         envres, tres = [Env.join(e, *envs), RDL::Type::MultiType.new(map)]
@@ -1514,7 +1574,7 @@ module RDL::Typecheck
     #     [a1, RDL::Globals.types[:bool]]
     #   end
     when :if
-      RDL::Globals.num_ctrl_flow_splits += 1
+      RDL::Globals.ctrl_flow_splits.add e
       envi, tguard = tc(scope, env, e.children[0]) # guard; any type allowed
 
       # always type check both sides
@@ -1534,6 +1594,82 @@ module RDL::Typecheck
       right_path = PathNot.new(left_path)
       envleft_in = envi.add_pi(left_path)
       envright_in = envi.add_pi(right_path)
+
+      # Type refinement
+
+      is_falsy = lambda { |t| t.is_a?(RDL::Type::BotType) || (t.is_a?(RDL::Type::SingletonType) && t.val.nil?) }
+
+      # MultiType case
+      if RDL::Config.instance.type_refinement &&
+        e.children[0] &&
+        e.children[0].type == :lvar &&
+        tguard.is_a?(RDL::Type::MultiType) && 
+        tguard.map.values.size == 2 &&
+        tguard.map.values.any? {|t| is_falsy.call(t)}
+        then
+        # Here, the AST is `if lvar`, where lvar is a MultiType
+        # with 2 branches and 1 of the branches is %bot or nil.
+        # We will still tc both sides, but will refine the type
+        # and path in both branches.
+
+        # tguard_left and tguard_right have type [[Path, Type]]
+        tguard_left = tguard.map.select {|p, t| !is_falsy.call(t)}.to_a
+        tguard_right = tguard.map.select {|p, t| is_falsy.call(t)}.to_a
+        raise if tguard_left.size > 1 || tguard_right.size > 1
+
+        envleft_in = envleft_in.bind(e.children[0].children[0], tguard_left[0][1], envleft_in.pi).add_pi(tguard_left[0][0])
+        envright_in = envleft_in.bind(e.children[0].children[0], tguard_right[0][1], envright_in.pi).add_pi(tguard_right[0][0])
+      end
+
+      # Union case
+      if RDL::Config.instance.type_refinement &&
+        e.children[0] &&
+        e.children[0].type == :lvar &&
+        tguard.is_a?(RDL::Type::UnionType) &&
+        tguard.types.size == 2 &&
+        tguard.types.any? {|t| is_falsy.call(t)}
+        then
+        # if t then .. else ... end where t = Union(t2 or nil)
+
+        tguard_left = tguard.types.select {|t| !is_falsy.call(t)}
+        tguard_right = tguard.types.select {|t| is_falsy.call(t)}
+        raise if tguard_left.size > 1 || tguard_right.size > 1
+
+        # no need to bind pis here, we don't have any
+        envleft_in = envleft_in.bind(e.children[0].children[0], tguard_left[0], envleft_in.pi)
+        envright_in = envright_in.bind(e.children[0].children[0], tguard_right[0], envright_in.pi)
+      end
+
+      if RDL::Config.instance.type_refinement && 
+        e.children[0].type == :send &&
+        e.children[0].children[0] &&
+        e.children[0].children[0].type == :lvar &&
+        e.children[0].children[1] &&
+        e.children[0].children[1] == :is_a? &&
+        e.children[0].children[2] &&
+        e.children[0].children[2].type == :const
+        then
+        # Here, we have if <lvar>.is_a? <const>
+        # We will add this information to envleft_in, only if it is more precise
+        # than the type we already have for it.
+
+        lvar = e.children[0].children[0].children[0]
+        refined = RDL::Type::NominalType.new(e.children[0].children[2].children[1].to_s)
+
+        # Symbolically execute, if possible.
+        if env[lvar].is_a?(RDL::Type::NominalType)
+          left = RDL::Type::Type.leq(env[lvar], refined, envleft_in.pi)
+          RDL::Logging.log :inference, :trace, "Type refinement: only inferring #{if left then "left" else "right" end} branch for conditional #{e.location.expression.source} @ #{e.location.expression}"
+          branch_ast = if left then e.children[1] else e.children[2] end
+          return (if branch_ast.nil? then [envi, RDL::Globals.types[:nil]] else tc(scope, envi, branch_ast) end)
+        end
+
+        #unless RDL::Type::Type.leq(env[lvar], refined, envleft_in.pi)
+        #  envleft_in = envleft_in.bind(lvar, refined, envleft_in.pi)
+        #end
+      end
+
+
       # always deep copy envs when adding paths.
       envleft_out, tleft = if e.children[1].nil? then [envleft_in, RDL::Globals.types[:nil]] else tc(scope, envleft_in.deep_copy, e.children[1]) end # then
       envright_out, tright = if e.children[2].nil? then [envright_in, RDL::Globals.types[:nil]] else tc(scope, envright_in.deep_copy, e.children[2]) end # else
@@ -1563,73 +1699,42 @@ module RDL::Typecheck
         [joined_env, RDL::Type::MultiType.new({left_path => tleft, right_path => tright}).canonical]
       end
     when :case
-      # TODO(Mark): implement
-      throw "pls no case atm"
-      # NOTE(Mark): Here too.
       envi = env
       envi, tcontrol = tc(scope, envi, e.children[0]) unless e.children[0].nil? # the control expression, which make be nil
       # for each guard, invoke guard === control expr, then possibly do body, possibly short-circuiting arbitrary later stuff
       tbodies = []
       envbodies = []
-      pathbodies = [] # Path Sensitivity: pathbodies stores the path for
-                      #                   each body, if applicable.
       e.children[1..-2].each { |wclause|
         raise RuntimeError, "Don't know what to do with case clause #{wclause.type}" unless wclause.type == :when
         envguards = []
         tguards = []
-        # ------------------#-#-#-#-#-#-#-#------------------------------------
-        # Path Sensitivity: this `scopebody` should be used when typechecking
-        #                   this child clause. It will contain additional type
-        #                   info if this child clause is a simple typetest.
-        # ------------------#-#-#-#-#-#-#-#------------------------------------
-        scopebody = scope
-        # Path Sensitivity: this `pathbody` represents the path to get to this
-        #                   "when" clause, if applicable.
-        pathbody = nil
-
         wclause.children[0..-2].each { |guard| # first wclause.length-1 children are the guards
           envi, tguard = tc(scope, envi, guard) # guard type can be anything
           tguards << tguard
           envi, _ = tc_send(scope, envi, tguard, :===, [tcontrol], nil, guard) unless tcontrol.nil?
           envguards << envi
         }
-        initial_env = Env.join(e, *envguards)
+        initial_env = Env.join(e, *envguards).add_pi(PathCondition.new(tcontrol, RDL::Type::UnionType.new(*tguards).canonical, e.children[0].location, e.children[0].location.expression.source))
         if (tguards.all? { |typ| typ.is_a?(RDL::Type::SingletonType) && (typ.val.is_a?(Class) || typ.val.nil?) }) && (e.children[0].type == :lvar)
           # Special case! We're branching on the type of the guard, which is a local variable.
           # So rebind that local variable to have the union of the guard types
-
           var_name = e.children[0].children[0]
           var_type = initial_env[var_name]
           new_typ = RDL::Type::UnionType.new(*(tguards.map { |typ| typ.val.nil? ? typ : RDL::Type::NominalType.new(typ.val) })).canonical
-
-          # Path Sensitivity: 
-          # Adjust scope[:pi] to include type test info when typechecking
-          # this child branch.
-          pathbody = PathCondition.new(tcontrol, new_typ, wclause.location.expression, "when " + wclause.children[0..-2].map{|c| c.location.expression.source}.join(", "))
-          scopebody = scope_add_path(scopebody, pathbody)
           # TODO adjust following for generics!
           if tcontrol.is_a? RDL::Type::GenericType
-            # Path Sensitivity: TODO(Mark) fix this `==`! Maybe add a new operator
-            # to deconstruct the type based on the path?
             if new_typ == tcontrol.base
               # special case: exact match of control type's base and type of guard; can use
               # geneirc type on this branch
-              initial_env = initial_env.bind(var_name, tcontrol, fixed: initial_env.fixed?(var_name), force: true)
-
-            # Path Sensitivity: use the current path to determine if this
-            #                   generic type is a match.
-            elsif !(RDL::Type::Type.leq(tcontrol.base, new_typ, env.pi) && !(RDL::Type::Type.leq(new_typ, tcontrol.base, env.pi)))
+              initial_env = initial_env.bind(var_name, tcontrol, env.pi, fixed: initial_env.fixed?(var_name), force: true)
+            elsif !RDL::Type::Type.leq(tcontrol.base <= new_typ) && !RDL::Type::Type.leq(new_typ , tcontrol.base, env.pi)
               next # can't possibly match this branch
             else
               error :generic_error, ["general refinement for generics not implemented yet"], wclause
             end
           else
-            # TODO(Mark):
-            # Path Sensitivity: use the current path to determine if a branch 
-            #                   is impossible. See test 
-            #                   test_path_infer:MP_case_stmt_type_test_1.
-            next unless tcontrol.is_a?(RDL::Type::VarType) || (RDL::Type::Type.leq(tcontrol, new_typ, env.pi) || RDL::Type::Type.leq(new_typ, tcontrol, env.pi)) # If control can't possibly match type, skip this branch
-            initial_env = initial_env.bind(var_name, new_typ, fixed: initial_env.fixed?(var_name), force: true)
+            next unless tcontrol.is_a?(RDL::Type::VarType) || RDL::Type::Type.leq(tcontrol, new_typ, env.pi) || RDL::Type::Type.leq(new_typ, tcontrol, env.pi) # If control can't possibly match type, skip this branch
+            initial_env = initial_env.bind(var_name, new_typ, env.pi, fixed: initial_env.fixed?(var_name), force: true)
             # note force is safe above because the env from this arm will be joined with the other envs
             # (where the type was not refined like this), so after the case the variable will be back to its
             # previous, unrefined type
@@ -1639,56 +1744,30 @@ module RDL::Typecheck
           envbody = initial_env
           tbody = RDL::Globals.types[:nil]
         else
-          # Path Sensitivity: add typetest to scope
-          envbody, tbody = tc(scopebody, initial_env, wclause.children[-1]) # last wclause child is body
+          envbody, tbody = tc(scope, initial_env, wclause.children[-1]) # last wclause child is body
           # reset type of var_name to its original type
-          envbody = envbody.bind(var_name, var_type, fixed: envbody.fixed?(var_name), force: true) if var_name
+          envbody = envbody.bind(var_name, var_type, env.pi, fixed: envbody.fixed?(var_name), force: true) unless var_name.nil?
         end
 
         tbodies << tbody
 
         envbodies << envbody
-
-        if pathbody
-          pathbodies << pathbody
-        else
-          pathbodies << PathTrue.new
-        end
       }
+
+      # pi of else assumes that all branches were false.
+      envelse = envi.add_pi(PathAnd.new(envbodies.map {|env| PathNot.new(env.pi)}))
       if e.children[-1].nil?
         # no else clause, might fall through having missed all cases
-        envbodies << envi
+        envbodies << envelse
       else
         # there is an else clause
-        envelse, telse = tc(scope, envi, e.children[-1])
+        envelse, telse = tc(scope, envelse, e.children[-1])
         tbodies << telse
         #envelse = envelse.bind(e.children[0].children[0], tcontrol, force: :true) if e.children[0].type == :lvar
         envbodies << envelse
-        pathbodies << env.pi
       end
       # before join reset var to original type!
-
-      # -----------------------------------------------------------------------
-
-      # Path Sensitivity:
-      # Create resulting type. If there were special cases for type-testing,
-      # this will be a multitype. If there were no special cases for 
-      # type-testing, the MultiType will automatically disappear, leaving a 
-      # union.
-      multi_map = {}
-
-      pathbodies.zip(tbodies).each { |p, t|
-        existing_type = multi_map[p]
-        if existing_type
-          # If there are 2 tbodies with the same path, union them.
-          multi_map[p] = RDL::Type::UnionType.new(existing_type, t)
-        else
-          multi_map[p] = t
-        end
-      }
-
-      tres = RDL::Type::MultiType.new(multi_map).canonical
-      [Env.join(e, *envbodies), tres]
+      [Env.join(e, *envbodies), RDL::Type::UnionType.new(*tbodies).canonical]
     when :while, :until
       # break: loop exit, i.e., right after loop guard; may take argument
       # next: before loop guard; argument not allowed
@@ -1898,7 +1977,7 @@ module RDL::Typecheck
         [Env.join(e, *env_res), RDL::Type::UnionType.new(*tres).canonical]
       }
     when :resbody
-      RDL::Globals.num_ctrl_flow_splits += 1
+      RDL::Globals.ctrl_flow_splits.add e
       # (resbody (array exns) (lvasgn var) rescue-body)
       resbody_scope = scope.clone
       resbody_scope[:exceptional] = true
@@ -2217,7 +2296,7 @@ module RDL::Typecheck
     # Path-Sensitivity:
     # If we have path-sensitive arguments, we need to map tc_send over
     # the different possible types.
-    if tactuals && tactuals.any? { |t| (t.is_a? RDL::Type::MultiType) || (t.is_a? RDL::Type::PathType) }
+    if tactuals && tactuals.any? { |t| (t.is_a? RDL::Type::MultiType) || (t.is_a? RDL::Type::PathType) } && meth != :[]=
       # CLEANUP eventually
       raise "hopefully impossible, should be handled in tc"
       # Map<Path, Array<Type>> : maps each path to its list of tactuals
@@ -2375,11 +2454,25 @@ module RDL::Typecheck
 
     RDL::Logging.log :inference, :trace, "Inlining call to #{meth}"
 
+    if RDL::Globals.inline_stack.include?(meth)
+      tret = RDL::Type::GenericType.new(
+        RDL::Type::NominalType.new("JSON"),
+        RDL::Type::NominalType.new("missing recursive call to #{klass}##{meth}")
+      )
+      RDL::Logging.log :inference, :trace, "Attempted to inline #{meth} but is recursive. Inlined call to #{meth} ~~> #{tret}"
+      return [env, [tret]]
+    else
+      RDL::Globals.inline_stack.push(meth)
+    end
+
     # construct fake method type
     # ignore tmeth.args, use tactuals instead.
-    fake = RDL::Type::MethodType.new(tactuals + tmeth.args.drop(tactuals.length), tmeth.block, tmeth.ret)
+    nested_targs = tactuals + tmeth.args.drop(tactuals.length)
+    nested_tblock = tmeth.block
+    nested_tret = RDL::Type::VarType.new({cls: klass, meth: meth, category: :ret}) # this should create distinct vartypes for each inlined call.
+    fake = RDL::Type::MethodType.new(nested_targs, nested_tblock, nested_tret)
     nested_scope = { task: :infer, klass: klass, meth: meth, 
-                     tret: tmeth.ret, tblock: tmeth.block, 
+                     tret: nested_tret, tblock: nested_tblock, 
                      context_types: RDL::Globals.info.get(klass, meth, :context_types), 
                      pi: PathTrue.new } # using PathTrue
     nested_name, nested_args, nested_body = *nested_ast
@@ -2400,6 +2493,8 @@ module RDL::Typecheck
     nested_tret = RDL::Heuristic.multitype_extraction(return_vartype)
 
     RDL::Logging.log :inference, :trace, "Inlined call to #{meth} ~~> #{nested_tret}"
+
+    RDL::Globals.inline_stack.pop
 
     #       Env,  Array<Type>
     return [env, [nested_tret]]
@@ -2426,6 +2521,12 @@ module RDL::Typecheck
       trecv = trecv.type
     end
     return [env, tc_send_class(trecv, e)] if (meth == :class) && (tactuals.empty?)
+
+    if trecv.is_a?(RDL::Type::TupleType) && trecv.array.nil? && meth == :each
+      # Skip dead codez
+      return [env, [trecv]]
+    end
+
     ts = [] # Array<MethodType>, i.e., an intersection types
     case trecv
     when RDL::Type::SingletonType
@@ -2492,6 +2593,9 @@ module RDL::Typecheck
           # Module mixin handle
           # Here a module method is calling a non-existent method; check for it in all mixees
           # TODO: Handle :extend
+          if RDL::Globals.module_mixees[klass].nil?
+            RDL.initialize_mixees_for klass
+          end
           # filter to mixed in modules that actually have this meth
           nts = RDL::Globals.module_mixees[klass].map { |k, kind| if kind == :include then k end }.filter {|k| lookup(scope, k.to_s, meth, e) }.map { |k| RDL::Type::NominalType.new(k) }
           return [env, [RDL::Globals.types[:bot]]] if nts.empty? # if module not mixed in, this call can't happen; so %bot
@@ -2547,9 +2651,10 @@ module RDL::Typecheck
         ts = lookup(scope, "Hash", meth, e)
         error :no_instance_method_type, ["Hash", meth], e unless ts
         #inst = trecv.to_inst.merge(self: trecv)
-        k_bind = trecv.promote.params[0].to_s == "k" ? RDL::Globals.types[:bot] : trecv.promote.params[0]
-        v_bind = trecv.promote.params[1].to_s == "v" ? RDL::Globals.types[:bot] : trecv.promote.params[1]
-        inst = { self: trecv , k: k_bind, v: v_bind }
+        #k_bind = trecv.promote.params[0].to_s == "k" ? RDL::Globals.types[:bot] : trecv.promote.params[0]
+        #v_bind = trecv.promote.params[1].to_s == "v" ? RDL::Globals.types[:bot] : trecv.promote.params[1]
+        #inst = { self: trecv , k: k_bind, v: v_bind }
+        inst = { self: trecv }
         self_klass = Hash
       else
         ## need to promote in this case
@@ -3168,7 +3273,7 @@ module RDL::Typecheck
     ancestors = the_klass.ancestors[1..-1]
     ancestors += [Kernel, BasicObject] if (!ancestors.include?(Kernel) && !ancestors.include?(BasicObject)) # Module#ancestors does not include these, even though all modules inherit their methods.
 
-    return [klass, meth] if the_klass.instance_methods(false).include? meth
+    return [klass, meth] if the_klass.instance_methods(false).include?(meth) || the_klass.private_instance_methods.include?(meth)
 
     ancestors.each { |ancestor|
       # assumes ancestors is proper order to walk hierarchy
@@ -3177,7 +3282,7 @@ module RDL::Typecheck
       # extended (i.e., not included) modules' instance methods get added as singleton methods, so can't be in class
       next if (ancestor.instance_of? Module) && (not (included.member? ancestor)) && (not is_singleton) && (ancestor != Kernel) && (ancestor != BasicObject)
 
-      return [ancestor.name, meth] if ancestor.instance_methods(false).include? meth
+      return [ancestor.name, meth] if ancestor.instance_methods(false).include?(meth)
 
       # this is missing some stuff from below
     }

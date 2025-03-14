@@ -21,6 +21,8 @@ class RDL::Config
   attr_accessor :render_methods
   attr_accessor :inline_methods # Set<Symbol>
   attr_accessor :boolean_algebra
+  attr_accessor :value_merge # Set<Symbol>. Possible values: {:multi, :union}
+  attr_accessor :type_refinement # bool. Whether or not to refine types for `if lvar.is_a? Type`
 
   def initialize
     RDL::Config.reset(self)
@@ -73,6 +75,8 @@ class RDL::Config
     c.render_methods = Set.new([:render])
     c.inline_methods = Set.new
     c.boolean_algebra = true # Perform boolean algebra laws to simplify paths during tc time?
+    c.value_merge = Set.new # Value merging for different type containers
+    c.type_refinement = false
   end
 
   def add_nowrap(*klasses)
