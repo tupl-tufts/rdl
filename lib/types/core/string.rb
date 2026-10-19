@@ -92,7 +92,7 @@ def String.append_output(trec, targs)
   if trec.is_a?(RDL::Type::PreciseStringType) && targs[0].is_a?(RDL::Type::PreciseStringType)
     targs[0].vals.each { |v|
       if trec.vals.last.is_a?(String) && v.is_a?(String)
-        trec.vals.last << v
+        trec.vals[-1] = trec.vals.last + v
       else
         trec.vals << v
       end
@@ -151,7 +151,7 @@ def String.chop_output(trec)
   case trec
   when RDL::Type::PreciseStringType
     if trec.vals.last.is_a?(String)
-      trec.vals.last.chop!
+      trec.vals[-1] = trec.vals.last.chop
       raise RDL::Typecheck::StaticTypeError, "Failed to mutate string: new string #{trec} does not match prior constraints." unless trec.check_bounds
       trec
     else

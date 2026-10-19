@@ -18,6 +18,9 @@ EOF
   s.executables << 'rdl_query'
   s.homepage    = 'https://github.com/tupl-tufts/rdl'
   s.license     = 'BSD-3-Clause'
-  s.add_runtime_dependency 'parser', '~>2.3', '>= 2.3.1.4'
+  s.required_ruby_version = '>= 2.7'
+  s.add_runtime_dependency 'parser', '>= 3.0'
+  s.add_runtime_dependency 'prism', '>= 1.5'
+  s.add_runtime_dependency 'racc'
   s.add_runtime_dependency 'sql-parser', '~>0.0.2'
 end

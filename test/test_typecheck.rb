@@ -217,7 +217,7 @@ class TestTypecheck < Minitest::Test
   # [+ expr +] is a string containing the expression to typecheck
   # returns the type of the expression
   def do_tc(expr, scope: Hash.new, env: RDL::Typecheck::Env.new)
-    ast = Parser::CurrentRuby.parse expr
+    ast = Prism::Translation::ParserCurrent.parse expr
     _, t = RDL::Typecheck.tc scope, env, ast
     return t
   end
@@ -766,6 +766,21 @@ class TestTypecheck < Minitest::Test
     }
   end
 
+  def test_send_implicit_param_block
+    RDL.type TestTypecheck, :_send_block1, "(Integer) { (Integer) -> Integer } -> Integer"
+    RDL.type TestTypecheck, :_send_block3, "() { (Integer, String) -> String } -> String"
+    assert do_tc("_send_block1(42) { _1 + 1 }", env: @env) <= RDL::Globals.types[:integer]
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42) { _1.to_s }", env: @env) }
+    assert do_tc("_send_block3 { _2 * _1 }", env: @env) <= RDL::Globals.types[:string]
+    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42) { _1 + _2 }", env: @env) }
+    assert do_tc('[1, 2, 3].map { _1.to_s }', env: @env) <= tt("Array<String>")
+    if RUBY_VERSION >= "3.4" # earlier grammars parse `it` as a method call
+      assert do_tc("_send_block1(42) { it + 1 }", env: @env) <= RDL::Globals.types[:integer]
+      assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("_send_block1(42) { it.to_s }", env: @env) }
+      assert do_tc('[1, 2, 3].map { it.to_s }', env: @env) <= tt("Array<String>")
+    end
+  end
+
   def test_send_method_generic
     self.class.class_eval {
       type :_send_method_generic1, '(t) -> t'
@@ -1052,11 +1067,15 @@ class TestTypecheck < Minitest::Test
 #    assert do_tc("i = 0; while i < 5 do break end; i") <= tt("0")
 #    assert do_tc("i = 0; while i < 5 do redo end; i") # infinite loop, ok for typing <= tt("0")
 #     assert do_tc("i = 0; while i < 5 do next end; i") # infinite loop, ok for typing <= tt("0")
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("i = 0; while i < 5 do retry end; i") }
+    # retry outside rescue is a Ruby syntax error, rejected by the parser (which also
+    # prints the diagnostic to stderr, so capture it)
+    e = assert_raises(Parser::SyntaxError) { capture_io { do_tc("i = 0; while i < 5 do retry end; i") } }
+    assert_match(/Invalid retry/, e.message)
     assert do_tc("i = 0; begin i = i + 1; break if i > 2; end while i < 5; i") <= RDL::Globals.types[:integer]
     assert do_tc("i = 0; begin i = i + 1; redo if i > 2; end while i < 5; i") <= RDL::Globals.types[:integer]
     assert do_tc("i = 0; begin i = i + 1; next if i > 2; end while i < 5; i") <= RDL::Globals.types[:integer]
-    assert_raises(RDL::Typecheck::StaticTypeError) { do_tc("i = 0; begin i = i + 1; retry if i > 2; end while i < 5; i") }
+    e = assert_raises(Parser::SyntaxError) { capture_io { do_tc("i = 0; begin i = i + 1; retry if i > 2; end while i < 5; i") } }
+    assert_match(/Invalid retry/, e.message)
 
     # break w/arg, next can't take arg
     assert do_tc("while _any_object do break 3 end", env: @env) <= @t3n
@@ -1819,7 +1838,7 @@ class TestTypecheck < Minitest::Test
         when :b
         end
       end
-      type(:foo, '(Symbol) -> NilClass', {:typecheck => :call})
+      type(:foo, '(Symbol) -> NilClass', :typecheck => :call)
     end
 
     assert_nil TestTypecheck::A5.new.foo(:a)

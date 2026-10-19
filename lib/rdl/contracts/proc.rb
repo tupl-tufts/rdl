@@ -15,7 +15,7 @@ module RDL::Contract
         # tmp = blk.call(*v, &other_blk) # TODO: Instance eval with self
         @post_cond.check(slf, tmp, *v, &other_blk)
         tmp
-      }
+      }.tap(&:ruby2_keywords)
     end
     
     def to_s

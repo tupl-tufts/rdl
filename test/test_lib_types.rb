@@ -81,9 +81,9 @@ class TestStdlibTypes < Minitest::Test
       BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
       BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
 
-      BigDecimal.new(BigDecimal('Infinity'))
-      BigDecimal.new(BigDecimal('-Infinity'))
-      BigDecimal(BigDecimal.new('NaN'))
+      BigDecimal(BigDecimal('Infinity'))
+      BigDecimal(BigDecimal('-Infinity'))
+      BigDecimal(BigDecimal('NaN'))
     end
     BigDecimal.save_limit do
       BigDecimal.limit(200)
@@ -106,10 +106,10 @@ class TestStdlibTypes < Minitest::Test
     # From the Ruby stdlib documentation
     BigMath.E(10)
     BigMath.PI(10)
-    BigMath.atan(BigDecimal.new('-1'), 16)
+    BigMath.atan(BigDecimal('-1'), 16)
     BigMath.cos(BigMath.PI(4), 16)
     BigMath.sin(BigMath.PI(5)/4, 5)
-    BigMath.sqrt(BigDecimal.new('2'), 16)
+    BigMath.sqrt(BigDecimal('2'), 16)
   end
 
   def test_class

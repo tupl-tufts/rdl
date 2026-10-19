@@ -705,7 +705,7 @@ module RDL
             tmp_meth = tmp_eval = "def #{klass}.tc_#{meth}#{count}#{arg_list} #{t.code}; end"
           end
           eval tmp_eval
-          ast = Parser::CurrentRuby.parse tmp_meth
+          ast = Prism::Translation::ParserCurrent.parse tmp_meth
           RDL::Typecheck.typecheck("[s]#{klass}", "tc_#{meth}#{count}".to_sym, ast, [code_type], [[:-, :+]]) 
           count += 1
         end

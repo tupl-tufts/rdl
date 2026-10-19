@@ -149,6 +149,20 @@ module RDL::Typecheck
     return r
   end
 
+  # Returns the (args ...) node for block node [+ e +]. Numbered-parameter (_1) and
+  # it-parameter blocks have implicit parameters, so build the equivalent explicit ones.
+  def self.block_args(e)
+    case e.type
+    when :numblock
+      args = (1..e.children[1]).map { |i| Parser::AST::Node.new(:arg, [:"_#{i}"], location: e.location) }
+      Parser::AST::Node.new(:args, args, location: e.location)
+    when :itblock
+      Parser::AST::Node.new(:args, [Parser::AST::Node.new(:arg, [e.children[1]], location: e.location)], location: e.location)
+    else
+      e.children[1]
+    end
+  end
+
   # add x:t to the captured map in scope
   def self.capture(scope, x, t)
     if scope[:captured][x]
@@ -195,14 +209,14 @@ module RDL::Typecheck
       end
       the_meth = RDL::Util.to_class(klass).instance_method(meth_name)
       code = Pry::Code.from_method the_meth
-      return Parser::CurrentRuby.parse code.to_s
+      return Prism::Translation::ParserCurrent.parse code.to_s
     end
 
     digest = Digest::MD5.file file
     cache_hit = ((RDL::Globals.parser_cache.has_key? file) &&
                  (RDL::Globals.parser_cache[file][0] == digest))
     unless cache_hit
-      file_ast = Parser::CurrentRuby.parse_file file
+      file_ast = Prism::Translation::ParserCurrent.parse_file file
       mapper = ASTMapper.new(file)
       mapper.process(file_ast)
       cache = {ast: file_ast, line_defs: mapper.line_defs}
@@ -823,9 +837,9 @@ RUBY
       end
       [envi, scope[:tblock].ret, eff]
       # tblock
-    when :block
-      # (block send block-args block-body)
-      scope_merge(scope, block: [e.children[1], e.children[2]]) { |bscope|
+    when :block, :numblock, :itblock
+      # (block send block-args block-body), (numblock send max-param block-body), (itblock send :it block-body)
+      scope_merge(scope, block: [block_args(e), e.children[2]]) { |bscope|
         tc(bscope, env, e.children[0])
       }
     when :and, :or
@@ -2181,7 +2195,7 @@ module Parser
           raise IndexError, "The range #{range} is outside the bounds of the source of size #{@source_buffer.source.size}"
         end
         dummy_range = Parser::Source::Range.new(@source_buffer, range.begin_pos - offset, range.end_pos - offset)
-        action = TreeRewriter::Action.new(dummy_range, @enforcer, attributes)
+        action = TreeRewriter::Action.new(dummy_range, @enforcer, **attributes)
         @action_root = @action_root.combine(action)
         self
       end

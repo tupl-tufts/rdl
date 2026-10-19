@@ -1,7 +1,9 @@
 require 'delegate'
 require 'digest'
 require 'set'
-require 'parser/current'
+require 'stringio'
+require 'parser'
+require 'prism'
 
 module RDL
 end
